@@ -60,6 +60,8 @@ pub(crate) struct DaemonRuntime {
     daemon_failed: bool,
     workspace_capability_trust_prompter: Option<WorkspaceCapabilityTrustPrompter>,
     pending_local_client_turn_ids: HashSet<String>,
+    recovered_presentation_sequence: u64,
+    exported_presentation_sequence: u64,
 }
 
 impl DaemonRuntime {
@@ -166,6 +168,8 @@ impl DaemonRuntime {
             daemon_failed: false,
             workspace_capability_trust_prompter: None,
             pending_local_client_turn_ids: HashSet::new(),
+            recovered_presentation_sequence: 0,
+            exported_presentation_sequence: 0,
         })
     }
 
@@ -179,6 +183,9 @@ impl DaemonRuntime {
     }
 
     fn detach_current_session(&mut self) {
+        self.recovered_presentation_sequence = 0;
+        self.exported_presentation_sequence = 0;
+        self.sync.clear_task_output();
         self.sync.pending_session_title = None;
         if self.daemon_failed {
             return;
@@ -216,7 +223,7 @@ impl DaemonRuntime {
         &mut self,
         conversation_key: &str,
         archive: &ChatArchive,
-    ) -> Result<()> {
+    ) -> Result<bool> {
         let created = self.client.call(
             "session.create",
             json!({
@@ -235,8 +242,11 @@ impl DaemonRuntime {
             "session.attach",
             json!({ "conversationKey": conversation_key }),
         )?;
-        self.replace_runtime_archive(archive)?;
-        Ok(())
+        let restored = created.get("restoredFromDisk").and_then(Value::as_bool) == Some(true);
+        if !restored {
+            self.replace_runtime_archive(archive)?;
+        }
+        Ok(restored)
     }
 
     fn apply_loaded_chat_metadata(&mut self, archive: &ChatArchive, conversation_key: &str) {
@@ -303,9 +313,13 @@ impl DaemonRuntime {
                 Ok(AttachChatSessionOutcome::AttachedLive)
             }
             Err(err) if Self::is_attach_miss(&err) => {
-                self.create_and_attach_session(&conversation_key, archive)?;
-                self.apply_loaded_chat_metadata(archive, &conversation_key);
-                Ok(AttachChatSessionOutcome::Created)
+                if self.create_and_attach_session(&conversation_key, archive)? {
+                    self.apply_attached_live_session_metadata(&conversation_key)?;
+                    Ok(AttachChatSessionOutcome::AttachedLive)
+                } else {
+                    self.apply_loaded_chat_metadata(archive, &conversation_key);
+                    Ok(AttachChatSessionOutcome::Created)
+                }
             }
             Err(err) => {
                 self.handle_daemon_error(err);
@@ -316,7 +330,10 @@ impl DaemonRuntime {
 
     /// Export the daemon session's live archive (llm history, subagents, loop state).
     pub fn fetch_live_chat_archive(&mut self) -> Result<ChatArchive> {
-        self.export_chat_archive(&[], &[])
+        let archive = self.export_chat_archive(&[], &[])?;
+        self.recovered_presentation_sequence = self.exported_presentation_sequence;
+        self.sync.events.clear();
+        Ok(archive)
     }
 
     pub fn desktop_timeline_resync_pending(&self) -> bool {
@@ -451,6 +468,15 @@ impl DaemonRuntime {
         let params = message.get("params").cloned().unwrap_or(Value::Null);
         let for_this_session =
             params.get("sessionId").and_then(Value::as_str) == self.session_id.as_deref();
+        if for_this_session
+            && matches!(method, "runtime.event" | "session.userTurnSubmitted")
+            && params
+                .get("presentationSequence")
+                .and_then(Value::as_u64)
+                .is_some_and(|sequence| sequence <= self.recovered_presentation_sequence)
+        {
+            return;
+        }
 
         match method {
             "runtime.event" if for_this_session => {
@@ -629,6 +655,14 @@ impl DaemonRuntime {
         if let Err(err) = self.call_daemon("session.abort", None) {
             self.handle_daemon_error(err);
         }
+    }
+
+    pub fn move_to_background(&mut self, tool_call_id: &str) -> Result<()> {
+        self.call_daemon(
+            "session.moveToBackground",
+            Some(json!({ "toolCallId": tool_call_id })),
+        )?;
+        Ok(())
     }
 
     pub fn continue_assistant_completion(&mut self) -> Result<()> {
@@ -1137,21 +1171,27 @@ impl DaemonRuntime {
         text: String,
         explicit_images: Option<Vec<String>>,
     ) -> Result<()> {
+        let mut params = json!({ "text": text });
+        if let Some(images) = explicit_images {
+            params["explicitImages"] = serde_json::to_value(images)?;
+        }
+        self.submit_session_turn("session.submitUserTurn", params)
+    }
+
+    pub fn start_implementing(&mut self) -> Result<()> {
+        self.submit_session_turn("session.startImplementing", json!({}))
+    }
+
+    fn submit_session_turn(&mut self, method: &str, mut params: Value) -> Result<()> {
         if self.daemon_failed {
             return Err(anyhow!("daemon is already in a failed state."));
         }
         let client_turn_id = uuid::Uuid::new_v4().to_string();
         self.pending_local_client_turn_ids
             .insert(client_turn_id.clone());
-        let mut params = json!({
-            "text": text,
-            "clientTurnId": client_turn_id,
-        });
-        if let Some(images) = explicit_images {
-            params["explicitImages"] = serde_json::to_value(images).unwrap_or(Value::Array(vec![]));
-        }
+        params["clientTurnId"] = json!(client_turn_id);
         logging::log_event(&format!(
-            "[daemon-runtime] submit_user_turn chars={} explicit_images={}",
+            "[daemon-runtime] {method} chars={} explicit_images={}",
             params
                 .get("text")
                 .and_then(Value::as_str)
@@ -1163,7 +1203,7 @@ impl DaemonRuntime {
                 .map(|items| items.len())
                 .unwrap_or(0)
         ));
-        if let Err(err) = self.call_daemon("session.submitUserTurn", Some(params)) {
+        if let Err(err) = self.call_daemon(method, Some(params)) {
             self.pending_local_client_turn_ids.remove(&client_turn_id);
             return Err(err);
         }
@@ -1436,24 +1476,35 @@ impl DaemonRuntime {
             Some(crate::runtime_sync::PendingApprovalKind::Tool) => "session.replyPendingApproval",
             None => return,
         };
-        if let Err(err) = self.call_daemon(method, Some(json!({ "decision": decision }))) {
+        let request_id = self
+            .sync
+            .current_pending_approval
+            .as_ref()
+            .and_then(|pending| pending.request_id.clone());
+        if let Err(err) = self.call_daemon(
+            method,
+            Some(json!({ "decision": decision, "requestId": request_id })),
+        ) {
             self.handle_daemon_error(err);
         }
     }
 
     pub fn respond_to_pending_questions(
         &mut self,
+        request_id: Option<&str>,
         result: &crate::ask_questions::AskQuestionsResult,
-    ) {
+    ) -> bool {
         if self.daemon_failed {
-            return;
+            return false;
         }
         if let Err(err) = self.call_daemon(
             "session.replyPendingQuestions",
-            Some(json!({ "result": result })),
+            Some(json!({ "result": result, "requestId": request_id })),
         ) {
             self.handle_daemon_error(err);
+            return false;
         }
+        true
     }
 
     pub fn execute_manual_tool_command(&mut self, message: &str) {
@@ -1714,13 +1765,50 @@ impl DaemonRuntime {
             Some(json!({ "messages": message_values, "assistantAux": assistant_aux })),
         )?;
         let bridge_archive: BridgeChatArchive = serde_json::from_value(value)?;
+        self.exported_presentation_sequence = bridge_archive
+            .presentation
+            .as_ref()
+            .and_then(|journal| journal.get("sequence"))
+            .and_then(Value::as_u64)
+            .unwrap_or(0);
         // Live timeline pushed by the authoritative desktop host; hydrate it
         // into desktop messages exactly like a disk load would.
-        let desktop_messages = bridge_archive
+        let mut desktop_messages = bridge_archive
             .desktop_message_timeline
             .as_deref()
-            .map(crate::chat_timeline::hydrate_desktop_messages_from_timeline)
-            .filter(|snapshots| !snapshots.is_empty());
+            .map(crate::chat_timeline::hydrate_desktop_messages_from_timeline);
+        if let Some(snapshots) = desktop_messages.as_ref() {
+            let (messages, assistant_aux_by_message) =
+                crate::rewind::restore_conversation(snapshots);
+            let mut projection = crate::chat_timeline::LiveChatProjection {
+                messages,
+                assistant_aux_by_message,
+            };
+            if let Some(entries) = bridge_archive
+                .presentation
+                .as_ref()
+                .and_then(|journal| journal.get("entries"))
+                .and_then(Value::as_array)
+            {
+                crate::chat_timeline::append_presentation_events(&mut projection, entries)
+                    .map_err(anyhow::Error::msg)?;
+            }
+            desktop_messages = Some(crate::rewind::conversation_snapshots(
+                &projection.messages,
+                &projection.assistant_aux_by_message,
+                None,
+            ));
+        } else if !bridge_archive.background_task_notifications.is_empty() {
+            let projection = crate::chat_timeline::project_live_chat_with_task_notices(
+                &bridge_archive.llm_history,
+                &bridge_archive.background_task_notifications,
+            );
+            desktop_messages = Some(crate::rewind::conversation_snapshots(
+                &projection.messages,
+                &projection.assistant_aux_by_message,
+                None,
+            ));
+        }
         Ok(ChatArchive {
             messages: bridge_archive
                 .messages

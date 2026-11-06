@@ -192,6 +192,8 @@ pub struct MessageAuxSnapshot {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolBlockSnapshot {
+    #[serde(flatten)]
+    pub metadata: serde_json::Map<String, Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tool_call_id: Option<String>,
     pub tool_name: String,
@@ -817,6 +819,7 @@ fn assistant_aux_data_from_snapshot(snapshot: &MessageAuxSnapshot) -> Option<Ass
 
 fn tool_snapshot_from_block(block: &ToolUiBlock) -> ToolBlockSnapshot {
     ToolBlockSnapshot {
+        metadata: block.metadata.clone(),
         tool_call_id: block.tool_call_id.clone(),
         tool_name: block.tool_name.clone(),
         phase: match block.phase {
@@ -837,6 +840,7 @@ fn tool_snapshot_from_block(block: &ToolUiBlock) -> ToolBlockSnapshot {
 
 fn tool_block_from_snapshot(snapshot: &ToolBlockSnapshot) -> ToolUiBlock {
     ToolUiBlock {
+        metadata: snapshot.metadata.clone(),
         tool_call_id: snapshot.tool_call_id.clone(),
         tool_name: snapshot.tool_name.clone(),
         phase: match snapshot.phase {

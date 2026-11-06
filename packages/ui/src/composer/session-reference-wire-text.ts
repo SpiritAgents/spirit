@@ -1,35 +1,39 @@
 import { formatChipWireBlock, scanChipWireBlocks } from "./chip-wire-block.js";
 
-function formatSessionReferenceInfoLine(path: string, title: string): string {
+function formatSessionReferenceInfoLine(path: string, title: string, sessionId?: string): string {
   const normalized = path.replace(/\\/gu, "/").trim();
   const trimmedTitle = title.trim();
-  if (!trimmedTitle) {
-    return `session:${normalized}`;
-  }
-  return `session:${normalized}\t${trimmedTitle}`;
+  const base = trimmedTitle ? `session:${normalized}\t${trimmedTitle}` : `session:${normalized}`;
+  const normalizedSessionId = sessionId?.trim();
+  return normalizedSessionId ? `${base}\tsession_id=${normalizedSessionId}` : base;
 }
 
-function parseSessionReferenceInfoLine(infoLine: string): { path: string; title: string } | null {
+function parseSessionReferenceInfoLine(
+  infoLine: string,
+): { path: string; title: string; sessionId?: string } | null {
   if (!infoLine.startsWith("session:")) {
     return null;
   }
   const payload = infoLine.slice("session:".length);
-  const tab = payload.indexOf("\t");
-  if (tab < 0) {
-    const path = payload.trim().replace(/\\/gu, "/");
-    return path ? { path, title: "" } : null;
-  }
-  const path = payload.slice(0, tab).trim().replace(/\\/gu, "/");
-  const title = payload.slice(tab + 1).trim();
+  const [rawPath, ...metadata] = payload.split("\t");
+  const path = rawPath.trim().replace(/\\/gu, "/");
+  const rawSessionId = metadata.at(-1)?.startsWith("session_id=") ? metadata.pop() : undefined;
+  const title = metadata.join("\t").trim();
+  const sessionId = rawSessionId?.slice("session_id=".length).trim();
   if (!path) {
     return null;
   }
-  return { path, title };
+  return { path, title, ...(sessionId ? { sessionId } : {}) };
 }
 
 /** Wire-format session reference (Git Commit / Terminal style fence in user text). */
-export function sessionReferenceContextText(path: string, title: string, content = ""): string {
-  return formatChipWireBlock(formatSessionReferenceInfoLine(path, title), content);
+export function sessionReferenceContextText(
+  path: string,
+  title: string,
+  content = "",
+  sessionId?: string,
+): string {
+  return formatChipWireBlock(formatSessionReferenceInfoLine(path, title, sessionId), content);
 }
 
 export type ParsedSessionReferenceWireBlock = {
@@ -38,6 +42,7 @@ export type ParsedSessionReferenceWireBlock = {
   path: string;
   title: string;
   content: string;
+  sessionId?: string;
 };
 
 /** Scan wire text for session reference blocks. */
@@ -55,6 +60,7 @@ export function scanSessionReferenceWireBlocks(content: string): ParsedSessionRe
         path: parsed.path,
         title: parsed.title,
         content: block.body,
+        ...(parsed.sessionId ? { sessionId: parsed.sessionId } : {}),
       };
     })
     .filter((block): block is ParsedSessionReferenceWireBlock => block !== null);

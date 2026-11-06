@@ -9,6 +9,9 @@ import { glob as globPaths } from "glob";
 
 import {
   APPLY_PATCH_HOST_TOOL_NAME,
+  parseBackgroundOptions,
+  parseDelayRequest,
+  type BackgroundOptions,
   throwUnknownToolError,
   toolNamesFromDefinitions,
   type JsonValue,
@@ -160,6 +163,7 @@ export interface HostToolExecutionOutput {
   content: HostToolContentPart[];
   summaryText: string;
   hostUi?: ToolExecutionHostUi;
+  execution?: { failed?: boolean; exitCode?: number };
 }
 
 export interface HostGeneratedImageSaveRequest {
@@ -223,12 +227,10 @@ export interface HostAskQuestionsRequest<QuestionSpec = HostAskQuestionsQuestion
 }
 
 export interface SubagentRequest {
-  task: string;
-  success_criteria?: string;
-  context_summary?: string;
-  files_to_inspect: string[];
-  expected_output?: string;
+  prompt: string;
+  sessionId?: string;
   worktree?: boolean;
+  background?: BackgroundOptions;
 }
 
 export type ApplyPatchOperationType = "create_file" | "update_file" | "delete_file";
@@ -241,7 +243,9 @@ export interface ApplyPatchOperation {
 
 export type HostToolRequest<QuestionSpec = HostAskQuestionsQuestionSpec> =
   | { name: "finish_task"; summary?: string }
-  | { name: "shell"; command: string; reason: string }
+  | { name: "delay"; seconds?: number; task_id?: string }
+  | { name: "stop_task"; task_id: string }
+  | { name: "shell"; command: string; reason: string; background?: BackgroundOptions }
   | { name: "web_fetch"; url: string }
   | { name: "ls"; path: string }
   | { name: "glob"; pattern: string }
@@ -269,12 +273,10 @@ export type HostToolRequest<QuestionSpec = HostAskQuestionsQuestionSpec> =
     }
   | {
       name: "subagent";
-      task: string;
-      success_criteria?: string;
-      context_summary?: string;
-      files_to_inspect: string[];
-      expected_output?: string;
+      prompt: string;
+      sessionId?: string;
       worktree?: boolean;
+      background?: BackgroundOptions;
     }
   | {
       name: "generate_image";
@@ -723,12 +725,19 @@ export class NodeHostToolService<
           ...(summary ? { summary } : {}),
         };
       }
-      case "shell":
+      case "shell": {
+        const background = parseBackgroundOptions(parsed.background);
         return {
           name,
           reason: requiredString(parsed, "reason"),
           command: requiredString(parsed, "command"),
+          ...(background !== undefined ? { background } : {}),
         };
+      }
+      case "delay":
+        return { name, ...parseDelayRequest(parsed) };
+      case "stop_task":
+        return { name, task_id: requiredString(parsed, "task_id") };
       case "web_fetch":
         return {
           name,
@@ -785,18 +794,15 @@ export class NodeHostToolService<
         };
       }
       case "subagent": {
-        const successCriteria = optionalStringStrict(parsed, "success_criteria");
-        const contextSummary = optionalStringStrict(parsed, "context_summary");
-        const expectedOutput = optionalStringStrict(parsed, "expected_output");
         const worktree = optionalBoolean(parsed, "worktree");
+        const sessionId = optionalStringStrict(parsed, "session_id");
+        const background = parseBackgroundOptions(parsed.background);
         return {
           name,
-          task: requiredString(parsed, "task"),
-          ...(successCriteria ? { success_criteria: successCriteria } : {}),
-          ...(contextSummary ? { context_summary: contextSummary } : {}),
-          files_to_inspect: optionalStringArrayStrict(parsed, "files_to_inspect"),
-          ...(expectedOutput ? { expected_output: expectedOutput } : {}),
+          prompt: requiredString(parsed, "prompt"),
+          ...(sessionId !== undefined ? { sessionId } : {}),
           ...(worktree === true ? { worktree: true } : {}),
+          ...(background !== undefined ? { background } : {}),
         };
       }
       case "generate_image": {
@@ -949,6 +955,8 @@ export class NodeHostToolService<
 
     switch (request.name) {
       case "finish_task":
+      case "delay":
+      case "stop_task":
       case "glob":
       case "grep":
       case "subagent":
@@ -1327,11 +1335,15 @@ export class NodeHostToolService<
     switch (request.name) {
       case "finish_task":
         return createHostToolTextOutput(request.summary?.trim() || "Task marked complete.");
+      case "delay":
+      case "stop_task":
+        throw new Error(`${request.name} requires the session task runtime.`);
       case "shell": {
         const shellMetadata = this.requestMetadataFor(request);
         return this.executeShell(request.command, {
           ...(shellMetadata?.onOutputChunk ? { onOutputChunk: shellMetadata.onOutputChunk } : {}),
           ...(shellMetadata?.toolCallId ? { toolCallId: shellMetadata.toolCallId } : {}),
+          ...(shellMetadata?.signal ? { signal: shellMetadata.signal } : {}),
         });
       }
       case "web_fetch":
@@ -1821,9 +1833,21 @@ export class NodeHostToolService<
       throw new Error("path must not be empty");
     }
     // Writes are gated by authorize(); do not re-apply a workspace allowlist here.
-    return path.isAbsolute(trimmed)
+    const target = path.isAbsolute(trimmed)
       ? path.resolve(trimmed)
       : path.resolve(this.workspaceRoot, trimmed);
+    const canonical = canonicalWritePath(target);
+    const dataRoot = canonicalWritePath(this.spiritDataDir);
+    const transcripts = resolveTranscriptsDir(dataRoot);
+    const relative = path.relative(transcripts, canonical).replaceAll("\\", "/");
+    if (/^[a-f0-9]{32}\/background-tasks(?:\/|$)/u.test(relative)) {
+      throw new Error("Background task records and output are read-only host-managed files.");
+    }
+    const dataRelative = path.relative(dataRoot, canonical).replaceAll("\\", "/");
+    if (/^session-storage-index(?:\/|$)/u.test(dataRelative)) {
+      throw new Error("Session storage identities are read-only host-managed files.");
+    }
+    return target;
   }
 
   private async executeLs(inputPath: string): Promise<string> {
@@ -2054,13 +2078,18 @@ export class NodeHostToolService<
 
   private async executeShell(
     command: string,
-    options: { onOutputChunk?: (chunk: string) => void; toolCallId?: string } = {},
-  ): Promise<string> {
+    options: {
+      onOutputChunk?: (chunk: string) => void | Promise<void>;
+      toolCallId?: string;
+      signal?: AbortSignal;
+    } = {},
+  ): Promise<HostToolExecutionOutput> {
     const shell = this.toolDefinitionEnvironment();
     const handle = runShell({
       workspaceRoot: this.workspaceRoot,
       command,
       ...(options.onOutputChunk ? { onOutputChunk: options.onOutputChunk } : {}),
+      ...(options.signal ? { signal: options.signal } : {}),
     });
     const toolCallId = options.toolCallId?.trim();
     if (toolCallId) {
@@ -2075,8 +2104,8 @@ export class NodeHostToolService<
       }
     }
 
-    return serializeShellToolResult(
-      buildShellToolResult({
+    const summaryText = serializeShellToolResult({
+      ...buildShellToolResult({
         terminal: shell.shellDisplayName,
         workspace: this.workspaceRoot,
         command,
@@ -2084,7 +2113,15 @@ export class NodeHostToolService<
         stdout: result.stdout,
         stderr: result.stderr,
       }),
-    );
+      ...(result.truncated ? { truncated: true } : {}),
+    });
+    return {
+      ...createHostToolTextOutput(summaryText),
+      execution: {
+        failed: result.exitCode !== 0,
+        ...(result.exitCode !== null ? { exitCode: result.exitCode } : {}),
+      },
+    };
   }
 
   private createImageToolOutput(
@@ -3147,6 +3184,17 @@ function isJsonObject(value: HostJsonValue): value is HostJsonObject {
 function isWithinRoot(candidate: string, root: string): boolean {
   const relative = path.relative(root, candidate);
   return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+function canonicalWritePath(target: string): string {
+  try {
+    return realpathSync(target);
+  } catch (error) {
+    if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") throw error;
+    const parent = path.dirname(target);
+    if (parent === target) throw error;
+    return path.join(canonicalWritePath(parent), path.basename(target));
+  }
 }
 
 function isSpiritDataInternalReadPath(resolvedPath: string, spiritDataDir: string): boolean {

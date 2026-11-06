@@ -88,6 +88,10 @@
       "types": "./dist/tool-output-archive-path.d.ts",
       "default": "./dist/tool-output-archive-path.js"
     },
+    "./background-task-path": {
+      "types": "./dist/background-task-path.d.ts",
+      "default": "./dist/background-task-path.js"
+    },
     "./image-file-support": {
       "types": "./dist/image-file-support.d.ts",
       "default": "./dist/image-file-support.js"

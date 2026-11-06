@@ -43,6 +43,7 @@ import {
   type ProviderEntry,
   resolveModelByRef,
   resolveSessionTranscriptFilePath,
+  readSessionStorageKey,
   resolveDefaultSpiritDataDir,
   resolveSpiritDataDir,
 } from "@spiritagent/host-internal";
@@ -640,6 +641,13 @@ function normalizeStoredSession(parsed: Partial<StoredDesktopSession>): StoredDe
     ...(normalizeGitBranch(parsed.gitBranch)
       ? { gitBranch: normalizeGitBranch(parsed.gitBranch) }
       : {}),
+    ...(parsed.workLocation === "worktree" ? { workLocation: "worktree" } : {}),
+    ...(typeof parsed.worktreePath === "string" && parsed.worktreePath.trim()
+      ? { worktreePath: parsed.worktreePath.trim() }
+      : {}),
+    ...(typeof parsed.worktreeBranch === "string" && parsed.worktreeBranch.trim()
+      ? { worktreeBranch: parsed.worktreeBranch.trim() }
+      : {}),
     ...(typeof parsed.activePlanPath === "string" && parsed.activePlanPath.trim()
       ? { activePlanPath: parsed.activePlanPath.trim() }
       : {}),
@@ -691,6 +699,7 @@ export async function listStoredSessions(): Promise<SessionListItem[]> {
           typeof parsed.savedAtUnixMs === "number"
             ? parsed.savedAtUnixMs
             : Math.round((await stat(filePath)).mtimeMs);
+        const sessionId = readSessionStorageKey(spiritDataDir(), path.resolve(filePath));
         return {
           path: filePath,
           displayName:
@@ -701,6 +710,7 @@ export async function listStoredSessions(): Promise<SessionListItem[]> {
           ...(gitBranch ? { gitBranch } : {}),
           ...(pinnedAtUnixMs ? { pinnedAtUnixMs } : {}),
           modifiedAtUnixMs,
+          ...(sessionId ? { sessionId } : {}),
           transcriptPath: resolveSessionTranscriptFilePath(spiritDataDir(), path.resolve(filePath)),
         } satisfies SessionListItem;
       } catch (error) {

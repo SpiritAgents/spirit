@@ -93,17 +93,6 @@ pub fn extract_active_plan_path_from_archived_llm_history(
     None
 }
 
-pub fn build_start_implementing_user_turn(active_plan_path: Option<&Path>) -> String {
-    match active_plan_path.filter(|path| !path.as_os_str().is_empty()) {
-        Some(path) => format!(
-            "The user has approved the plan and asked to start implementing. Before implementing, first read the {}-managed plan file {} to understand the execution plan, then start coding and verification. If the file does not exist, cannot be read, or its content clearly diverges from the current requirements, state so explicitly and ask the user to regenerate or confirm the plan; do not assume the plan content.",
-            crate::product::NAME,
-            path.display()
-        ),
-        None => "The user has approved the plan and asked to start implementing. No usable implementation plan path has been recorded in this session; use create_plan to create a plan before starting implementation.".to_string(),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -167,12 +156,5 @@ mod tests {
             extract_active_plan_path_from_llm_history(&history),
             Some(PathBuf::from("/tmp/second.md"))
         );
-    }
-
-    #[test]
-    fn build_start_implementing_user_turn_requires_active_plan_path() {
-        assert!(build_start_implementing_user_turn(None).contains("create_plan"));
-        let prompt = build_start_implementing_user_turn(Some(Path::new("/tmp/plan.md")));
-        assert!(prompt.contains("/tmp/plan.md"));
     }
 }

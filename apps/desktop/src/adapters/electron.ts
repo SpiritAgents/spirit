@@ -158,6 +158,9 @@ export async function createElectronHostApi(): Promise<HostApi> {
     abortShell(toolCallId) {
       return bridge.abortShell(toolCallId);
     },
+    moveToBackground(toolCallId) {
+      return bridge.moveToBackground(toolCallId);
+    },
     continueAssistantCompletion(messageId) {
       return bridge.continueAssistantCompletion(messageId);
     },

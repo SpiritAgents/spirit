@@ -253,20 +253,25 @@ export async function runDesktopDreamCollectorOnce(
           failed: execution.failed,
         }));
         if (result.kind === "requires-approval") {
+          const requestId = result.approval.requestId;
           blockedToolName = result.approval.toolName;
           const deniedToolName = result.approval.toolName;
           result = await resumeDreamCollectorTurn(runtime, () =>
-            runtime.continuePendingApproval({
-              kind: "deny",
-              resultText: `[dream collector policy] denied non-dream tool: ${deniedToolName}`,
-            }),
+            runtime.continuePendingApproval(
+              {
+                kind: "deny",
+                resultText: `[dream collector policy] denied non-dream tool: ${deniedToolName}`,
+              },
+              requestId,
+            ),
           );
           continue;
         }
         if (result.kind === "requires-questions") {
+          const requestId = result.questions.requestId;
           blockedToolName = result.questions.toolName;
           result = await resumeDreamCollectorTurn(runtime, () =>
-            runtime.continuePendingQuestions({ status: "skipped" }),
+            runtime.continuePendingQuestions({ status: "skipped" }, requestId),
           );
           continue;
         }

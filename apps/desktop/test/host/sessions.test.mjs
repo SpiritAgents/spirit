@@ -10,6 +10,7 @@ import {
   sessionListActivityFromBundle,
 } from "../../dist-electron/src/host/sessions.js";
 import { createDesktopRewindMetadata } from "../../dist-electron/src/host/rewind.js";
+import { sessionBundleFromRestored } from "../../dist-electron/src/host/session-bundle.js";
 import { buildV2StoredSession, buildV2TimelineFromUserMessage } from "./chat-schema-fixture.mjs";
 
 test("restoreStoredSessionState hydrates messages from v2 timeline", () => {
@@ -103,6 +104,60 @@ test("buildStoredDesktopSession and restoreStoredSessionState roundtrip pinnedAt
   });
 
   assert.equal("pinnedAtUnixMs" in restoredUnpinned, false);
+});
+
+test("worktree location survives Desktop storage and bundle restoration", () => {
+  const timeline = new DesktopMessageTimeline({ allocateMessageId: () => 1 });
+  timeline.beginUserTurn("continue in a worktree");
+  const stored = buildStoredDesktopSession({
+    llmHistory: [],
+    sessionDisplayName: "Worktree continuation",
+    workspaceRoot: "D:/Spirit/.worktrees/continuation",
+    workLocation: "worktree",
+    worktreePath: "D:/Spirit/.worktrees/continuation",
+    worktreeBranch: "spirit/subagent-continuation",
+    desktopMessageTimeline: timeline.snapshot(),
+    rewind: createDesktopRewindMetadata(),
+    loopEnabled: false,
+    approvalLevel: "default",
+  });
+  const restored = restoreStoredSessionState({
+    filePath: "D:/Spirit/test-session.json",
+    loaded: stored,
+  });
+  assert.equal(restored.workLocation, "worktree");
+  assert.equal(restored.worktreePath, "D:/Spirit/.worktrees/continuation");
+  assert.equal(restored.worktreeBranch, "spirit/subagent-continuation");
+
+  let nextMessageId = 2;
+  const options = {
+    allocateMessageId: () => nextMessageId++,
+    reserveMessageId: (messageId) => {
+      if (messageId >= nextMessageId) nextMessageId = messageId + 1;
+    },
+  };
+  const bundle = sessionBundleFromRestored(
+    "D:/Spirit/.worktrees/continuation",
+    restored,
+    (messages, snapshot) =>
+      snapshot
+        ? DesktopMessageTimeline.fromSnapshot(snapshot, options)
+        : DesktopMessageTimeline.fromMessages(messages, options),
+  );
+  assert.equal(bundle.workLocation, "worktree");
+  assert.equal(bundle.worktreePath, "D:/Spirit/.worktrees/continuation");
+  assert.equal(bundle.worktreeBranch, "spirit/subagent-continuation");
+});
+
+test("legacy Desktop storage defaults to local work location", () => {
+  const loaded = buildV2StoredSession({ userContent: "Legacy session" });
+  const restored = restoreStoredSessionState({
+    filePath: "D:/Spirit/test-session.json",
+    loaded,
+  });
+  assert.equal(restored.workLocation, "local");
+  assert.equal("worktreePath" in restored, false);
+  assert.equal("worktreeBranch" in restored, false);
 });
 
 test("sessionListActivityFromBundle maps runtime busy states", () => {

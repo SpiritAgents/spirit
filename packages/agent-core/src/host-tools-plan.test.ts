@@ -35,3 +35,9 @@ test("create_plan content description documents execution-ready plan shape", () 
   assert.match(String(content.description), /Phase 1/);
   assert.match(String(content.description), /edit_file/);
 });
+
+test("create_plan references the declared patch mechanism instead of a hidden editor", () => {
+  const description = JSON.stringify(buildPlanModeHostToolDefinitions("apply_patch"));
+  assert.match(description, /revise this plan with apply_patch/);
+  assert.doesNotMatch(description, /edit_file|old_text|new_text/);
+});

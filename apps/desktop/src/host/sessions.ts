@@ -102,6 +102,9 @@ export interface RestoredSessionState {
   contextUsage?: ConversationContextUsageSnapshot;
   subagentDesktopMessagesBySessionId?: Map<string, ConversationMessageSnapshot[]>;
   queuedUserTurns?: QueuedUserTurn[];
+  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
 }
 
 export function isEphemeralCommitSessionPath(filePath: string): boolean {
@@ -214,6 +217,9 @@ export function restoreStoredSessionState(input: {
     rewind: input.loaded.rewind ?? createDesktopRewindMetadata(),
     loopEnabled: input.loaded.loopEnabled === true,
     approvalLevel: normalizeApprovalLevel(input.loaded.approvalLevel),
+    workLocation: input.loaded.workLocation ?? "local",
+    ...(input.loaded.worktreePath ? { worktreePath: input.loaded.worktreePath } : {}),
+    ...(input.loaded.worktreeBranch ? { worktreeBranch: input.loaded.worktreeBranch } : {}),
     ...((): { activeModel?: ModelRef } => {
       const activeModel = parseStoredSessionActiveModel(input.loaded.activeModel);
       return activeModel ? { activeModel } : {};
@@ -248,6 +254,9 @@ export function buildStoredDesktopSession(input: {
   pinnedAtUnixMs?: number;
   workspaceRoot: string;
   gitBranch?: string;
+  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   activePlanPath?: string;
   desktopMessageTimeline: DesktopTimelineTurnSnapshot[];
   rewind: StoredDesktopRewindMetadata;
@@ -277,6 +286,9 @@ export function buildStoredDesktopSession(input: {
     ...(input.sessionTitleSource ? { sessionTitleSource: input.sessionTitleSource } : {}),
     ...(input.pinnedAtUnixMs ? { pinnedAtUnixMs: input.pinnedAtUnixMs } : {}),
     workspaceRoot: input.workspaceRoot,
+    workLocation: input.workLocation,
+    ...(input.worktreePath ? { worktreePath: input.worktreePath } : {}),
+    ...(input.worktreeBranch ? { worktreeBranch: input.worktreeBranch } : {}),
     ...(input.gitBranch ? { gitBranch: input.gitBranch } : {}),
     ...(input.automationId ? { automationId: input.automationId } : {}),
     ...(input.automationRunId ? { automationRunId: input.automationRunId } : {}),

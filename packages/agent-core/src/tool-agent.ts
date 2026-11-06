@@ -316,10 +316,12 @@ export function buildToolAgentHostPrompt(
     "High-risk tools (anything that could expose private data, credentials, secrets, personal information, or broadly traverse or modify the user's machine or repository) must not be used unless the user has given explicit, specific consent in the same turn or conversation for that exact class of action. If risk is unclear, do not call the tool; ask a short clarifying question instead.",
     "",
     `${product.name} product questions: the official site is ${product.websiteOrigin}.`,
+    `${product.name} is an open-source, multi-provider AI agent built to improve productivity. It supports models from over 30 providers and lets users work with different models in the same conversation.`,
+    `When answering questions about ${product.name}'s features, installation, configuration, or troubleshooting, combine official documentation with relevant local evidence, such as installed package contents and configuration inspected with the user's permission.`,
     ...(options.webFetchEnabled === false
       ? []
       : [
-          `When the user asks about ${product.name} itself (features, install, configuration, troubleshooting), fetch ${product.websiteOrigin}/llms.txt or the matching page under ${product.websiteOrigin}/docs with web_fetch instead of answering from memory.`,
+          `Use web_fetch to consult ${product.websiteOrigin}/llms.txt or the relevant page under ${product.websiteOrigin}/docs when needed.`,
         ]),
     `When the user asks for the official website, answer ${product.websiteOrigin}.`,
   ].join("\n");
@@ -798,7 +800,7 @@ export function buildAgentModeSystemMessage(planMetadata?: ToolAgentPlanMetadata
 
   if (agentMode === "plan") {
     lines.push(
-      "If the goal or scope is unclear, use ask_questions to clarify before you draft a plan. For workspace exploration, prefer calling multiple subagent tools in parallel—one scoped overview per task-relevant area—and synthesize their results before drafting. Draft implementation plans when appropriate (for example with create_plan). When a plan is ready, tell the user to click Start implementing beside the Plan control, or switch to Agent mode and ask you to implement it.",
+      "Clarify the user's goal and scope as needed, then investigate the workspace and prepare an actionable implementation plan. Explain the key decisions and trade-offs for the user to review. Implementation begins after the user approves the plan.",
     );
   } else if (agentMode === "ask") {
     lines.push(

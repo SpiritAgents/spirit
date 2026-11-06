@@ -55,6 +55,22 @@ export function historyAsPlainApiMessages(history: LlmMessage[]): JsonValue[] {
     role: message.role,
     content: llmMessageTextContent(message.content),
     ...(message.toolCallId !== undefined ? { tool_call_id: message.toolCallId } : {}),
+    ...(message.toolCalls?.length
+      ? {
+          tool_calls: message.toolCalls.map((call) => ({
+            id: call.id,
+            type: "function",
+            function: { name: call.name, arguments: call.argumentsJson },
+          })),
+        }
+      : {}),
+    ...(message.role === "user" && llmMessageHasImages(message.content)
+      ? {
+          image_paths: message.content
+            .filter((part): part is { type: "image"; path: string } => part.type === "image")
+            .map((part) => part.path),
+        }
+      : {}),
   }));
 }
 
@@ -982,7 +998,7 @@ export class SubagentTransport implements LlmTransport<undefined, ScriptedState>
                     type: "function",
                     function: {
                       name: "subagent",
-                      arguments: '{"task":"Output: OK, I am the SubAgent, hahaha"}',
+                      arguments: '{"prompt":"Output: OK, I am the SubAgent, hahaha"}',
                     },
                   },
                 ],
@@ -996,7 +1012,7 @@ export class SubagentTransport implements LlmTransport<undefined, ScriptedState>
               {
                 id: "call-subagent",
                 name: "subagent",
-                argumentsJson: '{"task":"Output: OK, I am the SubAgent, hahaha"}',
+                argumentsJson: '{"prompt":"Output: OK, I am the SubAgent, hahaha"}',
               },
             ],
           },
@@ -1011,7 +1027,8 @@ export class SubagentTransport implements LlmTransport<undefined, ScriptedState>
           isJsonObject(message) &&
           message.role === "user" &&
           typeof message.content === "string" &&
-          message.content.includes("You are already inside the delegated child session."),
+          message.content.includes("Output: OK, I am the SubAgent, hahaha") &&
+          !message.content.includes("You are already inside the delegated child session."),
       );
       if (!delegatedPromptPresent) {
         return {
@@ -2485,18 +2502,7 @@ export class PollingManualBackgroundExecutor extends HostExecutor {
 export function createScriptedState(history: LlmMessage[], userInput: string): ScriptedState {
   const messages: JsonValue[] = [
     { role: "system", content: "scripted-runtime" },
-    ...history.map((message) => ({
-      role: message.role,
-      content: llmMessageTextContent(message.content),
-      ...(message.toolCallId !== undefined ? { tool_call_id: message.toolCallId } : {}),
-      ...(message.role === "user" && llmMessageHasImages(message.content)
-        ? {
-            image_paths: message.content
-              .filter((part): part is { type: "image"; path: string } => part.type === "image")
-              .map((part) => part.path),
-          }
-        : {}),
-    })),
+    ...historyAsPlainApiMessages(history),
   ];
 
   const last = messages.at(-1);

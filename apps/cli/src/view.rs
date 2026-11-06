@@ -103,6 +103,7 @@ pub enum BottomFormKind {
     McpAdd,
     ModelAdd,
     AskQuestions {
+        request_id: Option<String>,
         tool_call_id: String,
         tool_name: String,
         request: AskQuestionsRequest,
@@ -210,6 +211,7 @@ pub enum ToolUiPhase {
 /// Structured tool call display block; `content` still keeps a plain-text copy for archiving and export.
 #[derive(Clone, Debug)]
 pub struct ToolUiBlock {
+    pub metadata: serde_json::Map<String, serde_json::Value>,
     pub tool_call_id: Option<String>,
     pub tool_name: String,
     pub phase: ToolUiPhase,
@@ -421,6 +423,7 @@ pub struct TuiViewModel {
     pub bottom_form: Option<BottomFormView>,
     pub history_offset_from_bottom: usize,
     pub pending_response_active: bool,
+    pub move_background_hint_visible: bool,
     pub pending_assistant_msg_index: Option<usize>,
     pub pending_aux: Option<PendingAssistantAux>,
     pub thinking_spinner_index: u8,

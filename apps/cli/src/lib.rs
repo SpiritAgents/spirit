@@ -1,5 +1,6 @@
 pub mod adapters;
 pub mod ask_questions;
+mod background_task_display;
 pub mod bedrock_mantle;
 pub mod chat_archive;
 pub mod chat_store;
@@ -24,6 +25,8 @@ pub mod mcp;
 pub mod mcp_types;
 pub mod model_catalog_display;
 pub mod model_registry;
+#[cfg(feature = "tui")]
+mod move_background;
 pub mod openai_models_list;
 pub mod permissions;
 pub mod permissions_types;

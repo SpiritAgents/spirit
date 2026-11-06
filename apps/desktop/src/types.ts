@@ -18,6 +18,9 @@ import type {
 import type { ProviderListedCatalogCapabilities } from "@spiritagent/agent-core/model-catalog";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 import type {
+  BackgroundTaskRecord,
+  BackgroundTaskOutputPreview,
+  ToolExecutionHostUi,
   LspWriteDiagnosticsUi,
   PermissionMemoryTarget,
   ThinkingCapabilities,
@@ -848,12 +851,14 @@ export interface AbortConversationRequest {
 }
 
 export interface ReplyPendingApprovalRequest {
+  requestId?: string;
   decision: DesktopApprovalDecision;
   /** Reply for a loaded split pane session without switching sidebar foreground. */
   sessionPath?: string;
 }
 
 export interface ReplyPendingQuestionsRequest {
+  requestId?: string;
   result: AskQuestionsResult;
   /** Reply for a loaded split pane session without switching sidebar foreground. */
   sessionPath?: string;
@@ -1013,6 +1018,8 @@ export interface SessionListItem {
   pinnedAtUnixMs?: number;
   kind?: "stored" | "ephemeral";
   readOnly?: boolean;
+  /** Canonical native Session ID used for continuation; older references may omit it. */
+  sessionId?: string;
   /** Absolute path to transcripts/.../transcript.json for this chat (deterministic from chat path). */
   transcriptPath: string;
   /** Agent turn in progress for this session (in-memory registry). */
@@ -1253,6 +1260,8 @@ export type SubagentViewerSessionStatus =
 export interface SubagentViewerSnapshot {
   parentToolCallId: string;
   sessionId: string;
+  /** Canonical title of the target session, not the continuation prompt. */
+  title: string;
   status: SubagentViewerSessionStatus;
   /** Same text as subagent tool card headlineDetail (delegated task). */
   promptText: string;
@@ -1783,7 +1792,16 @@ export interface FileRewindWarning {
 }
 
 export interface ToolBlockSnapshot {
+  delay?: ToolExecutionHostUi["delay"];
   toolCallId?: string;
+  backgroundTask?: BackgroundTaskRecord;
+  backgroundTaskOutput?: BackgroundTaskOutputPreview;
+  taskNotification?: {
+    eventId: string;
+    origin: "background-task";
+    restored: boolean;
+    outputError?: string;
+  };
   toolName: string;
   phase: "preview" | "pending-approval" | "running" | "succeeded" | "failed";
   headline: string;
@@ -1829,6 +1847,7 @@ export interface MessageAuxSnapshot {
 }
 
 export interface PendingToolApprovalSnapshot {
+  requestId?: string;
   toolName: string;
   prompt: string;
   /** Shell approvals render the command as a syntax-highlighted block instead of the plain prompt. */
@@ -1873,6 +1892,7 @@ export type DesktopApprovalDecision =
   | { kind: "guidance"; userMessage: string; resultText?: string };
 
 export interface PendingQuestionsSnapshot {
+  requestId?: string;
   toolCallId: string;
   toolName: string;
   request: AskQuestionsRequest;

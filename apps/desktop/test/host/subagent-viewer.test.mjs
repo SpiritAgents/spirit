@@ -42,6 +42,27 @@ test("buildSubagentConversationSnapshots maps user, assistant text, and tool res
   assert.equal(messages[3]?.content, "README mentions Desktop host.");
 });
 
+test("buildSubagentConversationSnapshots hides only the leading user timestamp metadata", () => {
+  const messages = buildSubagentConversationSnapshots(
+    [
+      {
+        role: "user",
+        content:
+          "<user_message_at>2026-11-06T01:00:00.000+08:00</user_message_at>\nInspect the repo",
+      },
+      {
+        role: "user",
+        content: "Keep this inline <user_message_at>literal</user_message_at> text",
+      },
+    ],
+    { sessionStatus: "completed" },
+  );
+  assert.deepEqual(
+    messages.map((message) => message.content),
+    ["Inspect the repo", "Keep this inline <user_message_at>literal</user_message_at> text"],
+  );
+});
+
 test("buildSubagentConversationSnapshots marks unresolved tools as running while session runs", () => {
   const messages = buildSubagentConversationSnapshots(
     [

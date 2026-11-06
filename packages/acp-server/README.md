@@ -5,11 +5,13 @@ ACP ([Agent Client Protocol](https://agentclientprotocol.com)) server adapter fo
 ## What it provides
 
 - **Terminal Auth** — `initialize` advertises a `type: "terminal"` auth method; clients run `--setup` for interactive provider configuration, then call `authenticate` before `session/new`.
-- **Protocol surface** — `initialize`, `authenticate`, `logout`, `session/new`, `session/prompt`, `session/cancel`, `session/close`, `session/set_mode`.
+- **Protocol surface** — `initialize`, `authenticate`, `logout`, `session/new`, `session/load`, `session/prompt`, `session/cancel`, `session/close`, `session/delete`, `session/set_mode`.
 - **Streaming** — real-time `agent_message_chunk` and `agent_thought_chunk` for model output and reasoning.
 - **Permission bridge** — tool approval via ACP `request_permission`.
 - **Slash commands** — workspace and user Skills advertised as `available_commands_update`.
 - **Local execution** — tools run in-process via `NodeHostToolService` (stdio reserved for ACP ndJSON).
+- **Background work** — Shell and Subagent tasks outlive a prompt response and stream updates with stable task IDs. `delay` waits and `stop_task` stops owned work; full output remains in the session's task files.
+- **Session lifetimes** — cancel stops the foreground turn, not detached tasks. Close, stdio disconnect, and host shutdown stop owned tasks; close preserves history, while delete removes it. Load replays history and task status without requesting a model response; work interrupted by a previous host is recorded, never restarted. Sessions with active tasks in another runtime must be closed in that host before loading or deleting their stored state.
 
 ## Quick start
 

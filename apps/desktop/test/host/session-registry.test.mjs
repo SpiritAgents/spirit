@@ -80,6 +80,18 @@ test("SessionRegistry beginNewActive reuses the same provisional slot per worksp
   assert.equal(path.resolve(first.id), path.resolve(provisionalNewSessionPath(workspaceRoot)));
 });
 
+test("SessionRegistry beginNewActive invalidates runtime freshness for the reused draft", () => {
+  const registry = new SessionRegistry();
+  const first = registry.beginNewActive("D:/Spirit/repo");
+  first.runtimeActivationSignature = "fresh";
+  first.runtimeTransport = {};
+
+  const second = registry.beginNewActive("D:/Spirit/repo");
+
+  assert.equal(second, first);
+  assert.equal(second.runtimeActivationSignature, undefined);
+});
+
 test("SessionRegistry rekeyBundle moves draft map entry to session file path", () => {
   const registry = new SessionRegistry();
   const bundle = registry.beginNewActive("D:/Spirit/repo");

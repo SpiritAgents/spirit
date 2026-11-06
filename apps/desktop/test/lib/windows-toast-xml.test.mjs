@@ -70,3 +70,22 @@ test("resolveNotificationActionIndex prefers event.actionIndex", () => {
   assert.equal(resolveNotificationActionIndex({ actionIndex: 0 }, 1), 0);
   assert.equal(resolveNotificationActionIndex({}, 1), 1);
 });
+
+test("approval toast actions retain their request identity across both activation paths", () => {
+  const requestId = "shown-request";
+  const xml = buildWindowsToastXml({
+    title: "Approval",
+    requestId,
+    actions: [{ type: "button", text: "Allow" }],
+  });
+  assert.match(xml, /action=0&amp;requestId=shown-request/);
+  for (const details of [{}, { type: "action", actionIndex: 0 }]) {
+    assert.deepEqual(
+      parseWindowsToastActivation({
+        ...details,
+        arguments: `type=action&action=0&requestId=${requestId}`,
+      }),
+      { kind: "action", actionIndex: 0, requestId },
+    );
+  }
+});

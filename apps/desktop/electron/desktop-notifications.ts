@@ -31,7 +31,10 @@ export type DesktopNotificationReplyPayload = {
   context?: DesktopNotificationContext;
 };
 
-export type ApprovalNotificationHandler = (decision: "allow" | "deny") => Promise<void>;
+export type ApprovalNotificationHandler = (
+  decision: "allow" | "deny",
+  requestId?: string,
+) => Promise<void>;
 
 export type NotificationReplyHandler = (
   payload: DesktopNotificationReplyPayload,
@@ -58,7 +61,7 @@ function focusMainWindow(): void {
   window.focus();
 }
 
-function handleApprovalActionIndex(index: number | undefined): void {
+function handleApprovalActionIndex(index: number | undefined, requestId?: string): void {
   if (index !== 0 && index !== 1) {
     focusMainWindow();
     return;
@@ -70,9 +73,9 @@ function handleApprovalActionIndex(index: number | undefined): void {
     approvalActionInFlight = true;
     try {
       if (index === 0) {
-        await approvalHandler?.("allow");
+        await approvalHandler?.("allow", requestId);
       } else {
-        await approvalHandler?.("deny");
+        await approvalHandler?.("deny", requestId);
       }
     } finally {
       approvalActionInFlight = false;
@@ -87,7 +90,7 @@ function handleWindowsToastActivation(details: {
 }): void {
   const parsed = parseWindowsToastActivation(details);
   if (parsed.kind === "action") {
-    handleApprovalActionIndex(parsed.actionIndex);
+    handleApprovalActionIndex(parsed.actionIndex, parsed.requestId);
     return;
   }
   focusMainWindow();
@@ -184,6 +187,7 @@ export async function showDesktopNotification(
   const replyKind =
     payload.kind === "approval" || payload.kind === "ask-questions" ? payload.kind : undefined;
   const windowsToastPayload = {
+    requestId: payload.context?.requestId,
     title: payload.title,
     body: payload.body,
     tag,
@@ -222,7 +226,10 @@ export async function showDesktopNotification(
 
   if (payload.kind === "approval" && buttonActions.length > 0) {
     notification.on("action", (event, legacyIndex) => {
-      handleApprovalActionIndex(resolveNotificationActionIndex(event, legacyIndex));
+      handleApprovalActionIndex(
+        resolveNotificationActionIndex(event, legacyIndex),
+        payload.context?.requestId,
+      );
     });
   }
 

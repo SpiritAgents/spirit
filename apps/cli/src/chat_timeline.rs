@@ -364,13 +364,50 @@ pub struct LiveChatProjection {
 
 /// Project daemon `llm_history` into TUI chat rows, including tool cards.
 pub fn project_live_chat_from_llm_history(history: &[ArchivedLlmMessage]) -> LiveChatProjection {
+    project_live_chat_with_task_notices(history, &[])
+}
+
+pub(crate) fn project_live_chat_with_task_notices(
+    history: &[ArchivedLlmMessage],
+    notices: &[serde_json::Value],
+) -> LiveChatProjection {
     let mut projection = LiveChatProjection::default();
     let mut index = 0usize;
     while index < history.len() {
         let entry = &history[index];
         match entry.role.as_str() {
             "user" => {
-                push_user_message(&mut projection, entry);
+                if let Some(notice) = notices.iter().find(|notice| {
+                    notice.get("content").and_then(serde_json::Value::as_str)
+                        == Some(entry.text_content().as_str())
+                }) {
+                    let projected = notice
+                        .get("output")
+                        .cloned()
+                        .map(serde_json::from_value::<crate::background_task_display::TaskOutput>)
+                        .transpose()
+                        .map_err(|error| error.to_string())
+                        .and_then(|output| {
+                            crate::background_task_display::task_tool_message(
+                                &notice["task"],
+                                &output.unwrap_or_default(),
+                                true,
+                                notice
+                                    .get("restored")
+                                    .and_then(serde_json::Value::as_bool)
+                                    .unwrap_or(false),
+                                notice
+                                    .get("outputError")
+                                    .and_then(serde_json::Value::as_str),
+                            )
+                        });
+                    projection.messages.push(
+                        projected
+                            .unwrap_or_else(|error| ChatMessage::new(MessageRole::Agent, error)),
+                    );
+                } else {
+                    push_user_message(&mut projection, entry);
+                }
                 index += 1;
             }
             "assistant" => {
@@ -383,6 +420,106 @@ pub fn project_live_chat_from_llm_history(history: &[ArchivedLlmMessage]) -> Liv
         }
     }
     projection
+}
+
+pub(crate) fn append_presentation_events(
+    projection: &mut LiveChatProjection,
+    entries: &[serde_json::Value],
+) -> Result<(), String> {
+    use crate::host_runtime::RuntimeEvent;
+    let mut sync = crate::runtime_sync::RuntimeSyncState::new();
+    let mut active: Option<usize> = None;
+    for entry in entries {
+        match entry.get("kind").and_then(serde_json::Value::as_str) {
+            Some("user") => {
+                let text = entry
+                    .get("text")
+                    .and_then(serde_json::Value::as_str)
+                    .ok_or("Invalid presentation user turn")?;
+                projection
+                    .messages
+                    .push(ChatMessage::new(MessageRole::User, text));
+                active = None;
+                continue;
+            }
+            Some("runtime") => sync.apply_bridge_events(vec![
+                serde_json::from_value(entry["event"].clone())
+                    .map_err(|error| error.to_string())?,
+            ]),
+            _ => return Err("Invalid presentation entry".into()),
+        }
+        for event in sync.events.drain(..) {
+            match event {
+                RuntimeEvent::BeginAssistantResponse => {
+                    projection
+                        .messages
+                        .push(ChatMessage::new(MessageRole::Agent, ""));
+                    active = Some(projection.messages.len() - 1);
+                }
+                RuntimeEvent::AssistantChunk(text) => {
+                    let index = *active.get_or_insert_with(|| {
+                        projection
+                            .messages
+                            .push(ChatMessage::new(MessageRole::Agent, ""));
+                        projection.messages.len() - 1
+                    });
+                    projection.messages[index].content.push_str(&text);
+                }
+                RuntimeEvent::ReplacePendingAssistant(text) => {
+                    if let Some(index) = active {
+                        projection.messages[index].content = text;
+                    }
+                }
+                RuntimeEvent::UpdatePendingAssistantThinking(text)
+                | RuntimeEvent::AssistantThinkingSegmentFinalized(text) => {
+                    if let Some(index) = active {
+                        projection
+                            .assistant_aux_by_message
+                            .entry(index)
+                            .or_default()
+                            .thinking = Some(text);
+                    }
+                }
+                RuntimeEvent::UpdatePendingAssistantCompaction(text) => {
+                    if let Some(index) = active {
+                        projection
+                            .assistant_aux_by_message
+                            .entry(index)
+                            .or_default()
+                            .compaction = Some(text);
+                    }
+                }
+                RuntimeEvent::AssistantResponseCompleted => active = None,
+                RuntimeEvent::RemovePendingAssistant => {
+                    if let Some(index) = active.take() {
+                        projection.messages[index].content.clear();
+                    }
+                }
+                RuntimeEvent::PushMessage(message) => projection.messages.push(message),
+                RuntimeEvent::UpsertTaskTool { message, insert } => {
+                    let id = message
+                        .tool_block
+                        .as_ref()
+                        .and_then(|tool| tool.tool_call_id.as_ref());
+                    let existing = projection.messages.iter_mut().find(|entry| {
+                        id.is_some()
+                            && entry
+                                .tool_block
+                                .as_ref()
+                                .and_then(|tool| tool.tool_call_id.as_ref())
+                                == id
+                    });
+                    if let Some(existing) = existing {
+                        *existing = message;
+                    } else if insert {
+                        projection.messages.push(message);
+                    }
+                }
+                RuntimeEvent::UpsertToolPreview { .. } | RuntimeEvent::OpenAskQuestions { .. } => {}
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Backward-compatible wrapper returning message rows only.
@@ -576,6 +713,7 @@ mod tests {
                 role: ConversationMessageRole::Assistant,
                 content: String::new(),
                 tool: Some(crate::rewind::ToolBlockSnapshot {
+                    metadata: Default::default(),
                     tool_call_id: Some("call-1".to_string()),
                     tool_name: "read_file".to_string(),
                     phase: ToolBlockSnapshotPhase::Succeeded,

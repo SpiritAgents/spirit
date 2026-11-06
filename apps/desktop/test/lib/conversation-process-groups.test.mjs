@@ -421,6 +421,47 @@ test("buildConversationRenderItems keeps todo_write outside process groups", () 
   assert.equal(secondGroup.toolCounts.explore, 1);
 });
 
+test("background task notifications stay outside process groups and run counts", () => {
+  const messages = [
+    { id: 1, role: "user", content: "Run in the background", pending: false },
+    {
+      id: 2,
+      role: "assistant",
+      content: "",
+      pending: false,
+      tool: { toolName: "shell", phase: "succeeded", headline: "Ran", detailLines: [] },
+    },
+    {
+      id: 3,
+      role: "assistant",
+      content: "",
+      pending: false,
+      tool: {
+        toolName: "shell",
+        phase: "succeeded",
+        headline: "Shell Completed",
+        detailLines: [],
+        taskNotification: { eventId: "task_1:completed", origin: "background-task" },
+      },
+    },
+    { id: 4, role: "assistant", content: "The command finished.", pending: false },
+  ];
+  const items = buildConversationRenderItems(messages, scopeKey);
+
+  assert.deepEqual(
+    items.map((item) => item.kind),
+    ["message", "process-group", "message", "message"],
+  );
+  const group = items[1];
+  assert.equal(group.kind, "process-group");
+  if (group.kind !== "process-group") {
+    return;
+  }
+  assert.deepEqual(group.messageIndices, [1]);
+  assert.equal(group.toolCounts.run, 1);
+  assert.equal(isMessageHiddenByProcessGroup(items, 2), false);
+});
+
 test("findRenderIndexForMessageId maps grouped tools to the process-group row", () => {
   const messages = [
     { id: 1, role: "user", content: "go", pending: false },

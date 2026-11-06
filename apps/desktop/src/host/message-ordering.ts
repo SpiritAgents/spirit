@@ -407,13 +407,16 @@ export function toolCallSummaryCopyForRequest(
       };
     }
     case "subagent": {
-      let task = typeof record.task === "string" ? record.task.trim() : "";
+      let task =
+        typeof record.prompt === "string"
+          ? record.prompt.trim()
+          : typeof record.task === "string"
+            ? record.task.trim()
+            : "";
       if (!task && options?.streamingArgumentsJson?.trim()) {
         task = tryExtractPartialSubagentTask(options.streamingArgumentsJson)?.trim() ?? "";
       }
-      const contextSummary =
-        typeof record.context_summary === "string" ? record.context_summary.trim() : "";
-      const previewSource = task || contextSummary;
+      const previewSource = task;
       return {
         headline: i18n.t("tool.subagent", tOpts),
         headlineDetail: previewSource
@@ -1323,6 +1326,8 @@ function readFileSummaryCopy(
   const detail = readFileToolHeadlineDetail(rawPath, {
     emptyFileLabel: i18n.t("tool.file"),
     toolOutputLabel: i18n.t("tool.toolOutput"),
+    shellOutputLabel: i18n.t("tool.shellOutput"),
+    subagentOutputLabel: i18n.t("tool.subagentOutput"),
     lineRange,
     skillMarkdownContent,
   });

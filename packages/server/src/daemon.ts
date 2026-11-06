@@ -27,6 +27,7 @@ import {
   SERVER_INITIALIZE,
   SESSION_ABORT,
   SESSION_ABORT_SHELL,
+  SESSION_MOVE_TO_BACKGROUND,
   SESSION_ACTIVATE_SKILL,
   SESSION_ADD_PENDING_IMAGE,
   SESSION_APPLY_MCP_PROMPT,
@@ -72,6 +73,7 @@ import {
   SESSION_SUBAGENT_AUX,
   SESSION_SUBAGENT_EVENTS,
   SESSION_SUBMIT_USER_TURN,
+  SESSION_START_IMPLEMENTING,
   SESSION_TAKE_MANUAL_RESULT,
   SESSION_TURN_FINISHED,
   SESSION_USER_TURN_SUBMITTED,
@@ -104,8 +106,10 @@ const SESSION_METHODS = new Set([
   SESSION_MIGRATE_CONVERSATION_KEY,
   SESSION_CLOSE,
   SESSION_SUBMIT_USER_TURN,
+  SESSION_START_IMPLEMENTING,
   SESSION_ABORT,
   SESSION_ABORT_SHELL,
+  SESSION_MOVE_TO_BACKGROUND,
   SESSION_SET_APPROVAL_LEVEL,
   SESSION_SET_MODE,
   SESSION_SET_LOOP_ENABLED,
@@ -330,16 +334,17 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
   };
 
   const sessionManager = new SessionManager(dataDir, {
-    broadcastRuntimeEvent: (sessionId, event) => {
-      broadcast(RUNTIME_EVENT, { sessionId, event });
+    broadcastRuntimeEvent: (sessionId, event, presentationSequence) => {
+      broadcast(RUNTIME_EVENT, { sessionId, event, presentationSequence });
     },
     broadcastSubagentEvents: (sessionId, drains) => {
       broadcast(SESSION_SUBAGENT_EVENTS, { sessionId, drains });
     },
-    broadcastUserTurnSubmitted: (sessionId, turn) => {
+    broadcastUserTurnSubmitted: (sessionId, turn, presentationSequence) => {
       broadcast(SESSION_USER_TURN_SUBMITTED, {
         sessionId,
         text: turn.text,
+        presentationSequence,
         ...(turn.clientTurnId ? { clientTurnId: turn.clientTurnId } : {}),
         ...(turn.explicitWorkspaceFiles.length > 0
           ? { explicitWorkspaceFiles: turn.explicitWorkspaceFiles }
@@ -408,7 +413,26 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         const modelRef = params["modelRef"];
         const agentMode = params["agentMode"];
         const conversationKey = params["conversationKey"];
+        const title = params["title"];
         const sessionKind = params["sessionKind"];
+        const workLocation = params["workLocation"];
+        const worktreePath = params["worktreePath"];
+        const worktreeBranch = params["worktreeBranch"];
+        const subagentOrigin = params["subagentOrigin"];
+        const normalizedSubagentOrigin =
+          subagentOrigin &&
+          typeof subagentOrigin === "object" &&
+          typeof (subagentOrigin as Record<string, unknown>)["parentSessionId"] === "string" &&
+          typeof (subagentOrigin as Record<string, unknown>)["parentToolCallId"] === "string"
+            ? {
+                parentSessionId: String(
+                  (subagentOrigin as Record<string, unknown>)["parentSessionId"],
+                ).trim(),
+                parentToolCallId: String(
+                  (subagentOrigin as Record<string, unknown>)["parentToolCallId"],
+                ).trim(),
+              }
+            : undefined;
         const dreamScopeRaw = params["dreamScope"];
         const dreamSourceSessionRaw = params["dreamSourceSession"];
         const hostUiPromptSection = normalizeHostUiPromptSection(params["hostUiPromptSection"]);
@@ -461,6 +485,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         const info = await sessionManager.createSession({
           workspaceRoot,
           hostKind: clientState?.clientKind ?? "cli",
+          ...(typeof title === "string" && title.trim() ? { title: title.trim() } : {}),
           ...(typeof conversationKey === "string" && conversationKey.trim()
             ? { conversationKey: conversationKey.trim() }
             : {}),
@@ -481,7 +506,19 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
           ...(agentMode === "plan" || agentMode === "ask" || agentMode === "debug"
             ? { agentMode }
             : {}),
-          ...(sessionKind === "dream-collector" ? { sessionKind: "dream-collector" as const } : {}),
+          ...(sessionKind === "dream-collector" || sessionKind === "subagent"
+            ? { sessionKind }
+            : {}),
+          ...(workLocation === "local" || workLocation === "worktree" ? { workLocation } : {}),
+          ...(typeof worktreePath === "string" && worktreePath.trim()
+            ? { worktreePath: worktreePath.trim() }
+            : {}),
+          ...(typeof worktreeBranch === "string" && worktreeBranch.trim()
+            ? { worktreeBranch: worktreeBranch.trim() }
+            : {}),
+          ...(normalizedSubagentOrigin?.parentSessionId && normalizedSubagentOrigin.parentToolCallId
+            ? { subagentOrigin: normalizedSubagentOrigin }
+            : {}),
           ...(dreamScope ? { dreamScope } : {}),
           ...(dreamSourceSession ? { dreamSourceSession } : {}),
           ...(hostUiPromptSection ? { hostUiPromptSection } : {}),
@@ -504,12 +541,17 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         trackAttachment(conn, result.session.sessionId);
         return result;
       }
-      case SESSION_DETACH:
-      case SESSION_CLOSE: {
+      case SESSION_DETACH: {
         const sessionId = readSessionId(params);
         const result = await sessionManager.detachSession(clientId, sessionId);
         untrackAttachment(conn, sessionId);
-        return method === SESSION_DETACH ? result : { ok: true, ...result };
+        return result;
+      }
+      case SESSION_CLOSE: {
+        const sessionId = readSessionId(params);
+        await sessionManager.closeSession(sessionId);
+        for (const connection of connections.values()) untrackAttachment(connection, sessionId);
+        return { ok: true, closed: true };
       }
       case SESSION_LIST:
         return { sessions: sessionManager.listSessions() };
@@ -521,6 +563,11 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         await sessionManager.migrateConversationKey(readSessionId(params), conversationKey.trim());
         return { ok: true };
       }
+      case SESSION_START_IMPLEMENTING:
+        return sessionManager.startImplementing(
+          readSessionId(params),
+          typeof params["clientTurnId"] === "string" ? params["clientTurnId"].trim() : undefined,
+        );
       case SESSION_SUBMIT_USER_TURN: {
         const text = params["text"];
         if (typeof text !== "string") {
@@ -557,6 +604,11 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
             String(params["toolCallId"] ?? ""),
           ),
         };
+      case SESSION_MOVE_TO_BACKGROUND:
+        return sessionManager.moveToBackground(
+          readSessionId(params),
+          String(params["toolCallId"] ?? ""),
+        );
       case SESSION_SET_APPROVAL_LEVEL: {
         const level = params["approvalLevel"];
         if (level !== "default" && level !== "auto-approval" && level !== "bypass-approval") {
@@ -568,13 +620,21 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       case SESSION_REPLY_PENDING_APPROVAL: {
         const sessionId = readSessionId(params);
         requireAttachedToSession(clientState, sessionId);
-        await sessionManager.replyPendingApproval(sessionId, params["decision"] as never);
+        const requestId = params["requestId"];
+        if (typeof requestId !== "string" || !requestId) throw new Error("missing requestId");
+        await sessionManager.replyPendingApproval(
+          sessionId,
+          params["decision"] as never,
+          requestId,
+        );
         return { ok: true };
       }
       case SESSION_REPLY_PENDING_QUESTIONS: {
         const sessionId = readSessionId(params);
         requireAttachedToSession(clientState, sessionId);
-        await sessionManager.replyPendingQuestions(sessionId, params["result"] as never);
+        const requestId = params["requestId"];
+        if (typeof requestId !== "string" || !requestId) throw new Error("missing requestId");
+        await sessionManager.replyPendingQuestions(sessionId, params["result"] as never, requestId);
         return { ok: true };
       }
       case SESSION_RESOLVE_EXTENSION_UI: {
@@ -599,14 +659,14 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         sessionManager.setLoopEnabled(readSessionId(params), params["enabled"] === true);
         return { ok: true };
       case SESSION_RESET:
-        sessionManager.reset(readSessionId(params));
+        await sessionManager.reset(readSessionId(params));
         return { ok: true };
       case SESSION_RENAME: {
         const title = params["title"];
         if (typeof title !== "string") {
           throw new Error("missing title");
         }
-        sessionManager.rename(readSessionId(params), title);
+        await sessionManager.rename(readSessionId(params), title);
         return { ok: true };
       }
       case SESSION_CONTINUE_COMPLETION:
@@ -635,7 +695,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         return { ok: true };
       }
       case SESSION_REPLACE_FROM_ARCHIVE:
-        sessionManager.replaceFromArchive(readSessionId(params), params["archive"]);
+        await sessionManager.replaceFromArchive(readSessionId(params), params["archive"]);
         return { ok: true };
       case SESSION_EXPORT_ARCHIVE:
         return sessionManager.exportArchive(
@@ -644,7 +704,13 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
           params["assistantAux"],
         );
       case SESSION_PUSH_DESKTOP_TIMELINE:
-        return sessionManager.pushDesktopTimeline(readSessionId(params), params["timeline"]);
+        return sessionManager.pushDesktopTimeline(
+          readSessionId(params),
+          params["timeline"],
+          typeof params["presentationSequence"] === "number"
+            ? params["presentationSequence"]
+            : undefined,
+        );
       case SESSION_GET_DESKTOP_TIMELINE:
         return sessionManager.getDesktopTimeline(readSessionId(params));
       case SESSION_EXPORT_STATE:
@@ -688,17 +754,22 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
           readSessionId(params),
           String(params["message"] ?? ""),
         );
-      case SESSION_CONTINUE_MANUAL_APPROVAL:
+      case SESSION_CONTINUE_MANUAL_APPROVAL: {
+        const requestId = params["requestId"];
+        if (typeof requestId !== "string" || !requestId) throw new Error("missing requestId");
         return sessionManager.continuePendingManualToolApproval(
           readSessionId(params),
           params["decision"],
+          requestId,
         );
+      }
       case SESSION_TAKE_MANUAL_RESULT:
         return sessionManager.takeCompletedManualToolCommandResult(readSessionId(params));
       case SESSION_SUBAGENT_ARCHIVE:
         return sessionManager.subagentSessionArchive(
           readSessionId(params),
           String(params["subagentSessionId"] ?? ""),
+          typeof params["parentToolCallId"] === "string" ? params["parentToolCallId"] : undefined,
         );
       case SESSION_SUBAGENT_AUX:
         return sessionManager.subagentPendingAuxState(

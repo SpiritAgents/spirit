@@ -22,6 +22,7 @@ function createHarness() {
   let nextTimelineMessageId = 1;
   let nextSegmentKind = "initial";
   let completedTurnResult = undefined;
+  let liveReasoningAwaitingDetail = false;
   const allocateMessageId = () => nextMessageId++;
   const timeline = new DesktopMessageTimeline({
     allocateMessageId: () => nextTimelineMessageId++,
@@ -47,6 +48,9 @@ function createHarness() {
         const next = completedTurnResult;
         completedTurnResult = undefined;
         return next;
+      },
+      expectLiveReasoningPlaceholder: () => {
+        liveReasoningAwaitingDetail = true;
       },
     }),
     messages: () => messages,
@@ -77,6 +81,8 @@ function createHarness() {
       completedTurnResult = result;
     },
     timeline,
+    pendingAuxState: () =>
+      liveReasoningAwaitingDetail ? { kind: "thinking", statusText: "| Thinking…" } : undefined,
     pushUser(content) {
       const message = {
         id: allocateMessageId(),
@@ -89,6 +95,95 @@ function createHarness() {
     },
   };
 }
+
+test("keeps delay timing metadata through completion and cancellation", () => {
+  const { orchestrator, timeline } = createHarness();
+  const delay = { startedAtUnixMs: 1000, deadlineUnixMs: 253000 };
+  orchestrator.applyRuntimeHostEvents([
+    {
+      kind: "tool-execution-ui-updated",
+      toolCallId: "delay-clock",
+      toolName: "delay",
+      argumentsJson: '{"seconds":252}',
+      hostUi: { delay },
+    },
+  ]);
+  let tool = timeline
+    .toMessages()
+    .find((message) => message.tool?.toolCallId === "delay-clock").tool;
+  assert.equal(tool.phase, "running");
+  assert.deepEqual(tool.delay, delay);
+  orchestrator.applyRuntimeHostEvents([
+    {
+      kind: "tool-execution-ui-updated",
+      toolCallId: "delay-clock",
+      toolName: "delay",
+      argumentsJson: '{"seconds":252}',
+      hostUi: { delay: { ...delay, elapsedMs: 1250 } },
+    },
+    {
+      kind: "tool-execution-finished",
+      execution: {
+        toolCallId: "delay-clock",
+        toolName: "delay",
+        request: { name: "delay", seconds: 252 },
+        output: "Cancelled",
+        failed: true,
+      },
+    },
+  ]);
+  tool = timeline.toMessages().find((message) => message.tool?.toolCallId === "delay-clock").tool;
+  assert.equal(tool.phase, "failed");
+  assert.equal(tool.delay.elapsedMs, 1250);
+});
+
+test("an active Subagent does not hide independent parent tools or assistant text", () => {
+  const { orchestrator, timeline, pushUser } = createHarness();
+  pushUser("Delegate research and inspect a separate file.");
+  orchestrator.applyRuntimeHostEvents([
+    { kind: "begin-assistant-response" },
+    {
+      kind: "tool-call-started",
+      toolCallId: "child",
+      toolName: "subagent",
+      request: { name: "subagent", prompt: "Research." },
+    },
+    {
+      kind: "streaming-tool-preview",
+      toolCallId: "parent-read",
+      toolName: "read_file",
+      argumentsJson: '{"path":"note.txt"}',
+    },
+    {
+      kind: "tool-call-started",
+      toolCallId: "parent-read",
+      toolName: "read_file",
+      request: { name: "read_file", path: "note.txt" },
+    },
+    {
+      kind: "tool-execution-finished",
+      execution: {
+        toolCallId: "parent-read",
+        toolName: "read_file",
+        request: { name: "read_file", path: "note.txt" },
+        output: "Parent file.",
+        failed: false,
+      },
+    },
+    { kind: "assistant-chunk", text: "Parent continues independently." },
+    { kind: "assistant-response-completed" },
+  ]);
+  const messages = timeline.toMessages();
+  assert.equal(
+    messages.find((message) => message.tool?.toolCallId === "child").tool.phase,
+    "running",
+  );
+  assert.equal(
+    messages.find((message) => message.tool?.toolCallId === "parent-read").tool.phase,
+    "succeeded",
+  );
+  assert(messages.some((message) => message.content === "Parent continues independently."));
+});
 
 function rowToken(message) {
   if (message.role === "user") return "user";
@@ -104,6 +199,114 @@ function visibleRowTokens(messages) {
     rewind: createDesktopRewindMetadata(),
   }).map(rowToken);
 }
+
+test("background completion shows Thinking before the first reasoning token", () => {
+  const harness = createHarness();
+  const task = {
+    version: 1,
+    id: "task_0123456789ab",
+    sessionKey: "fixture",
+    runtimeId: "main",
+    toolCallId: "call-shell",
+    kind: "shell",
+    input: "echo done",
+    argumentsJson: '{"name":"shell","command":"echo done"}',
+    owner: { id: "fixture", pid: 1 },
+    status: "completed",
+    background: true,
+    outputPath: "/session/background-tasks/shell-task_0123456789ab.log",
+    startedAtUnixMs: 1,
+    updatedAtUnixMs: 2,
+    endedAtUnixMs: 2,
+    elapsedMs: 1,
+    terminalEventId: "task_0123456789ab:completed",
+    exitCode: 0,
+  };
+  harness.pushUser("Start the task");
+  harness.orchestrator.applyRuntimeHostEvents([
+    { kind: "begin-assistant-response" },
+    { kind: "assistant-chunk", text: "The task is running." },
+    { kind: "assistant-response-completed" },
+  ]);
+  const notice = {
+    kind: "background-task-notification",
+    task,
+    content: "Model-only notification",
+    restored: false,
+    output: { text: "done\n", truncated: false },
+  };
+  harness.orchestrator.applyRuntimeHostEvents([notice, notice]);
+  const timelineMessages = harness.timeline.toMessages();
+  const pendingAux = harness.pendingAuxState();
+  assert.deepEqual(
+    buildVisibleMessageSnapshots({
+      messages: timelineMessages,
+      livePendingAux: pendingAux,
+      rewind: createDesktopRewindMetadata(),
+    }).map(rowToken),
+    [
+      "user",
+      "assistant:The task is running.",
+      "tool:task-notice:task_0123456789ab:completed",
+      "pending-assistant",
+    ],
+  );
+  assert.deepEqual(visibleRowTokens(timelineMessages), [
+    "user",
+    "assistant:The task is running.",
+    "tool:task-notice:task_0123456789ab:completed",
+  ]);
+  const pending = timelineMessages.at(-1);
+  assert.equal(pending.pending, true);
+  assert.equal(
+    shouldShowAssistantThinkingCollapsible(
+      pending,
+      pendingAux,
+      timelineMessages,
+      timelineMessages.length - 1,
+    ),
+    true,
+  );
+  const tool = timelineMessages.at(-2).tool;
+  assert.equal(tool.phase, "succeeded");
+  assert.equal(tool.backgroundTaskOutput.text, "done\n");
+  assert.equal(tool.taskNotification.eventId, task.terminalEventId);
+});
+
+test("detached output updates the original card without restarting its shimmer", () => {
+  const harness = createHarness();
+  const task = {
+    id: "task_0123456789ab",
+    toolCallId: "call-shell",
+    kind: "shell",
+    status: "running",
+    input: "echo done",
+    background: true,
+  };
+  harness.pushUser("Run a task");
+  harness.orchestrator.applyRuntimeHostEvents([
+    { kind: "begin-assistant-response" },
+    {
+      kind: "tool-execution-finished",
+      execution: {
+        toolCallId: "call-shell",
+        toolName: "shell",
+        request: { name: "shell", command: "echo done", reason: "Run a task" },
+        output: "Background task metadata",
+        failed: false,
+        hostUi: {
+          backgroundTask: task,
+          backgroundTaskOutput: { text: "first\n", truncated: false },
+        },
+      },
+    },
+    { kind: "background-task-output", task, chunk: "next\n" },
+  ]);
+  const tool = harness.timeline.toMessages().find((message) => message.tool)?.tool;
+  assert.equal(tool.phase, "succeeded");
+  assert.equal(tool.backgroundTaskOutput.text, "first\nnext\n");
+  assert.equal(tool.outputExcerpt, "Background task metadata");
+});
 
 test("abort preemptive thinking finalize ignores duplicate deferred after-stream finalize event", () => {
   const harness = createHarness();

@@ -132,7 +132,11 @@ export type ComposerDockSectionProps = {
   fileReferenceMenuView: import("@/lib/composer-at-reference-demo").AtReferenceMenuView;
   atReferenceMenuItems: import("@/lib/composer-at-reference-demo").AtReferenceMenuItem[];
   onApplyFileReferenceSuggestion: (path: string) => void;
-  onApplySessionReferenceSuggestion: (session: { path: string; title: string }) => void;
+  onApplySessionReferenceSuggestion: (session: {
+    path: string;
+    title: string;
+    sessionId?: string;
+  }) => void;
   onOpenAtReferenceSessions: () => void;
   onBackAtReferenceMenu: () => void;
   onDismissFileReferenceSuggestions: () => void;
@@ -502,7 +506,13 @@ export function ConversationView({
           onPaneDragEnter={onPaneDragEnter}
           onPaneDragLeave={onPaneDragLeave}
           onPaneDrop={onPaneDrop}
-          sessionTitle={sessionTitleVisible ? snapshot?.activeSession?.displayName : null}
+          sessionTitle={
+            sessionTitleVisible
+              ? subagentViewActive
+                ? snapshot?.subagentViewer?.title
+                : snapshot?.activeSession?.displayName
+              : null
+          }
           sessionTitleSuffix={sessionTitleSuffix}
           sessionTooltip={sessionTooltip}
           subagentPromptText={subagentViewActive ? snapshot?.subagentViewer?.promptText : null}
@@ -784,6 +794,7 @@ export function ConversationView({
                       onRewindDragOver={list.onRewindDragOver}
                       onRewindDrop={list.onRewindDrop}
                       onComposerAgentModeChange={list.onComposerAgentModeChange}
+                      moveBackgroundShortcutTarget={split.moveBackgroundShortcutTarget}
                     />
                   ) : null}
                   {navPlaceholderActive ? <ConversationNavPlaceholder /> : null}

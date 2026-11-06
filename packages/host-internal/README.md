@@ -1,5 +1,7 @@
 # @spiritagent/host-internal
 
+Session persistence uses the canonical Session UUID. `ensureSessionStorageKey` registers a conversation lookup alias; `bindSessionStorageKey` associates a promoted chat path with the same Session UUID and transcript directory. Promotion does not rename live task files or create directory symlinks. `RuntimeSessionStore` atomically persists runtime archives and host timeline snapshots; `FileBackgroundTaskStore` owns individual task records and complete output.
+
 Shared **host-side implementation** for [Spirit](https://github.com/SpiritAgents/spirit). It sits between platform hosts (Desktop, CLI, ACP server) and [`@spiritagent/agent-core`](https://www.npmjs.com/package/@spiritagent/agent-core), providing discovery, workspace helpers, and local execution plumbing.
 
 This package is in a transitional role: it currently still owns the shared host config and credential resolution, and the recorded direction is for it to be gradually hollowed out into `agent-core`. Only the provider presets and the wizard/catalog materialization core have moved so far; the rest follows opportunistically.
@@ -19,6 +21,31 @@ This package is in a transitional role: it currently still owns the shared host 
 This is a direct default-root change: there is no old-directory lookup, automatic migration, or dual write. Existing subdirectory layouts and host-specific extension scopes are preserved.
 
 MCP file discovery is supplied through `createHostMcpService(workspaceRoot, spiritDataDir, includeWorkspace, options)`. It injects a configuration source into Agent Core, so a daemon's selected data root is also used for MCP reads. MCP and Hooks path helpers live in this package rather than Agent Core.
+
+## Background task execution
+
+`FileBackgroundTaskStore` keeps complete output and atomic task records in each session's
+`transcripts/{session-hash}/background-tasks` directory, separately from truncated tool archives.
+File tools treat these records as read-only. The runtime retains only the initial output window;
+the full file remains available until the session is deleted.
+
+`createBackgroundTaskOwner` uses an instance-specific local IPC endpoint, not a PID liveness guess.
+Recovery can mark an absent owner interrupted without replaying work or counting downtime.
+`acquireRuntimeSessionLease` claims the entire session before reading runtime state, including
+sessions without background tasks. A small built-in SQLite table in
+`session-storage-index/runtime-leases.sqlite` atomically claims or replaces an inactive owner;
+IPC probes run outside transactions, and lease tokens prevent stale recovery or release from
+overwriting another host's claim. Daemon and ACP release ownership after shutdown and persistence;
+ACP deletion holds its own lease while removing stored files.
+
+`runShell` applies output backpressure and supervises process lifetime: POSIX commands run in an
+owned process group with a host-disconnect watchdog; Windows uses a suspended launch and a
+kill-on-close Job Object. This is lifecycle management, not a sandbox for commands that
+deliberately escape their POSIX session.
+
+`createSubagentWorkspaceBootstrap` starts from the parent's exact HEAD, including linked
+worktrees and detached HEADs. It rolls back unmodified, unstarted workspaces on initialization
+failure and retains workspaces once handed to a running subagent.
 
 ## Config and credentials
 

@@ -207,6 +207,7 @@ export interface HostApi {
   ): Promise<GitHubPullRequestDetail>;
   abortConversation(request?: AbortConversationRequest): Promise<DesktopSnapshot>;
   abortShell(toolCallId: string): Promise<DesktopSnapshot>;
+  moveToBackground(toolCallId: string): Promise<DesktopSnapshot>;
   continueAssistantCompletion(messageId: number): Promise<DesktopSnapshot>;
   rewindAndSubmitMessage(request: RewindAndSubmitMessageRequest): Promise<DesktopSnapshot>;
   forkSession(request: ForkSessionRequest): Promise<DesktopSnapshot>;

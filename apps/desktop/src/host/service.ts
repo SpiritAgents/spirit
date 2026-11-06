@@ -1,6 +1,12 @@
 import { lstat, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import {
+  hydrateTimelineSnapshotFromPersistence,
+  normalizeTimelineSnapshotForPersistence,
+  timelinePersistedSnapshotToMessages,
+  validateTimelineSnapshotV2,
+} from "./chat-schema.js";
 
 import {
   deleteFileBaselineTextForPath,
@@ -32,7 +38,6 @@ import {
   type McpUiOpenResult,
 } from "@spiritagent/agent-core";
 import {
-  buildStartImplementingUserTurn,
   extractActivePlanPathFromLlmHistory,
   createHostExtensionManager,
   collectEnabledExtensionInstructionContributions,
@@ -433,6 +438,7 @@ import {
 } from "./sessions.js";
 import { prepareSessionTitleForFirstUserTurn as resetSessionTitleForFirstUserTurn } from "./session-title-first-turn.js";
 import { applyGeneratedSessionTitle } from "./session-title-service.js";
+import { isForegroundProvisionalSessionPath } from "../lib/session-path-kind.js";
 import {
   abortCodeCompletionCommand,
   recordCodeCompletionFileStateCommand,
@@ -456,6 +462,7 @@ import {
   isSideChatProvisionalSessionPath,
   loadHostMetadata,
   loadStoredSession,
+  saveStoredSession,
   modelSecretKeyPresence,
   resolveApiKeyForConfigModel,
   createDesktopExtensionStateStore,
@@ -474,12 +481,15 @@ import { buildDesktopRuntimeBasicInfo, type DesktopHostRuntime } from "./runtime
 import { hydrateSessionReferenceWiresInUserText } from "./hydrate-session-reference-wires.js";
 import {
   abortRemoteDesktopShell,
+  moveRemoteDesktopTaskToBackground,
   closeRemoteDesktopRuntime,
+  closeRemoteDesktopConversation,
   closeSharedDesktopServerClient,
   notifyDesktopServerRefreshExtensions,
   createRemoteDesktopRuntime,
   disposeRemoteDesktopRuntime,
   ensureRemoteChildSessionArchivesFresh,
+  resolveRemoteUserSessionTarget,
   exportRemoteDesktopState,
   migrateRemoteConversationKey,
   openRemoteDesktopRuntime,
@@ -1780,7 +1790,11 @@ export class DesktopHostService {
     return this.runSerialized(async () => {
       await this.ensureInitialized(undefined, { fastPath: true });
       const runtime = this.requireRuntime();
-      if (runtime.isBusy()) {
+      if (
+        runtime.isBusy() ||
+        runtime.currentPendingApproval() ||
+        runtime.currentPendingQuestions()
+      ) {
         throw new Error(i18n.t("error.runtimeBusy"));
       }
 
@@ -1793,20 +1807,10 @@ export class DesktopHostService {
           activePlanPath: bundle.activePlanPath,
           workspaceBinding: state.workspaceBinding,
         });
-        bundle.toolExecutor?.setAgentModeToolExposure("agent");
       }
-      return this.submitUserTurnAfterInitialized(
-        buildStartImplementingUserTurn(
-          {
-            workspaceRoot: state.workspaceRoot,
-            spiritDataDir: spiritDataDir(),
-          },
-          bundle.activePlanPath,
-        ),
-        {
-          displayText: i18n.t("workspace.startImplementing"),
-        },
-      );
+      return this.submitUserTurnAfterInitialized(i18n.t("workspace.startImplementing"), {
+        startImplementing: true,
+      });
     });
   }
 
@@ -2378,6 +2382,36 @@ export class DesktopHostService {
     if (this.subagentViewerTargetToolCallId) {
       const bundle = this.activeBundle();
       await ensureRemoteChildSessionArchivesFresh(bundle.runtime);
+      const userSession = await resolveRemoteUserSessionTarget(
+        bundle.runtime,
+        this.subagentViewerTargetToolCallId,
+      );
+      if (userSession) {
+        this.subagentViewerTargetToolCallId = null;
+        const sessionPath = userSession.conversationKey;
+        const stored = await loadStoredSession(sessionPath);
+        const workLocation = userSession.workLocation ?? "local";
+        const nextStored = {
+          ...stored,
+          workspaceRoot: userSession.workspaceRoot,
+          workLocation,
+        };
+        if (userSession.worktreePath) nextStored.worktreePath = userSession.worktreePath;
+        else delete nextStored.worktreePath;
+        if (userSession.worktreeBranch) nextStored.worktreeBranch = userSession.worktreeBranch;
+        else delete nextStored.worktreeBranch;
+        await saveStoredSession(sessionPath, nextStored);
+        const loadedBundle = this.sessionRegistry.findBySessionPath(path.resolve(sessionPath));
+        if (loadedBundle) {
+          loadedBundle.workspaceRoot = userSession.workspaceRoot;
+          loadedBundle.workLocation = workLocation;
+          if (userSession.worktreePath) loadedBundle.worktreePath = userSession.worktreePath;
+          else delete loadedBundle.worktreePath;
+          if (userSession.worktreeBranch) loadedBundle.worktreeBranch = userSession.worktreeBranch;
+          else delete loadedBundle.worktreeBranch;
+        }
+        return this.openSession(sessionPath);
+      }
       this.refreshArchiveFromRuntime(bundle);
     }
     const snapshot = await this.buildSnapshot();
@@ -2387,6 +2421,12 @@ export class DesktopHostService {
   async abortShell(toolCallId: string): Promise<DesktopSnapshot> {
     const bundle = this.activeBundle();
     await abortRemoteDesktopShell(bundle.runtime, toolCallId);
+    return this.buildSnapshot();
+  }
+
+  async moveToBackground(toolCallId: string): Promise<DesktopSnapshot> {
+    const bundle = this.activeBundle();
+    await moveRemoteDesktopTaskToBackground(bundle.runtime, toolCallId);
     return this.buildSnapshot();
   }
 
@@ -2416,14 +2456,22 @@ export class DesktopHostService {
         this.paneSessionScopeContext(),
         sessionPath,
         async () => {
-          await replyPendingApprovalCommand(this.sessionTurnContext(), request.decision);
+          await replyPendingApprovalCommand(
+            this.sessionTurnContext(),
+            request.decision,
+            request.requestId,
+          );
         },
       );
       await this.refreshConfigAfterRememberedApproval(request.decision);
       await this.ensureInitialized(undefined, { fastPath: true });
       return this.buildSnapshot();
     }
-    const snapshot = await replyPendingApprovalCommand(this.sessionTurnContext(), request.decision);
+    const snapshot = await replyPendingApprovalCommand(
+      this.sessionTurnContext(),
+      request.decision,
+      request.requestId,
+    );
     await this.refreshConfigAfterRememberedApproval(request.decision);
     return snapshot;
   }
@@ -2449,13 +2497,21 @@ export class DesktopHostService {
         this.paneSessionScopeContext(),
         sessionPath,
         async () => {
-          await replyPendingQuestionsCommand(this.sessionTurnContext(), request.result);
+          await replyPendingQuestionsCommand(
+            this.sessionTurnContext(),
+            request.result,
+            request.requestId,
+          );
         },
       );
       await this.ensureInitialized(undefined, { fastPath: true });
       return this.buildSnapshot();
     }
-    return replyPendingQuestionsCommand(this.sessionTurnContext(), request.result);
+    return replyPendingQuestionsCommand(
+      this.sessionTurnContext(),
+      request.result,
+      request.requestId,
+    );
   }
 
   async replyWorkspaceCapabilityTrust(
@@ -2961,9 +3017,9 @@ export class DesktopHostService {
         const bundle = this.sessionRegistry.findBySessionPath(sessionPath);
         return isSessionBundleBusy(bundle);
       },
-      disposeSessionRuntime: async (bundle) => {
-        await closeRemoteDesktopRuntime(bundle.runtime);
-        bundle.runtime = undefined;
+      disposeSessionRuntime: async (bundle, sessionPath) => {
+        await closeRemoteDesktopConversation(spiritDataDir(), sessionPath, bundle?.runtime);
+        if (bundle) bundle.runtime = undefined;
       },
     };
   }
@@ -3103,12 +3159,22 @@ export class DesktopHostService {
       ? path.resolve(bundle.activeSession.filePath)
       : undefined;
     const remoteRuntimeInput = {
+      restorePresentation: true,
       dataDir: spiritDataDir(),
       workspaceRoot: bundle.workspaceRoot || state.workspaceRoot,
       modelRef: effectiveActiveModel,
       agentMode: resolveDesktopAgentMode(state.config),
-      archive,
+      archive: {
+        ...archive,
+        desktopMessageTimeline: normalizeTimelineSnapshotForPersistence(
+          bundle.messageTimeline.snapshot(),
+        ),
+      },
       approvalLevel: normalizeApprovalLevel(bundle.approvalLevel),
+      ...(bundle.activeSession?.displayName ? { title: bundle.activeSession.displayName } : {}),
+      workLocation: bundle.workLocation,
+      ...(bundle.worktreePath ? { worktreePath: bundle.worktreePath } : {}),
+      ...(bundle.worktreeBranch ? { worktreeBranch: bundle.worktreeBranch } : {}),
       todoSessionKey: this.resolveTodoSessionKeyForBundle(bundle),
       webToolExposure: {
         providerToolsEnabled: state.config.agents.providerTools.enabled,
@@ -3162,11 +3228,67 @@ export class DesktopHostService {
     };
     try {
       const previousSessionId = remoteDesktopSessionId(previousRuntime);
-      const runtime = conversationKey
-        ? await openRemoteDesktopRuntime({ ...remoteRuntimeInput, conversationKey })
-        : await createRemoteDesktopRuntime(remoteRuntimeInput);
+      // A reused draft path may still alias an older transcript. Start a fresh daemon identity;
+      // first-send promotion binds the stable chat path to that identity instead.
+      const freshForegroundDraft =
+        conversationKey !== undefined &&
+        isForegroundProvisionalSessionPath(conversationKey) &&
+        desktopMessages.length === 0;
+      const runtime = freshForegroundDraft
+        ? await createRemoteDesktopRuntime(remoteRuntimeInput)
+        : conversationKey
+          ? await openRemoteDesktopRuntime({ ...remoteRuntimeInput, conversationKey })
+          : await createRemoteDesktopRuntime(remoteRuntimeInput);
       runtime.setLoopEnabled(bundle.loopEnabled);
       bundle.runtime = runtime;
+      const restoredPresentation = runtime.takeRestoredPresentation();
+      if (restoredPresentation) {
+        if (restoredPresentation.timeline) {
+          // A new or reset daemon session has an empty baseline, unlike a saved chat file.
+          if (restoredPresentation.timeline.length !== 0) {
+            validateTimelineSnapshotV2(restoredPresentation.timeline);
+          }
+          bundle.messages = timelinePersistedSnapshotToMessages(restoredPresentation.timeline);
+          bundle.messageTimeline = this.createMessageTimelineFromMessages(
+            bundle.messages,
+            hydrateTimelineSnapshotFromPersistence(restoredPresentation.timeline),
+          );
+          bundle.messageIdCounter = nextMessageIdFromMessages(bundle.messages);
+          this.bundleOrchestrations.delete(bundle);
+        }
+        const projection = this.orchestrationFor(bundle).runtimeEvents;
+        for (const entry of restoredPresentation.entries) {
+          if (entry.kind === "user") {
+            this.projectRemoteUserTurn(bundle, {
+              text: entry.text,
+              explicitWorkspaceFiles: (entry.explicitWorkspaceFiles ??
+                []) as PendingWorkspaceFile[],
+            });
+          } else {
+            projection.applyRuntimeHostEvents([entry.event as RuntimeEvent<DesktopToolRequest>]);
+          }
+        }
+        const knownNotices = new Set(
+          bundle.messageTimeline
+            .toMessages()
+            .flatMap((message) =>
+              message.tool?.taskNotification ? [message.tool.taskNotification.eventId] : [],
+            ),
+        );
+        for (const notice of restoredPresentation.notifications) {
+          if (notice.task.terminalEventId && !knownNotices.has(notice.task.terminalEventId)) {
+            projection.applyRuntimeHostEvents([
+              { kind: "background-task-notification", ...notice },
+            ]);
+          }
+        }
+        bundle.messages = bundle.messageTimeline.toMessages();
+      }
+      if (!runtime.isBusy() && !runtime.needsProjection()) {
+        runtime.pushDesktopTimeline(
+          normalizeTimelineSnapshotForPersistence(bundle.messageTimeline.snapshot()),
+        );
+      }
       const newSessionId = remoteDesktopSessionId(runtime);
       if (previousRuntime) {
         if (previousSessionId && previousSessionId === newSessionId) {
@@ -3187,6 +3309,15 @@ export class DesktopHostService {
       await this.refreshTodoSnapshotForBundle(bundle);
       bundle.runtimeActivationSignature = this.runtimeActivationSignature(bundle);
     } catch (error) {
+      console.error("[desktop-host] runtime refresh failed", {
+        bundleId: bundle.id,
+        workspaceRoot: bundle.workspaceRoot || state.workspaceRoot,
+        inferencePreferenceOnly,
+        error,
+      });
+      if (bundle.runtime !== previousRuntime) {
+        await closeRemoteDesktopRuntime(bundle.runtime);
+      }
       await closeRemoteDesktopRuntime(previousRuntime);
       bundle.runtime = undefined;
       if (bundle.id === this.sessionRegistry.activeSessionId()) {
@@ -3935,6 +4066,7 @@ export class DesktopHostService {
       ...(pendingApproval
         ? {
             pendingApproval: {
+              requestId: pendingApproval.requestId,
               toolName: pendingApproval.toolName,
               request: pendingApproval.request as DesktopToolRequest,
               prompt: pendingApproval.prompt,
@@ -4092,6 +4224,7 @@ export class DesktopHostService {
         ...(pendingApproval
           ? {
               pendingToolApproval: mapPendingToolApproval({
+                requestId: pendingApproval.requestId,
                 toolName: pendingApproval.toolName,
                 request: pendingApproval.request as DesktopToolRequest,
                 prompt: pendingApproval.prompt,
@@ -4190,6 +4323,8 @@ export class DesktopHostService {
         isSessionBundleBusy(bundle) ? 1 : 0,
         bundle.activeSession?.filePath ?? bundle.id,
         pendingApproval?.toolCallId ?? "",
+        pendingApproval?.requestId ?? "",
+        pendingQuestions?.requestId ?? "",
         pendingQuestions ? JSON.stringify(pendingQuestions.request) : "",
         bundleRuntime?.pendingUserTurn() ?? "",
         bundleRuntime?.pendingImagePaths()?.length ?? 0,
@@ -4220,6 +4355,7 @@ export class DesktopHostService {
         ...(pendingApproval
           ? {
               pendingApproval: {
+                requestId: pendingApproval.requestId,
                 toolName: pendingApproval.toolName,
                 request: pendingApproval.request as DesktopToolRequest,
                 prompt: pendingApproval.prompt,
@@ -4923,7 +5059,13 @@ export class DesktopHostService {
     // The daemon keeps the latest snapshot per session; other attached hosts
     // (e.g. CLI) pull it on attach and on update notifications.
     const timelineRuntime = options.fromRuntime ?? bundle.runtime;
-    if (result.desktopMessageTimeline && timelineRuntime) {
+    if (
+      result.desktopMessageTimeline &&
+      timelineRuntime &&
+      !timelineRuntime.isBusy() &&
+      !timelineRuntime.needsProjection() &&
+      bundle.deferredRuntimeHostEvents.length === 0
+    ) {
       timelineRuntime.pushDesktopTimeline(result.desktopMessageTimeline);
     }
   }

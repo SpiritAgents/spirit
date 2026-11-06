@@ -1,7 +1,8 @@
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { DelayToolDuration } from "./delay-tool-duration";
 
-import { Square } from "lucide-react";
+import { Command, Square, SquareArrowOutUpRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { DiffCodeScrollView } from "@/components/diff-code-scroll-view";
@@ -20,6 +21,9 @@ import { useToolCallDiffHost } from "@/components/tool-call-diff-host-context";
 import { useCollapsibleChildMount } from "@/hooks/use-collapsible-child-mount";
 import { TodoItemsList } from "@/components/composer-todo-card";
 import { Button } from "@/components/ui/button";
+import { Kbd, KbdGroup } from "@spiritagent/ui/kbd";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { desktopShellPlatform } from "@/lib/desktop-shell";
 import { AnimatedCollapse, AnimatedCollapseContent } from "@/components/ui/animated-collapse";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { buildToolCallDiffLines } from "@/lib/diff-display-lines";
@@ -57,6 +61,54 @@ import { cn } from "@/lib/utils";
 import type { EditorFileTarget } from "@/lib/workspace-editor-navigation";
 import type { ToolBlockSnapshot } from "@/types";
 
+function MoveToBackgroundButton({
+  toolCallId,
+  onMoveToBackground,
+  showShortcut,
+}: {
+  toolCallId: string;
+  onMoveToBackground: (toolCallId: string) => void;
+  showShortcut: boolean;
+}) {
+  const { t } = useTranslation();
+  const darwin = desktopShellPlatform() === "darwin";
+  return (
+    <Tooltip delayDuration={300} disableHoverableContent>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          shape="pill"
+          className="shrink-0 shadow-none [&_svg]:size-3"
+          aria-label={t("tool.moveToBackground")}
+          onClick={(event) => {
+            event.stopPropagation();
+            onMoveToBackground(toolCallId);
+          }}
+        >
+          <SquareArrowOutUpRight className="size-3" strokeWidth={1.75} aria-hidden />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={4}>
+        <span>{t("tool.moveToBackground")}</span>
+        {showShortcut ? (
+          <KbdGroup>
+            {darwin ? (
+              <Kbd>
+                <Command className="size-3" strokeWidth={1.75} aria-hidden />
+              </Kbd>
+            ) : (
+              <Kbd>Ctrl</Kbd>
+            )}
+            <Kbd>B</Kbd>
+          </KbdGroup>
+        ) : null}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 const summaryClass = "text-xs leading-relaxed text-muted-foreground";
 
 const toolCallDetailScrollAreaClass =
@@ -82,7 +134,7 @@ function ToolCallDetailScrollPre({ children }: { children: string }) {
   );
 }
 
-export type ToolSummaryDetailTone = "default" | "shell-command";
+export type ToolSummaryDetailTone = "default" | "shell-command" | "single-line";
 
 export type ToolSummaryStatusSuffixTone = "filename-detail" | "failed-status";
 
@@ -97,6 +149,7 @@ const statusSuffixToneClass: Record<ToolSummaryStatusSuffixTone, string> = {
  */
 const summaryDetailToneClass: Record<ToolSummaryDetailTone, string> = {
   default: "text-foreground-subtle",
+  "single-line": "text-foreground-subtle",
   "shell-command": toolCardFileNameDetailClass,
 };
 
@@ -136,14 +189,14 @@ function ToolCallSummaryRow({
     () => resolveToolLineDeltaForDisplay(tool),
     [tool.phase, tool.toolName, tool.editLineDelta, tool.argsExcerpt],
   );
-  const statusSuffix = tool.phase === "failed" ? t("failed") : undefined;
+  const statusSuffix = tool.phase === "failed" && !tool.taskNotification ? t("failed") : undefined;
   const statusSuffixTone: ToolSummaryStatusSuffixTone | undefined = statusSuffix
     ? shellSummary
       ? "failed-status"
       : "filename-detail"
     : undefined;
 
-  const truncateSummary = detailTone === "shell-command";
+  const truncateSummary = detailTone !== "default";
 
   return (
     <span
@@ -156,6 +209,7 @@ function ToolCallSummaryRow({
         <MinimalToolSummary
           headline={headline}
           detail={detail}
+          detailNode={tool.toolName === "delay" ? <DelayToolDuration tool={tool} /> : undefined}
           resultDetail={resultDetail}
           resultDetailTone={resultDetailTone}
           shellSummary={shellSummary}
@@ -182,6 +236,7 @@ function ToolCallSummaryRow({
 export function MinimalToolSummary({
   headline,
   detail,
+  detailNode,
   resultDetail,
   resultDetailTone = "default",
   shellSummary,
@@ -192,6 +247,7 @@ export function MinimalToolSummary({
 }: {
   headline: string;
   detail?: string;
+  detailNode?: ReactNode;
   resultDetail?: string;
   resultDetailTone?: ToolSummaryResultDetailTone;
   shellSummary?: ShellToolSummaryParts;
@@ -203,7 +259,7 @@ export function MinimalToolSummary({
   const shimmerClass = shimmerActive
     ? "spirit-thinking-shimmer-text font-normal tracking-wide"
     : summaryClass;
-  const truncateSummary = detailTone === "shell-command";
+  const truncateSummary = detailTone !== "default";
 
   return (
     <span
@@ -220,10 +276,10 @@ export function MinimalToolSummary({
       ) : (
         <span className={shimmerClass}>{headline}</span>
       )}
-      {detail ? (
+      {(detailNode ?? detail) ? (
         <>
           {" "}
-          <span className={summaryDetailToneClass[detailTone]}>{detail}</span>
+          <span className={summaryDetailToneClass[detailTone]}>{detailNode ?? detail}</span>
         </>
       ) : null}
       {resultDetail ? (
@@ -279,7 +335,15 @@ function ProviderToolExpandedBody({
   );
 }
 
-function GenericToolExpandedBody({ tool }: { tool: ToolBlockSnapshot }) {
+function GenericToolExpandedBody({
+  tool,
+  onMoveToBackground,
+  moveBackgroundShortcutEligible,
+}: {
+  tool: ToolBlockSnapshot;
+  onMoveToBackground?: (toolCallId: string) => void;
+  moveBackgroundShortcutEligible?: boolean;
+}) {
   const { t } = useTranslation();
   const mcpInputJson = useMemo(
     () => resolveLazyMcpToolCallInputJson(tool.argsExcerpt),
@@ -375,8 +439,17 @@ function GenericToolExpandedBody({ tool }: { tool: ToolBlockSnapshot }) {
     );
   }
 
+  const moveBackgroundButton = onMoveToBackground ? (
+    <MoveToBackgroundButton
+      toolCallId={tool.toolCallId ?? ""}
+      onMoveToBackground={onMoveToBackground}
+      showShortcut={moveBackgroundShortcutEligible === true}
+    />
+  ) : null;
+
   return (
     <div className="space-y-2">
+      {moveBackgroundButton}
       {tool.outputExcerpt ? (
         <pre
           data-spirit-selectable="text"
@@ -550,21 +623,65 @@ function ShellToolExpandedBody({
   tool,
   command,
   onAbortShell,
+  onMoveToBackground,
+  moveBackgroundShortcutEligible,
+  open,
 }: {
   tool: ToolBlockSnapshot;
   command: string | undefined;
   onAbortShell?: (toolCallId: string) => void;
+  onMoveToBackground?: (toolCallId: string) => void;
+  moveBackgroundShortcutEligible?: boolean;
+  open: boolean;
 }) {
   const { t } = useTranslation();
-  const followTail = tool.phase === "running";
+  const readHostTextFile = useToolCallDiffHost()?.readHostTextFile;
+  const task = tool.backgroundTask;
+  const outputPath = task?.outputPath;
+  const taskRunning = task !== undefined && task.endedAtUnixMs === undefined;
+  const followTail = task ? taskRunning : tool.phase === "running";
+  const [savedOutput, setSavedOutput] = useState<{ path: string; text: string }>();
+  const [outputError, setOutputError] = useState<string>();
+  useEffect(() => {
+    if (!open || !outputPath || !readHostTextFile) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const read = async () => {
+      try {
+        const result = await readHostTextFile(outputPath);
+        if (cancelled) return;
+        setSavedOutput({ path: outputPath, text: result.text });
+        setOutputError(undefined);
+      } catch (error) {
+        if (cancelled) return;
+        setOutputError(error instanceof Error ? error.message : String(error));
+        return;
+      }
+      if (!cancelled && taskRunning) timer = setTimeout(read, 1_000);
+    };
+    void read();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [open, outputPath, readHostTextFile, taskRunning]);
   const shellOutput = useMemo(() => {
+    if (task) {
+      if (savedOutput?.path === task.outputPath) {
+        return {
+          text: savedOutput.text.slice(-512 * 1024),
+          truncated: savedOutput.text.length > 512 * 1024,
+        };
+      }
+      return tool.backgroundTaskOutput ?? null;
+    }
     const parsed = parseShellToolResult(tool.outputExcerpt);
     if (parsed) {
       return { text: parsed.output, truncated: parsed.truncated === true };
     }
     const raw = tool.outputExcerpt?.trim();
     return raw ? { text: raw, truncated: false } : null;
-  }, [tool.outputExcerpt]);
+  }, [tool.outputExcerpt, task, tool.backgroundTaskOutput, savedOutput]);
   const detailLines = shellToolExpandableDetailLines(tool, command);
   const showArgsExcerpt = !command && Boolean(tool.argsExcerpt?.trim());
 
@@ -573,15 +690,32 @@ function ShellToolExpandedBody({
   const showTerminateButton =
     tool.phase === "running" && toolCallId.length > 0 && Boolean(onAbortShell);
   const showShellPanel = Boolean(commandLine || shellOutput);
+  const displayedOutputError =
+    outputError ??
+    (savedOutput?.path === outputPath ? undefined : tool.taskNotification?.outputError);
 
   return (
     <div className="space-y-2">
+      {displayedOutputError ? (
+        <p role="status" className="text-xs text-destructive">
+          {t("tool.backgroundOutputUnavailable", {
+            error: displayedOutputError,
+          })}
+        </p>
+      ) : null}
       {showShellPanel ? (
         <div className="space-y-1">
           <div className="overflow-hidden rounded-md border border-border/20 bg-muted/15 p-2 text-xs leading-relaxed text-muted-foreground">
             {commandLine ? (
               <div className="flex items-start gap-2">
                 <ShellToolCommandHighlight command={commandLine} />
+                {onMoveToBackground ? (
+                  <MoveToBackgroundButton
+                    toolCallId={toolCallId}
+                    onMoveToBackground={onMoveToBackground}
+                    showShortcut={moveBackgroundShortcutEligible === true}
+                  />
+                ) : null}
                 {showTerminateButton ? (
                   <Button
                     type="button"
@@ -644,6 +778,8 @@ export function MinimalToolCallCard({
   onOpenReadFile,
   onOpenPlan,
   onAbortShell,
+  onMoveToBackground,
+  moveBackgroundShortcutEligible,
 }: {
   tool: ToolBlockSnapshot;
   workspaceRoot?: string;
@@ -651,12 +787,14 @@ export function MinimalToolCallCard({
   onOpenReadFile?: (target: EditorFileTarget) => void;
   onOpenPlan?: () => void;
   onAbortShell?: (toolCallId: string) => void;
+  onMoveToBackground?: (toolCallId: string) => void;
+  moveBackgroundShortcutEligible?: boolean;
 }) {
   const summary = getToolCallSummaryParts(tool);
   const shimmerActive = toolCallPhaseShowsShimmer(tool.phase);
   const isShell = tool.toolName === "shell";
   const isSubagent = tool.toolName === "subagent";
-  const subagentToolCallId = tool.toolCallId?.trim() ?? "";
+  const subagentToolCallId = tool.backgroundTask?.toolCallId ?? tool.toolCallId?.trim() ?? "";
   const canOpenSubagentViewer = Boolean(isSubagent && onOpenSubagentViewer && subagentToolCallId);
   const readFileTarget = useMemo(
     () =>
@@ -692,6 +830,14 @@ export function MinimalToolCallCard({
     [isShell, tool.argsExcerpt, tool.detailLines, tool.headlineDetail],
   );
   const expandable = toolHasExpandableContent(tool);
+  const moveToBackground =
+    (isShell || isSubagent) &&
+    !tool.backgroundTask &&
+    !tool.taskNotification &&
+    tool.phase === "running" &&
+    tool.toolCallId?.trim()
+      ? onMoveToBackground
+      : undefined;
   const [open, setOpen] = useState(false);
   const showLspHover = shouldShowLspDiagnosticsOnToolCard(tool);
   const lspHoverItemId = tool.toolCallId ?? tool.toolName;
@@ -706,7 +852,7 @@ export function MinimalToolCallCard({
       resultDetailTone={summary.resultDetailTone}
       shellSummary={summary.shellSummary}
       shimmerActive={shimmerActive}
-      detailTone={isShell ? "shell-command" : "default"}
+      detailTone={isShell ? "shell-command" : tool.taskNotification ? "single-line" : "default"}
       hideLineDelta={canOpenFileDiffNav}
       hideLspBadge={canOpenFileDiffNav}
     />
@@ -791,13 +937,24 @@ export function MinimalToolCallCard({
   const expandedBody = (
     <div className="pt-1.5">
       {isShell ? (
-        <ShellToolExpandedBody tool={tool} command={shellCommand} onAbortShell={onAbortShell} />
+        <ShellToolExpandedBody
+          tool={tool}
+          command={shellCommand}
+          onAbortShell={onAbortShell}
+          onMoveToBackground={moveToBackground}
+          moveBackgroundShortcutEligible={moveBackgroundShortcutEligible}
+          open={open}
+        />
       ) : isFileDiff ? (
         <FileToolDiffExpandedBody tool={tool} open={open} />
       ) : isProviderToolCard ? (
         <ProviderToolExpandedBody tool={tool} shimmerActive={shimmerActive} />
       ) : (
-        <GenericToolExpandedBody tool={tool} />
+        <GenericToolExpandedBody
+          tool={tool}
+          onMoveToBackground={moveToBackground}
+          moveBackgroundShortcutEligible={moveBackgroundShortcutEligible}
+        />
       )}
     </div>
   );

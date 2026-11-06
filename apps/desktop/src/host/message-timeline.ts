@@ -565,6 +565,11 @@ export class DesktopMessageTimeline {
       return rowToMessage(existing);
     }
 
+    // A completion notice arrives after the original tool/response, not inside its tool batch.
+    if (tool.taskNotification) {
+      this.completeActiveAssistantSegment();
+      this.createSegment(this.ensureActiveTurn(), "initial");
+    }
     const segment = this.ensureActiveSegment();
     const activeText = this.activeAssistantTextRow(segment);
     if (activeText?.content.trim()) {

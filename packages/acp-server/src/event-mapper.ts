@@ -1,4 +1,9 @@
-import type { JsonValue, RuntimeEvent } from "@spiritagent/agent-core";
+import {
+  isBackgroundTaskTerminal,
+  type JsonValue,
+  type RuntimeEvent,
+  type BackgroundTaskRecord,
+} from "@spiritagent/agent-core";
 import type * as schema from "@agentclientprotocol/sdk";
 import {
   mapToolNameToKind,
@@ -16,13 +21,15 @@ import {
 export interface EventMapperState {
   /** Length of thinking text already sent to the client */
   sentThinkingLength: number;
+  tasks: Set<string>;
+  outputs: Map<string, string>;
 }
 
 /**
  * Creates a fresh per-session mapper state.
  */
 export function createEventMapperState(): EventMapperState {
-  return { sentThinkingLength: 0 };
+  return { sentThinkingLength: 0, tasks: new Set(), outputs: new Map() };
 }
 
 /**
@@ -103,6 +110,7 @@ export function mapRuntimeEventToUpdate(
 
     case "tool-execution-finished": {
       const ex = event.execution;
+      state.outputs.delete(ex.toolCallId);
       const content = formatToolExecutionOutput(ex.output);
       return {
         sessionId,
@@ -127,21 +135,40 @@ export function mapRuntimeEventToUpdate(
       return undefined;
 
     case "tool-execution-output-chunk":
-      return undefined;
+      return outputUpdate(sessionId, event.toolCallId, event.chunk, state);
 
-    case "background-tool-status":
+    case "background-task-output":
+      return outputUpdate(sessionId, event.task.id, event.chunk, state);
+
+    case "background-task-changed":
+      return event.task.background ? taskUpdate(sessionId, event.task, state) : undefined;
+
+    case "background-task-notification": {
+      const update = taskUpdate(sessionId, event.task, state, event.content);
+      state.outputs.delete(event.task.id);
+      return update;
+    }
+
+    case "background-task-error":
       return {
         sessionId,
-        update: {
-          sessionUpdate: "tool_call_update",
-          toolCallId: `bg_${event.toolName}`,
-          status:
-            event.phase === "finished" ? (event.failed ? "failed" : "completed") : "in_progress",
-          ...(event.statusText
-            ? { content: [{ type: "content", content: { type: "text", text: event.statusText } }] }
-            : {}),
-        },
-      } as schema.SessionNotification;
+        update: event.taskId
+          ? {
+              sessionUpdate: state.tasks.has(event.taskId) ? "tool_call_update" : "tool_call",
+              toolCallId: event.taskId,
+              title: "Task Error",
+              status: "failed",
+              content: [{ type: "content", content: { type: "text", text: event.error } }],
+            }
+          : {
+              sessionUpdate: "agent_message_chunk",
+              content: { type: "text", text: event.error },
+            },
+      };
+
+    case "background-tool-status":
+      // Call-ID-bearing start/finish events already cover this legacy status channel.
+      return undefined;
 
     // Events handled elsewhere or ignored
     case "approval-requested":
@@ -154,6 +181,66 @@ export function mapRuntimeEventToUpdate(
     case "history-compacted":
       return undefined;
   }
+}
+
+function outputUpdate(
+  sessionId: string,
+  toolCallId: string,
+  chunk: string,
+  state: EventMapperState,
+): schema.SessionNotification {
+  const output = ((state.outputs.get(toolCallId) ?? "") + chunk).slice(-4000);
+  state.outputs.set(toolCallId, output);
+  return {
+    sessionId,
+    update: {
+      sessionUpdate: "tool_call_update",
+      toolCallId,
+      content: [{ type: "content", content: { type: "text", text: output } }],
+    },
+  };
+}
+
+function taskUpdate(
+  sessionId: string,
+  task: BackgroundTaskRecord,
+  state: EventMapperState,
+  notice?: string,
+): schema.SessionNotification {
+  const known = state.tasks.has(task.id);
+  state.tasks.add(task.id);
+  const status = isBackgroundTaskTerminal(task.status)
+    ? task.status === "completed"
+      ? "completed"
+      : "failed"
+    : "in_progress";
+  const call: schema.ToolCall = {
+    toolCallId: task.id,
+    title: buildToolCallTitle(task.kind, task.argumentsJson),
+    kind: mapToolNameToKind(task.kind),
+    status,
+    rawOutput: {
+      task_id: task.id,
+      tool_call_id: task.toolCallId,
+      status: task.status,
+      output_path: task.outputPath,
+      elapsed_seconds: task.elapsedMs / 1000,
+      ...(task.parentTaskId ? { parent_task_id: task.parentTaskId } : {}),
+      ...(task.exitCode !== undefined ? { exit_code: task.exitCode } : {}),
+      ...(task.error ? { error: task.error } : {}),
+    },
+    ...(notice
+      ? {
+          content: [{ type: "content" as const, content: { type: "text" as const, text: notice } }],
+        }
+      : {}),
+  };
+  return {
+    sessionId,
+    update: known
+      ? { ...call, sessionUpdate: "tool_call_update" }
+      : { ...call, sessionUpdate: "tool_call" },
+  };
 }
 
 /**

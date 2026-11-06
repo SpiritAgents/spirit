@@ -64,7 +64,7 @@ export type RichSegment =
       /** The reference was inserted as the session Plan file; UI-only, persisted via chipNavigateMeta. */
       isPlan?: boolean;
     }
-  | { kind: "sessionReference"; path: string; title: string; content?: string }
+  | { kind: "sessionReference"; path: string; title: string; content?: string; sessionId?: string }
   | { kind: "loop" }
   | { kind: "plan" }
   | { kind: "ask" }
@@ -475,7 +475,7 @@ export function segmentsToMessageText(segs: RichSegment[]): string {
         : seg.kind === "workspaceFile"
           ? workspaceFileContextText(seg.path)
           : seg.kind === "sessionReference"
-            ? sessionReferenceContextText(seg.path, seg.title, seg.content ?? "")
+            ? sessionReferenceContextText(seg.path, seg.title, seg.content ?? "", seg.sessionId)
             : seg.kind === "skill"
               ? skillContextText(seg.alias)
               : seg.kind === "prDiff"
@@ -965,7 +965,7 @@ export function replaceWorkspaceFileReferenceInSegments(
 export function replaceSessionReferenceInSegments(
   segs: RichSegment[],
   query: ActiveWorkspaceFileReferenceQuery,
-  session: { path: string; title: string; content?: string },
+  session: { path: string; title: string; content?: string; sessionId?: string },
   finalize: boolean,
 ): { segments: RichSegment[]; caret: SegmentCaret } {
   const merged = mergeAdjacentTextSegments(segs);
@@ -978,6 +978,7 @@ export function replaceSessionReferenceInSegments(
     path: session.path,
     title: session.title,
     ...(session.content !== undefined ? { content: session.content } : {}),
+    ...(session.sessionId ? { sessionId: session.sessionId } : {}),
   };
 
   if (seg?.kind !== "text" || endCaret.segmentIndex !== index) {
@@ -1106,7 +1107,7 @@ export type MessageContentPart =
     }
   | { kind: "messageQuote"; selectedText: string }
   | { kind: "workspaceFile"; path: string }
-  | { kind: "sessionReference"; path: string; title: string }
+  | { kind: "sessionReference"; path: string; title: string; sessionId?: string }
   | { kind: "skill"; alias: string };
 
 type ParsedWireBlock = {
@@ -1223,6 +1224,7 @@ function findWireBlocks(content: string): ParsedWireBlock[] {
         kind: "sessionReference",
         path: block.path,
         title: block.title || block.path,
+        ...(block.sessionId ? { sessionId: block.sessionId } : {}),
       },
     });
   }
@@ -1373,6 +1375,7 @@ export function messageContentToRichSegments(content: string, idPrefix: string):
         kind: "sessionReference",
         path: part.path,
         title: part.title,
+        ...(part.sessionId ? { sessionId: part.sessionId } : {}),
       });
       continue;
     }

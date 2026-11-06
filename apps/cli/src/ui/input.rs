@@ -96,6 +96,17 @@ pub(in crate::ui) fn build_footer_line(app: &TuiViewModel, width: usize) -> Line
             Some(Span::styled(format!("  |  {}", hint), footer_style)),
             format!("  |  {}", hint),
         )
+    } else if app.move_background_hint_visible {
+        let shortcut = if cfg!(target_os = "macos") {
+            "Ctrl+B / ⌘B"
+        } else {
+            "Ctrl+B"
+        };
+        let hint = t!("ui.footer.move_background_hint", shortcut = shortcut);
+        (
+            Some(Span::styled(format!("  |  {}", hint), footer_style)),
+            format!("  |  {}", hint),
+        )
     } else if app.pending_response_active && app.pending_aux_state().is_some() {
         let hint = t!("ui.footer.interrupt_reply_hint");
         (

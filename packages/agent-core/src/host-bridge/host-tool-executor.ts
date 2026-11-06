@@ -89,9 +89,10 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
   private dreamOnlyToolSurface = false;
   private loopToolDefinitionsCache: JsonValue[] = [];
   private loopToolExposureEnabled = false;
-  private planToolDefinitionsCache: JsonValue[] = [];
   private agentMode: AgentMode = "agent";
   private hostToolDefinitionsLoaded = false;
+  private backgroundTasksEnabled = false;
+  private subagentEnabled = true;
   private toolDefinitionsCache: JsonValue = [];
   private readonly requestMetadata = new WeakMap<object, HostToolRequestMetadata>();
   private readonly mcp: McpService;
@@ -168,11 +169,18 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
     this.refreshMergedToolDefinitions();
   }
 
+  setBackgroundTaskExposure(enabled: boolean): void {
+    this.backgroundTasksEnabled = enabled;
+    this.hostToolDefinitionsLoaded = false;
+  }
+
+  setSubagentExposure(enabled: boolean): void {
+    this.subagentEnabled = enabled;
+    this.hostToolDefinitionsLoaded = false;
+  }
+
   setAgentModeToolExposure(agentMode: AgentMode): void {
     this.agentMode = agentMode;
-    this.planToolDefinitionsCache = isPlanAgentMode(agentMode)
-      ? buildPlanModeHostToolDefinitions()
-      : [];
     this.refreshMergedToolDefinitions();
   }
 
@@ -222,13 +230,15 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
       return;
     }
     if (!this.hostToolDefinitionsLoaded) {
-      this.hostToolDefinitionsCache = buildBuiltinHostToolDefinitions(
-        this.localHostService
+      this.hostToolDefinitionsCache = buildBuiltinHostToolDefinitions({
+        ...(this.localHostService
           ? this.localHostService.toolDefinitionEnvironment()
           : parseBuiltinHostToolDefinitionEnvironment(
               await this.peer.call<JsonValue>("host.builtinToolDefinitionEnvironment"),
-            ),
-      );
+            )),
+        backgroundTasksEnabled: this.backgroundTasksEnabled,
+        subagentEnabled: this.subagentEnabled,
+      });
       this.hostToolDefinitionsLoaded = true;
     }
 
@@ -660,28 +670,26 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
     ) {
       hostDefinitions = filterToolDefinitionByName(hostDefinitions, "web_fetch");
     }
-    if (
+    const useApplyPatch =
       isOpenResponsesTransportConfig(this.transportConfigForToolDefinitions) &&
       shouldUseApplyPatchFileTools(this.transportConfigForToolDefinitions, {
         agentMode: this.agentMode,
-      }) &&
-      Array.isArray(hostDefinitions)
-    ) {
+      });
+    if (useApplyPatch && Array.isArray(hostDefinitions)) {
       hostDefinitions = filterLegacyHostFileToolDefinitions(hostDefinitions);
     }
+    const planDefinitions = isPlanAgentMode(this.agentMode)
+      ? buildPlanModeHostToolDefinitions(useApplyPatch ? "apply_patch" : "edit_file")
+      : [];
     const mergedHostDefinitions = filterHostToolDefinitionsForAgentMode(
       Array.isArray(hostDefinitions)
         ? [
             ...hostDefinitions,
             ...this.loopToolDefinitionsCache,
-            ...this.planToolDefinitionsCache,
+            ...planDefinitions,
             ...this.todoToolDefinitionsCache,
           ]
-        : [
-            ...this.loopToolDefinitionsCache,
-            ...this.planToolDefinitionsCache,
-            ...this.todoToolDefinitionsCache,
-          ],
+        : [...this.loopToolDefinitionsCache, ...planDefinitions, ...this.todoToolDefinitionsCache],
       this.agentMode,
     );
     this.toolDefinitionsCache = applyHostToolDescriptionHints(

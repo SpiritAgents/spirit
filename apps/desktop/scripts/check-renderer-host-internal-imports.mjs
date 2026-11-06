@@ -18,6 +18,7 @@ const RENDERER_SAFE_HOST_INTERNAL_SUBPATHS = new Set([
   "cloudflare-ai-gateway-resource",
   "skill-paths",
   "tool-output-archive-path",
+  "background-task-path",
   "github-pull-request-url",
   "github-pull-request-checks-pages",
   "github-pull-request-conversation-pages",

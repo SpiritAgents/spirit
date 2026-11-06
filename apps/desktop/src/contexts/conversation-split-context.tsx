@@ -68,6 +68,11 @@ import type { FocusedPaneComposerInsertHandlers } from "@/lib/focused-pane-compo
 import type { MessageQuoteAttachment } from "@spiritagent/ui/composer";
 import type { ConversationAbortShortcutTargetRef } from "@/lib/conversation-abort-shortcut";
 import {
+  moveBackgroundShortcutTargetForMessages,
+  type MoveBackgroundShortcutTarget,
+  type MoveBackgroundShortcutTargetRef,
+} from "@/lib/move-background-shortcut";
+import {
   registerSplitPaneShortcut,
   unregisterSplitPaneShortcut,
 } from "@/lib/split-pane-shortcut-bridge";
@@ -205,6 +210,7 @@ type ConversationSplitContextValue = {
   getFocusedPaneComposerControls: () => FocusedPaneComposerControls | null;
 
   conversationAbortShortcutTargetRef: ConversationAbortShortcutTargetRef | null;
+  moveBackgroundShortcutTarget: MoveBackgroundShortcutTarget;
 };
 
 const ConversationSplitContext = createContext<ConversationSplitContextValue | null>(null);
@@ -392,6 +398,7 @@ export function ConversationSplitProvider({
   snapshot,
 
   conversationAbortShortcutTargetRef = null,
+  moveBackgroundShortcutTargetRef = null,
 
   onEnsureConversationSurface,
 
@@ -404,6 +411,7 @@ export function ConversationSplitProvider({
   snapshot: DesktopSnapshot | null;
 
   conversationAbortShortcutTargetRef?: ConversationAbortShortcutTargetRef | null;
+  moveBackgroundShortcutTargetRef?: MoveBackgroundShortcutTargetRef | null;
 
   onEnsureConversationSurface?: () => void;
 
@@ -418,6 +426,22 @@ export function ConversationSplitProvider({
   const [layout, setLayout] = useState<SplitLayoutNode | null>(null);
 
   const [focusedPaneId, setFocusedPaneId] = useState<string | null>(null);
+  const moveBackgroundShortcutTarget = useMemo(() => {
+    const sessionPath = focusedPaneId
+      ? layout
+        ? findLeafByPaneId(layout, focusedPaneId)?.sessionPath
+        : undefined
+      : snapshot?.activeSession?.filePath;
+    const paneSnapshot = sessionPath ? resolvePaneDesktopSnapshot(snapshot, sessionPath) : null;
+    return moveBackgroundShortcutTargetForMessages(
+      paneSnapshot?.conversation.messages ?? [],
+      sessionPath,
+    );
+  }, [focusedPaneId, layout, snapshot]);
+  useEffect(() => {
+    if (!moveBackgroundShortcutTargetRef) return;
+    moveBackgroundShortcutTargetRef.current = moveBackgroundShortcutTarget;
+  }, [moveBackgroundShortcutTarget, moveBackgroundShortcutTargetRef]);
 
   const [paneDragActive, setPaneDragActive] = useState(false);
   const [paneDragSourcePaneId, setPaneDragSourcePaneId] = useState<string | null>(null);
@@ -1587,6 +1611,8 @@ export function ConversationSplitProvider({
       getFocusedPaneComposerControls,
 
       conversationAbortShortcutTargetRef,
+
+      moveBackgroundShortcutTarget,
     }),
 
     [
@@ -1655,6 +1681,8 @@ export function ConversationSplitProvider({
       highlightedSplitIds,
 
       setSplitResizeHighlight,
+
+      moveBackgroundShortcutTarget,
     ],
   );
 

@@ -16,6 +16,7 @@ import type {
   ToolApprovalPrompt,
   ToolCallRequest,
   ToolExecutionOutput,
+  ToolExecutionHostUi,
   ToolExecutor,
 } from "../ports.js";
 import type { HookRunner, HookSessionContext } from "../hooks/types.js";
@@ -133,6 +134,23 @@ export interface RuntimeHistoryPreparationResult {
 
 export type RuntimeEvent<ToolRequest> =
   | {
+      kind: "background-task-changed";
+      task: import("../background-tasks.js").BackgroundTaskRecord;
+    }
+  | {
+      kind: "background-task-output";
+      task: import("../background-tasks.js").BackgroundTaskRecord;
+      chunk: string;
+    }
+  | ({
+      kind: "background-task-notification";
+    } & import("../background-tasks.js").BackgroundTaskNotification)
+  | {
+      kind: "background-task-error";
+      taskId?: string;
+      error: string;
+    }
+  | {
       kind: "begin-assistant-response";
     }
   | {
@@ -212,6 +230,13 @@ export type RuntimeEvent<ToolRequest> =
       argumentsJson: string;
     }
   | {
+      kind: "tool-execution-ui-updated";
+      toolCallId: string;
+      toolName: string;
+      argumentsJson: string;
+      hostUi: ToolExecutionHostUi;
+    }
+  | {
       kind: "tool-execution-finished";
       execution: RuntimeToolExecution<ToolRequest>;
     }
@@ -237,6 +262,7 @@ export type RuntimeEvent<ToolRequest> =
     };
 
 export interface RuntimePendingApproval<ToolRequest> {
+  requestId?: string;
   prompt: ToolApprovalPrompt;
   request: ToolRequest;
   rememberTarget?: PermissionMemoryTarget;
@@ -268,6 +294,7 @@ export interface RuntimeSubagentSessionArchiveEntry extends SubagentSessionArchi
 }
 
 export interface RuntimePendingQuestions<ToolRequest> {
+  requestId?: string;
   request: ToolRequest;
   toolCallId: string;
   toolName: string;
@@ -426,6 +453,11 @@ export type RuntimeManualHistoryCompactionResult =
     };
 
 export interface AgentRuntimeOptions<Config, State, ToolRequest> {
+  backgroundTasks?: {
+    manager: import("./session-tasks.js").SessionTaskManager;
+    scope: import("./session-tasks.js").TaskScope;
+    persistHistory(): Promise<void>;
+  };
   config: Config;
   llmTransport: LlmTransport<Config, State>;
   toolExecutor: ToolExecutor<ToolRequest>;
@@ -485,9 +517,24 @@ export interface AgentRuntimeOptions<Config, State, ToolRequest> {
     workspaceRoot: string,
     userInput: string,
   ) => Promise<PendingWorkspaceFile[]> | PendingWorkspaceFile[];
-  bootstrapSubagentWorkspace?: SubagentWorkspaceBootstrap<ToolRequest>;
+  bootstrapSubagentWorkspace?: SubagentWorkspaceBootstrap<ToolRequest, Config, State>;
+  subagentSessionDelegate?: SubagentSessionDelegate;
   getApprovalLevel?: () => import("../auto-approval/types.js").SessionApprovalLevel;
   reviewToolApproval?: import("../auto-approval/types.js").ToolAutoReviewer;
+}
+
+export interface SubagentSessionExecutionRequest {
+  prompt: string;
+  parentToolCallId: string;
+  sessionId?: string;
+  worktree?: boolean;
+  context: import("./session-tasks.js").SessionTaskContext;
+}
+
+export interface SubagentSessionDelegate {
+  execute(
+    request: SubagentSessionExecutionRequest,
+  ): Promise<import("./session-tasks.js").SessionTaskResult>;
 }
 
 export interface SubagentWorkspaceBootstrapInput {
@@ -495,20 +542,29 @@ export interface SubagentWorkspaceBootstrapInput {
   task: string;
   worktree: boolean;
   parentWorkspaceRoot: string;
+  signal?: AbortSignal;
 }
 
-export type SubagentWorkspaceBootstrapResult<ToolRequest = unknown> =
+export type SubagentWorkspaceBootstrapResult<
+  ToolRequest = unknown,
+  Config = unknown,
+  State = unknown,
+> =
   | {
       workspaceRoot: string;
       worktreePath?: string;
       branchName?: string;
       toolExecutor?: ToolExecutor<ToolRequest>;
+      runtimeOptions?: AgentRuntimeOptions<Config, State, ToolRequest>;
+      markStarted?(): void;
+      rollback?(): Promise<void>;
+      dispose?(): Promise<void>;
     }
   | { error: string };
 
-export type SubagentWorkspaceBootstrap<ToolRequest = unknown> = (
+export type SubagentWorkspaceBootstrap<ToolRequest = unknown, Config = unknown, State = unknown> = (
   input: SubagentWorkspaceBootstrapInput,
-) => Promise<SubagentWorkspaceBootstrapResult<ToolRequest>>;
+) => Promise<SubagentWorkspaceBootstrapResult<ToolRequest, Config, State>>;
 
 export interface RuntimeTurnContext<ToolRequest> {
   requestTrace: JsonValue[];
@@ -521,6 +577,7 @@ export interface RuntimeTurnContext<ToolRequest> {
 }
 
 export interface PendingApprovalState<State, ToolRequest> {
+  requestId: string;
   pendingUserInput: string;
   state: State;
   request: ToolRequest;
@@ -542,6 +599,7 @@ export interface PendingApprovalState<State, ToolRequest> {
 }
 
 export interface PendingQuestionsState<State, ToolRequest> {
+  requestId: string;
   pendingUserInput: string;
   state: State;
   request: ToolRequest;
@@ -567,6 +625,7 @@ export interface PendingToolCallContinuation<State, ToolRequest> {
 }
 
 export interface PendingManualApprovalState<ToolRequest> {
+  requestId: string;
   request: ToolRequest;
   prompt: ToolApprovalPrompt;
   rememberTarget?: PermissionMemoryTarget;
@@ -619,7 +678,12 @@ export interface PendingToolCallBackgroundToolExecution<State, ToolRequest> {
   failed: boolean | undefined;
 }
 
-/** Held while the background slot is occupied; the state after prior tools complete is injected at actual start. */
+export interface StartedBackgroundToolExecution {
+  startedAtUnixMs: number;
+  result: Promise<{ output: ToolExecutionOutput; failed: boolean }>;
+}
+
+/** Results commit after prior tools; opted-in executions can already be running. */
 export interface DeferredBackgroundToolExecutionSpec<_State, ToolRequest> {
   pendingUserInput: string;
   request: ToolRequest;
@@ -631,6 +695,7 @@ export interface DeferredBackgroundToolExecutionSpec<_State, ToolRequest> {
   streamingEmitBeginResponse: boolean;
   earlyToolExecutions?: Map<string, PendingEarlyToolExecution<ToolRequest>>;
   postHookToolInput?: JsonObject;
+  startedExecution?: StartedBackgroundToolExecution;
 }
 
 export interface PendingManualBackgroundToolExecution<ToolRequest> {

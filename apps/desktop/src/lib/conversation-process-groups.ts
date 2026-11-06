@@ -26,7 +26,8 @@ function isProcessEligibleMetaMessage(message: ConversationMessageSnapshot | und
     return false;
   }
   if (message.tool) {
-    return !isProcessGroupExcludedToolName(message.tool.toolName);
+    // A task notice reports prior work; it is not another execution in this process run.
+    return !message.tool.taskNotification && !isProcessGroupExcludedToolName(message.tool.toolName);
   }
   return Boolean(message.aux?.thinking?.trim());
 }

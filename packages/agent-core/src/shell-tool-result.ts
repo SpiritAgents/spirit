@@ -2,9 +2,10 @@ export type ShellToolResult = {
   terminal: string;
   workspace: string;
   command: string;
-  exitCode: number;
+  exitCode: number | null;
   output: string;
   truncated?: boolean;
+  outputPath?: string;
 };
 
 export function combineShellToolOutput(stdout: string, stderr: string): string {
@@ -27,7 +28,7 @@ export function buildShellToolResult(input: {
   terminal: string;
   workspace: string;
   command: string;
-  exitCode: number;
+  exitCode: number | null;
   stdout: string;
   stderr: string;
 }): ShellToolResult {
@@ -47,6 +48,8 @@ export function serializeShellToolResult(result: ShellToolResult): string {
     command: result.command,
     exitCode: result.exitCode,
     output: result.output,
+    ...(result.truncated !== undefined ? { truncated: result.truncated } : {}),
+    ...(result.outputPath ? { outputPath: result.outputPath } : {}),
   };
   return JSON.stringify(payload);
 }
@@ -76,9 +79,10 @@ function isShellToolResult(value: unknown): value is ShellToolResult {
     typeof record.terminal === "string" &&
     typeof record.workspace === "string" &&
     typeof record.command === "string" &&
-    typeof record.exitCode === "number" &&
-    Number.isFinite(record.exitCode) &&
+    (record.exitCode === null ||
+      (typeof record.exitCode === "number" && Number.isFinite(record.exitCode))) &&
     typeof record.output === "string" &&
-    (record.truncated === undefined || typeof record.truncated === "boolean")
+    (record.truncated === undefined || typeof record.truncated === "boolean") &&
+    (record.outputPath === undefined || typeof record.outputPath === "string")
   );
 }

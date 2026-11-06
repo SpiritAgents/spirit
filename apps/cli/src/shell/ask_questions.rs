@@ -14,6 +14,7 @@ pub(crate) enum AskQuestionsActivateOutcome {
 }
 
 pub(crate) fn new_form(
+    request_id: Option<String>,
     tool_call_id: impl Into<String>,
     tool_name: impl Into<String>,
     request: AskQuestionsRequest,
@@ -57,6 +58,7 @@ pub(crate) fn new_form(
 
     BottomFormView {
         kind: BottomFormKind::AskQuestions {
+            request_id,
             tool_call_id: tool_call_id.into(),
             tool_name: tool_name.into(),
             request,
@@ -446,6 +448,7 @@ mod tests {
 
     fn build_form(questions: Vec<AskQuestionsQuestionSpec>) -> BottomFormView {
         new_form(
+            Some("question-request-1".to_string()),
             "call-1",
             "ask_questions",
             AskQuestionsRequest {

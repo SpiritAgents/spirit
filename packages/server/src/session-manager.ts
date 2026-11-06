@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 
 import {
+  buildStartImplementingPrompt,
+  buildParentSubagentToolResultText,
+  createToolExecutionTextOutput,
   getTransportConfigLastInputTokens,
   type HostToolDescriptionHint,
   type JsonValue,
@@ -10,13 +13,26 @@ import {
   type McpUiOpener,
   type PendingWorkspaceFile,
   type RuntimeEvent,
+  type RuntimeSubagentSessionArchiveEntry,
+  type RuntimeSubagentSessionSummary,
   type AgentMode,
+  type SubagentSessionExecutionRequest,
+  type SessionTaskContext,
+  type SessionTaskResult,
 } from "@spiritagent/agent-core";
 import type { BridgeRuntimeSnapshot } from "@spiritagent/agent-core/host-bridge";
 import {
   createHostTodoStore,
+  createBackgroundTaskOwner,
+  createSessionId,
+  createSubagentWorkspaceBootstrap,
+  readSessionStorageKey,
+  resolveSubagentTranscriptFilePath,
+  RuntimeSessionStore,
+  type BackgroundTaskOwner,
   deriveSessionTitleFallbackSeed,
   generateSessionTitleForTurn,
+  extractActivePlanPathFromLlmHistory,
   type ApprovalLevel,
   type HostDreamScope,
   type HostDreamSourceSessionRef,
@@ -61,7 +77,13 @@ export interface ServerSessionInfo {
   model: string;
   queuedTurns: number;
   conversationKey?: string;
+  sessionKind?: ServerSessionKind;
+  subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
+  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   attachmentCount: number;
+  restoredFromDisk: boolean;
 }
 
 interface QueuedUserTurn {
@@ -90,6 +112,12 @@ interface PendingTrustRequest {
 interface ServerSession {
   info: ServerSessionInfo;
   runtimeResult: ServerRuntimeResult;
+  agentWriter?: {
+    ownerSessionId: string;
+    toolCallId: string;
+    context: SessionTaskContext;
+    blocked: boolean;
+  };
   /** Incremented per turn; stale completions drop their broadcast. */
   turnGeneration: number;
   queue: QueuedUserTurn[];
@@ -99,6 +127,8 @@ interface ServerSession {
   /** Ticks spent idle while turnActive — guards against result-less endings. */
   idleTicksWhileActive: number;
   polling: boolean;
+  closing: boolean;
+  operations: Promise<void>;
   /** Skills activated out-of-turn (slash); consumed by the next turn. */
   pendingActiveSkills: LlmActiveSkill[];
   createParams: CreateSessionParams;
@@ -114,15 +144,30 @@ interface ServerSession {
         revision: number;
         timeline: unknown[];
         updatedAtUnixMs: number;
+        presentationSequence?: number;
       }
     | undefined;
   /** Fingerprint of childSessions summaries; used to push archives when membership/status changes. */
   childSessionsFingerprint?: string;
+  agentTurnWaiters?: Array<{
+    resolve(result: { text: string; failed: boolean }): void;
+    reject(error: unknown): void;
+  }>;
+}
+
+interface NativeSubagentLink {
+  parentSessionId: string;
+  parentToolCallId: string;
+  title: string;
 }
 
 export interface SessionManagerCallbacks {
   /** Broadcast a runtime event to every connected client. */
-  broadcastRuntimeEvent: (sessionId: string, event: RuntimeEvent<JsonValue>) => void;
+  broadcastRuntimeEvent: (
+    sessionId: string,
+    event: RuntimeEvent<JsonValue>,
+    presentationSequence?: number,
+  ) => void;
   broadcastSubagentEvents?: (
     sessionId: string,
     drains: Array<{
@@ -134,7 +179,11 @@ export interface SessionManagerCallbacks {
     }>,
   ) => void;
   /** Broadcast before the runtime starts so every client opens the same turn boundary. */
-  broadcastUserTurnSubmitted?: (sessionId: string, turn: QueuedUserTurn) => void;
+  broadcastUserTurnSubmitted?: (
+    sessionId: string,
+    turn: QueuedUserTurn,
+    presentationSequence?: number,
+  ) => void;
   /** Broadcast turn completion (terminal state of a submitUserTurn). */
   broadcastTurnFinished: (
     sessionId: string,
@@ -171,6 +220,11 @@ export interface SessionManagerCallbacks {
 export interface CreateSessionParams {
   workspaceRoot: string;
   hostKind: ServerClientKind;
+  sessionId?: string;
+  title?: string;
+  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   approvalLevel?: ApprovalLevel;
   modelRef?: ModelRef;
   agentMode?: AgentMode;
@@ -179,6 +233,7 @@ export interface CreateSessionParams {
   /** Stable chat file path for multi-host attach. */
   conversationKey?: string;
   sessionKind?: ServerSessionKind;
+  subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
   dreamScope?: HostDreamScope;
   dreamSourceSession?: HostDreamSourceSessionRef;
   /** Host UI Markdown / rendering hints (Desktop Mermaid). CLI omits. */
@@ -260,6 +315,8 @@ export class SessionManager {
   private readonly conversationIndex = new Map<string, string>();
   /** sessionId → attached clientIds (refcount). */
   private readonly attachments = new Map<string, Set<string>>();
+  private noClientsRemaining = false;
+  private readonly unattendedInputs = new Set<string>();
   private readonly pendingTrustRequests = new Map<string, PendingTrustRequest>();
   private readonly pendingExtensionUi = new Map<
     string,
@@ -269,10 +326,19 @@ export class SessionManager {
     }
   >();
   private readonly spiritDataDir: string;
+  private taskOwner: Promise<BackgroundTaskOwner> | undefined;
   /** Shared per-workspace MCP services (also serve host.mcp* management RPCs). */
   readonly mcpRegistry: McpRegistry;
   /** conversationKey → in-flight create; collapses concurrent creates for the same chat. */
   private readonly creatingByConversationKey = new Map<string, Promise<ServerSessionInfo>>();
+  private readonly agentTurnWaiters = new Map<
+    string,
+    Array<{
+      resolve(result: { text: string; failed: boolean }): void;
+      reject(error: unknown): void;
+    }>
+  >();
+  private readonly nativeSubagentLinks = new Map<string, Map<string, NativeSubagentLink>>();
 
   constructor(
     spiritDataDir: string,
@@ -314,6 +380,7 @@ export class SessionManager {
   private async createSessionInner(
     params: CreateSessionParams,
     conversationKey?: string,
+    requireExisting = false,
   ): Promise<ServerSessionInfo> {
     const trimmedKey = conversationKey?.trim();
     if (trimmedKey) {
@@ -327,14 +394,29 @@ export class SessionManager {
       }
     }
 
-    const sessionId = `sess_${randomUUID().replaceAll("-", "")}`;
-    // Transcript / basicInfo sessionKey: prefer conversationKey (chat path) so Desktop can
-    // resolve transcript.json from listSessions without a sess_* mapping.
+    const sessionId =
+      params.sessionId?.trim() ||
+      (trimmedKey ? readSessionStorageKey(this.spiritDataDir, trimmedKey) : undefined) ||
+      createSessionId();
+    // Transcript lookup prefers conversationKey (chat path); its alias resolves to sessionId.
     const transcriptSessionKey = trimmedKey || sessionId;
     const runtimeResult = await createServerRuntime({
       workspaceRoot: params.workspaceRoot,
       spiritDataDir: this.spiritDataDir,
       sessionKey: transcriptSessionKey,
+      sessionId,
+      ...(params.title?.trim() ? { title: params.title.trim() } : {}),
+      ...(trimmedKey ? { conversationKey: trimmedKey } : {}),
+      subagentSessionDelegate: {
+        execute: (request: SubagentSessionExecutionRequest) =>
+          this.delegateSubagentTurn(sessionId, request),
+      },
+      ...(requireExisting ? { requireExisting: true } : {}),
+      ...(params.subagentOrigin ? { subagentOrigin: params.subagentOrigin } : {}),
+      ...(params.workLocation ? { workLocation: params.workLocation } : {}),
+      ...(params.worktreePath ? { worktreePath: params.worktreePath } : {}),
+      ...(params.worktreeBranch ? { worktreeBranch: params.worktreeBranch } : {}),
+      taskOwner: await (this.taskOwner ??= createBackgroundTaskOwner(this.spiritDataDir)),
       ...(params.modelRef ? { modelRef: params.modelRef } : {}),
       ...(params.todoSessionKey?.trim() ? { todoSessionKey: params.todoSessionKey.trim() } : {}),
       ...(params.sessionKind === "dream-collector"
@@ -342,6 +424,7 @@ export class SessionManager {
         : { mcpService: this.mcpRegistry.forWorkspace(params.workspaceRoot) }),
       hostKind: params.hostKind === "web" ? "cli" : params.hostKind,
       approvalLevel: params.approvalLevel ?? "default",
+      agentMode: params.agentMode ?? "agent",
       ...(params.sessionKind ? { sessionKind: params.sessionKind } : {}),
       ...(params.dreamScope ? { dreamScope: params.dreamScope } : {}),
       ...(params.dreamSourceSession ? { dreamSourceSession: params.dreamSourceSession } : {}),
@@ -350,26 +433,34 @@ export class SessionManager {
         ? { hostToolDescriptionHints: params.hostToolDescriptionHints }
         : {}),
       basicInfoHost: resolveBasicInfoHost(params),
-      onEvent: (event) => this.handleRuntimeEvent(sessionId, event),
+      onEvent: (event, sequence) => this.handleRuntimeEvent(sessionId, event, sequence),
       onFileChange: (change) => this.callbacks.broadcastFileChange(sessionId, change),
       requestWorkspaceCapabilityTrust: (request) =>
         this.requestWorkspaceCapabilityTrust(sessionId, request),
       ...(this.callbacks.log ? { log: this.callbacks.log } : {}),
     });
-    await runtimeResult.setAgentMode(params.agentMode ?? "agent");
+    if (params.agentMode) await runtimeResult.setAgentMode(params.agentMode);
     this.attachDesktopMcpUiOpener(sessionId, runtimeResult, params.hostKind);
 
+    const resolvedConversationKey = runtimeResult.conversationKey ?? trimmedKey;
     const info: ServerSessionInfo = {
       sessionId,
-      workspaceRoot: params.workspaceRoot,
+      workspaceRoot: runtimeResult.workspaceRoot,
       hostKind: params.hostKind,
       createdAt: new Date().toISOString(),
+      ...(runtimeResult.title ? { title: runtimeResult.title } : {}),
       isBusy: false,
       approvalLevel: params.approvalLevel ?? "default",
       model: runtimeResult.transportConfig.model,
       queuedTurns: 0,
       attachmentCount: 0,
-      ...(trimmedKey ? { conversationKey: trimmedKey } : {}),
+      restoredFromDisk: runtimeResult.restoredFromDisk,
+      workLocation: runtimeResult.workLocation,
+      ...(runtimeResult.worktreePath ? { worktreePath: runtimeResult.worktreePath } : {}),
+      ...(runtimeResult.worktreeBranch ? { worktreeBranch: runtimeResult.worktreeBranch } : {}),
+      ...(runtimeResult.sessionKind ? { sessionKind: runtimeResult.sessionKind } : {}),
+      ...(runtimeResult.subagentOrigin ? { subagentOrigin: runtimeResult.subagentOrigin } : {}),
+      ...(resolvedConversationKey ? { conversationKey: resolvedConversationKey } : {}),
     };
     const session: ServerSession = {
       info,
@@ -380,8 +471,19 @@ export class SessionManager {
       turnActive: false,
       idleTicksWhileActive: 0,
       polling: false,
+      closing: false,
+      operations: Promise.resolve(),
+      ...(runtimeResult.restoredDesktopTimeline
+        ? { desktopTimeline: runtimeResult.restoredDesktopTimeline }
+        : {}),
       pendingActiveSkills: [],
-      createParams: params,
+      createParams: {
+        ...params,
+        workspaceRoot: runtimeResult.workspaceRoot,
+        workLocation: runtimeResult.workLocation,
+        ...(runtimeResult.worktreePath ? { worktreePath: runtimeResult.worktreePath } : {}),
+        ...(runtimeResult.worktreeBranch ? { worktreeBranch: runtimeResult.worktreeBranch } : {}),
+      },
       todoSessionKey: params.todoSessionKey?.trim() || sessionId,
     };
     session.pump = setInterval(() => this.tickSession(session), PUMP_INTERVAL_MS);
@@ -393,15 +495,299 @@ export class SessionManager {
     return { ...info };
   }
 
+  private waitForAgentTurn(sessionId: string): Promise<{ text: string; failed: boolean }> {
+    return new Promise((resolve, reject) => {
+      const waiters = this.agentTurnWaiters.get(sessionId) ?? [];
+      waiters.push({ resolve, reject });
+      this.agentTurnWaiters.set(sessionId, waiters);
+    });
+  }
+
+  private settleAgentTurnWaiters(
+    sessionId: string,
+    result: { text: string; failed: boolean },
+  ): void {
+    const waiters = this.agentTurnWaiters.get(sessionId) ?? [];
+    this.agentTurnWaiters.delete(sessionId);
+    for (const waiter of waiters) waiter.resolve(result);
+  }
+
+  private failAgentTurnWaiters(sessionId: string, error: unknown): void {
+    const waiters = this.agentTurnWaiters.get(sessionId) ?? [];
+    this.agentTurnWaiters.delete(sessionId);
+    for (const waiter of waiters) waiter.reject(error);
+  }
+
+  async delegateSubagentTurn(
+    parentSessionId: string,
+    request: SubagentSessionExecutionRequest,
+  ): Promise<SessionTaskResult> {
+    const parent = this.requireSession(parentSessionId);
+    if (!request.sessionId && parent.info.sessionKind === "subagent") {
+      throw new Error("Nested subagents are not supported.");
+    }
+    const target = request.sessionId
+      ? await this.resumeSession(request.sessionId, parent.info.workspaceRoot, parent.info.hostKind)
+      : await this.createSession({
+          workspaceRoot: parent.info.workspaceRoot,
+          hostKind: parent.info.hostKind,
+          sessionKind: "subagent",
+          subagentOrigin: {
+            parentSessionId,
+            parentToolCallId: request.parentToolCallId,
+          },
+          ...(parent.createParams.modelRef ? { modelRef: parent.createParams.modelRef } : {}),
+          ...(parent.createParams.agentMode ? { agentMode: parent.createParams.agentMode } : {}),
+          approvalLevel: parent.info.approvalLevel,
+          ...(parent.createParams.hostUiPromptSection
+            ? { hostUiPromptSection: parent.createParams.hostUiPromptSection }
+            : {}),
+          ...(parent.createParams.hostToolDescriptionHints
+            ? { hostToolDescriptionHints: parent.createParams.hostToolDescriptionHints }
+            : {}),
+          ...(parent.createParams.basicInfoHost
+            ? { basicInfoHost: parent.createParams.basicInfoHost }
+            : {}),
+        });
+    const targetSession = this.requireSession(target.sessionId);
+    const links = this.nativeSubagentLinks.get(target.sessionId) ?? new Map();
+    links.set(`${parentSessionId}\n${request.parentToolCallId}`, {
+      parentSessionId,
+      parentToolCallId: request.parentToolCallId,
+      title: request.prompt.trim().slice(0, 72) || "SubAgent",
+    });
+    this.nativeSubagentLinks.set(target.sessionId, links);
+    const { runtime } = targetSession.runtimeResult;
+    if (runtime.hasPendingApproval() || runtime.hasPendingQuestions()) {
+      throw new Error("Answer the target session's pending approval or questionnaire first.");
+    }
+    if (targetSession.agentWriter) {
+      throw new Error("The target session is already being prompted by another agent.");
+    }
+    const writer: NonNullable<ServerSession["agentWriter"]> = {
+      ownerSessionId: parentSessionId,
+      toolCallId: request.parentToolCallId,
+      context: request.context,
+      blocked: false,
+    };
+    targetSession.agentWriter = writer;
+    const cancel = () => {
+      const target = this.sessions.get(targetSession.info.sessionId);
+      if (target && !target.closing)
+        this.abort(target.info.sessionId, { preserveAgentWriter: true });
+    };
+    request.context.signal.addEventListener("abort", cancel, { once: true });
+    let completion: Promise<{ text: string; failed: boolean }> | undefined;
+    try {
+      const transcript = resolveSubagentTranscriptFilePath(
+        this.spiritDataDir,
+        target.sessionId,
+        target.sessionId,
+      );
+      if (runtime.isBusy() || targetSession.turnActive) {
+        this.abort(target.sessionId, { preserveAgentWriter: true });
+        await targetSession.operations;
+      }
+      await this.serializeSession(targetSession, async () => {
+        if (request.worktree) {
+          await this.setSessionWorktree(target.sessionId);
+        }
+        await request.context.update({
+          sessionId: target.sessionId,
+          sessionTranscript: transcript,
+          ...(targetSession.info.worktreePath
+            ? { worktreePath: targetSession.info.worktreePath }
+            : {}),
+          ...(targetSession.info.worktreeBranch
+            ? { worktreeBranch: targetSession.info.worktreeBranch }
+            : {}),
+        });
+        completion = this.waitForAgentTurn(target.sessionId);
+        await this.startTurn(targetSession, {
+          text: request.prompt,
+          explicitImages: [],
+          explicitWorkspaceFiles: [],
+          activeSkills: [],
+        });
+      });
+      const result = await completion!;
+      await request.context.update({
+        finalOutputPreview: result.text.slice(0, 16_384),
+      });
+      await request.context.writeOutput(`\n\nFinal response:\n${result.text}\n`);
+      return {
+        output: createToolExecutionTextOutput(
+          buildParentSubagentToolResultText(
+            result.text,
+            result.failed,
+            target.sessionId,
+            transcript,
+          ),
+        ),
+        failed: result.failed,
+      };
+    } catch (error) {
+      if (targetSession.agentWriter === writer) {
+        void completion?.catch(() => {});
+        this.failAgentTurnWaiters(target.sessionId, error);
+      }
+      throw error;
+    } finally {
+      request.context.signal.removeEventListener("abort", cancel);
+      if (targetSession.agentWriter === writer) delete targetSession.agentWriter;
+    }
+  }
+
+  async setSessionWorktree(sessionId: string): Promise<ServerSessionInfo> {
+    const session = this.requireSession(sessionId);
+    if (session.info.workLocation === "worktree" && session.info.worktreePath) {
+      return session.info;
+    }
+    if (session.runtimeResult.runtime.isBusy() || session.turnActive) {
+      throw new Error("The target session is busy; wait for the current turn to finish.");
+    }
+    const bootstrap = createSubagentWorkspaceBootstrap({
+      parentWorkspaceRoot: session.info.workspaceRoot,
+      buildScopedRuntime: async () => ({ toolExecutor: session.runtimeResult.toolExecutor }),
+    });
+    const boot = await bootstrap({
+      subagentSessionId: sessionId,
+      task: "Continue session",
+      worktree: true,
+      parentWorkspaceRoot: session.info.workspaceRoot,
+    });
+    if ("error" in boot) throw new Error(boot.error);
+    if (!boot.worktreePath || !boot.branchName) {
+      await boot.rollback?.();
+      throw new Error("The subagent worktree identity is incomplete.");
+    }
+    const previousRoot = session.info.workspaceRoot;
+    let switched = false;
+    try {
+      const fresh = await this.reconfigureSessionWorkspace(session, boot.workspaceRoot);
+      switched = true;
+      session.runtimeResult = fresh;
+      session.info.workspaceRoot = boot.workspaceRoot;
+      session.info.workLocation = "worktree";
+      session.info.worktreePath = boot.worktreePath;
+      session.info.worktreeBranch = boot.branchName;
+      session.createParams.workspaceRoot = boot.workspaceRoot;
+      session.createParams.workLocation = "worktree";
+      session.createParams.worktreePath = boot.worktreePath;
+      session.createParams.worktreeBranch = boot.branchName;
+      fresh.workLocation = "worktree";
+      fresh.worktreePath = boot.worktreePath;
+      fresh.worktreeBranch = boot.branchName;
+      await fresh.persist();
+      boot.markStarted?.();
+    } catch (error) {
+      const cleanup: Promise<unknown>[] = [Promise.resolve(boot.rollback?.())];
+      if (switched) {
+        cleanup.push(
+          this.reconfigureSessionWorkspace(session, previousRoot).then((restored) => {
+            session.runtimeResult = restored;
+            session.info.workspaceRoot = previousRoot;
+            session.info.workLocation = "local";
+            delete session.info.worktreePath;
+            delete session.info.worktreeBranch;
+            session.createParams.workspaceRoot = previousRoot;
+            session.createParams.workLocation = "local";
+            delete session.createParams.worktreePath;
+            delete session.createParams.worktreeBranch;
+          }),
+        );
+      }
+      const results = await Promise.allSettled(cleanup);
+      const failures = results.flatMap((entry) =>
+        entry.status === "rejected" ? [entry.reason] : [],
+      );
+      if (failures.length) throw new AggregateError([error, ...failures]);
+      throw error;
+    }
+    this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
+    return session.info;
+  }
+
+  private reconfigureSessionWorkspace(
+    session: ServerSession,
+    workspaceRoot: string,
+  ): Promise<ServerRuntimeResult> {
+    const current = session.runtimeResult;
+    return current.reconfigure({
+      workspaceRoot,
+      spiritDataDir: this.spiritDataDir,
+      sessionKey: current.sessionId,
+      agentMode: current.agentModeSnapshot(),
+      ...(session.createParams.modelRef ? { modelRef: session.createParams.modelRef } : {}),
+      todoSessionKey: session.todoSessionKey,
+      mcpService: this.mcpRegistry.forWorkspace(workspaceRoot),
+      hostKind: session.createParams.hostKind === "web" ? "cli" : session.createParams.hostKind,
+      approvalLevel: session.info.approvalLevel,
+      ...(session.info.sessionKind ? { sessionKind: session.info.sessionKind } : {}),
+      ...(session.info.subagentOrigin ? { subagentOrigin: session.info.subagentOrigin } : {}),
+      ...(session.createParams.hostUiPromptSection
+        ? { hostUiPromptSection: session.createParams.hostUiPromptSection }
+        : {}),
+      ...(session.createParams.hostToolDescriptionHints
+        ? { hostToolDescriptionHints: session.createParams.hostToolDescriptionHints }
+        : {}),
+      basicInfoHost: resolveBasicInfoHost(session.createParams),
+      onEvent: (event, sequence) =>
+        this.handleRuntimeEvent(session.info.sessionId, event, sequence),
+      onFileChange: (change) => this.callbacks.broadcastFileChange(session.info.sessionId, change),
+      requestWorkspaceCapabilityTrust: (request) =>
+        this.requestWorkspaceCapabilityTrust(session.info.sessionId, request),
+      ...(this.callbacks.log ? { log: this.callbacks.log } : {}),
+    });
+  }
+
+  async resumeSession(
+    sessionId: string,
+    workspaceRoot: string,
+    hostKind: ServerClientKind = "desktop",
+  ): Promise<ServerSessionInfo> {
+    const trimmed = sessionId.trim();
+    if (!trimmed) throw new Error("missing sessionId");
+    const live = this.sessions.get(trimmed);
+    if (live) {
+      return this.projectInfo(live);
+    }
+    const storageKey = readSessionStorageKey(this.spiritDataDir, trimmed);
+    const saved = storageKey
+      ? await new RuntimeSessionStore(this.spiritDataDir, storageKey).read()
+      : undefined;
+    return this.createSessionInner(
+      {
+        workspaceRoot: saved?.workspaceRoot ?? workspaceRoot,
+        hostKind,
+        sessionId: trimmed,
+        ...(saved?.modelRef ? { modelRef: saved.modelRef } : {}),
+      },
+      undefined,
+      true,
+    );
+  }
+
   attachSession(clientId: string, params: AttachSessionParams): AttachSessionResult {
     const sessionId = this.resolveSessionId(params);
     const session = this.requireSession(sessionId);
+    const conversationKey = params.conversationKey?.trim();
+    if (conversationKey && session.info.conversationKey !== conversationKey) {
+      session.info.conversationKey = conversationKey;
+      session.runtimeResult.conversationKey = conversationKey;
+      void session.runtimeResult.persist().catch((error: unknown) => {
+        this.callbacks.log?.(
+          `session ${sessionId}: conversation metadata persistence failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
+    }
     let clients = this.attachments.get(sessionId);
     if (!clients) {
       clients = new Set();
       this.attachments.set(sessionId, clients);
     }
     clients.add(clientId);
+    this.noClientsRemaining = false;
     return {
       session: this.projectInfo(session),
       snapshot: this.snapshotForSession(session),
@@ -418,12 +804,11 @@ export class SessionManager {
       return { closed: false };
     }
     this.attachments.delete(sessionId);
-    await this.destroySession(sessionId);
-    return { closed: true };
+    return { closed: false };
   }
 
   /** Move a live session to a new conversation key (e.g. provisional → stable chat path). */
-  async migrateConversationKey(sessionId: string, nextKey: string): Promise<void> {
+  async migrateConversationKey(sessionId: string, nextKey: string): Promise<ServerSessionInfo> {
     const trimmed = nextKey.trim();
     if (!trimmed) {
       throw new Error("missing conversationKey");
@@ -431,12 +816,33 @@ export class SessionManager {
     const session = this.requireSession(sessionId);
     const previousKey = session.info.conversationKey?.trim();
     if (previousKey === trimmed) {
-      return;
+      return this.projectInfo(session);
+    }
+    const inflight = this.creatingByConversationKey.get(trimmed);
+    if (inflight) await inflight;
+    const operation = this.migrateConversationKeyInner(session, trimmed);
+    this.creatingByConversationKey.set(trimmed, operation);
+    try {
+      return await operation;
+    } finally {
+      this.creatingByConversationKey.delete(trimmed);
+    }
+  }
+
+  private async migrateConversationKeyInner(
+    session: ServerSession,
+    trimmed: string,
+  ): Promise<ServerSessionInfo> {
+    const sessionId = session.info.sessionId;
+    const previousKey = session.info.conversationKey?.trim();
+    if (previousKey === trimmed) {
+      return this.projectInfo(session);
     }
     const occupied = this.conversationIndex.get(trimmed);
     if (occupied && occupied !== sessionId) {
       throw new Error(`conversationKey already registered: ${trimmed}`);
     }
+    await session.runtimeResult.setTranscriptSessionKey(trimmed);
     if (previousKey) {
       const indexed = this.conversationIndex.get(previousKey);
       if (indexed === sessionId) {
@@ -445,7 +851,8 @@ export class SessionManager {
     }
     session.info.conversationKey = trimmed;
     this.conversationIndex.set(trimmed, sessionId);
-    await session.runtimeResult.setTranscriptSessionKey(trimmed);
+    await session.runtimeResult.persist();
+    return this.projectInfo(session);
   }
 
   private resolveSessionId(params: AttachSessionParams): string {
@@ -464,8 +871,12 @@ export class SessionManager {
     return sessionId;
   }
 
-  listSessions(): ServerSessionInfo[] {
-    return [...this.sessions.values()].map((session) => this.projectInfo(session));
+  listSessions(options: { includeSubagents?: boolean } = {}): ServerSessionInfo[] {
+    return [...this.sessions.values()]
+      .filter(
+        (session) => options.includeSubagents === true || session.info.sessionKind !== "subagent",
+      )
+      .map((session) => this.projectInfo(session));
   }
 
   getSession(sessionId: string): ServerSessionInfo | undefined {
@@ -479,7 +890,33 @@ export class SessionManager {
   }
 
   private snapshotForSession(session: ServerSession): BridgeRuntimeSnapshot {
-    const snapshot = buildServerSnapshot(session.runtimeResult);
+    let snapshot = buildServerSnapshot(session.runtimeResult);
+    const delegated = [...this.sessions.values()].filter(
+      (target) => target.agentWriter?.ownerSessionId === session.info.sessionId,
+    );
+    if (!snapshot.currentPendingApproval) {
+      for (const target of delegated) {
+        const approval = target.runtimeResult.runtime.currentPendingApproval();
+        if (!approval) continue;
+        snapshot = {
+          ...snapshot,
+          hasPendingApproval: true,
+          currentPendingApproval: {
+            ...approval,
+            subagentSessionId: target.info.sessionId,
+            subagentTitle: target.info.title ?? "SubAgent",
+          },
+        };
+        break;
+      }
+    }
+    if (!snapshot.currentPendingQuestions) {
+      const questions = delegated
+        .map((target) => target.runtimeResult.runtime.currentPendingQuestions())
+        .find((pending) => pending !== undefined);
+      if (questions)
+        snapshot = { ...snapshot, hasPendingQuestions: true, currentPendingQuestions: questions };
+    }
     // approval-resolved mid-broadcast clears pending approval before the resumed
     // tool/LLM round marks runtime busy again; keep clients on the busy edge
     // for the whole turn while session.turnActive is set.
@@ -487,6 +924,25 @@ export class SessionManager {
       return { ...snapshot, isBusy: true };
     }
     return snapshot;
+  }
+
+  private syncDelegatedInputState(session: ServerSession): void {
+    const writer = session.agentWriter;
+    if (!writer) return;
+    const blocked =
+      session.runtimeResult.runtime.hasPendingApproval() ||
+      session.runtimeResult.runtime.hasPendingQuestions();
+    if (writer.blocked === blocked) return;
+    writer.blocked = blocked;
+    void writer.context.update({}, blocked ? "blocked" : "running").catch((error: unknown) => {
+      this.callbacks.log?.(
+        `session ${session.info.sessionId}: delegated input state failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+    const parent = this.sessions.get(writer.ownerSessionId);
+    if (parent && !parent.closing) {
+      this.callbacks.broadcastSnapshot(parent.info.sessionId, this.snapshotForSession(parent));
+    }
   }
 
   private projectInfo(session: ServerSession): ServerSessionInfo {
@@ -500,14 +956,30 @@ export class SessionManager {
 
   private requireSession(sessionId: string): ServerSession {
     const session = this.sessions.get(sessionId);
-    if (!session) {
+    if (!session || session.closing) {
       throw new Error(`session not found: ${sessionId}`);
     }
     return session;
   }
 
-  private handleRuntimeEvent(sessionId: string, event: RuntimeEvent<JsonValue>): void {
-    this.callbacks.broadcastRuntimeEvent(sessionId, event);
+  private handleRuntimeEvent(
+    sessionId: string,
+    event: RuntimeEvent<JsonValue>,
+    presentationSequence?: number,
+  ): void {
+    if (event.kind === "background-task-error") {
+      this.callbacks.log?.(`session ${sessionId}: ${event.error}`);
+    }
+    this.callbacks.broadcastRuntimeEvent(sessionId, event, presentationSequence);
+    const session = this.sessions.get(sessionId);
+    if (
+      session &&
+      (event.kind === "approval-requested" ||
+        event.kind === "approval-resolved" ||
+        event.kind === "questions-requested")
+    ) {
+      this.syncDelegatedInputState(session);
+    }
     // Approval/question lifecycle changes are exactly when clients need a
     // fresh projection (to open or close the interactive UI).
     if (
@@ -524,98 +996,160 @@ export class SessionManager {
 
   // ------------------------------------------------------------------ pump
 
+  private serializeSession<T>(
+    session: ServerSession,
+    action: () => Promise<T>,
+    allowClosing = false,
+  ): Promise<T> {
+    const guarded = async () => {
+      if (session.closing && !allowClosing) throw new Error("Session is closing.");
+      return action();
+    };
+    const run = session.operations.then(guarded, guarded);
+    session.operations = run.then(
+      () => {},
+      () => {},
+    );
+    return run;
+  }
+
   private tickSession(session: ServerSession): void {
-    if (session.polling) {
+    if (this.noClientsRemaining) this.denyUnattendedInputs(session);
+    if (session.polling || session.closing) {
       return;
     }
     session.polling = true;
-    void (async () => {
-      const { runtime } = session.runtimeResult;
-      await session.runtimeResult.toolExecutor.refreshCaches();
-      await runtime.poll();
-      const childSessions = runtime.childSessions();
-      const childSessionsFingerprint = childSessions
-        .map((entry) => `${entry.sessionId}:${entry.status}:${entry.parentToolCallId}`)
-        .join("|");
-      const childSessionsChanged = session.childSessionsFingerprint !== childSessionsFingerprint;
-      if (childSessionsChanged) {
-        session.childSessionsFingerprint = childSessionsFingerprint;
-      }
-
-      const childDrains = runtime.drainActiveChildSessionEvents().map((drain) => ({
-        ...drain,
-        pendingAux: runtime.childSessionPendingAuxState(drain.sessionId),
-        archive: runtime.childSessionArchive(drain.sessionId),
-      }));
-      const hasLiveChildPayload = childDrains.some(
-        (drain) => drain.events.length > 0 || drain.pendingAux !== undefined,
-      );
-      // Membership/status changes (incl. first create + mid-turn complete) must push
-      // archives even when the child produced no events this tick — Desktop remote
-      // runtime otherwise keeps empty childSessionArchives until turnFinished.
-      if (hasLiveChildPayload || childSessionsChanged) {
-        const drains = hasLiveChildPayload
-          ? childDrains
-          : runtime.childSessionArchives().map((archive) => ({
-              sessionId: archive.summary.sessionId,
-              parentToolCallId: archive.summary.parentToolCallId,
-              events: [] as RuntimeEvent<JsonValue>[],
-              pendingAux: runtime.childSessionPendingAuxState(archive.summary.sessionId),
-              archive,
-            }));
-        this.callbacks.broadcastSubagentEvents?.(session.info.sessionId, drains);
-      }
-      if (childSessionsChanged) {
-        this.callbacks.broadcastSnapshot(session.info.sessionId, this.snapshotForSession(session));
-      }
-      // The bridge had clients drive this on a timer; the daemon pump owns it now.
-      runtime.handleStreamStallTimeout();
-
-      const turnResult = runtime.takeCompletedTurnResult();
-      if (turnResult && session.turnActive) {
-        if (turnResult.kind !== "completed" && turnResult.kind !== "failed") {
-          return;
+    void this.serializeSession(
+      session,
+      async () => {
+        if (this.sessions.get(session.info.sessionId) !== session || session.closing) return;
+        const { runtime } = session.runtimeResult;
+        await session.runtimeResult.toolExecutor.refreshCaches();
+        await runtime.poll({ allowBackgroundWakeup: false });
+        this.syncDelegatedInputState(session);
+        const childSessions = runtime.childSessions();
+        const childSessionsFingerprint = childSessions
+          .map((entry) => `${entry.sessionId}:${entry.status}:${entry.parentToolCallId}`)
+          .join("|");
+        const childSessionsChanged = session.childSessionsFingerprint !== childSessionsFingerprint;
+        if (childSessionsChanged) {
+          session.childSessionsFingerprint = childSessionsFingerprint;
         }
-        this.finishTurn(
-          session,
-          session.turnGeneration,
-          turnResult.kind === "failed" ? "failed" : "completed",
-          turnResult.kind === "failed"
-            ? {
-                kind: "failed",
-                error: turnResult.error,
-                toolExecutions: turnResult.toolExecutions,
-              }
-            : {
-                kind: "completed",
-                assistantText: turnResult.assistantText,
-                toolExecutions: turnResult.toolExecutions,
-              },
+
+        const childDrains = runtime.drainActiveChildSessionEvents().map((drain) => ({
+          ...drain,
+          pendingAux: runtime.childSessionPendingAuxState(drain.sessionId),
+          archive: runtime.childSessionArchive(drain.sessionId),
+        }));
+        const hasLiveChildPayload = childDrains.some(
+          (drain) => drain.events.length > 0 || drain.pendingAux !== undefined,
         );
-        return;
-      }
-      const compactionResult = runtime.takeCompletedManualHistoryCompactionResult();
-      if (compactionResult && session.turnActive) {
-        this.finishTurn(session, session.turnGeneration, "completed");
-        return;
-      }
+        // Membership/status changes (incl. first create + mid-turn complete) must push
+        // archives even when the child produced no events this tick — Desktop remote
+        // runtime otherwise keeps empty childSessionArchives until turnFinished.
+        if (hasLiveChildPayload || childSessionsChanged) {
+          const drains = hasLiveChildPayload
+            ? childDrains
+            : runtime.childSessionArchives().map((archive) => ({
+                sessionId: archive.summary.sessionId,
+                parentToolCallId: archive.summary.parentToolCallId,
+                events: [] as RuntimeEvent<JsonValue>[],
+                pendingAux: runtime.childSessionPendingAuxState(archive.summary.sessionId),
+                archive,
+              }));
+          this.callbacks.broadcastSubagentEvents?.(session.info.sessionId, drains);
+        }
+        const childInputChanged = childDrains.some((drain) =>
+          drain.events.some(
+            (event) =>
+              event.kind === "approval-requested" ||
+              event.kind === "approval-resolved" ||
+              event.kind === "questions-requested",
+          ),
+        );
+        if (childSessionsChanged || childInputChanged) {
+          this.callbacks.broadcastSnapshot(
+            session.info.sessionId,
+            this.snapshotForSession(session),
+          );
+        }
+        // The bridge had clients drive this on a timer; the daemon pump owns it now.
+        runtime.handleStreamStallTimeout();
+        const drainedEvents = runtime.drainEvents();
+        this.broadcastNativeSubagentEvents(session, drainedEvents);
 
-      if (session.turnActive) {
-        const idle =
-          !runtime.isBusy() && !runtime.hasPendingApproval() && !runtime.hasPendingQuestions();
-        session.idleTicksWhileActive = idle ? session.idleTicksWhileActive + 1 : 0;
-        if (session.idleTicksWhileActive >= IDLE_GRACE_TICKS) {
-          // The turn machine went idle without producing a result (should not
-          // happen outside abort); release the session instead of hanging.
-          this.finishTurn(session, session.turnGeneration, "cancelled");
+        const turnResult = runtime.takeCompletedTurnResult();
+        if (turnResult && session.turnActive) {
+          if (turnResult.kind !== "completed" && turnResult.kind !== "failed") {
+            return;
+          }
+          await this.finishTurn(
+            session,
+            session.turnGeneration,
+            turnResult.kind === "failed" ? "failed" : "completed",
+            turnResult.kind === "failed"
+              ? {
+                  kind: "failed",
+                  error: turnResult.error,
+                  toolExecutions: turnResult.toolExecutions,
+                }
+              : {
+                  kind: "completed",
+                  assistantText: turnResult.assistantText,
+                  toolExecutions: turnResult.toolExecutions,
+                },
+          );
           return;
         }
-      } else {
-        session.idleTicksWhileActive = 0;
-      }
+        const compactionResult = runtime.takeCompletedManualHistoryCompactionResult();
+        if (compactionResult && session.turnActive) {
+          await this.finishTurn(session, session.turnGeneration, "completed");
+          return;
+        }
 
-      this.drainQueue(session);
-    })()
+        if (session.turnActive) {
+          const idle =
+            !runtime.isBusy() && !runtime.hasPendingApproval() && !runtime.hasPendingQuestions();
+          session.idleTicksWhileActive = idle ? session.idleTicksWhileActive + 1 : 0;
+          if (session.idleTicksWhileActive >= IDLE_GRACE_TICKS) {
+            // The turn machine went idle without producing a result (should not
+            // happen outside abort); release the session instead of hanging.
+            await this.finishTurn(session, session.turnGeneration, "cancelled");
+            return;
+          }
+        } else {
+          session.idleTicksWhileActive = 0;
+        }
+
+        await this.drainQueue(session);
+        if (
+          !session.turnActive &&
+          !runtime.isBusy() &&
+          !runtime.hasPendingApproval() &&
+          !runtime.hasPendingQuestions() &&
+          runtime.hasPendingBackgroundTaskNotifications()
+        ) {
+          session.turnActive = true;
+          session.turnGeneration += 1;
+          session.info.isBusy = true;
+          try {
+            if (!(await runtime.resumeBackgroundTaskNotifications())) {
+              session.turnActive = false;
+              session.info.isBusy = false;
+            }
+          } catch (error) {
+            session.turnActive = false;
+            session.info.isBusy = false;
+            throw error;
+          }
+          this.callbacks.broadcastSnapshot(
+            session.info.sessionId,
+            this.snapshotForSession(session),
+          );
+        }
+      },
+      true,
+    )
       .catch((err) => {
         this.callbacks.log?.(
           `session ${session.info.sessionId} pump error: ${err instanceof Error ? err.message : String(err)}`,
@@ -633,6 +1167,45 @@ export class SessionManager {
     params: SubmitUserTurnParams,
   ): Promise<SubmitUserTurnOutcome> {
     const session = this.requireSession(sessionId);
+    return this.serializeSession(session, () => this.submitUserTurnNow(session, params));
+  }
+
+  async startImplementing(
+    sessionId: string,
+    clientTurnId?: string,
+  ): Promise<SubmitUserTurnOutcome> {
+    const session = this.requireSession(sessionId);
+    const assertReady = () => {
+      const { runtime } = session.runtimeResult;
+      if (
+        runtime.isBusy() ||
+        session.turnActive ||
+        runtime.hasPendingApproval() ||
+        runtime.hasPendingQuestions()
+      )
+        throw new Error(
+          "Finish the current turn and answer pending requests before starting implementation.",
+        );
+    };
+    assertReady();
+    return this.serializeSession(session, async () => {
+      assertReady();
+      const planPath = session.runtimeResult.activePlanPathSnapshot();
+      session.runtimeResult.setActivePlanPath(planPath);
+      await session.runtimeResult.setAgentMode("agent");
+      session.createParams.agentMode = "agent";
+      await session.runtimeResult.persist();
+      return this.submitUserTurnNow(session, {
+        text: buildStartImplementingPrompt(planPath),
+        ...(clientTurnId ? { clientTurnId } : {}),
+      });
+    });
+  }
+
+  private async submitUserTurnNow(
+    session: ServerSession,
+    params: SubmitUserTurnParams,
+  ): Promise<SubmitUserTurnOutcome> {
     const { runtime } = session.runtimeResult;
     const text = params.text.trim();
     const imageCount = params.explicitImages?.length ?? 0;
@@ -671,11 +1244,6 @@ export class SessionManager {
     }
     const { runtime } = session.runtimeResult;
     await session.runtimeResult.toolExecutor.refreshCaches();
-    session.turnActive = true;
-    session.idleTicksWhileActive = 0;
-    session.info.isBusy = true;
-    session.turnGeneration += 1;
-
     // Skills activated out-of-turn (slash) merge with per-turn activations.
     const pending = session.pendingActiveSkills ?? [];
     const merged = [...pending, ...(turn.activeSkills ?? [])];
@@ -689,14 +1257,22 @@ export class SessionManager {
     });
     session.pendingActiveSkills = [];
 
-    await runtime.startUserTurnStreaming(
-      turn.text,
-      turn.explicitImages,
-      turn.explicitWorkspaceFiles,
-      activeSkills,
+    const presentationSequence = session.runtimeResult.presentation.append({
+      kind: "user",
+      text: turn.text,
+      explicitWorkspaceFiles: turn.explicitWorkspaceFiles,
+      ...(turn.clientTurnId ? { clientTurnId: turn.clientTurnId } : {}),
+    });
+    this.callbacks.broadcastUserTurnSubmitted?.(session.info.sessionId, turn, presentationSequence);
+    await this.startForegroundAction(session, () =>
+      runtime.startUserTurnStreaming(
+        turn.text,
+        turn.explicitImages,
+        turn.explicitWorkspaceFiles,
+        activeSkills,
+      ),
     );
     this.scheduleSessionTitleGenerationIfNeeded(session, turn.text);
-    this.callbacks.broadcastUserTurnSubmitted?.(session.info.sessionId, turn);
     // Push the busy edge immediately so clients see the turn start.
     this.callbacks.broadcastSnapshot(session.info.sessionId, this.snapshotForSession(session));
   }
@@ -730,6 +1306,8 @@ export class SessionManager {
           return;
         }
         live.info.title = result.title;
+        live.runtimeResult.title = result.title;
+        void live.runtimeResult.persist();
         this.callbacks.broadcastTitleUpdated?.(sessionId, result.title);
       })
       .catch((error) => {
@@ -740,24 +1318,34 @@ export class SessionManager {
       });
   }
 
-  private finishTurn(
+  private async finishTurn(
     session: ServerSession,
     generation: number,
     stopReason: TurnStopReason,
     result?: ServerTurnResult,
-  ): void {
+  ): Promise<void> {
     if (session.turnGeneration !== generation || !session.turnActive) {
       return;
     }
     session.turnActive = false;
     session.idleTicksWhileActive = 0;
     session.info.isBusy = false;
+    await session.runtimeResult.persist();
     this.callbacks.broadcastTurnFinished(session.info.sessionId, stopReason, result);
     this.callbacks.broadcastSnapshot(session.info.sessionId, this.snapshotForSession(session));
-    this.drainQueue(session);
+    this.settleAgentTurnWaiters(session.info.sessionId, {
+      text:
+        result?.kind === "completed"
+          ? result.assistantText
+          : result?.kind === "failed"
+            ? result.error
+            : "The turn was cancelled.",
+      failed: stopReason !== "completed",
+    });
+    await this.drainQueue(session);
   }
 
-  private drainQueue(session: ServerSession): void {
+  private async drainQueue(session: ServerSession): Promise<void> {
     const { runtime } = session.runtimeResult;
     if (session.queue.length === 0 || session.turnActive || runtime.isBusy()) {
       return;
@@ -766,7 +1354,9 @@ export class SessionManager {
       return;
     }
     const next = session.queue.shift()!;
-    this.startTurn(session, next).catch((err) => {
+    try {
+      await this.startTurn(session, next);
+    } catch (err) {
       session.turnActive = false;
       session.info.isBusy = false;
       const message = err instanceof Error ? err.message : String(err);
@@ -776,50 +1366,106 @@ export class SessionManager {
         toolExecutions: [],
       });
       this.callbacks.log?.(`drainQueue failed: ${message}`);
-      this.drainQueue(session);
-    });
+      await this.drainQueue(session);
+    }
   }
 
-  abort(sessionId: string): void {
+  abort(sessionId: string, options: { preserveAgentWriter?: boolean } = {}): void {
     const session = this.requireSession(sessionId);
     session.turnGeneration += 1;
+    if (!options.preserveAgentWriter) delete session.agentWriter;
     session.runtimeResult.runtime.abort();
     session.turnActive = false;
     session.idleTicksWhileActive = 0;
     session.info.isBusy = false;
     this.callbacks.broadcastTurnFinished(sessionId, "cancelled");
     this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
-    this.drainQueue(session);
+    void this.serializeSession(session, async () => {
+      await session.runtimeResult.persist();
+      await this.drainQueue(session);
+    }).catch((error: unknown) =>
+      this.callbacks.broadcastRuntimeEvent(sessionId, {
+        kind: "background-task-error",
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
   }
 
   abortShell(sessionId: string, toolCallId: string): boolean {
     return this.requireSession(sessionId).runtimeResult.abortShell(toolCallId);
   }
 
+  async moveToBackground(
+    sessionId: string,
+    toolCallId: string,
+  ): Promise<import("@spiritagent/agent-core").BackgroundTaskRecord> {
+    const session = this.requireSession(sessionId);
+    const task = session.runtimeResult.runtime
+      .backgroundTaskRecords()
+      .find(
+        (record) =>
+          record.toolCallId === toolCallId &&
+          (record.kind === "shell" || record.kind === "subagent") &&
+          !record.background &&
+          record.status !== "completed" &&
+          record.status !== "failed" &&
+          record.status !== "stopped" &&
+          record.status !== "interrupted",
+      );
+    if (!task) {
+      throw new Error("No foreground Shell or Subagent call is available for the background.");
+    }
+    return session.runtimeResult.tasks.moveToBackground(task.id, { runtimeId: "main" });
+  }
+
   async continueAssistantCompletion(sessionId: string): Promise<void> {
     const session = this.requireSession(sessionId);
-    const { runtime } = session.runtimeResult;
-    if (runtime.isBusy() || session.turnActive) {
-      throw new Error("session is busy; wait for the current turn to finish");
-    }
-    session.turnActive = true;
-    session.idleTicksWhileActive = 0;
-    session.info.isBusy = true;
-    session.turnGeneration += 1;
-    await runtime.continueAssistantCompletionStreaming();
+    await this.serializeSession(session, () =>
+      this.startForegroundAction(session, () =>
+        session.runtimeResult.runtime.continueAssistantCompletionStreaming(),
+      ),
+    );
   }
 
   async compactHistory(sessionId: string): Promise<void> {
     const session = this.requireSession(sessionId);
+    await this.serializeSession(session, () =>
+      this.startForegroundAction(session, () =>
+        session.runtimeResult.runtime.startManualHistoryCompaction(),
+      ),
+    );
+  }
+
+  private requireIdleForeground(session: ServerSession): void {
     const { runtime } = session.runtimeResult;
-    if (runtime.isBusy() || session.turnActive) {
+    if (
+      runtime.isBusy() ||
+      session.turnActive ||
+      runtime.hasPendingApproval() ||
+      runtime.hasPendingQuestions()
+    ) {
       throw new Error("session is busy; wait for the current turn to finish");
     }
+  }
+
+  private async startForegroundAction<T>(
+    session: ServerSession,
+    action: () => Promise<T>,
+  ): Promise<T> {
+    this.requireIdleForeground(session);
     session.turnActive = true;
     session.idleTicksWhileActive = 0;
     session.info.isBusy = true;
-    session.turnGeneration += 1;
-    await runtime.startManualHistoryCompaction();
+    const generation = ++session.turnGeneration;
+    try {
+      return await action();
+    } catch (error) {
+      if (session.turnGeneration === generation) {
+        session.turnActive = false;
+        session.info.isBusy = false;
+      }
+      throw error;
+    }
   }
 
   // ------------------------------------------------------- session config
@@ -832,8 +1478,11 @@ export class SessionManager {
 
   async setAgentMode(sessionId: string, mode: AgentMode): Promise<void> {
     const session = this.requireSession(sessionId);
-    await session.runtimeResult.setAgentMode(mode);
-    session.createParams.agentMode = mode;
+    await this.serializeSession(session, async () => {
+      await session.runtimeResult.setAgentMode(mode);
+      session.createParams.agentMode = mode;
+      await session.runtimeResult.persist();
+    });
   }
 
   setLoopEnabled(sessionId: string, enabled: boolean): void {
@@ -841,55 +1490,102 @@ export class SessionManager {
     session.runtimeResult.setLoopEnabled(enabled);
   }
 
-  reset(sessionId: string): void {
+  async reset(sessionId: string): Promise<void> {
     const session = this.requireSession(sessionId);
     session.turnGeneration += 1;
     session.runtimeResult.runtime.abort();
-    session.queue = [];
-    session.turnActive = false;
-    session.runtimeResult.runtime.replaceHistory([]);
-    session.info.isBusy = false;
-    session.desktopTimeline = undefined;
-    // Match the legacy bridge's fresh-session semantics: todos reset with it.
-    void createHostTodoStore({
-      spiritDataDir: this.spiritDataDir,
-      scope: { sessionKey: session.todoSessionKey },
-    })
-      .purge()
-      .catch(() => {});
-    this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
+    await this.serializeSession(session, async () => {
+      await session.runtimeResult.tasks.cancelOwnedWork();
+      await session.runtimeResult.runtime.settlePendingTaskNotifications();
+      for (const task of session.runtimeResult.tasks.records()) {
+        if (task.terminalEventId && !task.notificationDelivered) {
+          await session.runtimeResult.tasks.markNotified(task.id, { runtimeId: "main" });
+        }
+      }
+      session.queue = [];
+      session.turnActive = false;
+      session.runtimeResult.runtime.replaceHistory([], { retainBackgroundHistory: false });
+      session.runtimeResult.presentation.clear();
+      session.runtimeResult.setActivePlanPath();
+      session.info.isBusy = false;
+      session.desktopTimeline = {
+        revision: (session.desktopTimeline?.revision ?? 0) + 1,
+        timeline: [],
+        updatedAtUnixMs: Date.now(),
+        presentationSequence: session.runtimeResult.presentation.snapshot().sequence,
+      };
+      // Match the legacy bridge's fresh-session semantics: todos reset with it.
+      await createHostTodoStore({
+        spiritDataDir: this.spiritDataDir,
+        scope: { sessionKey: session.todoSessionKey },
+      }).purge();
+      await session.runtimeResult.persist({
+        initialized: true,
+        desktopTimeline: session.desktopTimeline,
+      });
+      this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
+    });
   }
 
-  rename(sessionId: string, title: string): void {
+  async rename(sessionId: string, title: string): Promise<void> {
     const session = this.requireSession(sessionId);
     const trimmed = title.trim();
     if (trimmed) {
       session.info.title = trimmed;
+      session.runtimeResult.title = trimmed;
     } else {
       delete session.info.title;
+      delete session.runtimeResult.title;
     }
+    await session.runtimeResult.persist();
+    if (trimmed) this.callbacks.broadcastTitleUpdated?.(sessionId, trimmed);
   }
 
   // ---------------------------------------------------- archive / restore
 
-  replaceFromArchive(sessionId: string, archive: unknown): void {
+  async replaceFromArchive(sessionId: string, archive: unknown): Promise<void> {
     const session = this.requireSession(sessionId);
-    const { runtime } = session.runtimeResult;
-    if (runtime.isBusy() || session.turnActive) {
-      throw new Error("session is busy; cannot replace archive while a turn is active");
-    }
-    session.runtimeResult.runtime.replaceFromArchive(archive as never);
-    // History was replaced wholesale; the previous timeline is stale until
-    // the owning host pushes a fresh snapshot.
-    session.desktopTimeline = undefined;
+    await this.serializeSession(session, async () => {
+      const { runtime } = session.runtimeResult;
+      if (runtime.isBusy() || session.turnActive) {
+        throw new Error("session is busy; cannot replace archive while a turn is active");
+      }
+      const importedTimeline =
+        archive && typeof archive === "object" && "desktopMessageTimeline" in archive
+          ? archive.desktopMessageTimeline
+          : undefined;
+      if (importedTimeline !== undefined && !Array.isArray(importedTimeline)) {
+        throw new Error("desktop timeline must be an array");
+      }
+      await runtime.settlePendingTaskNotifications();
+      runtime.replaceFromArchive(archive as never);
+      session.runtimeResult.presentation.clear();
+      session.runtimeResult.setActivePlanPath(
+        extractActivePlanPathFromLlmHistory(runtime.history()),
+      );
+      // Import the matching UI baseline before any new journal events can arrive.
+      session.desktopTimeline = importedTimeline
+        ? {
+            revision: (session.desktopTimeline?.revision ?? 0) + 1,
+            timeline: structuredClone(importedTimeline),
+            updatedAtUnixMs: Date.now(),
+            presentationSequence: session.runtimeResult.presentation.snapshot().sequence,
+          }
+        : undefined;
+      await session.runtimeResult.restoreTaskNotifications();
+      await session.runtimeResult.persist({
+        initialized: true,
+        desktopTimeline: session.desktopTimeline ?? null,
+      });
+    });
   }
 
   exportArchive(sessionId: string, messages: unknown, assistantAux: unknown): unknown {
     const session = this.requireSession(sessionId);
-    const archive = session.runtimeResult.runtime.toArchive(
-      messages as never,
-      assistantAux as never,
-    );
+    const archive = {
+      ...session.runtimeResult.runtime.toArchive(messages as never, assistantAux as never),
+      presentation: session.runtimeResult.presentation.snapshot(),
+    };
     const stored = session.desktopTimeline;
     if (!stored) {
       return archive;
@@ -898,6 +1594,7 @@ export class SessionManager {
       ...archive,
       desktopMessageTimeline: stored.timeline,
       desktopMessageTimelineRevision: stored.revision,
+      desktopPresentationSequence: stored.presentationSequence ?? 0,
     };
   }
 
@@ -906,19 +1603,34 @@ export class SessionManager {
    * notify every attached client. Payload stays opaque; only the array shape
    * is enforced at this boundary.
    */
-  pushDesktopTimeline(sessionId: string, timeline: unknown): { ok: true; revision: number } {
+  async pushDesktopTimeline(
+    sessionId: string,
+    timeline: unknown,
+    presentationSequence?: number,
+  ): Promise<{ ok: true; revision: number }> {
     const session = this.requireSession(sessionId);
     if (!Array.isArray(timeline)) {
       throw new Error("desktop timeline must be an array");
     }
-    const revision = (session.desktopTimeline?.revision ?? 0) + 1;
-    session.desktopTimeline = {
-      revision,
-      timeline,
-      updatedAtUnixMs: Date.now(),
-    };
-    this.callbacks.broadcastDesktopTimelineUpdated?.(sessionId, revision);
-    return { ok: true, revision };
+    if (presentationSequence === undefined) {
+      throw new Error("A presentation cursor is required for a desktop timeline.");
+    }
+    return this.serializeSession(session, async () => {
+      if (presentationSequence < (session.desktopTimeline?.presentationSequence ?? 0)) {
+        throw new Error("The timeline is older than the saved presentation cursor.");
+      }
+      session.runtimeResult.presentation.acknowledge(presentationSequence);
+      const revision = (session.desktopTimeline?.revision ?? 0) + 1;
+      session.desktopTimeline = {
+        revision,
+        timeline,
+        updatedAtUnixMs: Date.now(),
+        presentationSequence,
+      };
+      await session.runtimeResult.persist({ desktopTimeline: session.desktopTimeline });
+      this.callbacks.broadcastDesktopTimelineUpdated?.(sessionId, revision);
+      return { ok: true, revision };
+    });
   }
 
   getDesktopTimeline(sessionId: string): { revision: number; timeline: unknown[] } | null {
@@ -974,11 +1686,17 @@ export class SessionManager {
     userMessage?: string,
   ): Promise<string> {
     const session = this.requireSession(sessionId);
-    await session.runtimeResult.toolExecutor.refreshCaches();
-    session.turnActive = true;
-    session.idleTicksWhileActive = 0;
-    session.turnGeneration += 1;
-    return session.runtimeResult.runtime.startApplyMcpPrompt(server, prompt, argsJson, userMessage);
+    return this.serializeSession(session, () =>
+      this.startForegroundAction(session, async () => {
+        await session.runtimeResult.toolExecutor.refreshCaches();
+        return session.runtimeResult.runtime.startApplyMcpPrompt(
+          server,
+          prompt,
+          argsJson,
+          userMessage,
+        );
+      }),
+    );
   }
 
   /** MCP management/read pass-throughs to the session's tool executor. */
@@ -1024,12 +1742,16 @@ export class SessionManager {
         toolExecutor.startMcpBackgroundRefresh();
         return toolExecutor.mcpStatusSnapshot();
       case "startManualMcpTool": {
-        const request = await toolExecutor.createMcpToolRequest(
-          String(params["server"] ?? ""),
-          String(params["tool"] ?? ""),
-          typeof params["argsJson"] === "string" ? params["argsJson"] : undefined,
-        );
-        return runtime.startManualToolRequestDirect(request, "manual");
+        const session = this.requireSession(sessionId);
+        return this.serializeSession(session, async () => {
+          this.requireIdleForeground(session);
+          const request = await toolExecutor.createMcpToolRequest(
+            String(params["server"] ?? ""),
+            String(params["tool"] ?? ""),
+            typeof params["argsJson"] === "string" ? params["argsJson"] : undefined,
+          );
+          return runtime.startManualToolRequestDirect(request, "manual");
+        });
       }
       default:
         throw new Error(`unknown mcp action: ${action}`);
@@ -1039,15 +1761,27 @@ export class SessionManager {
   // -------------------------------------------------------- manual tools
 
   async startManualToolCommand(sessionId: string, message: string): Promise<unknown> {
-    const { runtime } = this.requireSession(sessionId).runtimeResult;
-    const result = await runtime.startManualToolCommand(message);
-    return { result, snapshot: this.snapshot(sessionId) };
+    const session = this.requireSession(sessionId);
+    return this.serializeSession(session, async () => {
+      this.requireIdleForeground(session);
+      const result = await session.runtimeResult.runtime.startManualToolCommand(message);
+      return { result, snapshot: this.snapshot(sessionId) };
+    });
   }
 
-  async continuePendingManualToolApproval(sessionId: string, decision: unknown): Promise<unknown> {
-    const { runtime } = this.requireSession(sessionId).runtimeResult;
-    const result = await runtime.continuePendingManualToolApproval(decision as never);
-    return { result, snapshot: this.snapshot(sessionId) };
+  async continuePendingManualToolApproval(
+    sessionId: string,
+    decision: unknown,
+    requestId?: string,
+  ): Promise<unknown> {
+    const session = this.requireSession(sessionId);
+    return this.serializeSession(session, async () => {
+      const result = await session.runtimeResult.runtime.continuePendingManualToolApproval(
+        decision as never,
+        requestId,
+      );
+      return { result, snapshot: this.snapshot(sessionId) };
+    });
   }
 
   takeCompletedManualToolCommandResult(sessionId: string): unknown {
@@ -1059,71 +1793,169 @@ export class SessionManager {
 
   // ------------------------------------------------------------ subagents
 
-  subagentSessionArchive(sessionId: string, subagentSessionId: string): unknown {
-    return (
-      this.requireSession(sessionId).runtimeResult.runtime.childSessionArchive(subagentSessionId) ??
-      null
+  async subagentSessionArchive(
+    sessionId: string,
+    subagentSessionId: string,
+    parentToolCallId?: string,
+  ): Promise<RuntimeSubagentSessionArchiveEntry | null> {
+    const parent = this.requireSession(sessionId);
+    const archived = parent.runtimeResult.runtime.childSessionArchive(subagentSessionId);
+    if (archived) return archived;
+    const link = this.nativeSubagentLinksForTarget(subagentSessionId).find(
+      (candidate) =>
+        candidate.parentSessionId === sessionId &&
+        (!parentToolCallId || candidate.parentToolCallId === parentToolCallId),
     );
+    if (!link) return null;
+    await this.resumeSession(subagentSessionId, parent.info.workspaceRoot, parent.info.hostKind);
+    const target = this.requireSession(subagentSessionId);
+    return this.nativeSubagentArchive(target, link);
   }
 
   subagentPendingAuxState(sessionId: string, subagentSessionId: string): unknown {
-    return (
-      this.requireSession(sessionId).runtimeResult.runtime.childSessionPendingAuxState(
-        subagentSessionId,
-      ) ?? null
+    const parent = this.requireSession(sessionId);
+    const pending = parent.runtimeResult.runtime.childSessionPendingAuxState(subagentSessionId);
+    if (pending) return pending;
+    if (
+      !this.nativeSubagentLinksForTarget(subagentSessionId).some(
+        (candidate) => candidate.parentSessionId === sessionId,
+      )
+    )
+      return null;
+    return this.sessions.get(subagentSessionId)?.runtimeResult.runtime.pendingAuxState() ?? null;
+  }
+
+  private nativeSubagentLinksForTarget(targetSessionId: string): NativeSubagentLink[] {
+    const links = new Map<string, NativeSubagentLink>(
+      this.nativeSubagentLinks.get(targetSessionId) ?? [],
     );
+    for (const parent of this.sessions.values()) {
+      for (const task of parent.runtimeResult.runtime.backgroundTaskRecords()) {
+        if (task.kind !== "subagent" || task.sessionId !== targetSessionId) continue;
+        const key = `${parent.info.sessionId}\n${task.toolCallId}`;
+        if (links.has(key)) continue;
+        links.set(key, {
+          parentSessionId: parent.info.sessionId,
+          parentToolCallId: task.toolCallId,
+          title: task.input.trim().slice(0, 72) || "SubAgent",
+        });
+      }
+    }
+    return [...links.values()].filter((link) => {
+      const parent = this.sessions.get(link.parentSessionId);
+      return parent && !parent.closing;
+    });
+  }
+
+  private nativeSubagentArchive(
+    target: ServerSession,
+    link: NativeSubagentLink,
+  ): RuntimeSubagentSessionArchiveEntry {
+    const parent = this.requireSession(link.parentSessionId);
+    const taskSummary = buildServerSnapshot(parent.runtimeResult).childSessions.find(
+      (summary) =>
+        summary.sessionId === target.info.sessionId &&
+        summary.parentToolCallId === link.parentToolCallId,
+    );
+    const summary: RuntimeSubagentSessionSummary = taskSummary ?? {
+      sessionId: target.info.sessionId,
+      parentToolCallId: link.parentToolCallId,
+      title: link.title,
+      status: target.agentWriter?.blocked
+        ? "blocked"
+        : target.turnActive || target.runtimeResult.runtime.isBusy()
+          ? "running"
+          : "completed",
+      startedAtUnixMs: Date.parse(target.info.createdAt),
+      updatedAtUnixMs: Date.now(),
+      ...(target.info.worktreePath ? { worktreePath: target.info.worktreePath } : {}),
+      ...(target.info.worktreeBranch ? { worktreeBranch: target.info.worktreeBranch } : {}),
+    };
+    return {
+      summary: {
+        ...summary,
+        ...(target.info.title ? { title: target.info.title } : {}),
+      },
+      llmHistory: [...target.runtimeResult.runtime.history()],
+    };
+  }
+
+  private broadcastNativeSubagentEvents(
+    target: ServerSession,
+    events: RuntimeEvent<JsonValue>[],
+  ): void {
+    if (events.length === 0) return;
+    for (const link of this.nativeSubagentLinksForTarget(target.info.sessionId)) {
+      this.callbacks.broadcastSubagentEvents?.(link.parentSessionId, [
+        {
+          sessionId: target.info.sessionId,
+          parentToolCallId: link.parentToolCallId,
+          events,
+          pendingAux: target.runtimeResult.runtime.pendingAuxState(),
+          archive: this.nativeSubagentArchive(target, link),
+        },
+      ]);
+    }
   }
 
   // ------------------------------------------------- config / hooks / mode
 
-  /** Re-resolve the transport from config.json and rebuild the runtime, preserving history. */
+  /** Refresh foreground bindings while live tasks retain their original execution environment. */
   async replaceConfig(sessionId: string, modelRef?: ModelRef): Promise<void> {
     const session = this.requireSession(sessionId);
-    if (modelRef?.providerId?.trim() && modelRef?.name?.trim()) {
-      session.createParams.modelRef = {
-        providerId: modelRef.providerId.trim(),
-        name: modelRef.name.trim(),
-      };
-    } else {
-      delete session.createParams.modelRef;
-    }
-    const old = session.runtimeResult;
-    await old.runSessionEnd("switch");
-    old.runtime.abort();
-    const history = [...old.runtime.history()];
-    const lastInputTokens = getTransportConfigLastInputTokens(old.transportConfig);
+    session.runtimeResult.runtime.abort();
+    await this.serializeSession(session, async () => {
+      if (modelRef?.providerId?.trim() && modelRef?.name?.trim()) {
+        session.createParams.modelRef = {
+          providerId: modelRef.providerId.trim(),
+          name: modelRef.name.trim(),
+        };
+      } else {
+        delete session.createParams.modelRef;
+      }
+      const old = session.runtimeResult;
+      const mode = session.createParams.agentMode ?? old.agentModeSnapshot();
+      await old.runSessionEnd("switch");
+      old.runtime.abort();
+      const lastInputTokens = getTransportConfigLastInputTokens(old.transportConfig);
 
-    const fresh = await createServerRuntime({
-      workspaceRoot: session.createParams.workspaceRoot,
-      spiritDataDir: this.spiritDataDir,
-      sessionKey: sessionId,
-      ...(session.createParams.modelRef ? { modelRef: session.createParams.modelRef } : {}),
-      todoSessionKey: session.todoSessionKey,
-      mcpService: this.mcpRegistry.forWorkspace(session.createParams.workspaceRoot),
-      hostKind: session.createParams.hostKind === "web" ? "cli" : session.createParams.hostKind,
-      approvalLevel: session.info.approvalLevel,
-      ...(session.createParams.hostUiPromptSection
-        ? { hostUiPromptSection: session.createParams.hostUiPromptSection }
-        : {}),
-      ...(session.createParams.hostToolDescriptionHints
-        ? { hostToolDescriptionHints: session.createParams.hostToolDescriptionHints }
-        : {}),
-      ...(lastInputTokens !== undefined ? { initialLastInputTokens: lastInputTokens } : {}),
-      basicInfoHost: resolveBasicInfoHost(session.createParams),
-      onEvent: (event) => this.handleRuntimeEvent(sessionId, event),
-      onFileChange: (change) => this.callbacks.broadcastFileChange(sessionId, change),
-      requestWorkspaceCapabilityTrust: (request) =>
-        this.requestWorkspaceCapabilityTrust(sessionId, request),
-      ...(this.callbacks.log ? { log: this.callbacks.log } : {}),
+      const fresh = await old.reconfigure({
+        workspaceRoot: session.createParams.workspaceRoot,
+        spiritDataDir: this.spiritDataDir,
+        sessionKey: old.sessionId,
+        agentMode: mode,
+        ...(session.createParams.modelRef ? { modelRef: session.createParams.modelRef } : {}),
+        todoSessionKey: session.todoSessionKey,
+        mcpService: this.mcpRegistry.forWorkspace(session.createParams.workspaceRoot),
+        hostKind: session.createParams.hostKind === "web" ? "cli" : session.createParams.hostKind,
+        approvalLevel: session.info.approvalLevel,
+        ...(session.createParams.hostUiPromptSection
+          ? { hostUiPromptSection: session.createParams.hostUiPromptSection }
+          : {}),
+        ...(session.createParams.hostToolDescriptionHints
+          ? { hostToolDescriptionHints: session.createParams.hostToolDescriptionHints }
+          : {}),
+        ...(lastInputTokens !== undefined ? { initialLastInputTokens: lastInputTokens } : {}),
+        basicInfoHost: resolveBasicInfoHost(session.createParams),
+        onEvent: (event, sequence) => this.handleRuntimeEvent(sessionId, event, sequence),
+        onFileChange: (change) => this.callbacks.broadcastFileChange(sessionId, change),
+        requestWorkspaceCapabilityTrust: (request) =>
+          this.requestWorkspaceCapabilityTrust(sessionId, request),
+        ...(this.callbacks.log ? { log: this.callbacks.log } : {}),
+      });
+      fresh.setLoopEnabled(old.runtime.loopEnabled());
+      await fresh.setAgentMode(mode);
+      this.attachDesktopMcpUiOpener(sessionId, fresh, session.createParams.hostKind);
+      session.runtimeResult = fresh;
+      session.info.model = fresh.transportConfig.model;
+      await fresh.runSessionStart("resume");
+      await fresh.persist();
+      session.turnActive = false;
+      session.info.isBusy = false;
+      session.idleTicksWhileActive = 0;
+      this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
+      await this.drainQueue(session);
     });
-    fresh.runtime.replaceHistory(history);
-    fresh.setLoopEnabled(old.runtime.loopEnabled());
-    await fresh.setAgentMode(session.createParams.agentMode ?? "agent");
-    this.attachDesktopMcpUiOpener(sessionId, fresh, session.createParams.hostKind);
-    session.runtimeResult = fresh;
-    session.info.model = fresh.transportConfig.model;
-    await old.toolExecutor.disposeLsp();
-    await fresh.runSessionStart("resume");
   }
 
   async reloadHostMetadata(sessionId: string, mode: AgentMode): Promise<void> {
@@ -1165,9 +1997,24 @@ export class SessionManager {
   async replyPendingApproval(
     sessionId: string,
     decision: Parameters<ServerRuntimeResult["runtime"]["continuePendingApproval"]>[0],
+    requestId?: string,
   ): Promise<void> {
     const session = this.requireSession(sessionId);
-    await session.runtimeResult.runtime.continuePendingApproval(decision);
+    if (!session.runtimeResult.runtime.currentPendingApproval(requestId)) {
+      const target = [...this.sessions.values()].find(
+        (candidate) =>
+          candidate.agentWriter?.ownerSessionId === sessionId &&
+          candidate.runtimeResult.runtime.currentPendingApproval(requestId),
+      );
+      if (target) {
+        await target.runtimeResult.runtime.continuePendingApproval(decision, requestId);
+        this.syncDelegatedInputState(target);
+        this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
+        return;
+      }
+    }
+    // poll() can await an early-stream approval; its reply must not queue behind that poll.
+    await session.runtimeResult.runtime.continuePendingApproval(decision, requestId);
     // approval-resolved mid-broadcast often sees isBusy=false (pending cleared, tool not
     // inFlight yet). Push again after continue so clients see the resumed busy edge —
     // same pattern as replyPendingQuestions.
@@ -1199,8 +2046,11 @@ export class SessionManager {
   }
 
   private createExtensionUiOpener(sessionId: string): McpUiOpener {
-    return (request: McpUiOpenRequest) =>
-      new Promise<McpUiOpenResult>((resolve) => {
+    return (request: McpUiOpenRequest) => {
+      if (this.noClientsRemaining) {
+        return Promise.resolve({ kind: "unavailable" as const, reason: "host-has-no-ui" });
+      }
+      return new Promise<McpUiOpenResult>((resolve) => {
         const requestId = randomUUID();
         this.pendingExtensionUi.set(requestId, { sessionId, resolve });
         this.callbacks.broadcastExtensionUiRequested?.(sessionId, {
@@ -1210,6 +2060,7 @@ export class SessionManager {
           ...(request.params === undefined ? {} : { params: request.params }),
         });
       });
+    };
   }
 
   private settleExtensionUiForSession(sessionId: string, result: McpUiOpenResult): void {
@@ -1225,9 +2076,23 @@ export class SessionManager {
   async replyPendingQuestions(
     sessionId: string,
     result: Parameters<ServerRuntimeResult["runtime"]["continuePendingQuestions"]>[0],
+    requestId?: string,
   ): Promise<void> {
     const session = this.requireSession(sessionId);
-    await session.runtimeResult.runtime.continuePendingQuestions(result);
+    if (!session.runtimeResult.runtime.currentPendingQuestions(requestId)) {
+      const target = [...this.sessions.values()].find(
+        (candidate) =>
+          candidate.agentWriter?.ownerSessionId === sessionId &&
+          candidate.runtimeResult.runtime.currentPendingQuestions(requestId),
+      );
+      if (target) {
+        await target.runtimeResult.runtime.continuePendingQuestions(result, requestId);
+        this.syncDelegatedInputState(target);
+        this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
+        return;
+      }
+    }
+    await session.runtimeResult.runtime.continuePendingQuestions(result, requestId);
     this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
   }
 
@@ -1235,6 +2100,7 @@ export class SessionManager {
     sessionId: string,
     request: WorkspaceCapabilityTrustRequestPayload,
   ): Promise<WorkspaceCapabilityTrustDecision> {
+    if (this.noClientsRemaining) return Promise.resolve("deny");
     return new Promise((resolve) => {
       const requestId = randomUUID();
       const timer = setTimeout(() => {
@@ -1270,29 +2136,9 @@ export class SessionManager {
    * runtime parks on input that can never arrive.
    */
   handleNoClientsRemaining(): void {
+    this.noClientsRemaining = true;
     for (const session of this.sessions.values()) {
-      const { runtime } = session.runtimeResult;
-      if (runtime.hasPendingApproval()) {
-        runtime
-          .continuePendingApproval({
-            kind: "deny",
-            resultText: "All clients disconnected.",
-          })
-          .catch((err) =>
-            this.callbacks.log?.(
-              `session ${session.info.sessionId}: deny failed: ${err instanceof Error ? err.message : String(err)}`,
-            ),
-          );
-      }
-      if (runtime.hasPendingQuestions()) {
-        runtime
-          .continuePendingQuestions({ status: "skipped" })
-          .catch((err) =>
-            this.callbacks.log?.(
-              `session ${session.info.sessionId}: skip questions failed: ${err instanceof Error ? err.message : String(err)}`,
-            ),
-          );
-      }
+      this.denyUnattendedInputs(session);
     }
     for (const [requestId, pending] of this.pendingTrustRequests) {
       this.pendingTrustRequests.delete(requestId);
@@ -1303,6 +2149,41 @@ export class SessionManager {
       this.pendingExtensionUi.delete(requestId);
       pending.resolve({ kind: "unavailable", reason: "host-has-no-ui" });
     }
+  }
+
+  private denyUnattendedInputs(session: ServerSession): void {
+    const { sessionId } = session.info;
+    if (session.closing || this.unattendedInputs.has(sessionId)) return;
+    this.unattendedInputs.add(sessionId);
+    void (async () => {
+      const { runtime } = session.runtimeResult;
+      while (this.noClientsRemaining && !session.closing) {
+        const approval = runtime.currentPendingApproval();
+        if (approval) {
+          await this.replyPendingApproval(
+            sessionId,
+            {
+              kind: "deny",
+              resultText: "All clients disconnected.",
+            },
+            approval.requestId,
+          );
+          continue;
+        }
+        const questions = runtime.currentPendingQuestions();
+        if (questions) {
+          await this.replyPendingQuestions(sessionId, { status: "skipped" }, questions.requestId);
+          continue;
+        }
+        break;
+      }
+    })()
+      .catch((error) => {
+        this.callbacks.log?.(
+          `session ${sessionId}: unattended input failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      })
+      .finally(() => this.unattendedInputs.delete(sessionId));
   }
 
   /** Re-read installed extensions into every live session (post install/remove). */
@@ -1322,28 +2203,38 @@ export class SessionManager {
     if (!session) {
       return;
     }
+    this.failAgentTurnWaiters(sessionId, new Error("The target session was closed."));
+    delete session.agentWriter;
+    session.closing = true;
     const conversationKey = session.info.conversationKey?.trim();
     if (conversationKey && this.conversationIndex.get(conversationKey) === sessionId) {
       this.conversationIndex.delete(conversationKey);
     }
     this.attachments.delete(sessionId);
+    for (const [requestId, pending] of this.pendingTrustRequests) {
+      if (pending.sessionId !== sessionId) continue;
+      this.pendingTrustRequests.delete(requestId);
+      clearTimeout(pending.timer);
+      pending.resolve("deny");
+    }
     this.settleExtensionUiForSession(sessionId, { kind: "unavailable", reason: "host-has-no-ui" });
     session.turnGeneration += 1;
     session.queue = [];
     clearInterval(session.pump);
     session.runtimeResult.runtime.abort();
+    await this.serializeSession(session, () => session.runtimeResult.dispose(), true);
     this.sessions.delete(sessionId);
-    await session.runtimeResult.toolExecutor.disposeLsp();
   }
 
   /** Aborts every session; called on daemon shutdown. */
   async shutdown(): Promise<void> {
     const disposals: Promise<void>[] = [];
     for (const session of this.sessions.values()) {
+      session.closing = true;
       session.turnGeneration += 1;
       clearInterval(session.pump);
       session.runtimeResult.runtime.abort();
-      disposals.push(session.runtimeResult.toolExecutor.disposeLsp());
+      disposals.push(this.serializeSession(session, () => session.runtimeResult.dispose(), true));
     }
     this.sessions.clear();
     this.conversationIndex.clear();
@@ -1357,6 +2248,14 @@ export class SessionManager {
       this.pendingExtensionUi.delete(requestId);
       pending.resolve({ kind: "unavailable", reason: "host-has-no-ui" });
     }
-    await Promise.all(disposals);
+    const settled = await Promise.allSettled(disposals);
+    const owner = await Promise.allSettled(
+      this.taskOwner ? [this.taskOwner.then((value) => value.close())] : [],
+    );
+    this.taskOwner = undefined;
+    const failures = [...settled, ...owner].flatMap((entry) =>
+      entry.status === "rejected" ? [entry.reason] : [],
+    );
+    if (failures.length) throw new AggregateError(failures, "Daemon session shutdown failed.");
   }
 }

@@ -111,10 +111,20 @@ function cloneJsonValue(value: JsonValue): JsonValue {
 export interface ToolExecutionOutput {
   content: LlmMessageContent;
   summaryText: string;
+  execution?: { failed?: boolean; exitCode?: number };
   hostUi?: ToolExecutionHostUi;
 }
 
 export interface ToolExecutionHostUi {
+  backgroundTask?: import("./background-tasks.js").BackgroundTaskRecord;
+  backgroundTaskOutput?: import("./background-tasks.js").BackgroundTaskOutputPreview;
+  delay?: {
+    startedAtUnixMs: number;
+    deadlineUnixMs?: number;
+    elapsedMs?: number;
+    taskId?: string;
+    taskKind?: "shell" | "subagent";
+  };
   lspWriteDiagnostics?: import("./lsp/types.js").LspWriteDiagnosticsUi;
   /**
    * apply_patch: the exact before/after file content the executor computed atomically with the
@@ -351,6 +361,7 @@ export interface SubagentSessionSummary {
 
 export interface SubagentSessionArchiveEntry {
   summary: SubagentSessionSummary;
+  backgroundTaskNotifications?: import("./background-tasks.js").BackgroundTaskNotification[];
   llmHistory: Array<StoredLlmMessageArchiveEntry | LegacyLlmMessageArchiveEntry>;
 }
 
@@ -432,6 +443,7 @@ export interface DreamSettings {
 }
 
 export interface ChatArchive {
+  backgroundTaskNotifications?: import("./background-tasks.js").BackgroundTaskNotification[];
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   assistantAux: AssistantAuxArchiveEntry[];
   llmHistory: Array<StoredLlmMessageArchiveEntry | LegacyLlmMessageArchiveEntry>;
@@ -567,13 +579,16 @@ export type AskQuestionsResult =
   | { status: "answered"; answers: AskQuestionsAnswer[] };
 
 export interface SubagentRequest {
-  task: string;
+  prompt: string;
+  sessionId?: string;
   subagentType?: string;
-  successCriteria?: string;
-  contextSummary?: string;
-  filesToInspect?: string[];
-  expectedOutput?: string;
   worktree?: boolean;
+  background?: import("./background-tasks.js").BackgroundOptions;
+}
+
+export interface SubagentSessionOrigin {
+  parentSessionId: string;
+  parentToolCallId: string;
 }
 
 export type PermissionMemoryTarget =
@@ -705,7 +720,9 @@ export interface ToolRequestExecutionMetadata {
   subagentTitle?: string;
   userInitiated?: boolean;
   /** In-process only; not serialized across host bridge IPC. */
-  onOutputChunk?: (chunk: string) => void;
+  onOutputChunk?: (chunk: string) => void | Promise<void>;
+  /** Execution-scoped cancellation; background work does not inherit a foreground turn abort. */
+  signal?: AbortSignal;
 }
 
 export interface ToolExecutor<
@@ -741,6 +758,8 @@ export interface ToolExecutor<
     result: AskQuestionsResult,
   ): Promise<ToolRequest | undefined>;
   shouldExecuteInBackground?(request: ToolRequest): boolean;
+  /** Overlap execution while committing results in tool-call order. */
+  canExecuteConcurrently?(request: ToolRequest): boolean;
   backgroundStatusText?(request: ToolRequest): string | undefined;
   abortRunningShell?(): void;
   startMcpBackgroundRefresh(): void;

@@ -48,6 +48,7 @@ export async function performToolExecution<Config, State, ToolRequest>(
 
   try {
     output = await runtime.options.toolExecutor.execute(request);
+    failed = output.execution?.failed === true;
   } catch (error) {
     failed = true;
     const summaryText = `[tool error] ${renderError(error)}`;

@@ -6,11 +6,12 @@ import { describe, it } from "vitest";
 
 import { setLlmFetchTransportOverrideForTests } from "@spiritagent/agent-core";
 import { setKeyringStoreForTests, providerInternalKeyAccount } from "@spiritagent/host-internal";
+import { isSessionId, readSessionStorageKey } from "@spiritagent/host-internal";
 
 import { SessionManager } from "../src/session-manager.js";
 
 function freshDataDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), "spirit-server-session-"));
+  const dir = mkdtempSync(join(tmpdir(), "ss-"));
   writeFileSync(
     join(dir, "config.json"),
     JSON.stringify({
@@ -72,6 +73,56 @@ function writeServiceTierConfig(dir: string, serviceTier: string): void {
 }
 
 describe("SessionManager", () => {
+  it("registers a native subagent session and resumes it by ID after restart", async () => {
+    await withMockKeyring(async () => {
+      const dataDir = freshDataDir();
+      const callbacks = {
+        broadcastRuntimeEvent: () => {},
+        broadcastTurnFinished: () => {},
+        broadcastSnapshot: () => {},
+        broadcastTrustRequest: () => {},
+        broadcastFileChange: () => {},
+      };
+      const first = new SessionManager(dataDir, callbacks);
+      const origin = { parentSessionId: "sess_parent", parentToolCallId: "call-1" };
+      const conversationKey = join(tmpdir(), "native-chat.json");
+      const created = await first.createSession({
+        workspaceRoot: tmpdir(),
+        hostKind: "desktop",
+        title: "Original session title",
+        conversationKey,
+        sessionKind: "subagent",
+        subagentOrigin: origin,
+      });
+      assert.ok(isSessionId(created.sessionId));
+      assert.equal(created.sessionKind, "subagent");
+      assert.deepEqual(created.subagentOrigin, origin);
+      assert.ok(readSessionStorageKey(dataDir, created.sessionId));
+      assert.deepEqual(first.listSessions(), []);
+      await first.shutdown();
+
+      const second = new SessionManager(dataDir, callbacks);
+      const resumed = await second.resumeSession(created.sessionId, tmpdir());
+      assert.equal(resumed.sessionId, created.sessionId);
+      assert.equal(resumed.sessionKind, "subagent");
+      assert.equal(resumed.title, "Original session title");
+      assert.equal(resumed.conversationKey, conversationKey);
+      assert.deepEqual(resumed.subagentOrigin, origin);
+      assert.deepEqual(second.listSessions(), []);
+      await second.rename(created.sessionId, "Renamed original session");
+      await second.shutdown();
+
+      const third = new SessionManager(dataDir, callbacks);
+      const renamed = await third.resumeSession(created.sessionId, tmpdir());
+      assert.equal(renamed.title, "Renamed original session");
+      await assert.rejects(
+        third.resumeSession("sess_missing", tmpdir()),
+        /Stored session not found/,
+      );
+      await third.shutdown();
+    });
+  });
+
   it("creates, lists, and closes sessions without touching the network", async () => {
     await withMockKeyring(async () => {
       const dataDir = freshDataDir();
@@ -90,7 +141,7 @@ describe("SessionManager", () => {
         workspaceRoot: tmpdir(),
         hostKind: "cli",
       });
-      assert.ok(created.sessionId.startsWith("sess_"));
+      assert.ok(isSessionId(created.sessionId));
       assert.equal(created.isBusy, false);
       assert.equal(created.approvalLevel, "default");
 
@@ -184,6 +235,8 @@ describe("SessionManager", () => {
         "loopEnabled",
         "approvalLevel",
         "backgroundToolStatus",
+        "backgroundTasks",
+        "backgroundTaskNotifications",
       ]);
       for (const key of Object.keys(snapshot)) {
         assert.ok(allowedKeys.has(key), `unexpected snapshot key: ${key}`);
@@ -237,9 +290,9 @@ describe("SessionManager", () => {
       assert.equal(manager.getSession(created.sessionId)?.sessionId, created.sessionId);
 
       const secondDetach = await manager.detachSession(clientB, created.sessionId);
-      assert.equal(secondDetach.closed, true);
-      assert.equal(manager.getSession(created.sessionId), undefined);
-      assert.deepEqual(manager.listSessions(), []);
+      assert.equal(secondDetach.closed, false);
+      assert.equal(manager.getSession(created.sessionId)?.attachmentCount, 0);
+      assert.equal(manager.listSessions().length, 1);
 
       await manager.shutdown();
     });
@@ -336,22 +389,25 @@ describe("SessionManager", () => {
         hostKind: "desktop",
       });
 
-      // No timeline yet: get returns null and exportArchive stays untouched.
-      assert.equal(manager.getDesktopTimeline(created.sessionId), null);
+      // The empty baseline lets either client replay the complete journal before its first checkpoint.
+      assert.deepEqual(manager.getDesktopTimeline(created.sessionId), {
+        revision: 0,
+        timeline: [],
+      });
       const plainArchive = manager.exportArchive(created.sessionId, [], []) as Record<
         string,
         unknown
       >;
-      assert.equal("desktopMessageTimeline" in plainArchive, false);
+      assert.deepEqual(plainArchive["desktopMessageTimeline"], []);
 
       // Non-array payloads are rejected at the boundary.
-      assert.throws(
+      await assert.rejects(
         () => manager.pushDesktopTimeline(created.sessionId, { not: "an-array" }),
         /desktop timeline must be an array/,
       );
 
       const timelineV1 = [{ turnId: 1, createdOrder: 0, segments: [] }];
-      const first = manager.pushDesktopTimeline(created.sessionId, timelineV1);
+      const first = await manager.pushDesktopTimeline(created.sessionId, timelineV1, 0);
       assert.deepEqual(first, { ok: true, revision: 1 });
       assert.deepEqual(manager.getDesktopTimeline(created.sessionId), {
         revision: 1,
@@ -362,7 +418,7 @@ describe("SessionManager", () => {
         { turnId: 1, createdOrder: 0, segments: [] },
         { turnId: 2, createdOrder: 1, segments: [] },
       ];
-      const second = manager.pushDesktopTimeline(created.sessionId, timelineV2);
+      const second = await manager.pushDesktopTimeline(created.sessionId, timelineV2, 0);
       assert.deepEqual(second, { ok: true, revision: 2 });
       assert.deepEqual(broadcasts, [
         { sessionId: created.sessionId, revision: 1 },
@@ -377,7 +433,7 @@ describe("SessionManager", () => {
       assert.equal(mergedArchive["desktopMessageTimelineRevision"], 2);
 
       // History replacement invalidates the stored timeline.
-      manager.replaceFromArchive(created.sessionId, {
+      await manager.replaceFromArchive(created.sessionId, {
         messages: [],
         assistantAux: [],
         llmHistory: [],
@@ -386,16 +442,16 @@ describe("SessionManager", () => {
       });
       assert.equal(manager.getDesktopTimeline(created.sessionId), null);
 
-      manager.pushDesktopTimeline(created.sessionId, timelineV1);
-      manager.reset(created.sessionId);
-      assert.equal(manager.getDesktopTimeline(created.sessionId), null);
+      await manager.pushDesktopTimeline(created.sessionId, timelineV1, 0);
+      await manager.reset(created.sessionId);
+      assert.deepEqual(manager.getDesktopTimeline(created.sessionId)?.timeline, []);
 
       await manager.shutdown();
     });
   });
 
   it("creates a session without an active model and rejects turns until setup", async () => {
-    const dataDir = mkdtempSync(join(tmpdir(), "spirit-server-session-nomodel-"));
+    const dataDir = mkdtempSync(join(tmpdir(), "sn-"));
     writeFileSync(
       join(dataDir, "config.json"),
       JSON.stringify({
@@ -416,7 +472,7 @@ describe("SessionManager", () => {
       workspaceRoot: tmpdir(),
       hostKind: "cli",
     });
-    assert.ok(created.sessionId.startsWith("sess_"));
+    assert.ok(isSessionId(created.sessionId));
     assert.equal(created.model, "");
 
     await assert.rejects(
@@ -632,5 +688,33 @@ describe("SessionManager", () => {
 
       await manager.shutdown();
     });
+  });
+});
+
+it("serializes stable conversation creation with provisional promotion", async () => {
+  await withMockKeyring(async () => {
+    const dataDir = freshDataDir();
+    const manager = new SessionManager(dataDir, {
+      broadcastRuntimeEvent: () => {},
+      broadcastTurnFinished: () => {},
+      broadcastSnapshot: () => {},
+      broadcastTrustRequest: () => {},
+      broadcastFileChange: () => {},
+    });
+    const created = await manager.createSession({
+      workspaceRoot: tmpdir(),
+      hostKind: "desktop",
+      conversationKey: "ephemeral://provisional-race",
+    });
+    const stable = "ephemeral://stable-race";
+    const promoted = manager.migrateConversationKey(created.sessionId, stable);
+    const reopened = await manager.createSession({
+      workspaceRoot: tmpdir(),
+      hostKind: "desktop",
+      conversationKey: stable,
+    });
+    await promoted;
+    assert.equal(reopened.sessionId, created.sessionId);
+    await manager.shutdown();
   });
 });

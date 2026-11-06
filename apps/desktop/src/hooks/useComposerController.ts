@@ -919,7 +919,7 @@ export function useComposerController({
   );
 
   const applySessionReferenceSuggestion = useCallback(
-    (session: { path: string; title: string }) => {
+    (session: { path: string; title: string; sessionId?: string }) => {
       const query = fileReferenceSuggestions?.query;
       if (!query) {
         return;
@@ -1446,8 +1446,12 @@ export function useComposerController({
   );
 
   const submitApprovalAllowShortcut = useCallback(() => {
-    void runtime.submitApproval({ kind: "allow" }, isPaneIsolated ? paneSessionPath : undefined);
-  }, [runtime, isPaneIsolated, paneSessionPath]);
+    void runtime.submitApproval(
+      { kind: "allow" },
+      isPaneIsolated ? paneSessionPath : undefined,
+      pendingApproval?.requestId,
+    );
+  }, [runtime, isPaneIsolated, paneSessionPath, pendingApproval]);
 
   const handleComposerKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {

@@ -121,6 +121,7 @@ declare global {
       request?: import("./types.js").AbortConversationRequest,
     ): Promise<DesktopSnapshot>;
     abortShell(toolCallId: string): Promise<DesktopSnapshot>;
+    moveToBackground(toolCallId: string): Promise<DesktopSnapshot>;
     continueAssistantCompletion(messageId: number): Promise<DesktopSnapshot>;
     rewindAndSubmitMessage(request: RewindAndSubmitMessageRequest): Promise<DesktopSnapshot>;
     forkSession(request: ForkSessionRequest): Promise<DesktopSnapshot>;
@@ -391,7 +392,7 @@ declare global {
     subscribeAppAwayChanged(callback: (away: boolean) => void): () => void;
     subscribeNotifyRefresh(callback: () => void): () => void;
     subscribeApprovalFromNotification(
-      callback: (payload: { decision: "allow" | "deny" }) => void,
+      callback: (payload: { decision: "allow" | "deny"; requestId?: string }) => void,
     ): () => void;
     subscribeNotificationReply(
       callback: (payload: {

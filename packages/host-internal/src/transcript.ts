@@ -1,24 +1,26 @@
-import { createHash } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { mergeSessionTranscripts, type SessionTranscript } from "@spiritagent/agent-core";
 
 import { sanitizeSessionIdForFilename } from "./spirit-filename-sanitize.js";
+import {
+  deleteSessionStorageReferences,
+  readSessionStorageKey,
+  sessionStorageDirectoryName,
+} from "./session-storage-identity.js";
 
 export const TRANSCRIPTS_DIR_NAME = "transcripts";
 export const SESSION_TRANSCRIPT_FILE_NAME = "transcript.json";
 export const SUBAGENT_TRANSCRIPTS_DIR_NAME = "subagents";
 
-/** Transcript directory name: stably normalize the sessionKey, then take the first 32 hex chars of its sha256, avoiding path-flattening collisions and overly long component names. */
+/** Internal IDs name the directory directly; unregistered lookup keys retain their bounded hash. */
 export function transcriptSessionDirName(sessionKey: string | undefined): string {
   const trimmed = sessionKey?.trim();
   if (!trimmed) {
     return "unknown";
   }
-  // Resolve absolute paths first so Desktop / server derive the same directory name for the same chat file; relative/opaque ids are hashed as-is.
-  const stableKey = path.isAbsolute(trimmed) ? path.resolve(trimmed) : trimmed;
-  return createHash("sha256").update(stableKey, "utf8").digest("hex").slice(0, 32);
+  return sessionStorageDirectoryName(trimmed);
 }
 
 export function resolveTranscriptsDir(spiritDataDir: string): string {
@@ -29,7 +31,11 @@ export function resolveTranscriptSessionDir(
   spiritDataDir: string,
   sessionKey: string | undefined,
 ): string {
-  return path.join(resolveTranscriptsDir(spiritDataDir), transcriptSessionDirName(sessionKey));
+  const trimmed = sessionKey?.trim();
+  const directory = trimmed
+    ? sessionStorageDirectoryName(readSessionStorageKey(spiritDataDir, trimmed) ?? trimmed)
+    : "unknown";
+  return path.join(resolveTranscriptsDir(spiritDataDir), directory);
 }
 
 export function resolveSessionTranscriptFilePath(
@@ -120,5 +126,7 @@ export async function deleteTranscriptSessionDir(
   sessionKey: string | undefined,
 ): Promise<void> {
   const sessionDir = resolveTranscriptSessionDir(spiritDataDir, sessionKey);
+  const storageKey = sessionKey ? readSessionStorageKey(spiritDataDir, sessionKey) : undefined;
   await rm(sessionDir, { recursive: true, force: true });
+  if (storageKey) await deleteSessionStorageReferences(spiritDataDir, storageKey);
 }

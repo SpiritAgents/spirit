@@ -305,12 +305,7 @@ export function appendLoopContinuationGuidance<State, ToolRequest>(
 export function formatLoopContinuationGuidance(originalUserInput: string): string {
   const original = originalUserInput.trim() || "(empty original user request)";
   return [
-    "Loop continuation check:",
-    "The assistant stopped without calling finish_task, but Loop is enabled.",
-    "Review the original user request and the work already completed in this conversation.",
-    "If the original task is fully complete, call the finish_task tool now.",
-    "If the original task is not complete, continue working on it according to the original user request.",
-    "Do not ask the user what to do next unless you are blocked or genuinely need missing information.",
+    "Revisit the user's goal and the results so far. Continue with useful improvements or verification within the requested scope, respecting any explicit iteration requirement. Call finish_task when the requested work is complete; if blocked, explain what is needed.",
     "",
     "Original user request:",
     original,

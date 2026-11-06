@@ -74,3 +74,16 @@ test("parseShellToolResult round-trips serialized JSON", () => {
   const parsed = parseShellToolResult(serializeShellToolResult(result));
   assert.deepEqual(parsed, result);
 });
+
+test("shell results preserve unknown exit codes and the full output file reference", () => {
+  const result = {
+    terminal: "shell",
+    workspace: "/workspace",
+    command: "build",
+    exitCode: null,
+    output: "partial",
+    truncated: true,
+    outputPath: "/data/background-tasks/output.log",
+  };
+  assert.deepEqual(parseShellToolResult(serializeShellToolResult(result)), result);
+});

@@ -10,6 +10,7 @@ import {
   type AgentMode,
 } from "./ports.js";
 import { throwUnknownToolError, toolNamesFromDefinitions } from "./unknown-tool-error.js";
+import { buildBackgroundOptionsSchema } from "./background-tasks.js";
 
 export {
   enrichUnknownToolError,
@@ -20,6 +21,8 @@ export {
 export interface BuiltinHostToolDefinitionEnvironment {
   shellDisplayName: string;
   commandParameterDescription: string;
+  backgroundTasksEnabled?: boolean;
+  subagentEnabled?: boolean;
 }
 
 export interface ContributedHostToolDefinition {
@@ -222,10 +225,49 @@ export function buildFinishTaskHostToolDefinitions(): JsonValue[] {
   ];
 }
 
+export function buildBackgroundTaskToolDefinitions(): JsonValue[] {
+  return [
+    functionTool(
+      "delay",
+      "Wait for a duration or for a background task. With both seconds and task_id, return when the task finishes or the duration elapses, whichever comes first.",
+      {
+        type: "object",
+        properties: {
+          seconds: {
+            type: "number",
+            minimum: 0,
+            description: "Seconds to wait, or the maximum wait when task_id is provided.",
+          },
+          task_id: {
+            type: "string",
+            minLength: 1,
+            description: "The background task to wait for. Omit seconds to wait until it finishes.",
+          },
+        },
+        anyOf: [{ required: ["seconds"] }, { required: ["task_id"] }],
+        additionalProperties: false,
+      },
+    ),
+    functionTool("stop_task", "Stop a running background task and its owned work.", {
+      type: "object",
+      properties: {
+        task_id: {
+          type: "string",
+          minLength: 1,
+          description: "The ID of the background task to stop.",
+        },
+      },
+      required: ["task_id"],
+      additionalProperties: false,
+    }),
+  ];
+}
+
 export function buildBuiltinHostToolDefinitions(
   environment: BuiltinHostToolDefinitionEnvironment,
 ): JsonValue[] {
   return [
+    ...(environment.backgroundTasksEnabled ? buildBackgroundTaskToolDefinitions() : []),
     functionTool("shell", buildShellToolDescription(environment.shellDisplayName), {
       type: "object",
       properties: {
@@ -241,6 +283,9 @@ export function buildBuiltinHostToolDefinitions(
           type: "string",
           description: environment.commandParameterDescription,
         },
+        ...(environment.backgroundTasksEnabled
+          ? { background: buildBackgroundOptionsSchema("shell") }
+          : {}),
       },
       required: ["reason", "command"],
       additionalProperties: false,
@@ -394,30 +439,39 @@ export function buildBuiltinHostToolDefinitions(
         additionalProperties: false,
       },
     ),
-    functionTool(
-      "subagent",
-      "Delegate a scoped task to a child agent session. Use this when the task can be isolated from the main conversation and you want the child agent to return only its final result.",
-      {
-        type: "object",
-        properties: {
-          task: { type: "string" },
-          success_criteria: { type: "string" },
-          context_summary: { type: "string" },
-          files_to_inspect: {
-            type: "array",
-            items: { type: "string" },
-          },
-          expected_output: { type: "string" },
-          worktree: {
-            type: "boolean",
-            description:
-              "When true, run the subagent in an isolated git worktree so parallel subagents can edit files without conflicting. Use when the subagent will modify workspace files and other subagents may edit at the same time; omit for read-only tasks.",
-          },
-        },
-        required: ["task"],
-        additionalProperties: false,
-      },
-    ),
+    ...(environment.subagentEnabled === false
+      ? []
+      : [
+          functionTool(
+            "subagent",
+            "Delegate substantial research or implementation work to a child agent. Parallel agents can reduce elapsed time and keep the main conversation focused across large workstreams. Without session_id, each child starts a fresh context, so weigh that setup and token cost against doing the work directly; small or tightly connected tasks often fit better in the main agent.",
+            {
+              type: "object",
+              properties: {
+                prompt: {
+                  type: "string",
+                  minLength: 1,
+                  description: "The prompt sent to the child agent.",
+                },
+                session_id: {
+                  type: "string",
+                  description:
+                    "Resume an existing session by ID. If the target is generating, its current foreground turn is interrupted before the new prompt; a target currently being prompted by another agent is left untouched and this call fails. Omit to create a new hidden subagent session.",
+                },
+                ...(environment.backgroundTasksEnabled
+                  ? { background: buildBackgroundOptionsSchema("subagent") }
+                  : {}),
+                worktree: {
+                  type: "boolean",
+                  description:
+                    "When true, switch the target session to an isolated git worktree and persist that location. If it is already in a worktree, continue there. Omit to keep the current location.",
+                },
+              },
+              required: ["prompt"],
+              additionalProperties: false,
+            },
+          ),
+        ]),
     functionTool(
       "generate_image",
       "Generate one image with the configured image generation model. Use this only when the user explicitly wants an image. First gather enough context and rewrite the final image prompt yourself, then call this tool. After it completes, you may continue with a normal assistant message when that helps the user.",
@@ -837,7 +891,9 @@ export function buildTodoHostToolDefinitions(): JsonValue[] {
   ];
 }
 
-export function buildPlanModeHostToolDefinitions(): JsonValue[] {
+export function buildPlanModeHostToolDefinitions(
+  editTool: "edit_file" | "apply_patch" = "edit_file",
+): JsonValue[] {
   return [
     functionTool(
       "create_plan",
@@ -853,7 +909,8 @@ export function buildPlanModeHostToolDefinitions(): JsonValue[] {
           content: {
             type: "string",
             description:
-              'Full markdown body of the implementation plan—the document a coding agent will follow in a later turn.\n\nUnless the user explicitly asks for another shape (one-pager, ADR-only, research notes), write an execution-ready plan, not a roadmap deck:\n\n- Start with a "# Title" and one short paragraph: goal, non-goals, and what "done" means.\n- Split work into ordered phases: "## Phase 1: <short title>", "## Phase 2: ...", and so on.\n- Under each phase use markdown task checkboxes only for actionable work: "- [ ] <imperative task>". Each task should be specific enough to implement or verify in one sitting; name files, modules, or APIs when known from the repo.\n- End each phase with a "**Verify**" bullet list: commands, tests, or observable checks that prove the phase is complete.\n- Phase 1 must state workspace assumptions that affect implementation (e.g. target git branch name, feature flags, or "no schema migrations") when relevant; do not invent repo facts—read the codebase first when unsure.\n- Prefer depth on the current user request over generic process filler; skip empty checklist boilerplate.\n\nAfter creation, revise this plan with edit_file on the same path (old_text/new_text), not another create_plan call.',
+              'Full markdown body of the implementation plan—the document a coding agent will follow in a later turn.\n\nUnless the user explicitly asks for another shape (one-pager, ADR-only, research notes), write an execution-ready plan, not a roadmap deck:\n\n- Start with a "# Title" and one short paragraph: goal, non-goals, and what "done" means.\n- Split work into ordered phases: "## Phase 1: <short title>", "## Phase 2: ...", and so on.\n- Under each phase use markdown task checkboxes only for actionable work: "- [ ] <imperative task>". Each task should be specific enough to implement or verify in one sitting; name files, modules, or APIs when known from the repo.\n- End each phase with a "**Verify**" bullet list: commands, tests, or observable checks that prove the phase is complete.\n- Phase 1 must state workspace assumptions that affect implementation (e.g. target git branch name, feature flags, or "no schema migrations") when relevant; do not invent repo facts—read the codebase first when unsure.\n- Prefer depth on the current user request over generic process filler; skip empty checklist boilerplate.\n\n' +
+              `After creation, revise this plan with ${editTool} on the same path${editTool === "edit_file" ? " (old_text/new_text)" : ""}, not another create_plan call.`,
           },
         },
         required: ["name", "content"],

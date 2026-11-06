@@ -29,7 +29,8 @@ export interface HostToolRequestMetadata {
   subagentTitle?: string;
   userInitiated?: boolean;
   /** In-process only; not serialized across host bridge IPC. */
-  onOutputChunk?: (chunk: string) => void;
+  onOutputChunk?: (chunk: string) => void | Promise<void>;
+  signal?: AbortSignal;
 }
 
 export interface HostRecordedFileChange {

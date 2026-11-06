@@ -274,6 +274,10 @@ impl RuntimeHandle {
         self.backend.abort()
     }
 
+    pub fn move_to_background(&mut self, tool_call_id: &str) -> Result<()> {
+        self.backend.move_to_background(tool_call_id)
+    }
+
     pub fn continue_assistant_completion(&mut self) -> Result<()> {
         self.backend.continue_assistant_completion()
     }
@@ -326,6 +330,10 @@ impl RuntimeHandle {
         explicit_images: Option<Vec<String>>,
     ) -> Result<()> {
         self.backend.submit_user_turn(text, explicit_images)
+    }
+
+    pub fn start_implementing(&mut self) -> Result<()> {
+        self.backend.start_implementing()
     }
 
     pub fn list_mcp_servers(&mut self) -> Result<Vec<ManagedMcpServer>> {
@@ -405,8 +413,13 @@ impl RuntimeHandle {
         self.backend.respond_to_pending_tool_approval(message)
     }
 
-    pub fn respond_to_pending_questions(&mut self, result: &AskQuestionsResult) {
-        self.backend.respond_to_pending_questions(result)
+    pub fn respond_to_pending_questions(
+        &mut self,
+        request_id: Option<&str>,
+        result: &AskQuestionsResult,
+    ) -> bool {
+        self.backend
+            .respond_to_pending_questions(request_id, result)
     }
 
     pub fn execute_manual_tool_command(&mut self, message: &str) {

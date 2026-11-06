@@ -10,7 +10,7 @@ import { providerInternalKeyAccount, setKeyringStoreForTests } from "@spiritagen
 import { createAcpRuntime } from "../src/runtime-factory.js";
 
 test("ACP request uses the config provider id instead of the SDK package", async () => {
-  const spiritDataDir = mkdtempSync(join(tmpdir(), "spirit-acp-host-prompt-"));
+  const spiritDataDir = mkdtempSync(join(tmpdir(), "af-"));
   const workspaceRoot = mkdtempSync(join(tmpdir(), "spirit-acp-host-prompt-ws-"));
   writeFileSync(
     join(spiritDataDir, "config.json"),
@@ -56,8 +56,9 @@ test("ACP request uses the config provider id instead of the SDK package", async
     );
   });
 
+  let result: Awaited<ReturnType<typeof createAcpRuntime>> | undefined;
   try {
-    const result = await createAcpRuntime({ workspaceRoot, spiritDataDir }, () => {});
+    result = await createAcpRuntime({ workspaceRoot, spiritDataDir }, () => {});
     const turn = await result.runtime.submitUserTurn("hello");
     assert.equal(turn.kind, "completed");
     const messages = requestBodies[0]?.messages;
@@ -66,13 +67,14 @@ test("ACP request uses the config provider id instead of the SDK package", async
     assert.match(serializedMessages, /The user's model is kimi-k3 from moonshot-ai\./);
     assert.doesNotMatch(serializedMessages, /@ai-sdk\/moonshotai/);
   } finally {
+    await result?.dispose();
     setLlmFetchTransportOverrideForTests(undefined);
     setKeyringStoreForTests(undefined);
   }
 });
 
 test("ACP conditional fast falls back and restores from real response usage", async () => {
-  const spiritDataDir = mkdtempSync(join(tmpdir(), "spirit-acp-tier-limit-"));
+  const spiritDataDir = mkdtempSync(join(tmpdir(), "at-"));
   const workspaceRoot = mkdtempSync(join(tmpdir(), "spirit-acp-tier-limit-ws-"));
   writeFileSync(
     join(spiritDataDir, "config.json"),
@@ -141,14 +143,16 @@ test("ACP conditional fast falls back and restores from real response usage", as
     );
   });
 
+  let result: Awaited<ReturnType<typeof createAcpRuntime>> | undefined;
   try {
-    const result = await createAcpRuntime({ workspaceRoot, spiritDataDir }, () => {});
+    result = await createAcpRuntime({ workspaceRoot, spiritDataDir }, () => {});
     for (const text of ["first", "second", "third"]) {
       const turn = await result.runtime.submitUserTurn(text);
       assert.equal(turn.kind, "completed");
     }
     assert.deepEqual(requestTiers, ["fast", "default", "fast"]);
   } finally {
+    await result?.dispose();
     setLlmFetchTransportOverrideForTests(undefined);
     setKeyringStoreForTests(undefined);
   }

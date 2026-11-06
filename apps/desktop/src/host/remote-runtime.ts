@@ -21,13 +21,15 @@ import type { BridgeRuntimeSnapshot } from "@spiritagent/agent-core/host-bridge"
 import type {
   WorkspaceCapabilityTrustDecision,
   WorkspaceCapabilityTrustRequest,
+  RuntimePresentationEntry,
+  RuntimePresentationState,
 } from "@spiritagent/host-internal";
 import type {
   ModelRef,
   HostDreamScope,
   HostDreamSourceSessionRef,
 } from "@spiritagent/host-internal";
-import { loadModelProfile } from "@spiritagent/host-internal";
+import { isSessionId, loadModelProfile } from "@spiritagent/host-internal";
 import {
   connectOrSpawnServer,
   type ServerNotificationListener,
@@ -45,8 +47,24 @@ import {
   buildDesktopUiMarkdownPromptSection,
 } from "./desktop-ui-markdown-prompt.js";
 import { sameWorkspaceRoot } from "./service-utils.js";
+import { sameSessionPath } from "./session-path.js";
+
+type PresentationArchive = ChatArchive & {
+  presentation?: RuntimePresentationState;
+  desktopMessageTimeline?: PersistedDesktopTimelineTurnSnapshot[];
+  desktopPresentationSequence?: number;
+};
+
+type PendingPresentationEvent =
+  | { event: RuntimeEvent<DesktopToolRequest>; sequence: number }
+  | {
+      userTurn: { text: string; explicitWorkspaceFiles: PendingWorkspaceFile[] };
+      clientTurnId?: string;
+      sequence: number;
+    };
 
 interface RemoteDesktopRuntimeInput {
+  restorePresentation?: boolean;
   dataDir: string;
   workspaceRoot: string;
   modelRef: ModelRef;
@@ -58,13 +76,17 @@ interface RemoteDesktopRuntimeInput {
   webToolExposure?: { providerToolsEnabled: boolean; webFetchEnabled: boolean };
   /** Resolved chat file path for multi-host session identity. */
   conversationKey?: string;
+  title?: string;
+  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   /**
    * Force `session.replaceConfig` on attach even when the daemon session already runs the
    * requested model; inference-preference-only updates (reasoning/thinking/service tier) change
    * config.json without changing the model name, which the attach-time name comparison cannot see.
    */
   refreshDaemonConfig?: boolean;
-  sessionKind?: "default" | "dream-collector";
+  sessionKind?: "default" | "dream-collector" | "subagent";
   dreamScope?: HostDreamScope;
   dreamSourceSession?: HostDreamSourceSessionRef;
   /** Desktop Web: `<basic_info>` host override with page URL. */
@@ -90,6 +112,23 @@ interface RemoteDesktopRuntimeInput {
 
 interface SessionCreateResult {
   sessionId: string;
+  restoredFromDisk?: boolean;
+}
+
+function isNativeDesktopSessionId(sessionId: string): boolean {
+  return isSessionId(sessionId);
+}
+
+function childArchiveIdentity(entry: RuntimeSubagentSessionArchiveEntry): string {
+  return isNativeDesktopSessionId(entry.summary.sessionId)
+    ? `${entry.summary.sessionId}\n${entry.summary.parentToolCallId}`
+    : entry.summary.sessionId;
+}
+
+function childSummaryIdentity(summary: RuntimeSubagentSessionSummary): string {
+  return isNativeDesktopSessionId(summary.sessionId)
+    ? `${summary.sessionId}\n${summary.parentToolCallId}`
+    : summary.sessionId;
 }
 
 interface SessionAttachResult {
@@ -302,9 +341,15 @@ export async function attachRemoteDesktopRuntime(
     await client.call("session.close", { sessionId: synced.session.sessionId });
     throw new Error(`stale daemon workspace for conversationKey: ${input.conversationKey}`);
   }
+  if (input.title?.trim()) {
+    await client.call("session.rename", {
+      sessionId: synced.session.sessionId,
+      title: input.title.trim(),
+    });
+  }
   const runtime = buildRemoteDesktopRuntime(client, synced.session.sessionId, input);
   try {
-    await runtime.initializeFromSnapshot(synced.snapshot);
+    await runtime.initializeFromSnapshot(synced.snapshot, input.restorePresentation);
     await applyRemoteSessionPreferences(runtime, input);
     return runtime;
   } catch (error) {
@@ -324,6 +369,9 @@ export async function createRemoteDesktopRuntime(
     approvalLevel: input.approvalLevel,
     ...(input.todoSessionKey ? { todoSessionKey: input.todoSessionKey } : {}),
     ...(input.conversationKey ? { conversationKey: input.conversationKey } : {}),
+    workLocation: input.workLocation,
+    ...(input.worktreePath ? { worktreePath: input.worktreePath } : {}),
+    ...(input.worktreeBranch ? { worktreeBranch: input.worktreeBranch } : {}),
     ...(input.sessionKind === "dream-collector" ? { sessionKind: "dream-collector" } : {}),
     ...(input.dreamScope ? { dreamScope: input.dreamScope } : {}),
     ...(input.dreamSourceSession ? { dreamSourceSession: input.dreamSourceSession } : {}),
@@ -336,9 +384,15 @@ export async function createRemoteDesktopRuntime(
     ...(input.basicInfoHost ? { basicInfoHost: input.basicInfoHost } : {}),
   });
   await client.call("session.attach", { sessionId: created.sessionId });
+  if (input.title?.trim()) {
+    await client.call("session.rename", {
+      sessionId: created.sessionId,
+      title: input.title.trim(),
+    });
+  }
   const runtime = buildRemoteDesktopRuntime(client, created.sessionId, input);
   try {
-    await runtime.initialize();
+    await runtime.initialize(created.restoredFromDisk === true, input.restorePresentation);
     return runtime;
   } catch (error) {
     await runtime.close().catch(() => undefined);
@@ -363,7 +417,11 @@ export async function openRemoteDesktopRuntime(
 export class RemoteDesktopRuntime {
   private snapshot: BridgeRuntimeSnapshot = { ...EMPTY_SNAPSHOT };
   private archive: ChatArchive;
-  private events: RuntimeEvent<DesktopToolRequest>[] = [];
+  private events: PendingPresentationEvent[] = [];
+  private projectedPresentationSequence = 0;
+  private restoringPresentation = false;
+  private receivedDuringRestore: RuntimePresentationEntry[] = [];
+  private restoredPresentation: PresentationArchive | undefined;
   private completedTurnResult: RuntimeTurnResult<unknown, DesktopToolRequest> | undefined;
   private pendingAssistantTextStore = "";
   private thinkingTextStore = "";
@@ -422,8 +480,11 @@ export class RemoteDesktopRuntime {
     this.unsubscribe = client.onNotification(listener);
   }
 
-  async initialize(): Promise<void> {
-    if (this.archive.llmHistory.length > 0 || (this.archive.subagentSessions?.length ?? 0) > 0) {
+  async initialize(restoredFromDisk = false, restorePresentation = false): Promise<void> {
+    if (
+      !restoredFromDisk &&
+      (this.archive.llmHistory.length > 0 || (this.archive.subagentSessions?.length ?? 0) > 0)
+    ) {
       await this.client.call("session.replaceFromArchive", {
         sessionId: this.sessionId,
         archive: this.archive,
@@ -432,12 +493,52 @@ export class RemoteDesktopRuntime {
     const result = await this.client.call<SessionPollResult>("session.poll", {
       sessionId: this.sessionId,
     });
-    await this.initializeFromSnapshot(result.snapshot);
+    await this.initializeFromSnapshot(result.snapshot, restorePresentation);
   }
 
-  async initializeFromSnapshot(snapshot: BridgeRuntimeSnapshot): Promise<void> {
+  async initializeFromSnapshot(
+    snapshot: BridgeRuntimeSnapshot,
+    restorePresentation = false,
+  ): Promise<void> {
+    this.restoringPresentation = restorePresentation;
     this.snapshot = snapshot;
     await this.refreshArchive();
+    this.restoredPresentation = this.archive as PresentationArchive;
+    if (
+      !this.restoredPresentation.presentation?.entries.length &&
+      !this.restoredPresentation.desktopMessageTimeline &&
+      this.receivedDuringRestore.length === 0
+    ) {
+      this.restoringPresentation = false;
+    }
+  }
+
+  takeRestoredPresentation() {
+    const archive = this.restoredPresentation;
+    this.restoredPresentation = undefined;
+    this.restoringPresentation = false;
+    if (!archive) return undefined;
+    const sequence = archive.presentation?.sequence ?? 0;
+    const entries = [
+      ...(archive.presentation?.entries ?? []),
+      ...this.receivedDuringRestore.filter((entry) => entry.sequence > sequence),
+    ];
+    this.receivedDuringRestore = [];
+    this.events = this.events.filter((entry) => entry.sequence > sequence);
+    for (const entry of entries) {
+      if (entry.kind === "runtime") {
+        this.applyRuntimeEvent(entry.event as RuntimeEvent<DesktopToolRequest>);
+      }
+    }
+    this.projectedPresentationSequence = entries.reduce(
+      (latest, entry) => Math.max(latest, entry.sequence),
+      sequence,
+    );
+    return {
+      timeline: archive.desktopMessageTimeline,
+      entries,
+      notifications: archive.backgroundTaskNotifications ?? [],
+    };
   }
 
   private dropNotificationListener(): void {
@@ -455,11 +556,13 @@ export class RemoteDesktopRuntime {
     await this.timelinePushTail;
   }
 
-  async close(): Promise<void> {
+  async close(options: { closeSession?: boolean } = {}): Promise<void> {
     this.dropNotificationListener();
     await this.awaitMutations();
     await this.timelinePushTail;
-    await this.client.call("session.detach", { sessionId: this.sessionId });
+    await this.client.call(options.closeSession ? "session.close" : "session.detach", {
+      sessionId: this.sessionId,
+    });
   }
 
   /**
@@ -468,11 +571,13 @@ export class RemoteDesktopRuntime {
    * persist boundary re-pushes a full snapshot, so nothing needs a retry).
    */
   pushDesktopTimeline(timeline: PersistedDesktopTimelineTurnSnapshot[]): void {
+    const presentationSequence = this.projectedPresentationSequence;
     this.timelinePushTail = this.timelinePushTail.then(async () => {
       try {
         await this.client.call("session.pushDesktopTimeline", {
           sessionId: this.sessionId,
           timeline,
+          presentationSequence,
         });
       } catch (error) {
         console.warn("[desktop-host] pushDesktopTimeline failed", error);
@@ -494,19 +599,29 @@ export class RemoteDesktopRuntime {
     explicitWorkspaceFiles: PendingWorkspaceFile[] = [],
     activeSkills: LlmActiveSkill[] = [],
   ): Promise<void> {
+    await this.startTurnRpc("session.submitUserTurn", {
+      text,
+      explicitImages,
+      explicitWorkspaceFiles,
+      activeSkills,
+    });
+  }
+
+  async startImplementing(): Promise<void> {
+    await this.startTurnRpc("session.startImplementing", {});
+  }
+
+  private async startTurnRpc(method: string, params: Record<string, unknown>): Promise<void> {
     await this.awaitMutations();
     this.snapshot = { ...this.snapshot, isBusy: true };
     this.pendingStartedAtStore = Date.now();
     const clientTurnId = randomUUID();
     this.pendingLocalClientTurnIds.add(clientTurnId);
     try {
-      await this.client.call("session.submitUserTurn", {
+      await this.client.call(method, {
         sessionId: this.sessionId,
         clientTurnId,
-        text,
-        explicitImages,
-        explicitWorkspaceFiles,
-        activeSkills,
+        ...params,
       });
     } catch (error) {
       this.pendingLocalClientTurnIds.delete(clientTurnId);
@@ -526,19 +641,24 @@ export class RemoteDesktopRuntime {
     await this.client.call("session.compactHistory", { sessionId: this.sessionId });
   }
 
-  async continuePendingApproval(decision: RuntimeApprovalDecision): Promise<void> {
+  async continuePendingApproval(
+    decision: RuntimeApprovalDecision,
+    requestId?: string,
+  ): Promise<void> {
     await this.awaitMutations();
     await this.client.call("session.replyPendingApproval", {
       sessionId: this.sessionId,
       decision,
+      requestId,
     });
   }
 
-  async continuePendingQuestions(result: AskQuestionsResult): Promise<void> {
+  async continuePendingQuestions(result: AskQuestionsResult, requestId?: string): Promise<void> {
     await this.awaitMutations();
     await this.client.call("session.replyPendingQuestions", {
       sessionId: this.sessionId,
       result,
+      requestId,
     });
   }
 
@@ -588,8 +708,24 @@ export class RemoteDesktopRuntime {
   }
 
   drainEvents(): RuntimeEvent<DesktopToolRequest>[] {
-    const events = this.events;
-    this.events = [];
+    const events: RuntimeEvent<DesktopToolRequest>[] = [];
+    while (this.events.length > 0) {
+      const entry = this.events[0]!;
+      if ("userTurn" in entry && events.length > 0) break;
+      this.events.shift();
+      this.projectedPresentationSequence = Math.max(
+        this.projectedPresentationSequence,
+        entry.sequence,
+      );
+      if ("userTurn" in entry) {
+        if (!entry.clientTurnId || !this.pendingLocalClientTurnIds.delete(entry.clientTurnId)) {
+          this.onRemoteUserTurnSubmitted?.(entry.userTurn);
+          this.onActivity?.();
+        }
+      } else {
+        events.push(entry.event);
+      }
+    }
     return events;
   }
 
@@ -793,8 +929,16 @@ export class RemoteDesktopRuntime {
     if (method === "runtime.event") {
       const event = params["event"] as RuntimeEvent<DesktopToolRequest>;
       if (event) {
+        const sequence =
+          typeof params["presentationSequence"] === "number"
+            ? params["presentationSequence"]
+            : this.projectedPresentationSequence;
+        if (this.restoringPresentation) {
+          this.receivedDuringRestore.push({ kind: "runtime", event, sequence });
+          return;
+        }
         this.applyRuntimeEvent(event);
-        this.events.push(event);
+        this.events.push({ event, sequence });
         this.onActivity?.();
       }
       return;
@@ -802,19 +946,36 @@ export class RemoteDesktopRuntime {
     if (method === "session.userTurnSubmitted" && typeof params["text"] === "string") {
       const clientTurnId =
         typeof params["clientTurnId"] === "string" ? params["clientTurnId"] : undefined;
+      if (this.restoringPresentation) {
+        this.receivedDuringRestore.push({
+          kind: "user",
+          sequence:
+            typeof params["presentationSequence"] === "number" ? params["presentationSequence"] : 0,
+          text: params["text"],
+          clientTurnId,
+          explicitWorkspaceFiles: Array.isArray(params["explicitWorkspaceFiles"])
+            ? params["explicitWorkspaceFiles"]
+            : [],
+        });
+        return;
+      }
       this.archive.llmHistory.push({
         role: "user",
         content: params["text"],
         imagePaths: [],
       });
-      if (clientTurnId && this.pendingLocalClientTurnIds.delete(clientTurnId)) {
-        return;
-      }
-      this.onRemoteUserTurnSubmitted?.({
-        text: params["text"],
-        explicitWorkspaceFiles: Array.isArray(params["explicitWorkspaceFiles"])
-          ? (params["explicitWorkspaceFiles"] as PendingWorkspaceFile[])
-          : [],
+      this.events.push({
+        userTurn: {
+          text: params["text"],
+          explicitWorkspaceFiles: Array.isArray(params["explicitWorkspaceFiles"])
+            ? (params["explicitWorkspaceFiles"] as PendingWorkspaceFile[])
+            : [],
+        },
+        clientTurnId,
+        sequence:
+          typeof params["presentationSequence"] === "number"
+            ? params["presentationSequence"]
+            : this.projectedPresentationSequence,
       });
       this.onActivity?.();
       return;
@@ -822,10 +983,12 @@ export class RemoteDesktopRuntime {
     if (method === "session.snapshot" && params["snapshot"]) {
       const incoming = params["snapshot"] as BridgeRuntimeSnapshot;
       this.snapshot = { ...incoming };
+      this.applyNativeChildSessionSummaries(incoming.childSessions ?? []);
       this.onActivity?.();
       return;
     }
     if (method === "session.turnFinished") {
+      if (this.restoringPresentation) return;
       this.applyTurnFinished(params as unknown as SessionTurnFinishedNotification);
       this.onActivity?.();
       return;
@@ -992,12 +1155,29 @@ export class RemoteDesktopRuntime {
   }
 
   private async refreshArchive(): Promise<void> {
-    this.archive = await this.client.call<ChatArchive>("session.exportArchive", {
+    const previousNativeArchives = (
+      (this.archive.subagentSessions ?? []) as RuntimeSubagentSessionArchiveEntry[]
+    ).filter((entry) => isNativeDesktopSessionId(entry.summary.sessionId));
+    const currentNativeSummaries = (this.snapshot.childSessions ?? []).filter((summary) =>
+      isNativeDesktopSessionId(summary.sessionId),
+    );
+    const refreshed = await this.client.call<ChatArchive>("session.exportArchive", {
       sessionId: this.sessionId,
       messages: this.archiveMessages,
       assistantAux: this.archiveAssistantAux,
     });
+    const refreshedSessions = (refreshed.subagentSessions ??
+      []) as RuntimeSubagentSessionArchiveEntry[];
+    const refreshedIds = new Set(refreshedSessions.map(childArchiveIdentity));
+    this.archive = {
+      ...refreshed,
+      subagentSessions: [
+        ...refreshedSessions,
+        ...previousNativeArchives.filter((entry) => !refreshedIds.has(childArchiveIdentity(entry))),
+      ] as ChatArchive["subagentSessions"],
+    };
     this.syncChildSessionSummariesFromArchives();
+    this.applyNativeChildSessionSummaries(currentNativeSummaries);
   }
 
   /**
@@ -1009,12 +1189,61 @@ export class RemoteDesktopRuntime {
     await this.awaitMutations();
     if (this.archiveRefreshPromise) {
       await this.archiveRefreshPromise;
-      return;
+    } else {
+      this.archiveRefreshPromise = this.refreshArchive().finally(() => {
+        this.archiveRefreshPromise = undefined;
+      });
+      await this.archiveRefreshPromise;
     }
-    this.archiveRefreshPromise = this.refreshArchive().finally(() => {
-      this.archiveRefreshPromise = undefined;
-    });
-    await this.archiveRefreshPromise;
+    const nativeSummaries = (this.snapshot.childSessions ?? []).filter((summary) =>
+      isNativeDesktopSessionId(summary.sessionId),
+    );
+    let archivesChanged = false;
+    for (const summary of nativeSummaries) {
+      const archive = await this.client.call<RuntimeSubagentSessionArchiveEntry | null>(
+        "session.subagentSessionArchive",
+        {
+          sessionId: this.sessionId,
+          subagentSessionId: summary.sessionId,
+          parentToolCallId: summary.parentToolCallId,
+        },
+      );
+      if (archive) archivesChanged = this.upsertChildSessionArchive(archive) || archivesChanged;
+    }
+    if (archivesChanged) this.syncChildSessionSummariesFromArchives();
+  }
+
+  private applyNativeChildSessionSummaries(
+    summaries: readonly RuntimeSubagentSessionSummary[],
+  ): void {
+    const nativeSummaries = new Map(
+      summaries
+        .filter((summary) => isNativeDesktopSessionId(summary.sessionId))
+        .map((summary) => [childSummaryIdentity(summary), summary]),
+    );
+    if (nativeSummaries.size === 0) return;
+    const sessions = (this.archive.subagentSessions ?? []) as RuntimeSubagentSessionArchiveEntry[];
+    this.archive = {
+      ...this.archive,
+      subagentSessions: sessions.map((entry) => {
+        const summary = nativeSummaries.get(childArchiveIdentity(entry));
+        return summary ? { ...entry, summary: { ...summary } } : entry;
+      }) as ChatArchive["subagentSessions"],
+    };
+    this.snapshot = {
+      ...this.snapshot,
+      childSessions: [
+        ...(this.snapshot.childSessions ?? []).map(
+          (summary) => nativeSummaries.get(childSummaryIdentity(summary)) ?? summary,
+        ),
+        ...[...nativeSummaries.values()].filter(
+          (summary) =>
+            !(this.snapshot.childSessions ?? []).some(
+              (candidate) => childSummaryIdentity(candidate) === childSummaryIdentity(summary),
+            ),
+        ),
+      ],
+    };
   }
 
   private upsertChildSessionArchive(entry: RuntimeSubagentSessionArchiveEntry): boolean {
@@ -1025,7 +1254,9 @@ export class RemoteDesktopRuntime {
     const sessions = [
       ...(this.archive.subagentSessions ?? []),
     ] as RuntimeSubagentSessionArchiveEntry[];
-    const index = sessions.findIndex((session) => session.summary.sessionId === sessionId);
+    const index = sessions.findIndex(
+      (session) => childArchiveIdentity(session) === childArchiveIdentity(entry),
+    );
     if (index >= 0) {
       sessions[index] = structuredClone(entry);
     } else {
@@ -1091,10 +1322,33 @@ export async function disposeRemoteDesktopRuntime(runtime: unknown): Promise<voi
   }
 }
 
-export async function closeRemoteDesktopRuntime(runtime: unknown): Promise<void> {
+export async function closeRemoteDesktopRuntime(
+  runtime: unknown,
+  options: { closeSession?: boolean } = {},
+): Promise<void> {
   if (runtime instanceof RemoteDesktopRuntime) {
-    await runtime.close();
+    await runtime.close(options);
   }
+}
+
+export async function closeRemoteDesktopConversation(
+  dataDir: string,
+  conversationKey: string,
+  runtime: unknown,
+): Promise<void> {
+  if (runtime instanceof RemoteDesktopRuntime) {
+    await runtime.close({ closeSession: true });
+    return;
+  }
+  const client = await sharedDesktopServerClient(dataDir);
+  const sessions =
+    await client.call<{ sessionId: string; conversationKey?: string }[]>("session.list");
+  const session = sessions.find(
+    (entry) => entry.conversationKey && sameSessionPath(entry.conversationKey, conversationKey),
+  );
+  if (!session) return;
+  await client.call("session.attach", { sessionId: session.sessionId });
+  await client.call("session.close", { sessionId: session.sessionId });
 }
 
 export function remoteDesktopRuntimeNeedsProjection(runtime: unknown): boolean {
@@ -1109,6 +1363,54 @@ export async function ensureRemoteChildSessionArchivesFresh(runtime: unknown): P
   return true;
 }
 
+export async function resolveRemoteUserSessionTarget(
+  runtime: unknown,
+  parentToolCallId: string,
+): Promise<
+  | {
+      conversationKey: string;
+      workspaceRoot: string;
+      workLocation?: "local" | "worktree";
+      worktreePath?: string;
+      worktreeBranch?: string;
+    }
+  | undefined
+> {
+  if (!(runtime instanceof RemoteDesktopRuntime)) return undefined;
+  const target = runtime
+    .childSessionArchives()
+    .find((entry) => entry.summary.parentToolCallId === parentToolCallId);
+  const sessionId = target?.summary.sessionId;
+  if (!sessionId || !isNativeDesktopSessionId(sessionId)) return undefined;
+  const result = await runtime.clientCall("session.list", {});
+  const sessions =
+    result && typeof result === "object" && "sessions" in result && Array.isArray(result.sessions)
+      ? (result.sessions as Array<{
+          sessionId: string;
+          sessionKind?: string;
+          conversationKey?: string;
+          workspaceRoot: string;
+          workLocation?: "local" | "worktree";
+          worktreePath?: string;
+          worktreeBranch?: string;
+        }>)
+      : [];
+  const session = sessions.find(
+    (session) =>
+      session.sessionId === sessionId &&
+      session.sessionKind !== "subagent" &&
+      Boolean(session.conversationKey?.trim()),
+  );
+  if (!session?.conversationKey) return undefined;
+  return {
+    conversationKey: session.conversationKey,
+    workspaceRoot: session.workspaceRoot,
+    ...(session.workLocation ? { workLocation: session.workLocation } : {}),
+    ...(session.worktreePath ? { worktreePath: session.worktreePath } : {}),
+    ...(session.worktreeBranch ? { worktreeBranch: session.worktreeBranch } : {}),
+  };
+}
+
 export async function abortRemoteDesktopShell(
   runtime: unknown,
   toolCallId: string,
@@ -1120,6 +1422,16 @@ export async function abortRemoteDesktopShell(
     aborted?: boolean;
   };
   return result.aborted === true;
+}
+
+export async function moveRemoteDesktopTaskToBackground(
+  runtime: unknown,
+  toolCallId: string,
+): Promise<void> {
+  if (!(runtime instanceof RemoteDesktopRuntime)) {
+    throw new Error("Background handoff requires a daemon runtime.");
+  }
+  await runtime.clientCall("session.moveToBackground", { toolCallId });
 }
 
 export async function exportRemoteDesktopState(runtime: unknown): Promise<

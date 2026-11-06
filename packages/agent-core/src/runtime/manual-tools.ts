@@ -100,7 +100,9 @@ export async function startManualToolCommand<Config, State, ToolRequest>(
       },
     );
     if (activeGate) {
+      const requestId = crypto.randomUUID();
       runtime.pendingManualApproval = {
+        requestId,
         request,
         prompt: activeGate.prompt,
         ...(activeGate.rememberTarget !== undefined
@@ -114,6 +116,7 @@ export async function startManualToolCommand<Config, State, ToolRequest>(
       runtime.emitEvent({
         kind: "approval-requested",
         approval: {
+          requestId,
           prompt: activeGate.prompt,
           request,
           ...(activeGate.rememberTarget !== undefined
@@ -128,6 +131,7 @@ export async function startManualToolCommand<Config, State, ToolRequest>(
       return {
         kind: "requires-approval",
         approval: {
+          requestId,
           prompt: activeGate.prompt,
           request,
           ...(activeGate.rememberTarget !== undefined
@@ -156,10 +160,15 @@ export async function startManualToolCommand<Config, State, ToolRequest>(
 export async function continuePendingManualToolApproval<Config, State, ToolRequest>(
   runtime: ManualToolsRuntime<Config, State, ToolRequest>,
   decision: RuntimeApprovalDecision,
+  requestId?: string,
 ): Promise<RuntimeManualToolCommandStartResult<State, ToolRequest>> {
   const pending = runtime.pendingManualApproval;
-  if (!pending) {
-    throw new Error("There is no pending manual tool call to confirm.");
+  if (!pending || (requestId !== undefined && pending.requestId !== requestId)) {
+    throw new Error(
+      requestId !== undefined
+        ? "This approval is no longer pending. Refresh the pending request."
+        : "There is no pending manual tool call to confirm.",
+    );
   }
 
   runtime.pendingManualApproval = undefined;

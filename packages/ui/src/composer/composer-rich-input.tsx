@@ -389,7 +389,7 @@ export type ComposerRichInputHandle = {
     options?: { isPlan?: boolean },
   ): void;
   insertSessionReference(
-    session: { path: string; title: string; content?: string },
+    session: { path: string; title: string; content?: string; sessionId?: string },
     query: ActiveWorkspaceFileReferenceQuery,
     finalize?: boolean,
   ): void;
@@ -766,7 +766,7 @@ const ComposerLexicalInputCore = forwardRef<ComposerRichInputHandle, ComposerLex
 
     const insertSessionReference = useCallback(
       (
-        session: { path: string; title: string; content?: string },
+        session: { path: string; title: string; content?: string; sessionId?: string },
         query: ActiveWorkspaceFileReferenceQuery,
         finalize = true,
       ) => {
@@ -774,6 +774,7 @@ const ComposerLexicalInputCore = forwardRef<ComposerRichInputHandle, ComposerLex
           path: session.path,
           title: session.title,
           ...(session.content !== undefined ? { content: session.content } : {}),
+          ...(session.sessionId ? { sessionId: session.sessionId } : {}),
           query,
           finalize,
         });

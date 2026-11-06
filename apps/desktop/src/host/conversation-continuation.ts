@@ -262,6 +262,11 @@ export function syncSubagentToolStreamingOutput(
     if (!existing) {
       continue;
     }
+    // A detached child outlives its completed parent call. Its progress is task-owned and must
+    // not reopen the parent card or replace the background output projection.
+    if (existing.backgroundTask) {
+      continue;
+    }
 
     const streamingText = extractSubagentSessionStreamingText(session)?.trim();
     const phase = findSubagentToolPhase(timelineMessages, toolCallId) ?? "running";
@@ -362,12 +367,29 @@ function describeContinuationMessage(message: ConversationMessageSnapshot): stri
   return `${message.id}:${kind}:${text}`;
 }
 
+function hasLiveForegroundSubagentSession(
+  sessions: SessionBundle["archiveSubagentSessions"],
+  messages: readonly ConversationMessageSnapshot[],
+): boolean {
+  return sessions.some((session) => {
+    if (session.summary.status !== "running" && session.summary.status !== "blocked") {
+      return false;
+    }
+    const parentToolCallId = session.summary.parentToolCallId?.trim();
+    const parentTool = parentToolCallId
+      ? messages.find((message) => message.tool?.toolCallId === parentToolCallId)?.tool
+      : undefined;
+    return !parentTool?.backgroundTask;
+  });
+}
+
 function purgeSubagentLeakTextInCurrentTurn(bundle: SessionBundle): void {
   const messages = bundle.messageTimeline.toMessages();
-  const liveSubagentSession = bundle.archiveSubagentSessions.some(
-    (session) => session.summary.status === "running" || session.summary.status === "blocked",
+  const liveForegroundSubagentSession = hasLiveForegroundSubagentSession(
+    bundle.archiveSubagentSessions,
+    messages,
   );
-  if (!hasInFlightSubagentDelegationInMessages(messages) && !liveSubagentSession) {
+  if (!hasInFlightSubagentDelegationInMessages(messages) && !liveForegroundSubagentSession) {
     return;
   }
 
@@ -405,10 +427,11 @@ function purgeSubagentLeakedToolRowsInCurrentTurn(
   bundle: SessionBundle,
 ): void {
   const messages = bundle.messageTimeline.toMessages();
-  const liveSubagentSession = bundle.archiveSubagentSessions.some(
-    (session) => session.summary.status === "running" || session.summary.status === "blocked",
+  const liveForegroundSubagentSession = hasLiveForegroundSubagentSession(
+    bundle.archiveSubagentSessions,
+    messages,
   );
-  if (!hasInFlightSubagentDelegationInMessages(messages) && !liveSubagentSession) {
+  if (!hasInFlightSubagentDelegationInMessages(messages) && !liveForegroundSubagentSession) {
     return;
   }
 

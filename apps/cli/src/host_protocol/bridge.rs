@@ -80,6 +80,10 @@ pub(crate) struct BridgeExportState {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BridgeChatArchive {
+    #[serde(default)]
+    pub(crate) presentation: Option<Value>,
+    #[serde(default)]
+    pub(crate) background_task_notifications: Vec<Value>,
     pub(crate) messages: Vec<BridgeChatMessage>,
     pub(crate) assistant_aux: Vec<BridgeAssistantAuxEntry>,
     pub(crate) llm_history: Vec<ArchivedLlmMessage>,
@@ -249,6 +253,7 @@ pub(crate) enum BridgeToolApprovalPrompt {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BridgePendingApproval {
+    pub(crate) request_id: Option<String>,
     pub(crate) prompt: BridgeToolApprovalPrompt,
     pub(crate) request: Value,
     pub(crate) remember_target: Option<BridgePermissionMemoryTarget>,
@@ -263,6 +268,7 @@ pub(crate) struct BridgePendingApproval {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BridgePendingQuestions {
+    pub(crate) request_id: Option<String>,
     pub(crate) request: Value,
     pub(crate) tool_call_id: String,
     pub(crate) tool_name: String,
@@ -289,6 +295,8 @@ pub(crate) struct BridgeWorkspaceFileReferenceSuggestions {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BridgeToolExecution {
+    #[serde(default)]
+    pub(crate) host_ui: Option<Value>,
     pub(crate) tool_call_id: String,
     pub(crate) tool_name: String,
     pub(crate) request: Value,
@@ -415,8 +423,26 @@ pub(crate) enum BridgeRuntimeEvent {
         status_text: Option<String>,
         failed: Option<bool>,
     },
+    #[serde(rename = "background-task-changed")]
+    BackgroundTaskChanged { task: Value },
+    #[serde(rename = "background-task-output")]
+    BackgroundTaskOutput { task: Value, chunk: String },
+    #[serde(rename = "background-task-notification")]
+    BackgroundTaskNotification {
+        task: Value,
+        content: String,
+        restored: bool,
+        #[serde(default)]
+        output: Option<Value>,
+        #[serde(default, rename = "outputError")]
+        output_error: Option<String>,
+    },
+    #[serde(rename = "background-task-error")]
+    BackgroundTaskError { error: String },
     #[serde(rename = "tool-execution-finished")]
     ToolExecutionFinished { execution: BridgeToolExecution },
+    #[serde(rename = "tool-execution-ui-updated")]
+    ToolExecutionUiUpdated {},
     /// Incremental shell stdout/stderr while `shell` runs in the background.
     /// CLI TUI does not render chunks yet; Desktop projects them into tool cards.
     #[serde(rename = "tool-execution-output-chunk")]

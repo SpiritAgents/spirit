@@ -28,10 +28,13 @@ export const SESSION_LIST = "session.list";
 export const SESSION_CLOSE = "session.close";
 /** RPC: submit a user turn; streaming arrives via `runtime.event`. */
 export const SESSION_SUBMIT_USER_TURN = "session.submitUserTurn";
+/** RPC: approve the recorded plan, switch to Agent mode, and submit the shared implementation prompt. */
+export const SESSION_START_IMPLEMENTING = "session.startImplementing";
 /** RPC: abort the current turn. */
 export const SESSION_ABORT = "session.abort";
 /** RPC: abort a running daemon shell by tool call id. */
 export const SESSION_ABORT_SHELL = "session.abortShell";
+export const SESSION_MOVE_TO_BACKGROUND = "session.moveToBackground";
 /** RPC: set approval level (default | auto-approval | bypass-approval). */
 export const SESSION_SET_APPROVAL_LEVEL = "session.setApprovalLevel";
 /** RPC: answer a pending tool approval. */
@@ -176,13 +179,19 @@ export interface SessionBasicInfoHost {
 
 export interface SessionCreateParams {
   workspaceRoot: string;
+  sessionId?: string;
+  title?: string;
   /** Stable chat file path; re-create returns the existing live session. */
   conversationKey?: string;
   approvalLevel?: SessionApprovalLevel;
   modelRef?: { groupId: string; name: string };
   agentMode?: "agent" | "plan" | "ask" | "debug";
   todoSessionKey?: string;
-  sessionKind?: "default" | "dream-collector";
+  sessionKind?: "default" | "dream-collector" | "subagent";
+  subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
+  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   dreamScope?: { workspaceRoot: string; gitBranch: string };
   dreamSourceSession?: { path: string; displayName?: string; savedAtUnixMs?: number };
   /**
@@ -231,7 +240,13 @@ export interface SessionInfo {
   approvalLevel: SessionApprovalLevel;
   model: string;
   conversationKey?: string;
+  sessionKind?: "default" | "dream-collector" | "subagent";
+  subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
+  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   attachmentCount: number;
+  restoredFromDisk?: boolean;
 }
 
 export interface SessionSubmitUserTurnParams {

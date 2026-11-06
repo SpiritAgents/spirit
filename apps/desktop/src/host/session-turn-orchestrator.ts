@@ -70,6 +70,7 @@ type TurnOrchestration = {
 };
 
 export interface SubmitUserTurnAfterInitializedOptions {
+  startImplementing?: boolean;
   preserveRewindWarnings?: boolean;
   displayText?: string;
   turnSkills?: LlmActiveSkill[];
@@ -219,7 +220,7 @@ export async function submitUserTurnAfterInitializedCommand(
     explicitWorkspaceFiles.length,
   );
 
-  if (directMediaTool && trimmed) {
+  if (directMediaTool && trimmed && !options.startImplementing) {
     try {
       await startComposerDirectMediaTurn(ctx, {
         bundle,
@@ -250,7 +251,8 @@ export async function submitUserTurnAfterInitializedCommand(
     throw new Error(i18n.t("error.runtimeNotReady"));
   }
   try {
-    await runtime.startUserTurnStreaming(trimmed, [], explicitWorkspaceFiles, turnSkills);
+    if (options.startImplementing) await runtime.startImplementing();
+    else await runtime.startUserTurnStreaming(trimmed, [], explicitWorkspaceFiles, turnSkills);
     ctx.refreshArchiveFromRuntime(bundle);
     await ctx.recordRewindCheckpoint(userMessage.id, beforeUserCheckpoint, bundle);
     await runtime.poll();
@@ -579,20 +581,23 @@ export async function continueAssistantCompletionCommand(
 export async function replyPendingApprovalCommand(
   ctx: SessionTurnOrchestratorContext,
   decision: DesktopApprovalDecision,
+  requestId?: string,
 ): Promise<DesktopSnapshot> {
   return ctx.runSerialized(async () => {
     await ctx.ensureInitialized(undefined, { fastPath: true });
     const runtime = ctx.requireRuntime();
     const pendingApproval = runtime.currentPendingApproval();
     const runtimeDecision = ctx.normalizeApprovalDecision(decision);
+    await runtime.continuePendingApproval(runtimeDecision, requestId);
     if (runtimeDecision.kind === "guidance" && runtimeDecision.userMessage.trim()) {
       ctx.insertUserApprovalReplyMessage(
         runtimeDecision.userMessage.trim(),
-        pendingApproval ? toolMessageKey(pendingApproval) : undefined,
+        pendingApproval?.requestId === requestId && pendingApproval
+          ? toolMessageKey(pendingApproval)
+          : undefined,
       );
       ctx.resetStreamingPlacementState(false);
     }
-    await runtime.continuePendingApproval(runtimeDecision);
     await runtime.poll();
     const orchestration = ctx.orchestrationFor(ctx.activeBundle());
     orchestration.runtimeEvents.applyRuntimeHostEvents(runtime.drainEvents());
@@ -609,11 +614,12 @@ export async function replyPendingApprovalCommand(
 export async function replyPendingQuestionsCommand(
   ctx: SessionTurnOrchestratorContext,
   result: AskQuestionsResult,
+  requestId?: string,
 ): Promise<DesktopSnapshot> {
   return ctx.runSerialized(async () => {
     await ctx.ensureInitialized(undefined, { fastPath: true });
     const runtime = ctx.requireRuntime();
-    await runtime.continuePendingQuestions(toRuntimeAskQuestionsResult(result));
+    await runtime.continuePendingQuestions(toRuntimeAskQuestionsResult(result), requestId);
     const orchestration = ctx.orchestrationFor(ctx.activeBundle());
     orchestration.runtimeEvents.applyRuntimeHostEvents(runtime.drainEvents());
     orchestration.runtimeEvents.consumeCompletedTurnResult();
