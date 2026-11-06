@@ -6,6 +6,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { brandedMacExecutable, devElectronDir } from "./dev-electron-bundle.mjs";
+import { stopRegisteredDaemons } from "./dev-daemon-lifecycle.mjs";
+import { resolveSpiritDataDir } from "../../../packages/host-internal/dist/data-paths.js";
 
 const desktopRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = path.resolve(desktopRoot, "..", "..");
@@ -68,13 +70,21 @@ function scheduleRestart(file) {
   changedFiles.add(file);
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
-    const shown = [...changedFiles].slice(0, 3).map((f) => path.basename(f));
-    const extra =
-      changedFiles.size > shown.length ? ` (+${changedFiles.size - shown.length} more)` : "";
-    changedFiles.clear();
-    console.log(`[dev] restarting electron: ${shown.join(", ")}${extra}`);
-    restarting = true;
-    child.kill();
+    void (async () => {
+      const shown = [...changedFiles].slice(0, 3).map((f) => path.basename(f));
+      const extra =
+        changedFiles.size > shown.length ? ` (+${changedFiles.size - shown.length} more)` : "";
+      changedFiles.clear();
+      console.log(`[dev] restarting electron: ${shown.join(", ")}${extra}`);
+      try {
+        await stopRegisteredDaemons(resolveSpiritDataDir());
+      } catch (error) {
+        console.error("[dev] failed to stop the previous daemon", error);
+        return;
+      }
+      restarting = true;
+      child.kill();
+    })();
   }, RESTART_DEBOUNCE_MS);
 }
 
