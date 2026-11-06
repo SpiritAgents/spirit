@@ -1018,6 +1018,8 @@ export interface SessionListItem {
   pinnedAtUnixMs?: number;
   kind?: "stored" | "ephemeral";
   readOnly?: boolean;
+  /** Canonical native Session ID used for continuation; older references may omit it. */
+  sessionId?: string;
   /** Absolute path to transcripts/.../transcript.json for this chat (deterministic from chat path). */
   transcriptPath: string;
   /** Agent turn in progress for this session (in-memory registry). */

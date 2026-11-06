@@ -43,6 +43,7 @@ import {
   type ProviderEntry,
   resolveModelByRef,
   resolveSessionTranscriptFilePath,
+  readSessionStorageKey,
   resolveDefaultSpiritDataDir,
   resolveSpiritDataDir,
 } from "@spiritagent/host-internal";
@@ -698,6 +699,7 @@ export async function listStoredSessions(): Promise<SessionListItem[]> {
           typeof parsed.savedAtUnixMs === "number"
             ? parsed.savedAtUnixMs
             : Math.round((await stat(filePath)).mtimeMs);
+        const sessionId = readSessionStorageKey(spiritDataDir(), path.resolve(filePath));
         return {
           path: filePath,
           displayName:
@@ -708,6 +710,7 @@ export async function listStoredSessions(): Promise<SessionListItem[]> {
           ...(gitBranch ? { gitBranch } : {}),
           ...(pinnedAtUnixMs ? { pinnedAtUnixMs } : {}),
           modifiedAtUnixMs,
+          ...(sessionId ? { sessionId } : {}),
           transcriptPath: resolveSessionTranscriptFilePath(spiritDataDir(), path.resolve(filePath)),
         } satisfies SessionListItem;
       } catch (error) {

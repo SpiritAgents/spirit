@@ -90,7 +90,11 @@ export type ComposerDockProps = {
   fileReferenceMenuView: import("@/lib/composer-at-reference-demo").AtReferenceMenuView;
   atReferenceMenuItems: import("@/lib/composer-at-reference-demo").AtReferenceMenuItem[];
   onApplyFileReferenceSuggestion: (path: string, options?: { isPlan?: boolean }) => void;
-  onApplySessionReferenceSuggestion: (session: { path: string; title: string }) => void;
+  onApplySessionReferenceSuggestion: (session: {
+    path: string;
+    title: string;
+    sessionId?: string;
+  }) => void;
   onOpenAtReferenceSessions: () => void;
   onBackAtReferenceMenu: () => void;
   onDismissFileReferenceSuggestions: () => void;

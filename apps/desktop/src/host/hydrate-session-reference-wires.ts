@@ -65,7 +65,12 @@ export async function hydrateSessionReferenceWiresInUserText(text: string): Prom
   for (const block of [...blocks].sort((left, right) => right.index - left.index)) {
     const content =
       block.content.trim().length > 0 ? block.content : await readTranscriptBody(block.path);
-    const replacement = sessionReferenceContextText(block.path, block.title, content);
+    const replacement = sessionReferenceContextText(
+      block.path,
+      block.title,
+      content,
+      block.sessionId,
+    );
     const blockEnd = block.index + block.length;
     const originalEndsWithNewline = block.length > 0 && result[blockEnd - 1] === "\n";
     const replacementWithTrailing =

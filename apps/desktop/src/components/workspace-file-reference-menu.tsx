@@ -16,7 +16,7 @@ type WorkspaceFileReferenceMenuProps = {
   items: AtReferenceMenuItem[];
   selectedIndex: number;
   onApplyFile(path: string, options?: { isPlan?: boolean }): void;
-  onApplySession(session: { path: string; title: string }): void;
+  onApplySession(session: { path: string; title: string; sessionId?: string }): void;
   onOpenSessions(): void;
   onBack(): void;
 };
@@ -122,7 +122,13 @@ export function WorkspaceFileReferenceMenu({
             selected={index === highlightedIndex}
             title={item.title}
             onMouseDown={(event) => event.preventDefault()}
-            onClick={() => onApplySession({ path: item.path, title: item.title })}
+            onClick={() =>
+              onApplySession({
+                path: item.path,
+                title: item.title,
+                ...(item.sessionId ? { sessionId: item.sessionId } : {}),
+              })
+            }
             {...getItemPointerHandlers(index)}
           >
             <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">

@@ -11,7 +11,7 @@ export type AtReferenceMenuItem =
   | { kind: "plan"; path: string }
   | { kind: "sessions-entry" }
   | { kind: "back" }
-  | { kind: "session"; path: string; title: string };
+  | { kind: "session"; path: string; title: string; sessionId?: string };
 
 export type AtReferenceSessionCandidate = {
   /** Absolute transcript.json path used in the chip wire. */
@@ -19,6 +19,8 @@ export type AtReferenceSessionCandidate = {
   title: string;
   /** Chat archive path; used to exclude the active session. */
   chatPath: string;
+  /** Canonical Session ID exposed to the model for continuation, when known. */
+  sessionId?: string;
 };
 
 export function atReferenceNeedle(rawQuery: string): string {
@@ -45,6 +47,7 @@ export function sessionCandidatesFromListItems(
       path: transcriptPath.replace(/\\/gu, "/"),
       title,
       chatPath,
+      ...(session.sessionId ? { sessionId: session.sessionId } : {}),
     });
   }
   return out;
@@ -74,6 +77,7 @@ export function buildAtReferenceMenuItems(input: {
       kind: "session" as const,
       path: session.path,
       title: session.title,
+      ...(session.sessionId ? { sessionId: session.sessionId } : {}),
     }),
   );
 

@@ -919,7 +919,7 @@ export function useComposerController({
   );
 
   const applySessionReferenceSuggestion = useCallback(
-    (session: { path: string; title: string }) => {
+    (session: { path: string; title: string; sessionId?: string }) => {
       const query = fileReferenceSuggestions?.query;
       if (!query) {
         return;
