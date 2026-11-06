@@ -27,6 +27,7 @@ import {
   SERVER_INITIALIZE,
   SESSION_ABORT,
   SESSION_ABORT_SHELL,
+  SESSION_MOVE_TO_BACKGROUND,
   SESSION_ACTIVATE_SKILL,
   SESSION_ADD_PENDING_IMAGE,
   SESSION_APPLY_MCP_PROMPT,
@@ -108,6 +109,7 @@ const SESSION_METHODS = new Set([
   SESSION_START_IMPLEMENTING,
   SESSION_ABORT,
   SESSION_ABORT_SHELL,
+  SESSION_MOVE_TO_BACKGROUND,
   SESSION_SET_APPROVAL_LEVEL,
   SESSION_SET_MODE,
   SESSION_SET_LOOP_ENABLED,
@@ -602,6 +604,11 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
             String(params["toolCallId"] ?? ""),
           ),
         };
+      case SESSION_MOVE_TO_BACKGROUND:
+        return sessionManager.moveToBackground(
+          readSessionId(params),
+          String(params["toolCallId"] ?? ""),
+        );
       case SESSION_SET_APPROVAL_LEVEL: {
         const level = params["approvalLevel"];
         if (level !== "default" && level !== "auto-approval" && level !== "bypass-approval") {

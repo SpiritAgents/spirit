@@ -1395,6 +1395,29 @@ export class SessionManager {
     return this.requireSession(sessionId).runtimeResult.abortShell(toolCallId);
   }
 
+  async moveToBackground(
+    sessionId: string,
+    toolCallId: string,
+  ): Promise<import("@spiritagent/agent-core").BackgroundTaskRecord> {
+    const session = this.requireSession(sessionId);
+    const task = session.runtimeResult.runtime
+      .backgroundTaskRecords()
+      .find(
+        (record) =>
+          record.toolCallId === toolCallId &&
+          (record.kind === "shell" || record.kind === "subagent") &&
+          !record.background &&
+          record.status !== "completed" &&
+          record.status !== "failed" &&
+          record.status !== "stopped" &&
+          record.status !== "interrupted",
+      );
+    if (!task) {
+      throw new Error("No foreground Shell or Subagent call is available for the background.");
+    }
+    return session.runtimeResult.tasks.moveToBackground(task.id, { runtimeId: "main" });
+  }
+
   async continueAssistantCompletion(sessionId: string): Promise<void> {
     const session = this.requireSession(sessionId);
     await this.serializeSession(session, () =>

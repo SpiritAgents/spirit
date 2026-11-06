@@ -10,9 +10,11 @@ import { ServerRpcClient } from "../src/client.js";
 import { startDaemon, type RunningDaemon } from "../src/daemon.js";
 import { listInstances } from "../src/instance-registry.js";
 import {
+  JSON_RPC_INTERNAL_ERROR,
   JSON_RPC_METHOD_NOT_FOUND,
   PROTOCOL_VERSION,
   SERVER_CONNECTED,
+  SESSION_MOVE_TO_BACKGROUND,
 } from "../src/protocol/index.js";
 
 interface RpcReply {
@@ -100,6 +102,34 @@ async function startTestDaemon(options?: {
 }
 
 describe("daemon lifecycle (smoke #1)", () => {
+  it("routes move-to-background requests to the session manager", async () => {
+    const { daemon, dataDir } = await startTestDaemon();
+    try {
+      const token = await readCurrentToken(dataDir);
+      assert.ok(token);
+      const client = new TestWsClient(`ws://127.0.0.1:${daemon.port}/?token=${token}`);
+      await client.open();
+      const connected = await client.nextMessage();
+      assert.equal(connected.method, SERVER_CONNECTED);
+
+      client.send({
+        jsonrpc: "2.0",
+        id: 1,
+        method: SESSION_MOVE_TO_BACKGROUND,
+        params: {
+          sessionId: "00000000-0000-4000-8000-000000000000",
+          toolCallId: "call",
+        },
+      });
+      const reply = await client.nextMessage();
+      assert.equal(reply.error?.code, JSON_RPC_INTERNAL_ERROR);
+      assert.match(reply.error?.message ?? "", /session not found/iu);
+      client.close();
+    } finally {
+      await daemon.close();
+    }
+  });
+
   it("starts on a random port, registers, serves health/initialize, unregisters on close", async () => {
     const { daemon, dataDir } = await startTestDaemon();
     try {

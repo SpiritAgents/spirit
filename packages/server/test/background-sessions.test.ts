@@ -295,6 +295,45 @@ it("starts two streamed default-delay shells before either hands off", async () 
   }
 });
 
+it("moves a foreground shell to the background and resumes its caller", async () => {
+  const { root, dataDir, workspaceRoot } = await fixture();
+  const { manager, finished } = managerFor(dataDir);
+  const requests = scriptedModel((_body, index) =>
+    index === 0
+      ? response("", {
+          name: "shell",
+          arguments: {
+            command: gatedShell(path.join(root, "never")),
+            reason: "Run the fixture.",
+          },
+        })
+      : response("Shell moved to the background."),
+  );
+  const { sessionId } = await manager.createSession({
+    workspaceRoot,
+    hostKind: "desktop",
+    conversationKey: "ephemeral://move-to-background",
+    approvalLevel: "bypass-approval",
+  });
+  await manager.submitUserTurn(sessionId, { text: "Run the check." });
+  await waitUntil(() => {
+    const task = manager.snapshot(sessionId).backgroundTasks?.[0];
+    return task?.status === "running" && !task.background;
+  });
+  const task = manager.snapshot(sessionId).backgroundTasks![0]!;
+  const moved = await manager.moveToBackground(sessionId, task.toolCallId);
+  expect(moved).toMatchObject({ id: task.id, background: true, status: "running" });
+  await waitUntil(() => finished.length === 1);
+  expect(requests).toHaveLength(2);
+  expect(JSON.stringify(requests[1])).toContain(task.id);
+  expect(manager.snapshot(sessionId).backgroundTasks![0]).toMatchObject({
+    id: task.id,
+    background: true,
+    status: "running",
+  });
+  await manager.closeSession(sessionId);
+});
+
 it("restores offline background replies after the acknowledged UI checkpoint without running the model", async () => {
   const { root, dataDir, workspaceRoot } = await fixture();
   const { manager, finished } = managerFor(dataDir);

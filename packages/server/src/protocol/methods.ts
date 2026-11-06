@@ -34,6 +34,7 @@ export const SESSION_START_IMPLEMENTING = "session.startImplementing";
 export const SESSION_ABORT = "session.abort";
 /** RPC: abort a running daemon shell by tool call id. */
 export const SESSION_ABORT_SHELL = "session.abortShell";
+export const SESSION_MOVE_TO_BACKGROUND = "session.moveToBackground";
 /** RPC: set approval level (default | auto-approval | bypass-approval). */
 export const SESSION_SET_APPROVAL_LEVEL = "session.setApprovalLevel";
 /** RPC: answer a pending tool approval. */

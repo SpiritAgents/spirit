@@ -51,6 +51,8 @@ interface TaskEntry {
   controller: AbortController;
   mutations: Promise<void>;
   completion: Promise<SessionTaskResult>;
+  backgroundHandoff: Promise<void>;
+  resolveBackgroundHandoff(): void;
   resolve(result: SessionTaskResult): void;
   reject(error: unknown): void;
   initialDelivered: boolean;
@@ -214,6 +216,10 @@ export class SessionTaskManager {
       resolve = resolveResult;
       reject = rejectResult;
     });
+    let resolveBackgroundHandoff!: () => void;
+    const backgroundHandoff = new Promise<void>((resolveHandoff) => {
+      resolveBackgroundHandoff = resolveHandoff;
+    });
     const entry: TaskEntry = {
       record,
       startedAt: performance.now(),
@@ -221,6 +227,8 @@ export class SessionTaskManager {
       controller: new AbortController(),
       mutations: Promise.resolve(),
       completion,
+      backgroundHandoff,
+      resolveBackgroundHandoff,
       resolve,
       reject,
       stopping: this.closing || this.cancellation !== undefined,
@@ -322,31 +330,37 @@ export class SessionTaskManager {
     scope: TaskScope,
     background?: BackgroundOptions,
   ): Promise<SessionTaskInitialResult> {
-    if (background?.type === false) {
-      const result = await entry.completion;
-      return { kind: "completed", record: structuredClone(entry.record), result };
-    }
     const timer = new AbortController();
-    let timedOut = false;
+    let handoffRequested = false;
     let handoffRecord: BackgroundTaskRecord | undefined;
     try {
-      timedOut = await Promise.race([
+      const waiters: Promise<boolean>[] = [
         entry.completion.then(() => false),
-        waitForTaskDelay(background?.delay ?? DEFAULT_BACKGROUND_DELAY_SECONDS, timer.signal).then(
-          () => true,
-        ),
-      ]);
+        entry.backgroundHandoff.then(() => false),
+      ];
+      if (background?.type !== false) {
+        waiters.push(
+          waitForTaskDelay(
+            background?.delay ?? DEFAULT_BACKGROUND_DELAY_SECONDS,
+            timer.signal,
+          ).then(() => true),
+        );
+      }
+      handoffRequested = await Promise.race(waiters);
     } finally {
       timer.abort();
     }
-    if (timedOut) {
+    if (handoffRequested) {
       await this.mutate(entry, async () => {
         if (isBackgroundTaskTerminal(entry.record.status)) return;
-        const next = { ...this.timedRecord(entry), background: true };
-        await this.options.store.save(next);
-        entry.record = next;
-        handoffRecord = structuredClone(next);
-        this.options.onChanged?.(structuredClone(next));
+        if (!entry.record.background) {
+          const next = { ...this.timedRecord(entry), background: true };
+          await this.options.store.save(next);
+          entry.record = next;
+          handoffRecord = structuredClone(next);
+          this.options.onChanged?.(structuredClone(next));
+          entry.resolveBackgroundHandoff();
+        }
       });
     }
     if (!entry.record.background) {
@@ -360,6 +374,21 @@ export class SessionTaskManager {
       outputTail: preview.text,
       outputTruncated: preview.truncated,
     };
+  }
+
+  async moveToBackground(taskId: string, scope: TaskScope): Promise<BackgroundTaskRecord> {
+    const record = this.getRecord(taskId, scope);
+    if (isBackgroundTaskTerminal(record.status)) {
+      throw new Error("Task has already finished.");
+    }
+    if (record.background) return structuredClone(record);
+    const entry = this.entries.get(taskId);
+    if (!entry) throw new Error(`Task ${taskId} is not owned by this host instance.`);
+    const result = await this.deliverInitialResult(entry, scope, { type: true, delay: 0 });
+    if (result.kind !== "background") {
+      throw new Error("Task completed before it could move to the background.");
+    }
+    return structuredClone(result.record);
   }
 
   async checkpoint(): Promise<void> {

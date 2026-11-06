@@ -461,6 +461,28 @@ async function advanceRuntime(
 }
 
 describe("managed tasks in AgentRuntime", () => {
+  it.each([{ background: undefined }, { background: { type: false as const } }])(
+    "moves a foreground task to the background without completing it",
+    async ({ background }) => {
+      const { manager, scope, input, done } = fixture();
+      const id = await manager.launch(input, async () => {
+        await waitForTaskDelay(1);
+        return done;
+      });
+      const initial = manager.initialResult(id, scope, background);
+      const moved = await manager.moveToBackground(id, scope);
+      expect(moved.background).toBe(true);
+      expect(moved.status).toBe("running");
+      await expect(initial).resolves.toMatchObject({
+        kind: "background",
+        record: { id, background: true, status: "running" },
+      });
+      await vi.advanceTimersByTimeAsync(1100);
+      expect(manager.record(id, scope).status).toBe("completed");
+      expect(manager.pendingNotifications(scope).map((task) => task.id)).toEqual([id]);
+    },
+  );
+
   it.each(["shutdown", "abort", "reset"] as const)(
     "finishes pending notification persistence without starting a model call after %s",
     async (action) => {
