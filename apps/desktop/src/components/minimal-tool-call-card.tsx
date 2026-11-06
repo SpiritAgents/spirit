@@ -2,7 +2,7 @@ import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { DelayToolDuration } from "./delay-tool-duration";
 
-import { Square } from "lucide-react";
+import { Command, Square, SquareArrowOutUpRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { DiffCodeScrollView } from "@/components/diff-code-scroll-view";
@@ -21,6 +21,9 @@ import { useToolCallDiffHost } from "@/components/tool-call-diff-host-context";
 import { useCollapsibleChildMount } from "@/hooks/use-collapsible-child-mount";
 import { TodoItemsList } from "@/components/composer-todo-card";
 import { Button } from "@/components/ui/button";
+import { Kbd, KbdGroup } from "@spiritagent/ui/kbd";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { desktopShellPlatform } from "@/lib/desktop-shell";
 import { AnimatedCollapse, AnimatedCollapseContent } from "@/components/ui/animated-collapse";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { buildToolCallDiffLines } from "@/lib/diff-display-lines";
@@ -57,6 +60,54 @@ import { resolveReadFileTargetFromTool } from "@/lib/read-file-tool-navigation";
 import { cn } from "@/lib/utils";
 import type { EditorFileTarget } from "@/lib/workspace-editor-navigation";
 import type { ToolBlockSnapshot } from "@/types";
+
+function MoveToBackgroundButton({
+  toolCallId,
+  onMoveToBackground,
+  showShortcut,
+}: {
+  toolCallId: string;
+  onMoveToBackground: (toolCallId: string) => void;
+  showShortcut: boolean;
+}) {
+  const { t } = useTranslation();
+  const darwin = desktopShellPlatform() === "darwin";
+  return (
+    <Tooltip delayDuration={300} disableHoverableContent>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          shape="pill"
+          className="shrink-0 shadow-none [&_svg]:size-3"
+          aria-label={t("tool.moveToBackground")}
+          onClick={(event) => {
+            event.stopPropagation();
+            onMoveToBackground(toolCallId);
+          }}
+        >
+          <SquareArrowOutUpRight className="size-3" strokeWidth={1.75} aria-hidden />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={4}>
+        <span>{t("tool.moveToBackground")}</span>
+        {showShortcut ? (
+          <KbdGroup>
+            {darwin ? (
+              <Kbd>
+                <Command className="size-3" strokeWidth={1.75} aria-hidden />
+              </Kbd>
+            ) : (
+              <Kbd>Ctrl</Kbd>
+            )}
+            <Kbd>B</Kbd>
+          </KbdGroup>
+        ) : null}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 const summaryClass = "text-xs leading-relaxed text-muted-foreground";
 
@@ -284,7 +335,15 @@ function ProviderToolExpandedBody({
   );
 }
 
-function GenericToolExpandedBody({ tool }: { tool: ToolBlockSnapshot }) {
+function GenericToolExpandedBody({
+  tool,
+  onMoveToBackground,
+  moveBackgroundShortcutEligible,
+}: {
+  tool: ToolBlockSnapshot;
+  onMoveToBackground?: (toolCallId: string) => void;
+  moveBackgroundShortcutEligible?: boolean;
+}) {
   const { t } = useTranslation();
   const mcpInputJson = useMemo(
     () => resolveLazyMcpToolCallInputJson(tool.argsExcerpt),
@@ -380,8 +439,17 @@ function GenericToolExpandedBody({ tool }: { tool: ToolBlockSnapshot }) {
     );
   }
 
+  const moveBackgroundButton = onMoveToBackground ? (
+    <MoveToBackgroundButton
+      toolCallId={tool.toolCallId ?? ""}
+      onMoveToBackground={onMoveToBackground}
+      showShortcut={moveBackgroundShortcutEligible === true}
+    />
+  ) : null;
+
   return (
     <div className="space-y-2">
+      {moveBackgroundButton}
       {tool.outputExcerpt ? (
         <pre
           data-spirit-selectable="text"
@@ -555,11 +623,15 @@ function ShellToolExpandedBody({
   tool,
   command,
   onAbortShell,
+  onMoveToBackground,
+  moveBackgroundShortcutEligible,
   open,
 }: {
   tool: ToolBlockSnapshot;
   command: string | undefined;
   onAbortShell?: (toolCallId: string) => void;
+  onMoveToBackground?: (toolCallId: string) => void;
+  moveBackgroundShortcutEligible?: boolean;
   open: boolean;
 }) {
   const { t } = useTranslation();
@@ -637,6 +709,13 @@ function ShellToolExpandedBody({
             {commandLine ? (
               <div className="flex items-start gap-2">
                 <ShellToolCommandHighlight command={commandLine} />
+                {onMoveToBackground ? (
+                  <MoveToBackgroundButton
+                    toolCallId={toolCallId}
+                    onMoveToBackground={onMoveToBackground}
+                    showShortcut={moveBackgroundShortcutEligible === true}
+                  />
+                ) : null}
                 {showTerminateButton ? (
                   <Button
                     type="button"
@@ -699,6 +778,8 @@ export function MinimalToolCallCard({
   onOpenReadFile,
   onOpenPlan,
   onAbortShell,
+  onMoveToBackground,
+  moveBackgroundShortcutEligible,
 }: {
   tool: ToolBlockSnapshot;
   workspaceRoot?: string;
@@ -706,6 +787,8 @@ export function MinimalToolCallCard({
   onOpenReadFile?: (target: EditorFileTarget) => void;
   onOpenPlan?: () => void;
   onAbortShell?: (toolCallId: string) => void;
+  onMoveToBackground?: (toolCallId: string) => void;
+  moveBackgroundShortcutEligible?: boolean;
 }) {
   const summary = getToolCallSummaryParts(tool);
   const shimmerActive = toolCallPhaseShowsShimmer(tool.phase);
@@ -747,6 +830,14 @@ export function MinimalToolCallCard({
     [isShell, tool.argsExcerpt, tool.detailLines, tool.headlineDetail],
   );
   const expandable = toolHasExpandableContent(tool);
+  const moveToBackground =
+    (isShell || isSubagent) &&
+    !tool.backgroundTask &&
+    !tool.taskNotification &&
+    tool.phase === "running" &&
+    tool.toolCallId?.trim()
+      ? onMoveToBackground
+      : undefined;
   const [open, setOpen] = useState(false);
   const showLspHover = shouldShowLspDiagnosticsOnToolCard(tool);
   const lspHoverItemId = tool.toolCallId ?? tool.toolName;
@@ -850,6 +941,8 @@ export function MinimalToolCallCard({
           tool={tool}
           command={shellCommand}
           onAbortShell={onAbortShell}
+          onMoveToBackground={moveToBackground}
+          moveBackgroundShortcutEligible={moveBackgroundShortcutEligible}
           open={open}
         />
       ) : isFileDiff ? (
@@ -857,7 +950,11 @@ export function MinimalToolCallCard({
       ) : isProviderToolCard ? (
         <ProviderToolExpandedBody tool={tool} shimmerActive={shimmerActive} />
       ) : (
-        <GenericToolExpandedBody tool={tool} />
+        <GenericToolExpandedBody
+          tool={tool}
+          onMoveToBackground={moveToBackground}
+          moveBackgroundShortcutEligible={moveBackgroundShortcutEligible}
+        />
       )}
     </div>
   );

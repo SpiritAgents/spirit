@@ -102,6 +102,8 @@ function MessageCardImpl({
   onOpenReadFile,
   onOpenPlan,
   onAbortShell,
+  onMoveToBackground,
+  moveBackgroundShortcutEligible,
   queuedCanMoveUp = false,
   queueActionBusy = false,
   onQueueMoveUp,
@@ -181,6 +183,8 @@ function MessageCardImpl({
   onOpenReadFile?: (target: EditorFileTarget) => void;
   onOpenPlan?: () => void;
   onAbortShell?: (toolCallId: string) => void;
+  onMoveToBackground?: (toolCallId: string) => void;
+  moveBackgroundShortcutEligible?: boolean;
   queuedCanMoveUp?: boolean;
   queueActionBusy?: boolean;
   onQueueMoveUp?(queueId: string): void;
@@ -412,6 +416,8 @@ function MessageCardImpl({
             onOpenReadFile={onOpenReadFile}
             onOpenPlan={onOpenPlan}
             onAbortShell={onAbortShell}
+            onMoveToBackground={onMoveToBackground}
+            moveBackgroundShortcutEligible={moveBackgroundShortcutEligible}
           />
         ) : null}
         {showTurnActions ? (

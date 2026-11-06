@@ -70,6 +70,7 @@ export interface HostCommandDelegate {
   refreshGitSnapshot(): Promise<unknown>;
   abortConversation(request?: CommandPayloads["abortConversation"]): Promise<unknown>;
   abortShell(toolCallId: string): Promise<unknown>;
+  moveToBackground(toolCallId: string): Promise<unknown>;
   continueAssistantCompletion(messageId: number): Promise<unknown>;
   poll(request?: import("../types.js").PollRequest): Promise<unknown>;
   listDreamsOverview(): Promise<unknown>;
@@ -288,6 +289,7 @@ const hostCommandDispatch = {
   refreshGitSnapshot: (host) => host.refreshGitSnapshot(),
   abortConversation: (host, payload) => host.abortConversation(payload ?? {}),
   abortShell: (host, payload) => host.abortShell(payload.toolCallId),
+  moveToBackground: (host, payload) => host.moveToBackground(payload.toolCallId),
   continueAssistantCompletion: (host, payload) =>
     host.continueAssistantCompletion(payload.messageId),
   poll: (host, payload) => host.poll(payload),

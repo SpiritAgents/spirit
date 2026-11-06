@@ -41,6 +41,8 @@ import type {
   ModelRef,
   PendingAssistantAux,
 } from "@/types";
+import type { MoveBackgroundShortcutTarget } from "@/lib/move-background-shortcut";
+import { normalizePaneSessionPathKey } from "@/lib/pane-desktop-snapshot";
 import type { PointerEvent, ReactNode, RefObject } from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -107,6 +109,7 @@ export type ConversationListProps = {
   onRewindDrop: (event: import("react").DragEvent<HTMLElement>) => void;
   onComposerAgentModeChange: (mode: DesktopAgentMode) => void;
   onForkMessage: (message: ConversationMessageSnapshot, listIndex: number) => void;
+  moveBackgroundShortcutTarget?: MoveBackgroundShortcutTarget;
 };
 
 export function ConversationList({
@@ -152,6 +155,7 @@ export function ConversationList({
   onRewindDrop,
   onComposerAgentModeChange,
   onForkMessage,
+  moveBackgroundShortcutTarget,
 }: ConversationListProps) {
   const { t } = useTranslation();
   const [hoveredAssistantTurnStart, setHoveredAssistantTurnStart] = useState<number | null>(null);
@@ -203,6 +207,12 @@ export function ConversationList({
       void abortShell(toolCallId);
     },
     [abortShell],
+  );
+  const handleMoveToBackground = useCallback(
+    (toolCallId: string) => {
+      void runtime.moveToBackground(toolCallId);
+    },
+    [runtime.moveToBackground],
   );
   const handleQueueMoveUp = useCallback(
     (queueId: string) => {
@@ -461,6 +471,16 @@ export function ConversationList({
                   onOpenReadFile={onOpenReadFile}
                   onOpenPlan={onOpenPlan}
                   onAbortShell={handleAbortShell}
+                  onMoveToBackground={handleMoveToBackground}
+                  moveBackgroundShortcutEligible={(() => {
+                    const target = moveBackgroundShortcutTarget;
+                    return (
+                      target?.eligible === true &&
+                      target.toolCallId === message.tool?.toolCallId &&
+                      normalizePaneSessionPathKey(target.sessionPath ?? "") ===
+                        normalizePaneSessionPathKey(composerSessionKey)
+                    );
+                  })()}
                 />
               )}
               readManagedImagePreviewDataUrl={runtime.readManagedImagePreviewDataUrl}
@@ -589,6 +609,16 @@ export function ConversationList({
         onOpenReadFile={onOpenReadFile}
         onOpenPlan={onOpenPlan}
         onAbortShell={handleAbortShell}
+        onMoveToBackground={handleMoveToBackground}
+        moveBackgroundShortcutEligible={(() => {
+          const target = moveBackgroundShortcutTarget;
+          return (
+            target?.eligible === true &&
+            target.toolCallId === message.tool?.toolCallId &&
+            normalizePaneSessionPathKey(target.sessionPath ?? "") ===
+              normalizePaneSessionPathKey(composerSessionKey)
+          );
+        })()}
         queuedCanMoveUp={queuedCanMoveUp}
         queueActionBusy={runtime.busyAction === "send"}
         onQueueMoveUp={handleQueueMoveUp}

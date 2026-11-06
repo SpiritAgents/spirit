@@ -2874,6 +2874,28 @@ export function useDesktopRuntime() {
     [api, applySnapshot],
   );
 
+  const moveToBackground = useCallback(
+    async (toolCallId: string): Promise<boolean> => {
+      if (!api?.moveToBackground) {
+        return false;
+      }
+      const trimmed = toolCallId.trim();
+      if (!trimmed) {
+        return false;
+      }
+      try {
+        const next = await api.moveToBackground(trimmed);
+        applySnapshot(next);
+        setRuntimeError("");
+        return true;
+      } catch (error) {
+        setRuntimeError(describeError(error));
+        return false;
+      }
+    },
+    [api, applySnapshot],
+  );
+
   const setLoopEnabled = useCallback(
     async (enabled: boolean): Promise<boolean> => {
       if (!api) {
@@ -4170,6 +4192,7 @@ export function useDesktopRuntime() {
     inspectMcpServer,
     abortConversation,
     abortShell,
+    moveToBackground,
     setLoopEnabled,
     setSubagentViewerTarget,
     setApprovalLevel,

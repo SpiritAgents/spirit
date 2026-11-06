@@ -794,6 +794,7 @@ export function ConversationView({
                       onRewindDragOver={list.onRewindDragOver}
                       onRewindDrop={list.onRewindDrop}
                       onComposerAgentModeChange={list.onComposerAgentModeChange}
+                      moveBackgroundShortcutTarget={split.moveBackgroundShortcutTarget}
                     />
                   ) : null}
                   {navPlaceholderActive ? <ConversationNavPlaceholder /> : null}

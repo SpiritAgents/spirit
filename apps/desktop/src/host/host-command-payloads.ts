@@ -139,6 +139,7 @@ export type CommandPayloads = {
   submitUserTurn: SubmitUserTurnRequest;
   abortConversation: import("../types.js").AbortConversationRequest | undefined;
   abortShell: { toolCallId: string };
+  moveToBackground: { toolCallId: string };
   continueAssistantCompletion: { messageId: number };
   poll: { sessionPath?: string } | undefined;
   listDreamsOverview: undefined;

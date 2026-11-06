@@ -1126,6 +1126,18 @@ async function handleApiRequest({
     return;
   }
 
+  if (request.method === "POST" && pathname === "/api/background") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("moveToBackground", {
+        toolCallId: typeof jsonBody?.toolCallId === "string" ? jsonBody.toolCallId : "",
+      }),
+    );
+    return;
+  }
+
   if (request.method === "POST" && pathname === "/api/continue") {
     writeJson(
       request,

@@ -78,6 +78,7 @@ export type HostCommandName =
   | "markGitHubPullRequestReady"
   | "abortConversation"
   | "abortShell"
+  | "moveToBackground"
   | "continueAssistantCompletion"
   | "poll"
   | "listDreamsOverview"

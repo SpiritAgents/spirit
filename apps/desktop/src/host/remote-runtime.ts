@@ -1424,6 +1424,16 @@ export async function abortRemoteDesktopShell(
   return result.aborted === true;
 }
 
+export async function moveRemoteDesktopTaskToBackground(
+  runtime: unknown,
+  toolCallId: string,
+): Promise<void> {
+  if (!(runtime instanceof RemoteDesktopRuntime)) {
+    throw new Error("Background handoff requires a daemon runtime.");
+  }
+  await runtime.clientCall("session.moveToBackground", { toolCallId });
+}
+
 export async function exportRemoteDesktopState(runtime: unknown): Promise<
   | {
       apiMessages: unknown[];

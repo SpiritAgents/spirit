@@ -269,6 +269,9 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   abortShell(toolCallId: string) {
     return ipcRenderer.invoke("desktop:invoke", "abortShell", { toolCallId });
   },
+  moveToBackground(toolCallId: string) {
+    return ipcRenderer.invoke("desktop:invoke", "moveToBackground", { toolCallId });
+  },
   continueAssistantCompletion(messageId: number) {
     return ipcRenderer.invoke("desktop:invoke", "continueAssistantCompletion", { messageId });
   },

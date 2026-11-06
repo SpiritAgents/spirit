@@ -359,6 +359,9 @@ export function createWebHostApi(): HostApi {
     abortShell(toolCallId: string) {
       return post<DesktopSnapshot>(baseUrl, "/api/abort-shell-command", { toolCallId });
     },
+    moveToBackground(toolCallId: string) {
+      return post<DesktopSnapshot>(baseUrl, "/api/background", { toolCallId });
+    },
     continueAssistantCompletion(messageId: number) {
       return post<DesktopSnapshot>(baseUrl, "/api/continue", { messageId });
     },

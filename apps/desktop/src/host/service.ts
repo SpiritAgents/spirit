@@ -481,6 +481,7 @@ import { buildDesktopRuntimeBasicInfo, type DesktopHostRuntime } from "./runtime
 import { hydrateSessionReferenceWiresInUserText } from "./hydrate-session-reference-wires.js";
 import {
   abortRemoteDesktopShell,
+  moveRemoteDesktopTaskToBackground,
   closeRemoteDesktopRuntime,
   closeRemoteDesktopConversation,
   closeSharedDesktopServerClient,
@@ -2420,6 +2421,12 @@ export class DesktopHostService {
   async abortShell(toolCallId: string): Promise<DesktopSnapshot> {
     const bundle = this.activeBundle();
     await abortRemoteDesktopShell(bundle.runtime, toolCallId);
+    return this.buildSnapshot();
+  }
+
+  async moveToBackground(toolCallId: string): Promise<DesktopSnapshot> {
+    const bundle = this.activeBundle();
+    await moveRemoteDesktopTaskToBackground(bundle.runtime, toolCallId);
     return this.buildSnapshot();
   }
 

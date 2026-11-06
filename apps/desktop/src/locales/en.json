@@ -1411,6 +1411,7 @@
     }
   },
   "tool": {
+    "moveToBackground": "Move to Background",
     "reasonPrefix": "Reason:",
     "runCommand": "Run command",
     "runShellVerb": "Run",

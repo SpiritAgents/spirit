@@ -21,6 +21,8 @@ export function ToolCallCollapsible({
   onOpenReadFile,
   onOpenPlan,
   onAbortShell,
+  onMoveToBackground,
+  moveBackgroundShortcutEligible,
 }: {
   tool: ToolBlockSnapshot;
   workspaceRoot?: string;
@@ -32,6 +34,8 @@ export function ToolCallCollapsible({
   onOpenReadFile?: (target: EditorFileTarget) => void;
   onOpenPlan?: () => void;
   onAbortShell?: (toolCallId: string) => void;
+  onMoveToBackground?: (toolCallId: string) => void;
+  moveBackgroundShortcutEligible?: boolean;
 }) {
   if (tool.toolName === "finish_task") {
     return null;
@@ -65,6 +69,8 @@ export function ToolCallCollapsible({
       onOpenReadFile={onOpenReadFile}
       onOpenPlan={onOpenPlan}
       onAbortShell={onAbortShell}
+      onMoveToBackground={onMoveToBackground}
+      moveBackgroundShortcutEligible={moveBackgroundShortcutEligible}
     />
   );
 }

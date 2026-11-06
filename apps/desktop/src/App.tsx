@@ -46,6 +46,7 @@ import { ConversationTypingFocusRedirectBridge } from "@/components/conversation
 import type { FocusedPaneComposerControls } from "@/lib/focused-pane-composer-controls";
 import { useConversationViewState } from "@/hooks/useConversationViewState";
 import type { ConversationAbortShortcutTarget } from "@/lib/conversation-abort-shortcut";
+import type { MoveBackgroundShortcutTarget } from "@/lib/move-background-shortcut";
 import { useUiLayoutScale } from "@/hooks/useUiLayoutScale";
 import { EditCommandStateProvider } from "@/contexts/edit-command-state-context";
 import { useDesktopKeyboardShortcuts } from "@/hooks/useDesktopKeyboardShortcuts";
@@ -147,6 +148,9 @@ export default function App() {
     beginSideChatRef.current = handler;
   }, []);
   const conversationAbortShortcutTargetRef = useRef<ConversationAbortShortcutTarget>({
+    eligible: false,
+  });
+  const moveBackgroundShortcutTargetRef = useRef<MoveBackgroundShortcutTarget>({
     eligible: false,
   });
 
@@ -282,6 +286,7 @@ export default function App() {
     activeSurfaceRef: surfaceNav.activeSurfaceRef,
     conversationAbortShortcutEligibleRef: conversation.conversationAbortShortcutEligibleRef,
     conversationAbortShortcutTargetRef,
+    moveBackgroundShortcutTargetRef,
     sessionSidebarChromeApiRef: surfaceNav.sessionSidebarChromeApiRef,
     handleNewChat,
     handleSelectSession,
@@ -526,6 +531,7 @@ export default function App() {
                               conversationAbortShortcutTargetRef={
                                 conversationAbortShortcutTargetRef
                               }
+                              moveBackgroundShortcutTargetRef={moveBackgroundShortcutTargetRef}
                               registerBeginSideChat={registerBeginSideChat}
                               onEnsureConversationSurface={() => {
                                 surfaceNav.setLastNonSettingsSurface("conversation");

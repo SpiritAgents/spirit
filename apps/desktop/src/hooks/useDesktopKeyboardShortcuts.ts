@@ -31,6 +31,7 @@ import { resolveUiLayoutZoomShortcutAction } from "@/lib/ui-layout-scale";
 import type { WorkspaceToolTab } from "@/lib/workspace-tool-tabs";
 import type { AppSurface } from "@/hooks/useAppSurfaceNavigation";
 import type { ConversationAbortShortcutTargetRef } from "@/lib/conversation-abort-shortcut";
+import type { MoveBackgroundShortcutTargetRef } from "@/lib/move-background-shortcut";
 
 type DesktopRuntime = ReturnType<typeof useDesktopRuntime>;
 
@@ -60,6 +61,7 @@ export type UseDesktopKeyboardShortcutsOptions = {
   activeSurfaceRef: MutableRefObject<AppSurface>;
   conversationAbortShortcutEligibleRef: MutableRefObject<boolean>;
   conversationAbortShortcutTargetRef?: ConversationAbortShortcutTargetRef;
+  moveBackgroundShortcutTargetRef?: MoveBackgroundShortcutTargetRef;
   sessionSidebarChromeApiRef: MutableRefObject<SessionSidebarChromeApi | null>;
   handleNewChat: () => void;
   handleSelectSession: (path: string) => void;
@@ -77,6 +79,7 @@ export function useDesktopKeyboardShortcuts({
   activeSurfaceRef,
   conversationAbortShortcutEligibleRef,
   conversationAbortShortcutTargetRef,
+  moveBackgroundShortcutTargetRef,
   sessionSidebarChromeApiRef,
   handleNewChat,
   handleSelectSession,
@@ -128,13 +131,20 @@ export function useDesktopKeyboardShortcuts({
       if (!isModShortcutPressed(event) || event.key.toLowerCase() !== "b") {
         return;
       }
+      const backgroundTarget = moveBackgroundShortcutTargetRef?.current;
+      if (backgroundTarget?.eligible && backgroundTarget.toolCallId) {
+        event.preventDefault();
+        event.stopPropagation();
+        void runtime.moveToBackground(backgroundTarget.toolCallId);
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       sessionSidebarChromeApiRef.current?.toggle();
     };
     window.addEventListener("keydown", onKeyDown, { capture: true });
     return () => window.removeEventListener("keydown", onKeyDown, { capture: true });
-  }, [sessionSidebarChromeApiRef]);
+  }, [moveBackgroundShortcutTargetRef, runtime.moveToBackground, sessionSidebarChromeApiRef]);
 
   // Cmd+Opt+B is not stolen by Lexical (isBold requires an exact modifier match).
   // Capture here is pairing with Cmd+B, not a necessity for the same bug.
