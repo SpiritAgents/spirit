@@ -76,13 +76,16 @@ interface RemoteDesktopRuntimeInput {
   webToolExposure?: { providerToolsEnabled: boolean; webFetchEnabled: boolean };
   /** Resolved chat file path for multi-host session identity. */
   conversationKey?: string;
+  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   /**
    * Force `session.replaceConfig` on attach even when the daemon session already runs the
    * requested model; inference-preference-only updates (reasoning/thinking/service tier) change
    * config.json without changing the model name, which the attach-time name comparison cannot see.
    */
   refreshDaemonConfig?: boolean;
-  sessionKind?: "default" | "dream-collector";
+  sessionKind?: "default" | "dream-collector" | "subagent";
   dreamScope?: HostDreamScope;
   dreamSourceSession?: HostDreamSourceSessionRef;
   /** Desktop Web: `<basic_info>` host override with page URL. */
@@ -343,6 +346,9 @@ export async function createRemoteDesktopRuntime(
     approvalLevel: input.approvalLevel,
     ...(input.todoSessionKey ? { todoSessionKey: input.todoSessionKey } : {}),
     ...(input.conversationKey ? { conversationKey: input.conversationKey } : {}),
+    workLocation: input.workLocation,
+    ...(input.worktreePath ? { worktreePath: input.worktreePath } : {}),
+    ...(input.worktreeBranch ? { worktreeBranch: input.worktreeBranch } : {}),
     ...(input.sessionKind === "dream-collector" ? { sessionKind: "dream-collector" } : {}),
     ...(input.dreamScope ? { dreamScope: input.dreamScope } : {}),
     ...(input.dreamSourceSession ? { dreamSourceSession: input.dreamSourceSession } : {}),

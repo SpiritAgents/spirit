@@ -161,6 +161,9 @@ export interface StoredDesktopSession {
   pinnedAtUnixMs?: number;
   workspaceRoot?: string;
   gitBranch?: string;
+  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   activePlanPath?: string;
   rewind?: StoredDesktopRewindMetadata;
   contextUsage?: ConversationContextUsageSnapshot;

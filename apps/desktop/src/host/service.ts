@@ -3132,6 +3132,9 @@ export class DesktopHostService {
         ),
       },
       approvalLevel: normalizeApprovalLevel(bundle.approvalLevel),
+      workLocation: bundle.workLocation,
+      ...(bundle.worktreePath ? { worktreePath: bundle.worktreePath } : {}),
+      ...(bundle.worktreeBranch ? { worktreeBranch: bundle.worktreeBranch } : {}),
       todoSessionKey: this.resolveTodoSessionKeyForBundle(bundle),
       webToolExposure: {
         providerToolsEnabled: state.config.agents.providerTools.enabled,

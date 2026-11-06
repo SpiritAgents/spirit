@@ -22,6 +22,7 @@ export interface BuiltinHostToolDefinitionEnvironment {
   shellDisplayName: string;
   commandParameterDescription: string;
   backgroundTasksEnabled?: boolean;
+  subagentEnabled?: boolean;
 }
 
 export interface ContributedHostToolDefinition {
@@ -438,35 +439,39 @@ export function buildBuiltinHostToolDefinitions(
         additionalProperties: false,
       },
     ),
-    functionTool(
-      "subagent",
-      "Delegate substantial research or implementation work to a child agent. Parallel agents can reduce elapsed time and keep the main conversation focused across large workstreams. Each child starts a fresh context, so weigh that setup and token cost against doing the work directly; small or tightly connected tasks often fit better in the main agent.",
-      {
-        type: "object",
-        properties: {
-          prompt: {
-            type: "string",
-            minLength: 1,
-            description: "The prompt sent to the child agent.",
-          },
-          session_id: {
-            type: "string",
-            description:
-              "Resume an existing session by ID. An idle target is interrupted before the new prompt; a target currently being prompted by another agent is left untouched and this call fails. Omit to create a new hidden subagent session.",
-          },
-          ...(environment.backgroundTasksEnabled
-            ? { background: buildBackgroundOptionsSchema("subagent") }
-            : {}),
-          worktree: {
-            type: "boolean",
-            description:
-              "When true, switch the target session to an isolated git worktree and persist that location. If it is already in a worktree, continue there. Omit to keep the current location.",
-          },
-        },
-        required: ["prompt"],
-        additionalProperties: false,
-      },
-    ),
+    ...(environment.subagentEnabled === false
+      ? []
+      : [
+          functionTool(
+            "subagent",
+            "Delegate substantial research or implementation work to a child agent. Parallel agents can reduce elapsed time and keep the main conversation focused across large workstreams. Without session_id, each child starts a fresh context, so weigh that setup and token cost against doing the work directly; small or tightly connected tasks often fit better in the main agent.",
+            {
+              type: "object",
+              properties: {
+                prompt: {
+                  type: "string",
+                  minLength: 1,
+                  description: "The prompt sent to the child agent.",
+                },
+                session_id: {
+                  type: "string",
+                  description:
+                    "Resume an existing session by ID. If the target is generating, its current foreground turn is interrupted before the new prompt; a target currently being prompted by another agent is left untouched and this call fails. Omit to create a new hidden subagent session.",
+                },
+                ...(environment.backgroundTasksEnabled
+                  ? { background: buildBackgroundOptionsSchema("subagent") }
+                  : {}),
+                worktree: {
+                  type: "boolean",
+                  description:
+                    "When true, switch the target session to an isolated git worktree and persist that location. If it is already in a worktree, continue there. Omit to keep the current location.",
+                },
+              },
+              required: ["prompt"],
+              additionalProperties: false,
+            },
+          ),
+        ]),
     functionTool(
       "generate_image",
       "Generate one image with the configured image generation model. Use this only when the user explicitly wants an image. First gather enough context and rewrite the final image prompt yourself, then call this tool. After it completes, you may continue with a normal assistant message when that helps the user.",

@@ -15,6 +15,7 @@ import {
   createBackgroundTaskOwner,
   ensureSessionStorageKey,
   FileBackgroundTaskStore,
+  readSessionStorageKey,
   RuntimeSessionStore,
 } from "@spiritagent/host-internal";
 import { SessionManager } from "../src/session-manager.js";
@@ -58,18 +59,26 @@ function managerFor(dataDir: string) {
   const events: RuntimeEvent<JsonValue>[] = [];
   const childEvents: RuntimeEvent<JsonValue>[] = [];
   const finished: string[] = [];
+  const eventSessionIds: string[] = [];
+  const finishedSessionIds: string[] = [];
   const snapshots: ReturnType<SessionManager["snapshot"]>[] = [];
   const manager = new SessionManager(dataDir, {
-    broadcastRuntimeEvent: (_id, event) => events.push(event),
+    broadcastRuntimeEvent: (id, event) => {
+      events.push(event);
+      eventSessionIds.push(id);
+    },
     broadcastSubagentEvents: (_id, drains) =>
       childEvents.push(...drains.flatMap((drain) => drain.events)),
-    broadcastTurnFinished: (_id, reason) => finished.push(reason),
+    broadcastTurnFinished: (id, reason) => {
+      finished.push(reason);
+      finishedSessionIds.push(id);
+    },
     broadcastSnapshot: (_id, snapshot) => snapshots.push(snapshot),
     broadcastTrustRequest: () => {},
     broadcastFileChange: () => {},
   });
   cleanups.push(() => manager.shutdown());
-  return { manager, events, childEvents, finished, snapshots };
+  return { manager, events, eventSessionIds, childEvents, finished, finishedSessionIds, snapshots };
 }
 
 function response(
@@ -147,7 +156,7 @@ async function waitUntil(predicate: () => boolean | Promise<boolean>) {
 
 async function parallelInputFixture(kind: "approval" | "questions", rounds = 1) {
   const { dataDir, workspaceRoot } = await fixture();
-  const { manager, childEvents } = managerFor(dataDir);
+  const { manager, events, eventSessionIds } = managerFor(dataDir);
   let inputRequests = 0;
   scriptedModel((body) => {
     const messages = body["messages"] as { role: string; content: unknown }[];
@@ -200,7 +209,8 @@ async function parallelInputFixture(kind: "approval" | "questions", rounds = 1) 
       ? manager.replyPendingApproval(sessionId, { kind: "allow" }, requestId)
       : manager.replyPendingQuestions(sessionId, { status: "skipped" }, requestId);
   const requests = () =>
-    childEvents.flatMap<NonNullable<ReturnType<typeof pending>>>((event) => {
+    events.flatMap<NonNullable<ReturnType<typeof pending>>>((event, index) => {
+      if (eventSessionIds[index] === sessionId) return [];
       if (kind === "approval" && event.kind === "approval-requested") return [event.approval];
       if (kind === "questions" && event.kind === "questions-requested") return [event.questions];
       return [];
@@ -248,7 +258,7 @@ it.each(["approval", "questions"] as const)(
 
 it("starts two streamed default-delay shells before either hands off", async () => {
   const { root, dataDir, workspaceRoot } = await fixture();
-  const { manager } = managerFor(dataDir);
+  const { manager, finished } = managerFor(dataDir);
   const requests = scriptedModel(() =>
     response(
       "",
@@ -286,7 +296,7 @@ it("starts two streamed default-delay shells before either hands off", async () 
 
 it("restores offline background replies after the acknowledged UI checkpoint without running the model", async () => {
   const { root, dataDir, workspaceRoot } = await fixture();
-  const { manager } = managerFor(dataDir);
+  const { manager, finished } = managerFor(dataDir);
   const gate = path.join(root, "release");
   const requests = scriptedModel((_body, index) =>
     index === 0
@@ -637,7 +647,7 @@ it("runs a worktree child with scoped instructions, branch, filesystem, and isol
   );
   await writeFile(path.join(workspaceRoot, "tracked.txt"), "dirty");
   await writeFile(path.join(workspaceRoot, "local-only.txt"), "untracked");
-  const { manager, finished, events, snapshots } = managerFor(dataDir);
+  const { manager, events, eventSessionIds, snapshots } = managerFor(dataDir);
   const requests = scriptedModel((_body, index) => {
     if (index === 0)
       return response("", {
@@ -680,7 +690,7 @@ it("runs a worktree child with scoped instructions, branch, filesystem, and isol
     )
     .toBe("blocked");
   await manager.replyPendingApproval(sessionId, { kind: "allow" });
-  await waitUntil(() => finished.length === 1);
+  await waitUntil(() => requests.length === 4);
   expect(requests).toHaveLength(4);
   const snapshot = manager.snapshot(sessionId);
   const child = snapshot.childSessions![0]!;
@@ -688,21 +698,26 @@ it("runs a worktree child with scoped instructions, branch, filesystem, and isol
   expect(JSON.stringify(requests[1])).toContain(child.worktreePath!);
   expect(JSON.stringify(requests[1])).toContain(child.worktreeBranch!);
   expect(JSON.stringify(requests[1])).toContain("Use the fixture marker.");
-  const shell = snapshot.backgroundTasks!.find((entry) => entry.kind === "shell")!;
+  const shell = manager
+    .snapshot(child.sessionId)
+    .backgroundTasks!.find((entry) => entry.kind === "shell")!;
   const output = JSON.parse((await readFile(shell.outputPath, "utf8")).trim());
   expect(output).toEqual({ cwd: child.worktreePath, tracked: "committed", local: false });
   expect(await readFile(path.join(child.worktreePath!, "tracked.txt"), "utf8")).toBe("committed");
   expect(
     events
-      .filter((event) => event.kind === "assistant-chunk")
-      .map((event) => event.text)
+      .flatMap((event, index) =>
+        event.kind === "assistant-chunk" && eventSessionIds[index] === sessionId
+          ? [event.text]
+          : [],
+      )
       .join(""),
   ).not.toContain("Child final response.");
 });
 
-it("keeps a running child on its original model and mode until its own background work finishes", async () => {
+it("keeps target background work on its original model and mode without waking the parent", async () => {
   const { root, dataDir, workspaceRoot } = await fixture();
-  const { manager, finished } = managerFor(dataDir);
+  const { manager, finishedSessionIds } = managerFor(dataDir);
   const gate = path.join(root, "release-child");
   const childRequests: Record<string, unknown>[] = [];
   let parentRequests = 0;
@@ -738,15 +753,20 @@ it("keeps a running child on its original model and mode until its own backgroun
   await manager.submitUserTurn(sessionId, { text: "Delegate the fixture." });
   await waitUntil(
     () =>
-      finished.length === 1 &&
-      manager
-        .snapshot(sessionId)
-        .backgroundTasks!.some((task) => task.status === "waiting-for-background"),
+      finishedSessionIds.filter((id) => id === sessionId).length === 1 &&
+      childRequests.length === 2,
   );
+  const targetId = manager.snapshot(sessionId).childSessions[0]?.sessionId;
+  expect(targetId).toBeTruthy();
+  // The caller's own Subagent task notification still wakes the parent once.
+  await waitUntil(() => finishedSessionIds.filter((id) => id === sessionId).length === 2);
   await manager.setAgentMode(sessionId, "ask");
   await manager.replaceConfig(sessionId, { providerId: "fixture", name: "next-model" });
+  const parentCompletionsAfterReconfigure = finishedSessionIds.filter(
+    (id) => id === sessionId,
+  ).length;
   await writeFile(gate, "");
-  await waitUntil(() => finished.length === 2);
+  await waitUntil(() => childRequests.length === 3);
   expect(childRequests).toHaveLength(3);
   expect(childRequests.every((request) => request.model === "fixture-model")).toBe(true);
   expect(
@@ -755,8 +775,11 @@ it("keeps a running child on its original model and mode until its own backgroun
     ),
   ).toBe(true);
   expect(
-    manager.snapshot(sessionId).backgroundTasks!.every((task) => task.status === "completed"),
+    manager.snapshot(targetId!).backgroundTasks!.every((task) => task.status === "completed"),
   ).toBe(true);
+  expect(finishedSessionIds.filter((id) => id === sessionId)).toHaveLength(
+    parentCompletionsAfterReconfigure,
+  );
 });
 
 function delegatedContext() {
@@ -894,4 +917,126 @@ it("interrupts an ordinary target turn before continuing it", async () => {
   const archive = manager.exportArchive(target.sessionId, [], []);
   expect(JSON.stringify(archive)).toContain("Ordinary old turn");
   expect(JSON.stringify(archive)).toContain("Continued turn");
+});
+
+it("persists and reuses a continued session worktree across restart", async () => {
+  const { dataDir, workspaceRoot } = await fixture();
+  const git = (...args: string[]) =>
+    execFileSync("git", args, { cwd: workspaceRoot, stdio: "pipe" });
+  git("init", "--quiet");
+  await writeFile(path.join(workspaceRoot, "tracked.txt"), "committed");
+  git("add", "tracked.txt");
+  git(
+    "-c",
+    "user.name=Fixture",
+    "-c",
+    "user.email=fixture@example.invalid",
+    "-c",
+    "commit.gpgsign=false",
+    "commit",
+    "--quiet",
+    "-m",
+    "fixture",
+  );
+  const { manager } = managerFor(dataDir);
+  const parent = await manager.createSession({
+    workspaceRoot,
+    hostKind: "desktop",
+    agentMode: "debug",
+    modelRef: { providerId: "fixture", name: "next-model" },
+  });
+  let replies = 0;
+  setLlmFetchTransportOverrideForTests(async () => response(`Reply ${++replies}`));
+
+  const first = delegatedContext();
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    prompt: "First worktree turn",
+    parentToolCallId: "call-worktree-create",
+    worktree: true,
+    context: first.context,
+  });
+  const targetId = first.updates[0]?.sessionId;
+  if (!targetId) throw new Error("Missing delegated session ID.");
+  const created = manager.getSession(targetId)!;
+  expect(created.workLocation).toBe("worktree");
+  expect(created.workspaceRoot).toBe(created.worktreePath);
+  expect(created.worktreePath).not.toBe(workspaceRoot);
+  expect(created.worktreeBranch).toMatch(/^spirit\/subagent-/);
+  expect(created.model).toBe("next-model");
+  expect(first.updates[0]).toMatchObject({
+    worktreePath: created.worktreePath,
+    worktreeBranch: created.worktreeBranch,
+  });
+
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: targetId,
+    prompt: "Second worktree turn",
+    parentToolCallId: "call-worktree-reuse",
+    worktree: true,
+    context: delegatedContext().context,
+  });
+  expect(manager.getSession(targetId)?.worktreePath).toBe(created.worktreePath);
+  const storageKey = readSessionStorageKey(dataDir, targetId)!;
+  const saved = await new RuntimeSessionStore(dataDir, storageKey).read();
+  expect(saved).toMatchObject({
+    workspaceRoot: created.worktreePath,
+    workLocation: "worktree",
+    worktreePath: created.worktreePath,
+    worktreeBranch: created.worktreeBranch,
+    agentMode: "debug",
+  });
+  await manager.shutdown();
+
+  const restarted = managerFor(dataDir).manager;
+  const restartedParent = await restarted.createSession({ workspaceRoot, hostKind: "desktop" });
+  await restarted.delegateSubagentTurn(restartedParent.sessionId, {
+    sessionId: targetId,
+    prompt: "Third worktree turn",
+    parentToolCallId: "call-worktree-restored",
+    worktree: true,
+    context: delegatedContext().context,
+  });
+  const restored = restarted.getSession(targetId)!;
+  expect(restored.workspaceRoot).toBe(created.worktreePath);
+  expect(restored.worktreePath).toBe(created.worktreePath);
+  expect(restored.worktreeBranch).toBe(created.worktreeBranch);
+  expect(restored.model).toBe("next-model");
+  const history = JSON.stringify(restarted.exportArchive(targetId, [], []));
+  expect(history).toContain("First worktree turn");
+  expect(history).toContain("Second worktree turn");
+  expect(history).toContain("Third worktree turn");
+  expect(replies).toBe(3);
+});
+
+it("does not prompt or move a session when worktree creation fails", async () => {
+  const { dataDir, workspaceRoot } = await fixture();
+  const { manager } = managerFor(dataDir);
+  const parent = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
+  const target = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
+  let requests = 0;
+  setLlmFetchTransportOverrideForTests(async () => {
+    requests += 1;
+    return response("Unexpected reply");
+  });
+  const delegated = delegatedContext();
+
+  await expect(
+    manager.delegateSubagentTurn(parent.sessionId, {
+      sessionId: target.sessionId,
+      prompt: "Must not enter history",
+      parentToolCallId: "call-worktree-failure",
+      worktree: true,
+      context: delegated.context,
+    }),
+  ).rejects.toThrow();
+  expect(requests).toBe(0);
+  expect(delegated.outputs).toEqual([]);
+  expect(manager.getSession(target.sessionId)).toMatchObject({
+    workspaceRoot,
+    workLocation: "local",
+  });
+  expect(manager.getSession(target.sessionId)?.worktreePath).toBeUndefined();
+  expect(JSON.stringify(manager.exportArchive(target.sessionId, [], []))).not.toContain(
+    "Must not enter history",
+  );
 });

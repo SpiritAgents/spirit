@@ -640,6 +640,13 @@ function normalizeStoredSession(parsed: Partial<StoredDesktopSession>): StoredDe
     ...(normalizeGitBranch(parsed.gitBranch)
       ? { gitBranch: normalizeGitBranch(parsed.gitBranch) }
       : {}),
+    ...(parsed.workLocation === "worktree" ? { workLocation: "worktree" } : {}),
+    ...(typeof parsed.worktreePath === "string" && parsed.worktreePath.trim()
+      ? { worktreePath: parsed.worktreePath.trim() }
+      : {}),
+    ...(typeof parsed.worktreeBranch === "string" && parsed.worktreeBranch.trim()
+      ? { worktreeBranch: parsed.worktreeBranch.trim() }
+      : {}),
     ...(typeof parsed.activePlanPath === "string" && parsed.activePlanPath.trim()
       ? { activePlanPath: parsed.activePlanPath.trim() }
       : {}),

@@ -14,6 +14,15 @@ import { isJsonObject } from "./tool-agent.js";
 const environment = { shellDisplayName: "Shell", commandParameterDescription: "Command." };
 
 describe("background task contracts", () => {
+  it("omits nested subagent creation when the host disables it", () => {
+    const definitions = buildBuiltinHostToolDefinitions({
+      ...environment,
+      backgroundTasksEnabled: true,
+      subagentEnabled: false,
+    });
+    expect(definitions.map(readHostFunctionToolName)).not.toContain("subagent");
+  });
+
   it("only exposes background controls when the host supports them", () => {
     const disabled = buildBuiltinHostToolDefinitions(environment);
     expect(disabled.map(readHostFunctionToolName)).not.toContain("delay");

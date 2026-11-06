@@ -412,6 +412,24 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         const agentMode = params["agentMode"];
         const conversationKey = params["conversationKey"];
         const sessionKind = params["sessionKind"];
+        const workLocation = params["workLocation"];
+        const worktreePath = params["worktreePath"];
+        const worktreeBranch = params["worktreeBranch"];
+        const subagentOrigin = params["subagentOrigin"];
+        const normalizedSubagentOrigin =
+          subagentOrigin &&
+          typeof subagentOrigin === "object" &&
+          typeof (subagentOrigin as Record<string, unknown>)["parentSessionId"] === "string" &&
+          typeof (subagentOrigin as Record<string, unknown>)["parentToolCallId"] === "string"
+            ? {
+                parentSessionId: String(
+                  (subagentOrigin as Record<string, unknown>)["parentSessionId"],
+                ).trim(),
+                parentToolCallId: String(
+                  (subagentOrigin as Record<string, unknown>)["parentToolCallId"],
+                ).trim(),
+              }
+            : undefined;
         const dreamScopeRaw = params["dreamScope"];
         const dreamSourceSessionRaw = params["dreamSourceSession"];
         const hostUiPromptSection = normalizeHostUiPromptSection(params["hostUiPromptSection"]);
@@ -484,7 +502,19 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
           ...(agentMode === "plan" || agentMode === "ask" || agentMode === "debug"
             ? { agentMode }
             : {}),
-          ...(sessionKind === "dream-collector" ? { sessionKind: "dream-collector" as const } : {}),
+          ...(sessionKind === "dream-collector" || sessionKind === "subagent"
+            ? { sessionKind }
+            : {}),
+          ...(workLocation === "local" || workLocation === "worktree" ? { workLocation } : {}),
+          ...(typeof worktreePath === "string" && worktreePath.trim()
+            ? { worktreePath: worktreePath.trim() }
+            : {}),
+          ...(typeof worktreeBranch === "string" && worktreeBranch.trim()
+            ? { worktreeBranch: worktreeBranch.trim() }
+            : {}),
+          ...(normalizedSubagentOrigin?.parentSessionId && normalizedSubagentOrigin.parentToolCallId
+            ? { subagentOrigin: normalizedSubagentOrigin }
+            : {}),
           ...(dreamScope ? { dreamScope } : {}),
           ...(dreamSourceSession ? { dreamSourceSession } : {}),
           ...(hostUiPromptSection ? { hostUiPromptSection } : {}),

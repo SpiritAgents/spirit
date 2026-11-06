@@ -47,6 +47,8 @@ export interface SessionBundle {
   activeModel?: ModelRef;
   pendingGitBranch?: string;
   workLocation: WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   rewind: StoredDesktopRewindMetadata;
   rewindWarnings: FileRewindWarning[];
   messageIdCounter: number;
@@ -173,7 +175,9 @@ export function sessionBundleFromRestored(
     loopEnabled: restored.loopEnabled,
     approvalLevel: restored.approvalLevel,
     ...(restored.activeModel ? { activeModel: restored.activeModel } : {}),
-    workLocation: "local",
+    workLocation: restored.workLocation ?? "local",
+    ...(restored.worktreePath ? { worktreePath: restored.worktreePath } : {}),
+    ...(restored.worktreeBranch ? { worktreeBranch: restored.worktreeBranch } : {}),
     rewind: restored.rewind,
     rewindWarnings: [],
     messageIdCounter: nextMessageIdFromMessages(restored.messages),
@@ -217,6 +221,8 @@ export function resetSessionBundleInPlace(bundle: SessionBundle): void {
   bundle.activeModel = undefined;
   bundle.pendingGitBranch = undefined;
   bundle.workLocation = "local";
+  delete bundle.worktreePath;
+  delete bundle.worktreeBranch;
   bundle.rewind = createDesktopRewindMetadata();
   bundle.rewindWarnings = [];
   bundle.messageIdCounter = 1;

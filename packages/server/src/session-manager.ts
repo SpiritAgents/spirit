@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import path from "node:path";
 
 import {
   buildStartImplementingPrompt,
@@ -16,13 +15,17 @@ import {
   type RuntimeEvent,
   type AgentMode,
   type SubagentSessionExecutionRequest,
+  type SessionTaskContext,
   type SessionTaskResult,
 } from "@spiritagent/agent-core";
 import type { BridgeRuntimeSnapshot } from "@spiritagent/agent-core/host-bridge";
 import {
   createHostTodoStore,
   createBackgroundTaskOwner,
+  createSubagentWorkspaceBootstrap,
+  readSessionStorageKey,
   resolveSubagentTranscriptFilePath,
+  RuntimeSessionStore,
   type BackgroundTaskOwner,
   deriveSessionTitleFallbackSeed,
   generateSessionTitleForTurn,
@@ -73,6 +76,9 @@ export interface ServerSessionInfo {
   conversationKey?: string;
   sessionKind?: ServerSessionKind;
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
+  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   attachmentCount: number;
   restoredFromDisk: boolean;
 }
@@ -103,7 +109,12 @@ interface PendingTrustRequest {
 interface ServerSession {
   info: ServerSessionInfo;
   runtimeResult: ServerRuntimeResult;
-  agentWriter?: { ownerSessionId: string; toolCallId: string };
+  agentWriter?: {
+    ownerSessionId: string;
+    toolCallId: string;
+    context: SessionTaskContext;
+    blocked: boolean;
+  };
   /** Incremented per turn; stale completions drop their broadcast. */
   turnGeneration: number;
   queue: QueuedUserTurn[];
@@ -201,6 +212,9 @@ export interface CreateSessionParams {
   workspaceRoot: string;
   hostKind: ServerClientKind;
   sessionId?: string;
+  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   approvalLevel?: ApprovalLevel;
   modelRef?: ModelRef;
   agentMode?: AgentMode;
@@ -384,6 +398,9 @@ export class SessionManager {
       },
       ...(requireExisting ? { requireExisting: true } : {}),
       ...(params.subagentOrigin ? { subagentOrigin: params.subagentOrigin } : {}),
+      ...(params.workLocation ? { workLocation: params.workLocation } : {}),
+      ...(params.worktreePath ? { worktreePath: params.worktreePath } : {}),
+      ...(params.worktreeBranch ? { worktreeBranch: params.worktreeBranch } : {}),
       taskOwner: await (this.taskOwner ??= createBackgroundTaskOwner(this.spiritDataDir)),
       ...(params.modelRef ? { modelRef: params.modelRef } : {}),
       ...(params.todoSessionKey?.trim() ? { todoSessionKey: params.todoSessionKey.trim() } : {}),
@@ -412,7 +429,7 @@ export class SessionManager {
 
     const info: ServerSessionInfo = {
       sessionId,
-      workspaceRoot: params.workspaceRoot,
+      workspaceRoot: runtimeResult.workspaceRoot,
       hostKind: params.hostKind,
       createdAt: new Date().toISOString(),
       isBusy: false,
@@ -421,6 +438,9 @@ export class SessionManager {
       queuedTurns: 0,
       attachmentCount: 0,
       restoredFromDisk: runtimeResult.restoredFromDisk,
+      workLocation: runtimeResult.workLocation,
+      ...(runtimeResult.worktreePath ? { worktreePath: runtimeResult.worktreePath } : {}),
+      ...(runtimeResult.worktreeBranch ? { worktreeBranch: runtimeResult.worktreeBranch } : {}),
       ...(runtimeResult.sessionKind ? { sessionKind: runtimeResult.sessionKind } : {}),
       ...(runtimeResult.subagentOrigin ? { subagentOrigin: runtimeResult.subagentOrigin } : {}),
       ...(trimmedKey ? { conversationKey: trimmedKey } : {}),
@@ -440,7 +460,13 @@ export class SessionManager {
         ? { desktopTimeline: runtimeResult.restoredDesktopTimeline }
         : {}),
       pendingActiveSkills: [],
-      createParams: params,
+      createParams: {
+        ...params,
+        workspaceRoot: runtimeResult.workspaceRoot,
+        workLocation: runtimeResult.workLocation,
+        ...(runtimeResult.worktreePath ? { worktreePath: runtimeResult.worktreePath } : {}),
+        ...(runtimeResult.worktreeBranch ? { worktreeBranch: runtimeResult.worktreeBranch } : {}),
+      },
       todoSessionKey: params.todoSessionKey?.trim() || sessionId,
     };
     session.pump = setInterval(() => this.tickSession(session), PUMP_INTERVAL_MS);
@@ -514,20 +540,38 @@ export class SessionManager {
     if (targetSession.agentWriter) {
       throw new Error("The target session is already being prompted by another agent.");
     }
-    targetSession.agentWriter = {
+    const writer: NonNullable<ServerSession["agentWriter"]> = {
       ownerSessionId: parentSessionId,
       toolCallId: request.parentToolCallId,
+      context: request.context,
+      blocked: false,
     };
+    targetSession.agentWriter = writer;
     if (runtime.isBusy() || targetSession.turnActive) {
-      this.abort(target.sessionId);
+      this.abort(target.sessionId, { preserveAgentWriter: true });
       await targetSession.operations;
-      targetSession.agentWriter = {
-        ownerSessionId: parentSessionId,
-        toolCallId: request.parentToolCallId,
-      };
     }
+    if (request.worktree) {
+      await this.setSessionWorktree(target.sessionId);
+    }
+    const transcript = resolveSubagentTranscriptFilePath(
+      this.spiritDataDir,
+      target.sessionId,
+      target.sessionId,
+    );
+    await request.context.update({
+      sessionId: target.sessionId,
+      sessionTranscript: transcript,
+      ...(targetSession.info.worktreePath ? { worktreePath: targetSession.info.worktreePath } : {}),
+      ...(targetSession.info.worktreeBranch
+        ? { worktreeBranch: targetSession.info.worktreeBranch }
+        : {}),
+    });
     const completion = this.waitForAgentTurn(target.sessionId);
-    const cancel = () => this.abort(target.sessionId);
+    const cancel = () => {
+      const target = this.sessions.get(targetSession.info.sessionId);
+      if (target && !target.closing) this.abort(target.info.sessionId);
+    };
     request.context.signal.addEventListener("abort", cancel, { once: true });
     try {
       await this.startTurn(targetSession, {
@@ -537,14 +581,7 @@ export class SessionManager {
         activeSkills: [],
       });
       const result = await completion;
-      const transcript = resolveSubagentTranscriptFilePath(
-        this.spiritDataDir,
-        target.sessionId,
-        target.sessionId,
-      );
       await request.context.update({
-        sessionId: target.sessionId,
-        sessionTranscript: transcript,
         finalOutputPreview: result.text.slice(0, 16_384),
       });
       await request.context.writeOutput(`\n\nFinal response:\n${result.text}\n`);
@@ -568,6 +605,109 @@ export class SessionManager {
     }
   }
 
+  async setSessionWorktree(sessionId: string): Promise<ServerSessionInfo> {
+    const session = this.requireSession(sessionId);
+    if (session.info.workLocation === "worktree" && session.info.worktreePath) {
+      return session.info;
+    }
+    if (session.runtimeResult.runtime.isBusy() || session.turnActive) {
+      throw new Error("The target session is busy; wait for the current turn to finish.");
+    }
+    const bootstrap = createSubagentWorkspaceBootstrap({
+      parentWorkspaceRoot: session.info.workspaceRoot,
+      buildScopedRuntime: async () => ({ toolExecutor: session.runtimeResult.toolExecutor }),
+    });
+    const boot = await bootstrap({
+      subagentSessionId: sessionId,
+      task: "Continue session",
+      worktree: true,
+      parentWorkspaceRoot: session.info.workspaceRoot,
+    });
+    if ("error" in boot) throw new Error(boot.error);
+    if (!boot.worktreePath || !boot.branchName) {
+      await boot.rollback?.();
+      throw new Error("The subagent worktree identity is incomplete.");
+    }
+    const previousRoot = session.info.workspaceRoot;
+    let switched = false;
+    try {
+      const fresh = await this.reconfigureSessionWorkspace(session, boot.workspaceRoot);
+      switched = true;
+      session.runtimeResult = fresh;
+      session.info.workspaceRoot = boot.workspaceRoot;
+      session.info.workLocation = "worktree";
+      session.info.worktreePath = boot.worktreePath;
+      session.info.worktreeBranch = boot.branchName;
+      session.createParams.workspaceRoot = boot.workspaceRoot;
+      session.createParams.workLocation = "worktree";
+      session.createParams.worktreePath = boot.worktreePath;
+      session.createParams.worktreeBranch = boot.branchName;
+      fresh.workLocation = "worktree";
+      fresh.worktreePath = boot.worktreePath;
+      fresh.worktreeBranch = boot.branchName;
+      await fresh.persist();
+      boot.markStarted?.();
+    } catch (error) {
+      const cleanup: Promise<unknown>[] = [Promise.resolve(boot.rollback?.())];
+      if (switched) {
+        cleanup.push(
+          this.reconfigureSessionWorkspace(session, previousRoot).then((restored) => {
+            session.runtimeResult = restored;
+            session.info.workspaceRoot = previousRoot;
+            session.info.workLocation = "local";
+            delete session.info.worktreePath;
+            delete session.info.worktreeBranch;
+            session.createParams.workspaceRoot = previousRoot;
+            session.createParams.workLocation = "local";
+            delete session.createParams.worktreePath;
+            delete session.createParams.worktreeBranch;
+          }),
+        );
+      }
+      const results = await Promise.allSettled(cleanup);
+      const failures = results.flatMap((entry) =>
+        entry.status === "rejected" ? [entry.reason] : [],
+      );
+      if (failures.length) throw new AggregateError([error, ...failures]);
+      throw error;
+    }
+    this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
+    return session.info;
+  }
+
+  private reconfigureSessionWorkspace(
+    session: ServerSession,
+    workspaceRoot: string,
+  ): Promise<ServerRuntimeResult> {
+    const current = session.runtimeResult;
+    return current.reconfigure({
+      workspaceRoot,
+      spiritDataDir: this.spiritDataDir,
+      sessionKey: current.storageSessionKey,
+      agentMode: current.agentModeSnapshot(),
+      ...(session.createParams.modelRef ? { modelRef: session.createParams.modelRef } : {}),
+      todoSessionKey: session.todoSessionKey,
+      mcpService: this.mcpRegistry.forWorkspace(workspaceRoot),
+      hostKind: session.createParams.hostKind === "web" ? "cli" : session.createParams.hostKind,
+      approvalLevel: session.info.approvalLevel,
+      ...(session.info.sessionKind ? { sessionKind: session.info.sessionKind } : {}),
+      ...(session.info.subagentOrigin ? { subagentOrigin: session.info.subagentOrigin } : {}),
+      ...(session.createParams.hostUiPromptSection
+        ? { hostUiPromptSection: session.createParams.hostUiPromptSection }
+        : {}),
+      ...(session.createParams.hostToolDescriptionHints
+        ? { hostToolDescriptionHints: session.createParams.hostToolDescriptionHints }
+        : {}),
+      basicInfoHost: resolveBasicInfoHost(session.createParams),
+      onEvent: (event, sequence) =>
+        this.handleRuntimeEvent(session.info.sessionId, event, sequence),
+      onFileChange: (change) => this.callbacks.broadcastFileChange(session.info.sessionId, change),
+      requestWorkspaceCapabilityTrust: (request) =>
+        this.requestWorkspaceCapabilityTrust(session.info.sessionId, request),
+      ...(this.callbacks.log ? { log: this.callbacks.log } : {}),
+    });
+  }
+
   async resumeSession(
     sessionId: string,
     workspaceRoot: string,
@@ -577,13 +717,19 @@ export class SessionManager {
     if (!trimmed) throw new Error("missing sessionId");
     const live = this.sessions.get(trimmed);
     if (live) {
-      if (path.resolve(live.info.workspaceRoot) !== path.resolve(workspaceRoot)) {
-        throw new Error("Session workspace mismatch.");
-      }
       return this.projectInfo(live);
     }
+    const storageKey = readSessionStorageKey(this.spiritDataDir, trimmed);
+    const saved = storageKey
+      ? await new RuntimeSessionStore(this.spiritDataDir, storageKey).read()
+      : undefined;
     return this.createSessionInner(
-      { workspaceRoot, hostKind, sessionId: trimmed },
+      {
+        workspaceRoot: saved?.workspaceRoot ?? workspaceRoot,
+        hostKind,
+        sessionId: trimmed,
+        ...(saved?.modelRef ? { modelRef: saved.modelRef } : {}),
+      },
       undefined,
       true,
     );
@@ -680,7 +826,33 @@ export class SessionManager {
   }
 
   private snapshotForSession(session: ServerSession): BridgeRuntimeSnapshot {
-    const snapshot = buildServerSnapshot(session.runtimeResult);
+    let snapshot = buildServerSnapshot(session.runtimeResult);
+    const delegated = [...this.sessions.values()].filter(
+      (target) => target.agentWriter?.ownerSessionId === session.info.sessionId,
+    );
+    if (!snapshot.currentPendingApproval) {
+      for (const target of delegated) {
+        const approval = target.runtimeResult.runtime.currentPendingApproval();
+        if (!approval) continue;
+        snapshot = {
+          ...snapshot,
+          hasPendingApproval: true,
+          currentPendingApproval: {
+            ...approval,
+            subagentSessionId: target.info.sessionId,
+            subagentTitle: target.info.title ?? "SubAgent",
+          },
+        };
+        break;
+      }
+    }
+    if (!snapshot.currentPendingQuestions) {
+      const questions = delegated
+        .map((target) => target.runtimeResult.runtime.currentPendingQuestions())
+        .find((pending) => pending !== undefined);
+      if (questions)
+        snapshot = { ...snapshot, hasPendingQuestions: true, currentPendingQuestions: questions };
+    }
     // approval-resolved mid-broadcast clears pending approval before the resumed
     // tool/LLM round marks runtime busy again; keep clients on the busy edge
     // for the whole turn while session.turnActive is set.
@@ -688,6 +860,25 @@ export class SessionManager {
       return { ...snapshot, isBusy: true };
     }
     return snapshot;
+  }
+
+  private syncDelegatedInputState(session: ServerSession): void {
+    const writer = session.agentWriter;
+    if (!writer) return;
+    const blocked =
+      session.runtimeResult.runtime.hasPendingApproval() ||
+      session.runtimeResult.runtime.hasPendingQuestions();
+    if (writer.blocked === blocked) return;
+    writer.blocked = blocked;
+    void writer.context.update({}, blocked ? "blocked" : "running").catch((error: unknown) => {
+      this.callbacks.log?.(
+        `session ${session.info.sessionId}: delegated input state failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+    const parent = this.sessions.get(writer.ownerSessionId);
+    if (parent && !parent.closing) {
+      this.callbacks.broadcastSnapshot(parent.info.sessionId, this.snapshotForSession(parent));
+    }
   }
 
   private projectInfo(session: ServerSession): ServerSessionInfo {
@@ -716,6 +907,15 @@ export class SessionManager {
       this.callbacks.log?.(`session ${sessionId}: ${event.error}`);
     }
     this.callbacks.broadcastRuntimeEvent(sessionId, event, presentationSequence);
+    const session = this.sessions.get(sessionId);
+    if (
+      session &&
+      (event.kind === "approval-requested" ||
+        event.kind === "approval-resolved" ||
+        event.kind === "questions-requested")
+    ) {
+      this.syncDelegatedInputState(session);
+    }
     // Approval/question lifecycle changes are exactly when clients need a
     // fresh projection (to open or close the interactive UI).
     if (
@@ -762,6 +962,7 @@ export class SessionManager {
         const { runtime } = session.runtimeResult;
         await session.runtimeResult.toolExecutor.refreshCaches();
         await runtime.poll({ allowBackgroundWakeup: false });
+        this.syncDelegatedInputState(session);
         const childSessions = runtime.childSessions();
         const childSessionsFingerprint = childSessions
           .map((entry) => `${entry.sessionId}:${entry.status}:${entry.parentToolCallId}`)
@@ -1103,10 +1304,10 @@ export class SessionManager {
     }
   }
 
-  abort(sessionId: string): void {
+  abort(sessionId: string, options: { preserveAgentWriter?: boolean } = {}): void {
     const session = this.requireSession(sessionId);
     session.turnGeneration += 1;
-    delete session.agentWriter;
+    if (!options.preserveAgentWriter) delete session.agentWriter;
     session.runtimeResult.runtime.abort();
     session.turnActive = false;
     session.idleTicksWhileActive = 0;
@@ -1616,6 +1817,19 @@ export class SessionManager {
     requestId?: string,
   ): Promise<void> {
     const session = this.requireSession(sessionId);
+    if (!session.runtimeResult.runtime.currentPendingApproval(requestId)) {
+      const target = [...this.sessions.values()].find(
+        (candidate) =>
+          candidate.agentWriter?.ownerSessionId === sessionId &&
+          candidate.runtimeResult.runtime.currentPendingApproval(requestId),
+      );
+      if (target) {
+        await target.runtimeResult.runtime.continuePendingApproval(decision, requestId);
+        this.syncDelegatedInputState(target);
+        this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
+        return;
+      }
+    }
     // poll() can await an early-stream approval; its reply must not queue behind that poll.
     await session.runtimeResult.runtime.continuePendingApproval(decision, requestId);
     // approval-resolved mid-broadcast often sees isBusy=false (pending cleared, tool not
@@ -1682,6 +1896,19 @@ export class SessionManager {
     requestId?: string,
   ): Promise<void> {
     const session = this.requireSession(sessionId);
+    if (!session.runtimeResult.runtime.currentPendingQuestions(requestId)) {
+      const target = [...this.sessions.values()].find(
+        (candidate) =>
+          candidate.agentWriter?.ownerSessionId === sessionId &&
+          candidate.runtimeResult.runtime.currentPendingQuestions(requestId),
+      );
+      if (target) {
+        await target.runtimeResult.runtime.continuePendingQuestions(result, requestId);
+        this.syncDelegatedInputState(target);
+        this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
+        return;
+      }
+    }
     await session.runtimeResult.runtime.continuePendingQuestions(result, requestId);
     this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
   }

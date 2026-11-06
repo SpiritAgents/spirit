@@ -77,8 +77,13 @@ export type AcpHostRuntime = AgentRuntime<LlmTransportConfig, LlmToolAgentState,
 export interface AcpRuntimeResult {
   runtime: AcpHostRuntime;
   toolExecutor: HostToolExecutorProxy;
+  reconfigure(next: { workspaceRoot: string }): Promise<AcpRuntimeResult>;
+  workspaceRoot: string;
   sessionKind?: "default" | "dream-collector" | "subagent";
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
+  workLocation: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   enabledRules: LlmEnabledRule[];
   enabledSkillCatalog: LlmEnabledSkillCatalogEntry[];
   planMetadata: LlmPlanMetadata | undefined;
@@ -105,6 +110,10 @@ export async function createAcpRuntime(
     sessionKind?: "default" | "dream-collector" | "subagent";
     subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
     subagentSessionDelegate?: import("@spiritagent/agent-core").SubagentSessionDelegate;
+    workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+    worktreePath?: string;
+    worktreeBranch?: string;
+    adoptStoredWorkspace?: boolean;
   } = {},
 ): Promise<AcpRuntimeResult> {
   const storageKey = options.requireExisting
@@ -124,9 +133,15 @@ export async function createAcpRuntime(
     lease = sessionLease;
     const saved = await sessionStore.read();
     if (options.requireExisting && !saved) throw new Error("Stored ACP session not found.");
-    if (saved && path.resolve(saved.workspaceRoot) !== path.resolve(config.workspaceRoot)) {
+    if (
+      saved &&
+      options.adoptStoredWorkspace !== true &&
+      path.resolve(saved.workspaceRoot) !== path.resolve(config.workspaceRoot)
+    ) {
       throw new Error("The stored session belongs to a different workspace.");
     }
+    const workspaceRoot =
+      options.adoptStoredWorkspace === true && saved ? saved.workspaceRoot : config.workspaceRoot;
     let closed = false;
     const report = (error: unknown, taskId?: string) =>
       onEvent({
@@ -139,8 +154,11 @@ export async function createAcpRuntime(
       await sessionStore.save({
         version: 1,
         sessionKey: storageKey,
-        workspaceRoot: config.workspaceRoot,
+        workspaceRoot: result.workspaceRoot,
         agentMode: result.agentModeSnapshot(),
+        workLocation: result.workLocation,
+        ...(result.worktreePath ? { worktreePath: result.worktreePath } : {}),
+        ...(result.worktreeBranch ? { worktreeBranch: result.worktreeBranch } : {}),
         ...(sessionKind ? { sessionKind } : {}),
         ...(subagentOrigin ? { subagentOrigin } : {}),
         initialized: true,
@@ -172,23 +190,36 @@ export async function createAcpRuntime(
     });
     const sessionKind = options.sessionKind ?? saved?.sessionKind;
     const subagentOrigin = options.subagentOrigin ?? saved?.subagentOrigin;
+    const workLocation = options.workLocation ?? saved?.workLocation ?? "local";
+    const worktreePath = options.worktreePath ?? saved?.worktreePath;
+    const worktreeBranch = options.worktreeBranch ?? saved?.worktreeBranch;
     const prepared = await prepareAcpRuntime(
-      config,
+      { ...config, workspaceRoot },
       onEvent,
       saved?.agentMode ?? initialMode,
       storageKey,
     );
-    prepared.runtimeOptions.backgroundTasks = {
-      manager: tasks,
-      scope: { runtimeId: "main" },
-      persistHistory: persist,
+    const configurePreparedRuntime = (environment: PreparedAcpRuntime): void => {
+      environment.runtimeOptions.backgroundTasks = {
+        manager: tasks,
+        scope: { runtimeId: "main" },
+        persistHistory: persist,
+      };
+      if (options.subagentSessionDelegate) {
+        environment.runtimeOptions.subagentSessionDelegate = options.subagentSessionDelegate;
+      }
     };
-    if (options.subagentSessionDelegate) {
-      prepared.runtimeOptions.subagentSessionDelegate = options.subagentSessionDelegate;
-    }
+    prepared.toolExecutor.setSubagentExposure(
+      (options.sessionKind ?? saved?.sessionKind) !== "subagent",
+    );
+    configurePreparedRuntime(prepared);
     const runtime = new AgentRuntime(prepared.runtimeOptions);
     result = {
       ...prepared,
+      workspaceRoot,
+      workLocation,
+      ...(worktreePath ? { worktreePath } : {}),
+      ...(worktreeBranch ? { worktreeBranch } : {}),
       ...(sessionKind ? { sessionKind } : {}),
       ...(subagentOrigin ? { subagentOrigin } : {}),
       runtime,
@@ -199,6 +230,39 @@ export async function createAcpRuntime(
       setAgentMode: async (mode) => {
         await prepared.setAgentMode(mode);
         await persist();
+      },
+      reconfigure: async (next) => {
+        const current = result;
+        if (!current) throw new Error("ACP runtime is not initialized.");
+        const nextPrepared = await prepareAcpRuntime(
+          { ...config, workspaceRoot: next.workspaceRoot },
+          onEvent,
+          current.agentModeSnapshot(),
+          storageKey,
+        );
+        configurePreparedRuntime(nextPrepared);
+        runtime.replaceHostOptions(nextPrepared.runtimeOptions);
+        result = {
+          ...nextPrepared,
+          workspaceRoot: next.workspaceRoot,
+          workLocation: current.workLocation,
+          ...(current.worktreePath ? { worktreePath: current.worktreePath } : {}),
+          ...(current.worktreeBranch ? { worktreeBranch: current.worktreeBranch } : {}),
+          ...(current.sessionKind ? { sessionKind: current.sessionKind } : {}),
+          ...(current.subagentOrigin ? { subagentOrigin: current.subagentOrigin } : {}),
+          runtime,
+          tasks,
+          storageSessionKey: storageKey,
+          restoredFromDisk: current.restoredFromDisk,
+          persist,
+          setAgentMode: async (mode) => {
+            await nextPrepared.setAgentMode(mode);
+            await persist();
+          },
+          reconfigure: current.reconfigure,
+          dispose: current.dispose,
+        };
+        return result;
       },
       dispose: async () => {
         if (closed) return;

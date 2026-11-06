@@ -25,19 +25,22 @@ export interface AcpServerConfig {
 export interface AcpSessionState {
   readonly sessionId: string;
   readonly runtime: AgentRuntime<LlmTransportConfig, LlmToolAgentState, JsonValue>;
-  readonly toolExecutor: HostToolExecutorProxy;
-  readonly workspaceRoot: string;
+  toolExecutor: HostToolExecutorProxy;
+  workspaceRoot: string;
+  workLocation: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   readonly sessionKind?: "default" | "dream-collector" | "subagent";
   readonly subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
   currentMode: AgentMode;
   /** AbortController for the currently running prompt turn (null if idle) */
   pendingPrompt: AbortController | null;
   /** Mutable active skills array — shared with runtime factory closures */
-  readonly activeSkills: LlmActiveSkill[];
+  activeSkills: LlmActiveSkill[];
   /** Skill catalog entries discovered at session creation */
-  readonly enabledSkillCatalog: LlmEnabledSkillCatalogEntry[];
+  enabledSkillCatalog: LlmEnabledSkillCatalogEntry[];
   /** Switch agent mode: updates tool exposure + system prompt planMetadata */
-  readonly setAgentMode: (mode: AgentMode) => Promise<void>;
+  setAgentMode: (mode: AgentMode) => Promise<void>;
 }
 
 /**

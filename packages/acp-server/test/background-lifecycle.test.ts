@@ -512,3 +512,106 @@ it("rejects a second agent while an ACP target turn is active and allows the nex
   expect(JSON.stringify(history)).toContain("Third writer");
   await manager.shutdown();
 });
+
+it("persists and reuses an ACP continuation worktree across restart", async () => {
+  const { config } = await fixture();
+  const git = (...args: string[]) =>
+    execFileSync("git", args, { cwd: config.workspaceRoot, stdio: "pipe" });
+  git("init", "--quiet");
+  await writeFile(path.join(config.workspaceRoot, "tracked.txt"), "committed");
+  git("add", "tracked.txt");
+  git(
+    "-c",
+    "user.name=Fixture",
+    "-c",
+    "user.email=fixture@example.invalid",
+    "-c",
+    "commit.gpgsign=false",
+    "commit",
+    "--quiet",
+    "-m",
+    "fixture",
+  );
+  const manager = new SessionManager(config);
+  const parent = await manager.createSession(config.workspaceRoot, () => {}, "debug");
+  let replies = 0;
+  setLlmFetchTransportOverrideForTests(async () => {
+    replies += 1;
+    return response();
+  });
+  const first = delegatedContext();
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    prompt: "First ACP worktree turn",
+    parentToolCallId: "call-acp-worktree-create",
+    worktree: true,
+    context: first.context,
+  });
+  const targetId = first.updates[0]?.sessionId;
+  if (!targetId) throw new Error("Missing delegated session ID.");
+  const created = manager.getSession(targetId)!;
+  expect(created.workLocation).toBe("worktree");
+  expect(created.workspaceRoot).toBe(created.worktreePath);
+  expect(created.currentMode).toBe("debug");
+
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: targetId,
+    prompt: "Second ACP worktree turn",
+    parentToolCallId: "call-acp-worktree-reuse",
+    worktree: true,
+    context: delegatedContext().context,
+  });
+  expect(manager.getSession(targetId)?.worktreePath).toBe(created.worktreePath);
+  await manager.shutdown();
+
+  const restarted = new SessionManager(config);
+  const restartedParent = await restarted.createSession(config.workspaceRoot, () => {});
+  await restarted.delegateSubagentTurn(restartedParent.sessionId, {
+    sessionId: targetId,
+    prompt: "Third ACP worktree turn",
+    parentToolCallId: "call-acp-worktree-restored",
+    worktree: true,
+    context: delegatedContext().context,
+  });
+  const restored = restarted.getSession(targetId)!;
+  expect(restored.workspaceRoot).toBe(created.worktreePath);
+  expect(restored.worktreePath).toBe(created.worktreePath);
+  expect(restored.worktreeBranch).toBe(created.worktreeBranch);
+  expect(restored.currentMode).toBe("debug");
+  const history = JSON.stringify(restored.runtime.history());
+  expect(history).toContain("First ACP worktree turn");
+  expect(history).toContain("Second ACP worktree turn");
+  expect(history).toContain("Third ACP worktree turn");
+  expect(replies).toBe(3);
+  await restarted.shutdown();
+});
+
+it("does not prompt or move an ACP session when worktree creation fails", async () => {
+  const { config } = await fixture();
+  const manager = new SessionManager(config);
+  const parent = await manager.createSession(config.workspaceRoot, () => {});
+  const target = await manager.createSession(config.workspaceRoot, () => {});
+  let requests = 0;
+  setLlmFetchTransportOverrideForTests(async () => {
+    requests += 1;
+    return response();
+  });
+
+  await expect(
+    manager.delegateSubagentTurn(parent.sessionId, {
+      sessionId: target.sessionId,
+      prompt: "Must not enter ACP history",
+      parentToolCallId: "call-acp-worktree-failure",
+      worktree: true,
+      context: delegatedContext().context,
+    }),
+  ).rejects.toThrow();
+  expect(requests).toBe(0);
+  expect(manager.getSession(target.sessionId)).toMatchObject({
+    workspaceRoot: config.workspaceRoot,
+    workLocation: "local",
+  });
+  expect(JSON.stringify(manager.getSession(target.sessionId)?.runtime.history())).not.toContain(
+    "Must not enter ACP history",
+  );
+  await manager.shutdown();
+});

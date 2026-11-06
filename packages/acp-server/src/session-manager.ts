@@ -13,6 +13,7 @@ import {
 } from "@spiritagent/agent-core";
 import {
   createBackgroundTaskOwner,
+  createSubagentWorkspaceBootstrap,
   acquireRuntimeSessionLease,
   deleteTranscriptSessionDir,
   FileBackgroundTaskStore,
@@ -31,6 +32,9 @@ interface SessionSummary {
   sessionId: string;
   sessionKind?: "default" | "dream-collector" | "subagent";
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
+  workLocation: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   currentMode: AgentMode;
   modes: typeof AVAILABLE_MODES;
   enabledSkillCatalog: AcpSessionState["enabledSkillCatalog"];
@@ -89,15 +93,25 @@ export class SessionManager {
     sessionId: string,
     workspaceRoot: string,
     onEvent: EventSink,
+    adoptStoredWorkspace = false,
   ): Promise<SessionSummary> {
     if (!/^sess_[0-9a-f]{32}$/.test(sessionId)) throw new Error("Invalid ACP session ID.");
     const live = this.sessions.get(sessionId);
     if (live) {
+      if (adoptStoredWorkspace) return this.summary(live);
       if (path.resolve(live.workspaceRoot) !== path.resolve(workspaceRoot))
         throw new Error("Session workspace mismatch.");
       return this.summary(live);
     }
-    return this.openSession(sessionId, workspaceRoot, onEvent, "agent", true);
+    return this.openSession(
+      sessionId,
+      workspaceRoot,
+      onEvent,
+      "agent",
+      true,
+      {},
+      adoptStoredWorkspace,
+    );
   }
 
   private async openSession(
@@ -107,10 +121,12 @@ export class SessionManager {
     mode: AgentMode,
     requireExisting: boolean,
     options: CreateAcpSessionOptions = {},
+    adoptStoredWorkspace = false,
   ): Promise<SessionSummary> {
     if (this.shuttingDown) throw new Error("ACP host is shutting down.");
     const opening = this.openings.get(sessionId);
     if (opening) {
+      if (adoptStoredWorkspace) return opening.promise;
       if (path.resolve(opening.workspaceRoot) !== path.resolve(workspaceRoot))
         throw new Error("Session workspace mismatch.");
       return opening.promise;
@@ -122,6 +138,7 @@ export class SessionManager {
       mode,
       requireExisting,
       options,
+      adoptStoredWorkspace,
     ).finally(() => this.openings.delete(sessionId));
     this.openings.set(sessionId, { workspaceRoot, promise });
     return promise;
@@ -134,6 +151,7 @@ export class SessionManager {
     mode: AgentMode,
     requireExisting: boolean,
     options: CreateAcpSessionOptions = {},
+    adoptStoredWorkspace = false,
   ): Promise<SessionSummary> {
     const result = await createAcpRuntime(
       { ...this.globalConfig, workspaceRoot },
@@ -148,6 +166,7 @@ export class SessionManager {
           this.globalConfig.spiritDataDir,
         )),
         requireExisting,
+        adoptStoredWorkspace,
         subagentSessionDelegate: {
           execute: (request: import("@spiritagent/agent-core").SubagentSessionExecutionRequest) =>
             this.delegateSubagentTurn(sessionId, request),
@@ -161,7 +180,10 @@ export class SessionManager {
       runtime: result.runtime,
       toolExecutor: result.toolExecutor,
       result,
-      workspaceRoot,
+      workspaceRoot: result.workspaceRoot,
+      workLocation: result.workLocation,
+      ...(result.worktreePath ? { worktreePath: result.worktreePath } : {}),
+      ...(result.worktreeBranch ? { worktreeBranch: result.worktreeBranch } : {}),
       ...(result.sessionKind ? { sessionKind: result.sessionKind } : {}),
       ...(result.subagentOrigin ? { subagentOrigin: result.subagentOrigin } : {}),
       currentMode: result.agentModeSnapshot(),
@@ -185,6 +207,9 @@ export class SessionManager {
   private summary(session: LiveSession) {
     return {
       sessionId: session.sessionId,
+      workLocation: session.workLocation,
+      ...(session.worktreePath ? { worktreePath: session.worktreePath } : {}),
+      ...(session.worktreeBranch ? { worktreeBranch: session.worktreeBranch } : {}),
       ...(session.sessionKind ? { sessionKind: session.sessionKind } : {}),
       ...(session.subagentOrigin ? { subagentOrigin: session.subagentOrigin } : {}),
       modes: AVAILABLE_MODES,
@@ -352,7 +377,7 @@ export class SessionManager {
       throw new Error("Nested subagents are not supported.");
     }
     const target = request.sessionId
-      ? await this.loadSession(request.sessionId, parent.workspaceRoot, parent.onEvent)
+      ? await this.loadSession(request.sessionId, parent.workspaceRoot, parent.onEvent, true)
       : await this.createSession(parent.workspaceRoot, parent.onEvent, parent.currentMode, {
           sessionKind: "subagent",
           subagentOrigin: {
@@ -380,6 +405,20 @@ export class SessionManager {
         toolCallId: request.parentToolCallId,
       };
     }
+    if (request.worktree) {
+      await this.setSessionWorktree(target.sessionId);
+    }
+    const transcript = resolveSubagentTranscriptFilePath(
+      this.globalConfig.spiritDataDir,
+      target.sessionId,
+      target.sessionId,
+    );
+    await request.context.update({
+      sessionId: target.sessionId,
+      sessionTranscript: transcript,
+      ...(session.worktreePath ? { worktreePath: session.worktreePath } : {}),
+      ...(session.worktreeBranch ? { worktreeBranch: session.worktreeBranch } : {}),
+    });
     const cancel = () => this.cancel(target.sessionId);
     request.context.signal.addEventListener("abort", cancel, { once: true });
     try {
@@ -387,14 +426,7 @@ export class SessionManager {
       const result = session.lastTurnResult;
       const failed = stopReason !== "end_turn";
       const text = result?.assistantText ?? result?.error ?? "The turn was cancelled.";
-      const transcript = resolveSubagentTranscriptFilePath(
-        this.globalConfig.spiritDataDir,
-        target.sessionId,
-        target.sessionId,
-      );
       await request.context.update({
-        sessionId: target.sessionId,
-        sessionTranscript: transcript,
         finalOutputPreview: text.slice(0, 16_384),
       });
       await request.context.writeOutput(`\n\nFinal response:\n${text}\n`);
@@ -408,6 +440,76 @@ export class SessionManager {
       request.context.signal.removeEventListener("abort", cancel);
       delete session.agentWriter;
     }
+  }
+
+  async setSessionWorktree(sessionId: string): Promise<AcpSessionState> {
+    const session = this.sessions.get(sessionId);
+    if (!session || session.closing) throw new Error(`Session ${sessionId} not found`);
+    if (session.workLocation === "worktree" && session.worktreePath) {
+      return session;
+    }
+    if (session.runtime.isBusy() || session.turnActive) {
+      throw new Error("The target session is busy; wait for the current turn to finish.");
+    }
+    const bootstrap = createSubagentWorkspaceBootstrap({
+      parentWorkspaceRoot: session.workspaceRoot,
+      buildScopedRuntime: async () => ({ toolExecutor: session.toolExecutor }),
+    });
+    const boot = await bootstrap({
+      subagentSessionId: sessionId,
+      task: "Continue session",
+      worktree: true,
+      parentWorkspaceRoot: session.workspaceRoot,
+    });
+    if ("error" in boot) throw new Error(boot.error);
+    if (!boot.worktreePath || !boot.branchName) {
+      await boot.rollback?.();
+      throw new Error("The subagent worktree identity is incomplete.");
+    }
+    const previousRoot = session.workspaceRoot;
+    let switched = false;
+    try {
+      const fresh = await session.result.reconfigure({ workspaceRoot: boot.workspaceRoot });
+      switched = true;
+      session.result = fresh;
+      session.toolExecutor = fresh.toolExecutor;
+      session.activeSkills = fresh.activeSkills;
+      session.enabledSkillCatalog = fresh.enabledSkillCatalog;
+      session.setAgentMode = fresh.setAgentMode;
+      session.workspaceRoot = boot.workspaceRoot;
+      session.workLocation = "worktree";
+      session.worktreePath = boot.worktreePath;
+      session.worktreeBranch = boot.branchName;
+      fresh.workLocation = "worktree";
+      fresh.worktreePath = boot.worktreePath;
+      fresh.worktreeBranch = boot.branchName;
+      await fresh.persist();
+      boot.markStarted?.();
+    } catch (error) {
+      const cleanup: Promise<unknown>[] = [Promise.resolve(boot.rollback?.())];
+      if (switched) {
+        cleanup.push(
+          session.result.reconfigure({ workspaceRoot: previousRoot }).then((restored) => {
+            session.result = restored;
+            session.toolExecutor = restored.toolExecutor;
+            session.activeSkills = restored.activeSkills;
+            session.enabledSkillCatalog = restored.enabledSkillCatalog;
+            session.setAgentMode = restored.setAgentMode;
+            session.workspaceRoot = previousRoot;
+            session.workLocation = "local";
+            delete session.worktreePath;
+            delete session.worktreeBranch;
+          }),
+        );
+      }
+      const results = await Promise.allSettled(cleanup);
+      const failures = results.flatMap((entry) =>
+        entry.status === "rejected" ? [entry.reason] : [],
+      );
+      if (failures.length) throw new AggregateError([error, ...failures]);
+      throw error;
+    }
+    return session;
   }
 
   async setSessionMode(sessionId: string, modeId: string): Promise<AgentMode> {

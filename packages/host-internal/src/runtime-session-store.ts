@@ -3,6 +3,7 @@ import path from "node:path";
 import type { AgentMode, ChatArchive, RuntimeEvent } from "@spiritagent/agent-core";
 import { writeTaskStateJson } from "./background-task-store.js";
 import { resolveTranscriptSessionDir } from "./transcript.js";
+import type { WorkLocationKind } from "./work-location.js";
 
 export type RuntimePresentationPayload =
   | { kind: "runtime"; event: RuntimeEvent<unknown> }
@@ -20,8 +21,12 @@ export interface RuntimeSessionState {
   sessionKey: string;
   workspaceRoot: string;
   agentMode: AgentMode;
+  modelRef?: import("./config.js").ModelRef;
   sessionKind?: "default" | "dream-collector" | "subagent";
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
+  workLocation?: WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   activePlanPath?: string;
   initialized: boolean;
   archive: ChatArchive;
@@ -117,6 +122,24 @@ function isRuntimeSessionState(value: unknown): value is RuntimeSessionState {
       return false;
   }
   if ("activePlanPath" in value && typeof value.activePlanPath !== "string") return false;
+  if (
+    "modelRef" in value &&
+    (typeof value.modelRef !== "object" ||
+      value.modelRef === null ||
+      !("providerId" in value.modelRef) ||
+      typeof value.modelRef.providerId !== "string" ||
+      !("name" in value.modelRef) ||
+      typeof value.modelRef.name !== "string")
+  )
+    return false;
+  if (
+    "workLocation" in value &&
+    value.workLocation !== "local" &&
+    value.workLocation !== "worktree"
+  )
+    return false;
+  if ("worktreePath" in value && typeof value.worktreePath !== "string") return false;
+  if ("worktreeBranch" in value && typeof value.worktreeBranch !== "string") return false;
   if ("presentation" in value) {
     const presentation = value.presentation;
     if (

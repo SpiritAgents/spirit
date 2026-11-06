@@ -178,6 +178,7 @@ export interface SessionBasicInfoHost {
 
 export interface SessionCreateParams {
   workspaceRoot: string;
+  sessionId?: string;
   /** Stable chat file path; re-create returns the existing live session. */
   conversationKey?: string;
   approvalLevel?: SessionApprovalLevel;
@@ -185,6 +186,10 @@ export interface SessionCreateParams {
   agentMode?: "agent" | "plan" | "ask" | "debug";
   todoSessionKey?: string;
   sessionKind?: "default" | "dream-collector" | "subagent";
+  subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
+  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   dreamScope?: { workspaceRoot: string; gitBranch: string };
   dreamSourceSession?: { path: string; displayName?: string; savedAtUnixMs?: number };
   /**
@@ -233,6 +238,11 @@ export interface SessionInfo {
   approvalLevel: SessionApprovalLevel;
   model: string;
   conversationKey?: string;
+  sessionKind?: "default" | "dream-collector" | "subagent";
+  subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
+  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   attachmentCount: number;
   restoredFromDisk?: boolean;
 }

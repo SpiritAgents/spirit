@@ -141,6 +141,9 @@ export interface ServerRuntimeOptions {
   sessionKind?: ServerSessionKind;
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
   subagentSessionDelegate?: import("@spiritagent/agent-core").SubagentSessionDelegate;
+  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   dreamScope?: HostDreamScope;
   dreamSourceSession?: HostDreamSourceSessionRef;
   /** Main-session usage carried across runtime replacement; absent means no measured input yet. */
@@ -231,8 +234,12 @@ interface ServerRuntimeBindings {
 export interface ServerRuntimeResult extends ServerRuntimeBindings {
   presentation: PresentationJournal;
   storageSessionKey: string;
+  workspaceRoot: string;
   sessionKind?: ServerSessionKind;
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
+  workLocation: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  worktreePath?: string;
+  worktreeBranch?: string;
   restoredFromDisk: boolean;
   tasks: SessionTaskManager;
   restoredDesktopTimeline: RuntimeSessionState["desktopTimeline"];
@@ -314,10 +321,14 @@ export async function createServerRuntime(
       await sessionStore.save({
         version: 1,
         sessionKey: storageSessionKey,
-        workspaceRoot: options.workspaceRoot,
+        workspaceRoot: result.workspaceRoot,
         agentMode: result.agentModeSnapshot(),
+        ...(modelRef ? { modelRef } : {}),
         ...(sessionKind ? { sessionKind } : {}),
         ...(subagentOrigin ? { subagentOrigin } : {}),
+        workLocation: result.workLocation,
+        ...(result.worktreePath ? { worktreePath: result.worktreePath } : {}),
+        ...(result.worktreeBranch ? { worktreeBranch: result.worktreeBranch } : {}),
         ...(activePlanPath ? { activePlanPath } : {}),
         initialized,
         archive: result.runtime.toArchive([], []),
@@ -348,25 +359,34 @@ export async function createServerRuntime(
         if (task.background) onEvent({ kind: "background-task-output", task, chunk });
       },
     });
+    const sessionKind = options.sessionKind ?? saved?.sessionKind;
+    let modelRef = options.modelRef ?? saved?.modelRef;
     const prepared = await prepareServerRuntime({
       ...options,
       onEvent,
       sessionKey: storageSessionKey,
+      ...(sessionKind ? { sessionKind } : {}),
+      ...(modelRef ? { modelRef } : {}),
       ...(saved ? { agentMode: saved.agentMode } : {}),
       ...(saved?.activePlanPath ? { activePlanPath: saved.activePlanPath } : {}),
     });
     executors.add(prepared.toolExecutor);
-    prepared.runtimeOptions.backgroundTasks = {
-      manager: tasks,
-      scope: { runtimeId: "main" },
-      persistHistory: persist,
+    const configurePreparedRuntime = (environment: PreparedServerRuntime): void => {
+      environment.runtimeOptions.backgroundTasks = {
+        manager: tasks,
+        scope: { runtimeId: "main" },
+        persistHistory: persist,
+      };
+      if (options.subagentSessionDelegate) {
+        environment.runtimeOptions.subagentSessionDelegate = options.subagentSessionDelegate;
+      }
     };
-    if (options.subagentSessionDelegate) {
-      prepared.runtimeOptions.subagentSessionDelegate = options.subagentSessionDelegate;
-    }
+    configurePreparedRuntime(prepared);
     const runtime = new AgentRuntime(prepared.runtimeOptions);
-    const sessionKind = options.sessionKind ?? saved?.sessionKind;
     const subagentOrigin = options.subagentOrigin ?? saved?.subagentOrigin;
+    const workLocation = options.workLocation ?? saved?.workLocation ?? "local";
+    const worktreePath = options.worktreePath ?? saved?.worktreePath;
+    const worktreeBranch = options.worktreeBranch ?? saved?.worktreeBranch;
     const bind = (environment: PreparedServerRuntime): ServerRuntimeResult => {
       const bindings = environment.bind(runtime);
       executors.add(bindings.toolExecutor);
@@ -374,6 +394,10 @@ export async function createServerRuntime(
         ...bindings,
         ...(sessionKind ? { sessionKind } : {}),
         ...(subagentOrigin ? { subagentOrigin } : {}),
+        workspaceRoot: options.workspaceRoot,
+        workLocation,
+        ...(worktreePath ? { worktreePath } : {}),
+        ...(worktreeBranch ? { worktreeBranch } : {}),
         storageSessionKey,
         restoredFromDisk: saved?.initialized === true,
         restoredDesktopTimeline: desktopTimeline,
@@ -383,15 +407,19 @@ export async function createServerRuntime(
         restoreTaskNotifications: () => runtime.restoreBackgroundTaskNotifications(),
         reconfigure: async (next) => {
           const activePlanPath = result.activePlanPathSnapshot();
+          modelRef = next.modelRef;
           const fresh = await prepareServerRuntime({
             ...next,
             onEvent,
             sessionKey: storageSessionKey,
             ...(activePlanPath ? { activePlanPath } : {}),
           });
+          configurePreparedRuntime(fresh);
           executors.add(fresh.toolExecutor);
           runtime.replaceHostOptions(fresh.runtimeOptions);
-          return bind(fresh);
+          const rebound = bind(fresh);
+          rebound.workspaceRoot = next.workspaceRoot;
+          return rebound;
         },
         dispose: async () => {
           if (closed) return;
@@ -475,6 +503,7 @@ async function prepareServerRuntime(
   const toolExecutor = new HostToolExecutorProxy(createNoopPeer(), mcpService);
   try {
     toolExecutor.setBackgroundTaskExposure(!isDreamCollector);
+    toolExecutor.setSubagentExposure(options.sessionKind !== "subagent");
 
     // 2. Local tool service: real shell/file/web execution, noop management MCP
     //    adapter (MCP tool execution lives on the executor's McpService, same

@@ -92,6 +92,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
   private agentMode: AgentMode = "agent";
   private hostToolDefinitionsLoaded = false;
   private backgroundTasksEnabled = false;
+  private subagentEnabled = true;
   private toolDefinitionsCache: JsonValue = [];
   private readonly requestMetadata = new WeakMap<object, HostToolRequestMetadata>();
   private readonly mcp: McpService;
@@ -173,6 +174,11 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
     this.hostToolDefinitionsLoaded = false;
   }
 
+  setSubagentExposure(enabled: boolean): void {
+    this.subagentEnabled = enabled;
+    this.hostToolDefinitionsLoaded = false;
+  }
+
   setAgentModeToolExposure(agentMode: AgentMode): void {
     this.agentMode = agentMode;
     this.refreshMergedToolDefinitions();
@@ -231,6 +237,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
               await this.peer.call<JsonValue>("host.builtinToolDefinitionEnvironment"),
             )),
         backgroundTasksEnabled: this.backgroundTasksEnabled,
+        subagentEnabled: this.subagentEnabled,
       });
       this.hostToolDefinitionsLoaded = true;
     }
