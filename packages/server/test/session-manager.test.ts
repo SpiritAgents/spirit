@@ -6,6 +6,7 @@ import { describe, it } from "vitest";
 
 import { setLlmFetchTransportOverrideForTests } from "@spiritagent/agent-core";
 import { setKeyringStoreForTests, providerInternalKeyAccount } from "@spiritagent/host-internal";
+import { readSessionStorageKey } from "@spiritagent/host-internal";
 
 import { SessionManager } from "../src/session-manager.js";
 
@@ -72,6 +73,45 @@ function writeServiceTierConfig(dir: string, serviceTier: string): void {
 }
 
 describe("SessionManager", () => {
+  it("registers a native subagent session and resumes it by ID after restart", async () => {
+    await withMockKeyring(async () => {
+      const dataDir = freshDataDir();
+      const callbacks = {
+        broadcastRuntimeEvent: () => {},
+        broadcastTurnFinished: () => {},
+        broadcastSnapshot: () => {},
+        broadcastTrustRequest: () => {},
+        broadcastFileChange: () => {},
+      };
+      const first = new SessionManager(dataDir, callbacks);
+      const origin = { parentSessionId: "sess_parent", parentToolCallId: "call-1" };
+      const created = await first.createSession({
+        workspaceRoot: tmpdir(),
+        hostKind: "desktop",
+        sessionKind: "subagent",
+        subagentOrigin: origin,
+      });
+      assert.ok(created.sessionId.startsWith("sess_"));
+      assert.equal(created.sessionKind, "subagent");
+      assert.deepEqual(created.subagentOrigin, origin);
+      assert.ok(readSessionStorageKey(dataDir, created.sessionId));
+      assert.deepEqual(first.listSessions(), []);
+      await first.shutdown();
+
+      const second = new SessionManager(dataDir, callbacks);
+      const resumed = await second.resumeSession(created.sessionId, tmpdir());
+      assert.equal(resumed.sessionId, created.sessionId);
+      assert.equal(resumed.sessionKind, "subagent");
+      assert.deepEqual(resumed.subagentOrigin, origin);
+      assert.deepEqual(second.listSessions(), []);
+      await assert.rejects(
+        second.resumeSession("sess_missing", tmpdir()),
+        /Stored session not found/,
+      );
+      await second.shutdown();
+    });
+  });
+
   it("creates, lists, and closes sessions without touching the network", async () => {
     await withMockKeyring(async () => {
       const dataDir = freshDataDir();

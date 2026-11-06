@@ -4566,11 +4566,13 @@ function extractSubagentRequest<ToolRequest>(request: ToolRequest): SubagentRequ
   }
 
   const subagentType = readOptionalStringField(value, "subagent_type", "subagentType");
+  const sessionId = readOptionalStringField(value, "session_id", "sessionId");
   const worktree = value.worktree === true ? true : undefined;
   const background = parseBackgroundOptions(value.background);
 
   return {
     prompt,
+    ...(sessionId !== undefined ? { sessionId } : {}),
     ...(subagentType !== undefined ? { subagentType } : {}),
     ...(worktree !== undefined ? { worktree } : {}),
     ...(background !== undefined ? { background } : {}),

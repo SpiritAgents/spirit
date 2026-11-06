@@ -77,6 +77,8 @@ export type AcpHostRuntime = AgentRuntime<LlmTransportConfig, LlmToolAgentState,
 export interface AcpRuntimeResult {
   runtime: AcpHostRuntime;
   toolExecutor: HostToolExecutorProxy;
+  sessionKind?: "default" | "dream-collector" | "subagent";
+  subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
   enabledRules: LlmEnabledRule[];
   enabledSkillCatalog: LlmEnabledSkillCatalogEntry[];
   planMetadata: LlmPlanMetadata | undefined;
@@ -97,7 +99,12 @@ export async function createAcpRuntime(
   onEvent: (event: RuntimeEvent<JsonValue>) => void,
   initialMode: AgentMode = "agent",
   transcriptSessionKey = `acp_${randomUUID()}`,
-  options: { taskOwner?: BackgroundTaskOwner; requireExisting?: boolean } = {},
+  options: {
+    taskOwner?: BackgroundTaskOwner;
+    requireExisting?: boolean;
+    sessionKind?: "default" | "dream-collector" | "subagent";
+    subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
+  } = {},
 ): Promise<AcpRuntimeResult> {
   const storageKey = options.requireExisting
     ? readSessionStorageKey(config.spiritDataDir, transcriptSessionKey)
@@ -133,6 +140,8 @@ export async function createAcpRuntime(
         sessionKey: storageKey,
         workspaceRoot: config.workspaceRoot,
         agentMode: result.agentModeSnapshot(),
+        ...(sessionKind ? { sessionKind } : {}),
+        ...(subagentOrigin ? { subagentOrigin } : {}),
         initialized: true,
         archive: result.runtime.toArchive([], []),
       });
@@ -160,6 +169,8 @@ export async function createAcpRuntime(
         void persist().catch((error: unknown) => report(error, task.id));
       },
     });
+    const sessionKind = options.sessionKind ?? saved?.sessionKind;
+    const subagentOrigin = options.subagentOrigin ?? saved?.subagentOrigin;
     const prepared = await prepareAcpRuntime(
       config,
       onEvent,
@@ -174,6 +185,8 @@ export async function createAcpRuntime(
     const runtime = new AgentRuntime(prepared.runtimeOptions);
     result = {
       ...prepared,
+      ...(sessionKind ? { sessionKind } : {}),
+      ...(subagentOrigin ? { subagentOrigin } : {}),
       runtime,
       tasks,
       storageSessionKey: storageKey,

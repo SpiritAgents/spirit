@@ -83,6 +83,7 @@ import {
   type RuntimeSessionState,
   ensureSessionStorageKey,
   bindSessionStorageKey,
+  readSessionStorageKey,
   ensureBuiltInExtensions,
   ensureBuiltInSkills,
   ensurePersonalMarketplace,
@@ -115,13 +116,17 @@ export type ServerHostRuntime = AgentRuntime<LlmTransportConfig, LlmToolAgentSta
 
 export type ServerClientKind = "cli" | "desktop" | "web";
 
-export type ServerSessionKind = "default" | "dream-collector";
+export type ServerSessionKind = "default" | "dream-collector" | "subagent";
 
 export interface ServerRuntimeOptions {
   workspaceRoot: string;
   spiritDataDir: string;
   /** Transcript + todo scope key; defaults to the session id. */
   sessionKey: string;
+  /** Stable session ID used to restore this runtime later. */
+  sessionId?: string;
+  /** Restore only from an existing persisted session; never create an empty replacement. */
+  requireExisting?: boolean;
   taskOwner?: BackgroundTaskOwner;
   modelRef?: ModelRef;
   /** Todo store scope override (CLI keys todos by its own chat session id). */
@@ -134,6 +139,7 @@ export interface ServerRuntimeOptions {
   agentMode?: AgentMode;
   activePlanPath?: string;
   sessionKind?: ServerSessionKind;
+  subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
   dreamScope?: HostDreamScope;
   dreamSourceSession?: HostDreamSourceSessionRef;
   /** Main-session usage carried across runtime replacement; absent means no measured input yet. */
@@ -224,6 +230,8 @@ interface ServerRuntimeBindings {
 export interface ServerRuntimeResult extends ServerRuntimeBindings {
   presentation: PresentationJournal;
   storageSessionKey: string;
+  sessionKind?: ServerSessionKind;
+  subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
   restoredFromDisk: boolean;
   tasks: SessionTaskManager;
   restoredDesktopTimeline: RuntimeSessionState["desktopTimeline"];
@@ -255,10 +263,13 @@ const builtInSeededTrees = new Set<string>();
 export async function createServerRuntime(
   options: ServerRuntimeOptions,
 ): Promise<ServerRuntimeResult> {
-  const storageSessionKey = await ensureSessionStorageKey(
-    options.spiritDataDir,
-    options.sessionKey,
-  );
+  const storageSessionKey = options.requireExisting
+    ? readSessionStorageKey(options.spiritDataDir, options.sessionKey)
+    : await ensureSessionStorageKey(options.spiritDataDir, options.sessionKey);
+  if (!storageSessionKey) throw new Error("Stored session not found.");
+  if (options.sessionId) {
+    await bindSessionStorageKey(options.spiritDataDir, options.sessionId, storageSessionKey);
+  }
   const sessionStore = new RuntimeSessionStore(options.spiritDataDir, storageSessionKey);
   const owner = options.taskOwner ?? (await createBackgroundTaskOwner(options.spiritDataDir));
   const executors = new Set<HostToolExecutorProxy>();
@@ -271,6 +282,7 @@ export async function createServerRuntime(
     );
     lease = sessionLease;
     const saved = await sessionStore.read();
+    if (options.requireExisting && !saved) throw new Error("Stored session not found.");
     if (saved && path.resolve(saved.workspaceRoot) !== path.resolve(options.workspaceRoot)) {
       throw new Error("The stored session belongs to a different workspace.");
     }
@@ -303,6 +315,8 @@ export async function createServerRuntime(
         sessionKey: storageSessionKey,
         workspaceRoot: options.workspaceRoot,
         agentMode: result.agentModeSnapshot(),
+        ...(sessionKind ? { sessionKind } : {}),
+        ...(subagentOrigin ? { subagentOrigin } : {}),
         ...(activePlanPath ? { activePlanPath } : {}),
         initialized,
         archive: result.runtime.toArchive([], []),
@@ -347,11 +361,15 @@ export async function createServerRuntime(
       persistHistory: persist,
     };
     const runtime = new AgentRuntime(prepared.runtimeOptions);
+    const sessionKind = options.sessionKind ?? saved?.sessionKind;
+    const subagentOrigin = options.subagentOrigin ?? saved?.subagentOrigin;
     const bind = (environment: PreparedServerRuntime): ServerRuntimeResult => {
       const bindings = environment.bind(runtime);
       executors.add(bindings.toolExecutor);
       result = {
         ...bindings,
+        ...(sessionKind ? { sessionKind } : {}),
+        ...(subagentOrigin ? { subagentOrigin } : {}),
         storageSessionKey,
         restoredFromDisk: saved?.initialized === true,
         restoredDesktopTimeline: desktopTimeline,

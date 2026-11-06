@@ -20,6 +20,8 @@ export interface RuntimeSessionState {
   sessionKey: string;
   workspaceRoot: string;
   agentMode: AgentMode;
+  sessionKind?: "default" | "dream-collector" | "subagent";
+  subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
   activePlanPath?: string;
   initialized: boolean;
   archive: ChatArchive;

@@ -580,9 +580,15 @@ export type AskQuestionsResult =
 
 export interface SubagentRequest {
   prompt: string;
+  sessionId?: string;
   subagentType?: string;
   worktree?: boolean;
   background?: import("./background-tasks.js").BackgroundOptions;
+}
+
+export interface SubagentSessionOrigin {
+  parentSessionId: string;
+  parentToolCallId: string;
 }
 
 export type PermissionMemoryTarget =

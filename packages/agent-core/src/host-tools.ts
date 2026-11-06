@@ -449,13 +449,18 @@ export function buildBuiltinHostToolDefinitions(
             minLength: 1,
             description: "The prompt sent to the child agent.",
           },
+          session_id: {
+            type: "string",
+            description:
+              "Resume an existing session by ID. An idle target is interrupted before the new prompt; a target currently being prompted by another agent is left untouched and this call fails. Omit to create a new hidden subagent session.",
+          },
           ...(environment.backgroundTasksEnabled
             ? { background: buildBackgroundOptionsSchema("subagent") }
             : {}),
           worktree: {
             type: "boolean",
             description:
-              "When true, run the subagent in an isolated git worktree so parallel subagents can edit files without conflicting. Use when the subagent will modify workspace files and other subagents may edit at the same time; omit for read-only tasks.",
+              "When true, switch the target session to an isolated git worktree and persist that location. If it is already in a worktree, continue there. Omit to keep the current location.",
           },
         },
         required: ["prompt"],

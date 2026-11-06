@@ -40,8 +40,17 @@ describe("background task contracts", () => {
       }
       expect(parameters.required).toEqual(["prompt"]);
       expect(Object.keys(parameters.properties).sort()).toEqual(
-        background ? ["background", "prompt", "worktree"] : ["prompt", "worktree"],
+        background
+          ? ["background", "prompt", "session_id", "worktree"]
+          : ["prompt", "session_id", "worktree"],
       );
+      const sessionIdSchema = parameters.properties.session_id;
+      const worktreeSchema = parameters.properties.worktree;
+      if (!isJsonObject(sessionIdSchema) || !isJsonObject(worktreeSchema)) {
+        throw new Error("Missing subagent continuation schemas.");
+      }
+      expect(String(sessionIdSchema.description)).toContain("another agent is left untouched");
+      expect(String(worktreeSchema.description)).toContain("persist that location");
     }
   });
 

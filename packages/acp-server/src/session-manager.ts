@@ -26,6 +26,8 @@ type StopReason = "end_turn" | "refusal" | "cancelled";
 type EventSink = (sessionId: string, event: RuntimeEvent<JsonValue>) => void;
 interface SessionSummary {
   sessionId: string;
+  sessionKind?: "default" | "dream-collector" | "subagent";
+  subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
   currentMode: AgentMode;
   modes: typeof AVAILABLE_MODES;
   enabledSkillCatalog: AcpSessionState["enabledSkillCatalog"];
@@ -44,6 +46,12 @@ interface LiveSession extends AcpSessionState {
   reportedQuestions?: RuntimePendingQuestions<JsonValue> | undefined;
 }
 
+interface CreateAcpSessionOptions {
+  sessionId?: string;
+  sessionKind?: "default" | "dream-collector" | "subagent";
+  subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
+}
+
 /** Owns ACP session lifetimes independently of individual prompt requests. */
 export class SessionManager {
   private readonly sessions = new Map<string, LiveSession>();
@@ -56,13 +64,19 @@ export class SessionManager {
 
   constructor(private readonly globalConfig: AcpServerConfig) {}
 
-  async createSession(workspaceRoot: string, onEvent: EventSink, initialMode: AgentMode = "agent") {
+  async createSession(
+    workspaceRoot: string,
+    onEvent: EventSink,
+    initialMode: AgentMode = "agent",
+    options: CreateAcpSessionOptions = {},
+  ) {
     return this.openSession(
-      `sess_${randomUUID().replaceAll("-", "")}`,
+      options.sessionId?.trim() || `sess_${randomUUID().replaceAll("-", "")}`,
       workspaceRoot,
       onEvent,
       initialMode,
       false,
+      options,
     );
   }
 
@@ -87,6 +101,7 @@ export class SessionManager {
     onEvent: EventSink,
     mode: AgentMode,
     requireExisting: boolean,
+    options: CreateAcpSessionOptions = {},
   ): Promise<SessionSummary> {
     if (this.shuttingDown) throw new Error("ACP host is shutting down.");
     const opening = this.openings.get(sessionId);
@@ -101,6 +116,7 @@ export class SessionManager {
       onEvent,
       mode,
       requireExisting,
+      options,
     ).finally(() => this.openings.delete(sessionId));
     this.openings.set(sessionId, { workspaceRoot, promise });
     return promise;
@@ -112,6 +128,7 @@ export class SessionManager {
     onEvent: EventSink,
     mode: AgentMode,
     requireExisting: boolean,
+    options: CreateAcpSessionOptions = {},
   ): Promise<SessionSummary> {
     const result = await createAcpRuntime(
       { ...this.globalConfig, workspaceRoot },
@@ -126,6 +143,8 @@ export class SessionManager {
           this.globalConfig.spiritDataDir,
         )),
         requireExisting,
+        ...(options.sessionKind ? { sessionKind: options.sessionKind } : {}),
+        ...(options.subagentOrigin ? { subagentOrigin: options.subagentOrigin } : {}),
       },
     );
     const session: LiveSession = {
@@ -134,6 +153,8 @@ export class SessionManager {
       toolExecutor: result.toolExecutor,
       result,
       workspaceRoot,
+      ...(result.sessionKind ? { sessionKind: result.sessionKind } : {}),
+      ...(result.subagentOrigin ? { subagentOrigin: result.subagentOrigin } : {}),
       currentMode: result.agentModeSnapshot(),
       pendingPrompt: null,
       activeSkills: result.activeSkills,
@@ -155,6 +176,8 @@ export class SessionManager {
   private summary(session: LiveSession) {
     return {
       sessionId: session.sessionId,
+      ...(session.sessionKind ? { sessionKind: session.sessionKind } : {}),
+      ...(session.subagentOrigin ? { subagentOrigin: session.subagentOrigin } : {}),
       modes: AVAILABLE_MODES,
       currentMode: session.currentMode,
       enabledSkillCatalog: session.enabledSkillCatalog,

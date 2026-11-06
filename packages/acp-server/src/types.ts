@@ -27,6 +27,8 @@ export interface AcpSessionState {
   readonly runtime: AgentRuntime<LlmTransportConfig, LlmToolAgentState, JsonValue>;
   readonly toolExecutor: HostToolExecutorProxy;
   readonly workspaceRoot: string;
+  readonly sessionKind?: "default" | "dream-collector" | "subagent";
+  readonly subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
   currentMode: AgentMode;
   /** AbortController for the currently running prompt turn (null if idle) */
   pendingPrompt: AbortController | null;

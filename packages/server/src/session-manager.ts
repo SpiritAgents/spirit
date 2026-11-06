@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 
 import {
   buildStartImplementingPrompt,
@@ -65,6 +66,8 @@ export interface ServerSessionInfo {
   model: string;
   queuedTurns: number;
   conversationKey?: string;
+  sessionKind?: ServerSessionKind;
+  subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
   attachmentCount: number;
   restoredFromDisk: boolean;
 }
@@ -187,6 +190,7 @@ export interface SessionManagerCallbacks {
 export interface CreateSessionParams {
   workspaceRoot: string;
   hostKind: ServerClientKind;
+  sessionId?: string;
   approvalLevel?: ApprovalLevel;
   modelRef?: ModelRef;
   agentMode?: AgentMode;
@@ -195,6 +199,7 @@ export interface CreateSessionParams {
   /** Stable chat file path for multi-host attach. */
   conversationKey?: string;
   sessionKind?: ServerSessionKind;
+  subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
   dreamScope?: HostDreamScope;
   dreamSourceSession?: HostDreamSourceSessionRef;
   /** Host UI Markdown / rendering hints (Desktop Mermaid). CLI omits. */
@@ -333,6 +338,7 @@ export class SessionManager {
   private async createSessionInner(
     params: CreateSessionParams,
     conversationKey?: string,
+    requireExisting = false,
   ): Promise<ServerSessionInfo> {
     const trimmedKey = conversationKey?.trim();
     if (trimmedKey) {
@@ -346,7 +352,7 @@ export class SessionManager {
       }
     }
 
-    const sessionId = `sess_${randomUUID().replaceAll("-", "")}`;
+    const sessionId = params.sessionId?.trim() || `sess_${randomUUID().replaceAll("-", "")}`;
     // Transcript / basicInfo sessionKey: prefer conversationKey (chat path) so Desktop can
     // resolve transcript.json from listSessions without a sess_* mapping.
     const transcriptSessionKey = trimmedKey || sessionId;
@@ -354,6 +360,9 @@ export class SessionManager {
       workspaceRoot: params.workspaceRoot,
       spiritDataDir: this.spiritDataDir,
       sessionKey: transcriptSessionKey,
+      sessionId,
+      ...(requireExisting ? { requireExisting: true } : {}),
+      ...(params.subagentOrigin ? { subagentOrigin: params.subagentOrigin } : {}),
       taskOwner: await (this.taskOwner ??= createBackgroundTaskOwner(this.spiritDataDir)),
       ...(params.modelRef ? { modelRef: params.modelRef } : {}),
       ...(params.todoSessionKey?.trim() ? { todoSessionKey: params.todoSessionKey.trim() } : {}),
@@ -391,6 +400,8 @@ export class SessionManager {
       queuedTurns: 0,
       attachmentCount: 0,
       restoredFromDisk: runtimeResult.restoredFromDisk,
+      ...(runtimeResult.sessionKind ? { sessionKind: runtimeResult.sessionKind } : {}),
+      ...(runtimeResult.subagentOrigin ? { subagentOrigin: runtimeResult.subagentOrigin } : {}),
       ...(trimmedKey ? { conversationKey: trimmedKey } : {}),
     };
     const session: ServerSession = {
@@ -418,6 +429,27 @@ export class SessionManager {
       this.conversationIndex.set(trimmedKey, sessionId);
     }
     return { ...info };
+  }
+
+  async resumeSession(
+    sessionId: string,
+    workspaceRoot: string,
+    hostKind: ServerClientKind = "desktop",
+  ): Promise<ServerSessionInfo> {
+    const trimmed = sessionId.trim();
+    if (!trimmed) throw new Error("missing sessionId");
+    const live = this.sessions.get(trimmed);
+    if (live) {
+      if (path.resolve(live.info.workspaceRoot) !== path.resolve(workspaceRoot)) {
+        throw new Error("Session workspace mismatch.");
+      }
+      return this.projectInfo(live);
+    }
+    return this.createSessionInner(
+      { workspaceRoot, hostKind, sessionId: trimmed },
+      undefined,
+      true,
+    );
   }
 
   attachSession(clientId: string, params: AttachSessionParams): AttachSessionResult {
@@ -492,8 +524,12 @@ export class SessionManager {
     return sessionId;
   }
 
-  listSessions(): ServerSessionInfo[] {
-    return [...this.sessions.values()].map((session) => this.projectInfo(session));
+  listSessions(options: { includeSubagents?: boolean } = {}): ServerSessionInfo[] {
+    return [...this.sessions.values()]
+      .filter(
+        (session) => options.includeSubagents === true || session.info.sessionKind !== "subagent",
+      )
+      .map((session) => this.projectInfo(session));
   }
 
   getSession(sessionId: string): ServerSessionInfo | undefined {

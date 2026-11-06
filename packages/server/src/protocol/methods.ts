@@ -184,7 +184,7 @@ export interface SessionCreateParams {
   modelRef?: { groupId: string; name: string };
   agentMode?: "agent" | "plan" | "ask" | "debug";
   todoSessionKey?: string;
-  sessionKind?: "default" | "dream-collector";
+  sessionKind?: "default" | "dream-collector" | "subagent";
   dreamScope?: { workspaceRoot: string; gitBranch: string };
   dreamSourceSession?: { path: string; displayName?: string; savedAtUnixMs?: number };
   /**

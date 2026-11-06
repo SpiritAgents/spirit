@@ -203,6 +203,26 @@ it("reports output and completion after the prompt response using stable task ID
   ).toBe(false);
 });
 
+it("creates native subagent sessions and reloads their metadata by session ID", async () => {
+  const { config } = await fixture();
+  const first = new SessionManager(config);
+  const origin = { parentSessionId: "sess_parent", parentToolCallId: "call-1" };
+  const created = await first.createSession(config.workspaceRoot, () => {}, "agent", {
+    sessionKind: "subagent",
+    subagentOrigin: origin,
+  });
+  expect(created.sessionKind).toBe("subagent");
+  expect(created.subagentOrigin).toEqual(origin);
+  await first.shutdown();
+
+  const second = new SessionManager(config);
+  const restored = await second.loadSession(created.sessionId, config.workspaceRoot, () => {});
+  expect(restored.sessionId).toBe(created.sessionId);
+  expect(restored.sessionKind).toBe("subagent");
+  expect(restored.subagentOrigin).toEqual(origin);
+  await second.shutdown();
+});
+
 it("cancels foreground work independently and reloads a closed session without model execution", async () => {
   const { root, config } = await fixture();
   const first = connect(config);
