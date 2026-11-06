@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import * as acp from "@agentclientprotocol/sdk";
 import { setLlmFetchTransportOverrideForTests } from "@spiritagent/agent-core";
+import type { BackgroundTaskRecord } from "@spiritagent/agent-core";
 import { afterEach, expect, it } from "vitest";
 import { SpiritAcpAgent } from "../src/acp-agent.js";
 import { SessionManager } from "../src/session-manager.js";
@@ -406,4 +407,57 @@ it("runs ACP worktree children against committed files with scoped context and r
   expect(output.cwd).not.toBe(config.workspaceRoot);
   await client.closeSession({ sessionId });
   expect(await readFile(path.join(output.cwd, "tracked.txt"), "utf8")).toBe("committed");
+});
+
+function delegatedContext() {
+  const updates: Array<Partial<BackgroundTaskRecord>> = [];
+  const outputs: string[] = [];
+  return {
+    updates,
+    outputs,
+    context: {
+      taskId: "task_delegate",
+      signal: new AbortController().signal,
+      update: async (metadata: Partial<BackgroundTaskRecord>) => {
+        updates.push(metadata);
+      },
+      writeOutput: async (text: string) => {
+        outputs.push(text);
+      },
+    },
+  };
+}
+
+it("continues native subagent sessions with normal user turns", async () => {
+  const { config } = await fixture();
+  const manager = new SessionManager(config);
+  const parent = await manager.createSession(config.workspaceRoot, () => {});
+  let requests = 0;
+  setLlmFetchTransportOverrideForTests(async () => {
+    requests += 1;
+    return response();
+  });
+
+  const first = delegatedContext();
+  const created = await manager.delegateSubagentTurn(parent.sessionId, {
+    prompt: "First continuation",
+    parentToolCallId: "call-native",
+    context: first.context,
+  });
+  const targetId = first.updates[0]?.sessionId;
+  if (!targetId) throw new Error("Missing delegated session ID.");
+  expect(created.output.summaryText).toContain("Response.");
+
+  const second = delegatedContext();
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: targetId,
+    prompt: "Second continuation",
+    parentToolCallId: "call-resume",
+    context: second.context,
+  });
+  const history = manager.getSession(targetId)!.runtime.history();
+  expect(JSON.stringify(history)).toContain("First continuation");
+  expect(JSON.stringify(history)).toContain("Second continuation");
+  expect(requests).toBe(2);
+  await manager.shutdown();
 });

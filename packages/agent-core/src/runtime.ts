@@ -153,6 +153,7 @@ import type { StreamingRuntime } from "./runtime/streaming.js";
 import type { ToolExecutionRuntime } from "./runtime/tool-execution.js";
 
 export { pendingWorkspaceFilesFromInput, referencedPathsFromInput } from "./runtime/helpers.js";
+export { buildParentSubagentToolResultText } from "./runtime/subagent-parent-tool-result.js";
 export type {
   AgentRuntimeOptions,
   AssistantAuxKind,
@@ -174,6 +175,8 @@ export type {
   RuntimeStatePreparationResult,
   RuntimeToolExecution,
   RuntimeTurnResult,
+  SubagentSessionDelegate,
+  SubagentSessionExecutionRequest,
   SubagentWorkspaceBootstrap,
   SubagentWorkspaceBootstrapInput,
   SubagentWorkspaceBootstrapResult,
@@ -4058,7 +4061,18 @@ export class AgentRuntime<Config, State, ToolRequest> {
     parentToolCallId: string,
     context: SessionTaskContext,
   ): Promise<SessionTaskResult> {
-    if (this.runtimeDepthStore >= 1) throw new Error("Nested subagents are not supported.");
+    if (this.runtimeDepthStore >= 1 && !request.sessionId) {
+      throw new Error("Nested subagents are not supported.");
+    }
+    if (this.options.subagentSessionDelegate) {
+      return this.options.subagentSessionDelegate.execute({
+        prompt: request.prompt,
+        parentToolCallId,
+        ...(request.sessionId ? { sessionId: request.sessionId } : {}),
+        ...(request.worktree !== undefined ? { worktree: request.worktree } : {}),
+        context,
+      });
+    }
     const tasks = this.options.backgroundTasks;
     if (!tasks) throw new Error("Background task support is not configured.");
     const sessionId = this.nextChildSessionId();

@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import {
+  buildParentSubagentToolResultText,
+  createToolExecutionTextOutput,
   isBackgroundTaskTerminal,
   type JsonValue,
   type RuntimeEvent,
@@ -16,6 +18,7 @@ import {
   FileBackgroundTaskStore,
   isBackgroundTaskOwnerAlive,
   readSessionStorageKey,
+  resolveSubagentTranscriptFilePath,
   type BackgroundTaskOwner,
 } from "@spiritagent/host-internal";
 import type { AcpServerConfig, AcpSessionState } from "./types.js";
@@ -44,6 +47,7 @@ interface LiveSession extends AcpSessionState {
   onEvent: EventSink;
   reportedApproval?: RuntimePendingApproval<JsonValue> | undefined;
   reportedQuestions?: RuntimePendingQuestions<JsonValue> | undefined;
+  lastTurnResult?: { assistantText?: string; error?: string };
 }
 
 interface CreateAcpSessionOptions {
@@ -143,6 +147,10 @@ export class SessionManager {
           this.globalConfig.spiritDataDir,
         )),
         requireExisting,
+        subagentSessionDelegate: {
+          execute: (request: import("@spiritagent/agent-core").SubagentSessionExecutionRequest) =>
+            this.delegateSubagentTurn(sessionId, request),
+        },
         ...(options.sessionKind ? { sessionKind: options.sessionKind } : {}),
         ...(options.subagentOrigin ? { subagentOrigin: options.subagentOrigin } : {}),
       },
@@ -230,6 +238,7 @@ export class SessionManager {
     if (!session || session.closing) throw new Error(`Session ${sessionId} not found`);
     this.cancel(sessionId);
     const generation = session.generation;
+    delete session.lastTurnResult;
     session.pendingPrompt = new AbortController();
     const completed = new Promise<StopReason>((resolve, reject) => {
       session.waiter = { resolve, reject };
@@ -288,6 +297,10 @@ export class SessionManager {
         if (result?.kind === "completed" || result?.kind === "failed") {
           await session.result.persist();
           if (generation !== session.generation) return;
+          session.lastTurnResult =
+            result.kind === "completed"
+              ? { assistantText: result.assistantText }
+              : { error: result.error };
           session.turnActive = false;
           session.pendingPrompt = null;
           session.waiter?.resolve(result.kind === "completed" ? "end_turn" : "refusal");
@@ -320,6 +333,61 @@ export class SessionManager {
       .finally(() => {
         session.polling = false;
       });
+  }
+
+  async delegateSubagentTurn(
+    parentSessionId: string,
+    request: import("@spiritagent/agent-core").SubagentSessionExecutionRequest,
+  ): Promise<import("@spiritagent/agent-core").SessionTaskResult> {
+    const parent = this.sessions.get(parentSessionId);
+    if (!parent || parent.closing) throw new Error(`Session ${parentSessionId} not found`);
+    if (!request.sessionId && parent.sessionKind === "subagent") {
+      throw new Error("Nested subagents are not supported.");
+    }
+    const target = request.sessionId
+      ? await this.loadSession(request.sessionId, parent.workspaceRoot, parent.onEvent)
+      : await this.createSession(parent.workspaceRoot, parent.onEvent, parent.currentMode, {
+          sessionKind: "subagent",
+          subagentOrigin: {
+            parentSessionId,
+            parentToolCallId: request.parentToolCallId,
+          },
+        });
+    const session = this.sessions.get(target.sessionId);
+    if (!session || session.closing) throw new Error(`Session ${target.sessionId} not found`);
+    if (session.runtime.hasPendingApproval() || session.runtime.hasPendingQuestions()) {
+      throw new Error("Answer the target session's pending approval or questionnaire first.");
+    }
+    if (session.turnActive || session.waiter) {
+      throw new Error("The target session is busy; wait for the current turn to finish.");
+    }
+    const cancel = () => this.cancel(target.sessionId);
+    request.context.signal.addEventListener("abort", cancel, { once: true });
+    try {
+      const stopReason = await this.runPrompt(target.sessionId, request.prompt, [], []);
+      const result = session.lastTurnResult;
+      const failed = stopReason !== "end_turn";
+      const text = result?.assistantText ?? result?.error ?? "The turn was cancelled.";
+      const transcript = resolveSubagentTranscriptFilePath(
+        this.globalConfig.spiritDataDir,
+        target.sessionId,
+        target.sessionId,
+      );
+      await request.context.update({
+        sessionId: target.sessionId,
+        sessionTranscript: transcript,
+        finalOutputPreview: text.slice(0, 16_384),
+      });
+      await request.context.writeOutput(`\n\nFinal response:\n${text}\n`);
+      return {
+        output: createToolExecutionTextOutput(
+          buildParentSubagentToolResultText(text, failed, target.sessionId, transcript),
+        ),
+        failed,
+      };
+    } finally {
+      request.context.signal.removeEventListener("abort", cancel);
+    }
   }
 
   async setSessionMode(sessionId: string, modeId: string): Promise<AgentMode> {

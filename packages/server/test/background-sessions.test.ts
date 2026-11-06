@@ -7,6 +7,7 @@ import {
   createLlmMessageContentFromTextAndImages,
   setLlmFetchTransportOverrideForTests,
   type ChatArchive,
+  type BackgroundTaskRecord,
   type JsonValue,
   type RuntimeEvent,
 } from "@spiritagent/agent-core";
@@ -756,4 +757,58 @@ it("keeps a running child on its original model and mode until its own backgroun
   expect(
     manager.snapshot(sessionId).backgroundTasks!.every((task) => task.status === "completed"),
   ).toBe(true);
+});
+
+function delegatedContext() {
+  const updates: Array<Partial<BackgroundTaskRecord>> = [];
+  const outputs: string[] = [];
+  return {
+    updates,
+    outputs,
+    context: {
+      taskId: "task_delegate",
+      signal: new AbortController().signal,
+      update: async (metadata: Partial<BackgroundTaskRecord>) => {
+        updates.push(metadata);
+      },
+      writeOutput: async (text: string) => {
+        outputs.push(text);
+      },
+    },
+  };
+}
+
+it("creates and continues native subagent sessions by ID", async () => {
+  const { dataDir, workspaceRoot } = await fixture();
+  const { manager } = managerFor(dataDir);
+  const parent = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
+  let replies = 0;
+  setLlmFetchTransportOverrideForTests(async () => response(`Reply ${++replies}`));
+
+  const first = delegatedContext();
+  const created = await manager.delegateSubagentTurn(parent.sessionId, {
+    prompt: "First continuation",
+    parentToolCallId: "call-native",
+    context: first.context,
+  });
+  const targetId = first.updates[0]?.sessionId;
+  expect(targetId).toMatch(/^sess_/);
+  if (!targetId) throw new Error("Missing delegated session ID.");
+  expect(created.output.summaryText).toContain("Reply 1");
+  expect(created.output.summaryText).toContain(targetId);
+
+  const second = delegatedContext();
+  const continued = await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: targetId,
+    prompt: "Second continuation",
+    parentToolCallId: "call-resume",
+    context: second.context,
+  });
+  expect(continued.output.summaryText).toContain("Reply 2");
+  expect(second.updates[0]?.sessionId).toBe(targetId);
+  const archive = manager.exportArchive(targetId, [], []);
+  expect(JSON.stringify(archive)).toContain("First continuation");
+  expect(JSON.stringify(archive)).toContain("Second continuation");
+  expect(JSON.stringify(archive)).toContain("Reply 2");
+  expect(replies).toBe(2);
 });

@@ -7,7 +7,7 @@ import {
   type ToolCallRequest,
   type ToolRequestExecutionMetadata,
 } from "../ports.js";
-import { AgentRuntime } from "../runtime.js";
+import { AgentRuntime, buildParentSubagentToolResultText } from "../runtime.js";
 import {
   HostExecutor,
   SubagentTransport,
@@ -412,6 +412,7 @@ function toolCalls(
 function runtimeFixture(
   script: (state: ScriptedState) => ToolAgentRoundCompletion<ScriptedState>,
   shellSeconds = 2,
+  subagentSessionDelegate?: import("../runtime/types.js").SubagentSessionDelegate,
 ) {
   const tasks = fixture();
   class Executor extends HostExecutor {
@@ -444,6 +445,7 @@ function runtimeFixture(
     appendUserMessage: appendScriptedUserMessage,
     extractAssistantText: extractScriptedAssistantText,
     backgroundTasks: { manager: tasks.manager, scope: tasks.scope, persistHistory: persisted },
+    ...(subagentSessionDelegate ? { subagentSessionDelegate } : {}),
   });
   return { ...tasks, runtime, persisted };
 }
@@ -832,6 +834,54 @@ describe("managed tasks in AgentRuntime", () => {
         .history()
         .filter((message) => llmMessageTextContent(message.content).includes("\ntask_event_id: ")),
     ).toHaveLength(1);
+    await runtime.shutdown();
+  });
+
+  it("uses the native session delegate when configured", async () => {
+    const prompts: string[] = [];
+    const delegate: import("../runtime/types.js").SubagentSessionDelegate = {
+      execute: async (request) => {
+        prompts.push(request.prompt);
+        await request.context.update({
+          sessionId: "sess_native",
+          sessionTranscript: "/tmp/native.json",
+          finalOutputPreview: "Native result",
+        });
+        await request.context.writeOutput("Native result");
+        return {
+          output: createToolExecutionTextOutput(
+            buildParentSubagentToolResultText(
+              "Native result",
+              false,
+              "sess_native",
+              "/tmp/native.json",
+            ),
+          ),
+        };
+      },
+    };
+    let rounds = 0;
+    const { runtime } = runtimeFixture(
+      (state) =>
+        ++rounds === 1
+          ? toolCalls(state, [
+              {
+                id: "native-call",
+                name: "subagent",
+                argumentsJson: '{"prompt":"Investigate","background":{"delay":0}}',
+              },
+            ])
+          : finalResponse(state, "Done."),
+      undefined,
+      delegate,
+    );
+    await runtime.startUserTurnStreaming("Delegate");
+    await advanceRuntime(runtime, 500);
+    expect(prompts).toEqual(["Investigate"]);
+    const finished = runtime
+      .drainEvents()
+      .find((event) => event.kind === "tool-execution-finished");
+    expect(finished?.execution.output).toContain("sessionId: sess_native");
     await runtime.shutdown();
   });
 });

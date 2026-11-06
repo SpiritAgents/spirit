@@ -518,8 +518,23 @@ export interface AgentRuntimeOptions<Config, State, ToolRequest> {
     userInput: string,
   ) => Promise<PendingWorkspaceFile[]> | PendingWorkspaceFile[];
   bootstrapSubagentWorkspace?: SubagentWorkspaceBootstrap<ToolRequest, Config, State>;
+  subagentSessionDelegate?: SubagentSessionDelegate;
   getApprovalLevel?: () => import("../auto-approval/types.js").SessionApprovalLevel;
   reviewToolApproval?: import("../auto-approval/types.js").ToolAutoReviewer;
+}
+
+export interface SubagentSessionExecutionRequest {
+  prompt: string;
+  parentToolCallId: string;
+  sessionId?: string;
+  worktree?: boolean;
+  context: import("./session-tasks.js").SessionTaskContext;
+}
+
+export interface SubagentSessionDelegate {
+  execute(
+    request: SubagentSessionExecutionRequest,
+  ): Promise<import("./session-tasks.js").SessionTaskResult>;
 }
 
 export interface SubagentWorkspaceBootstrapInput {

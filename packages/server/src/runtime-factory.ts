@@ -140,6 +140,7 @@ export interface ServerRuntimeOptions {
   activePlanPath?: string;
   sessionKind?: ServerSessionKind;
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
+  subagentSessionDelegate?: import("@spiritagent/agent-core").SubagentSessionDelegate;
   dreamScope?: HostDreamScope;
   dreamSourceSession?: HostDreamSourceSessionRef;
   /** Main-session usage carried across runtime replacement; absent means no measured input yet. */
@@ -360,6 +361,9 @@ export async function createServerRuntime(
       scope: { runtimeId: "main" },
       persistHistory: persist,
     };
+    if (options.subagentSessionDelegate) {
+      prepared.runtimeOptions.subagentSessionDelegate = options.subagentSessionDelegate;
+    }
     const runtime = new AgentRuntime(prepared.runtimeOptions);
     const sessionKind = options.sessionKind ?? saved?.sessionKind;
     const subagentOrigin = options.subagentOrigin ?? saved?.subagentOrigin;

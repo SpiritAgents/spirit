@@ -104,6 +104,7 @@ export async function createAcpRuntime(
     requireExisting?: boolean;
     sessionKind?: "default" | "dream-collector" | "subagent";
     subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
+    subagentSessionDelegate?: import("@spiritagent/agent-core").SubagentSessionDelegate;
   } = {},
 ): Promise<AcpRuntimeResult> {
   const storageKey = options.requireExisting
@@ -182,6 +183,9 @@ export async function createAcpRuntime(
       scope: { runtimeId: "main" },
       persistHistory: persist,
     };
+    if (options.subagentSessionDelegate) {
+      prepared.runtimeOptions.subagentSessionDelegate = options.subagentSessionDelegate;
+    }
     const runtime = new AgentRuntime(prepared.runtimeOptions);
     result = {
       ...prepared,

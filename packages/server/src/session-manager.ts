@@ -3,6 +3,8 @@ import path from "node:path";
 
 import {
   buildStartImplementingPrompt,
+  buildParentSubagentToolResultText,
+  createToolExecutionTextOutput,
   getTransportConfigLastInputTokens,
   type HostToolDescriptionHint,
   type JsonValue,
@@ -13,11 +15,14 @@ import {
   type PendingWorkspaceFile,
   type RuntimeEvent,
   type AgentMode,
+  type SubagentSessionExecutionRequest,
+  type SessionTaskResult,
 } from "@spiritagent/agent-core";
 import type { BridgeRuntimeSnapshot } from "@spiritagent/agent-core/host-bridge";
 import {
   createHostTodoStore,
   createBackgroundTaskOwner,
+  resolveSubagentTranscriptFilePath,
   type BackgroundTaskOwner,
   deriveSessionTitleFallbackSeed,
   generateSessionTitleForTurn,
@@ -129,6 +134,10 @@ interface ServerSession {
     | undefined;
   /** Fingerprint of childSessions summaries; used to push archives when membership/status changes. */
   childSessionsFingerprint?: string;
+  agentTurnWaiters?: Array<{
+    resolve(result: { text: string; failed: boolean }): void;
+    reject(error: unknown): void;
+  }>;
 }
 
 export interface SessionManagerCallbacks {
@@ -297,6 +306,13 @@ export class SessionManager {
   readonly mcpRegistry: McpRegistry;
   /** conversationKey → in-flight create; collapses concurrent creates for the same chat. */
   private readonly creatingByConversationKey = new Map<string, Promise<ServerSessionInfo>>();
+  private readonly agentTurnWaiters = new Map<
+    string,
+    Array<{
+      resolve(result: { text: string; failed: boolean }): void;
+      reject(error: unknown): void;
+    }>
+  >();
 
   constructor(
     spiritDataDir: string,
@@ -361,6 +377,10 @@ export class SessionManager {
       spiritDataDir: this.spiritDataDir,
       sessionKey: transcriptSessionKey,
       sessionId,
+      subagentSessionDelegate: {
+        execute: (request: SubagentSessionExecutionRequest) =>
+          this.delegateSubagentTurn(sessionId, request),
+      },
       ...(requireExisting ? { requireExisting: true } : {}),
       ...(params.subagentOrigin ? { subagentOrigin: params.subagentOrigin } : {}),
       taskOwner: await (this.taskOwner ??= createBackgroundTaskOwner(this.spiritDataDir)),
@@ -429,6 +449,109 @@ export class SessionManager {
       this.conversationIndex.set(trimmedKey, sessionId);
     }
     return { ...info };
+  }
+
+  private waitForAgentTurn(sessionId: string): Promise<{ text: string; failed: boolean }> {
+    return new Promise((resolve, reject) => {
+      const waiters = this.agentTurnWaiters.get(sessionId) ?? [];
+      waiters.push({ resolve, reject });
+      this.agentTurnWaiters.set(sessionId, waiters);
+    });
+  }
+
+  private settleAgentTurnWaiters(
+    sessionId: string,
+    result: { text: string; failed: boolean },
+  ): void {
+    const waiters = this.agentTurnWaiters.get(sessionId) ?? [];
+    this.agentTurnWaiters.delete(sessionId);
+    for (const waiter of waiters) waiter.resolve(result);
+  }
+
+  private failAgentTurnWaiters(sessionId: string, error: unknown): void {
+    const waiters = this.agentTurnWaiters.get(sessionId) ?? [];
+    this.agentTurnWaiters.delete(sessionId);
+    for (const waiter of waiters) waiter.reject(error);
+  }
+
+  async delegateSubagentTurn(
+    parentSessionId: string,
+    request: SubagentSessionExecutionRequest,
+  ): Promise<SessionTaskResult> {
+    const parent = this.requireSession(parentSessionId);
+    if (!request.sessionId && parent.info.sessionKind === "subagent") {
+      throw new Error("Nested subagents are not supported.");
+    }
+    const target = request.sessionId
+      ? await this.resumeSession(request.sessionId, parent.info.workspaceRoot, parent.info.hostKind)
+      : await this.createSession({
+          workspaceRoot: parent.info.workspaceRoot,
+          hostKind: parent.info.hostKind,
+          sessionKind: "subagent",
+          subagentOrigin: {
+            parentSessionId,
+            parentToolCallId: request.parentToolCallId,
+          },
+          ...(parent.createParams.modelRef ? { modelRef: parent.createParams.modelRef } : {}),
+          ...(parent.createParams.agentMode ? { agentMode: parent.createParams.agentMode } : {}),
+          approvalLevel: parent.info.approvalLevel,
+          ...(parent.createParams.hostUiPromptSection
+            ? { hostUiPromptSection: parent.createParams.hostUiPromptSection }
+            : {}),
+          ...(parent.createParams.hostToolDescriptionHints
+            ? { hostToolDescriptionHints: parent.createParams.hostToolDescriptionHints }
+            : {}),
+          ...(parent.createParams.basicInfoHost
+            ? { basicInfoHost: parent.createParams.basicInfoHost }
+            : {}),
+        });
+    const targetSession = this.requireSession(target.sessionId);
+    const { runtime } = targetSession.runtimeResult;
+    if (runtime.hasPendingApproval() || runtime.hasPendingQuestions()) {
+      throw new Error("Answer the target session's pending approval or questionnaire first.");
+    }
+    if (runtime.isBusy() || targetSession.turnActive) {
+      throw new Error("The target session is busy; wait for the current turn to finish.");
+    }
+    const completion = this.waitForAgentTurn(target.sessionId);
+    const cancel = () => this.abort(target.sessionId);
+    request.context.signal.addEventListener("abort", cancel, { once: true });
+    try {
+      await this.startTurn(targetSession, {
+        text: request.prompt,
+        explicitImages: [],
+        explicitWorkspaceFiles: [],
+        activeSkills: [],
+      });
+      const result = await completion;
+      const transcript = resolveSubagentTranscriptFilePath(
+        this.spiritDataDir,
+        target.sessionId,
+        target.sessionId,
+      );
+      await request.context.update({
+        sessionId: target.sessionId,
+        sessionTranscript: transcript,
+        finalOutputPreview: result.text.slice(0, 16_384),
+      });
+      await request.context.writeOutput(`\n\nFinal response:\n${result.text}\n`);
+      return {
+        output: createToolExecutionTextOutput(
+          buildParentSubagentToolResultText(
+            result.text,
+            result.failed,
+            target.sessionId,
+            transcript,
+          ),
+        ),
+        failed: result.failed,
+      };
+    } catch (error) {
+      this.failAgentTurnWaiters(target.sessionId, error);
+      throw error;
+    } finally {
+      request.context.signal.removeEventListener("abort", cancel);
+    }
   }
 
   async resumeSession(
@@ -928,6 +1051,15 @@ export class SessionManager {
     await session.runtimeResult.persist();
     this.callbacks.broadcastTurnFinished(session.info.sessionId, stopReason, result);
     this.callbacks.broadcastSnapshot(session.info.sessionId, this.snapshotForSession(session));
+    this.settleAgentTurnWaiters(session.info.sessionId, {
+      text:
+        result?.kind === "completed"
+          ? result.assistantText
+          : result?.kind === "failed"
+            ? result.error
+            : "The turn was cancelled.",
+      failed: stopReason !== "completed",
+    });
     await this.drainQueue(session);
   }
 
@@ -1645,6 +1777,7 @@ export class SessionManager {
     if (!session) {
       return;
     }
+    this.failAgentTurnWaiters(sessionId, new Error("The target session was closed."));
     session.closing = true;
     const conversationKey = session.info.conversationKey?.trim();
     if (conversationKey && this.conversationIndex.get(conversationKey) === sessionId) {

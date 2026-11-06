@@ -27,7 +27,7 @@ export function shouldScheduleSessionTitleGeneration(input: {
   conversationKey?: string | undefined;
   history: readonly LlmMessage[];
 }): boolean {
-  if (input.sessionKind === "dream-collector") {
+  if (input.sessionKind === "dream-collector" || input.sessionKind === "subagent") {
     return false;
   }
   const conversationKey = input.conversationKey?.trim() ?? "";
