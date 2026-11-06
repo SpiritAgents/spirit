@@ -2295,13 +2295,15 @@ export class AgentRuntime<Config, State, ToolRequest> {
       outcome.sessionTranscript,
     );
 
-    turn.toolExecutions.push({
+    const execution = {
       toolCallId,
       toolName: "subagent",
       request,
       output: outcome.text,
       failed: outcome.failed,
-    });
+    };
+    turn.toolExecutions.push(execution);
+    this.emitEvent({ kind: "tool-execution-finished", execution });
 
     const resumedState = await this.appendToolResultMessageWithOutputTruncation(
       state,
@@ -2472,13 +2474,15 @@ export class AgentRuntime<Config, State, ToolRequest> {
       outcome.sessionTranscript,
     );
 
-    turn.toolExecutions.push({
+    const execution = {
       toolCallId,
       toolName: "subagent",
       request,
       output: outcome.text,
       failed: outcome.failed,
-    });
+    };
+    turn.toolExecutions.push(execution);
+    this.emitEvent({ kind: "tool-execution-finished", execution });
 
     const resumedState = await this.appendToolResultMessageWithOutputTruncation(
       state,

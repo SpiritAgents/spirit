@@ -924,3 +924,51 @@ it("forwards a continuation session ID through the managed subagent executor", a
   expect(resumedSessionId).toBe("sess_native");
   await runtime.shutdown();
 });
+
+it.each(["streaming", "synchronous"] as const)(
+  "emits native subagent completion before the parent response (%s)",
+  async (mode) => {
+    const delegate: import("../runtime/types.js").SubagentSessionDelegate = {
+      execute: async () => ({
+        output: createToolExecutionTextOutput(
+          buildParentSubagentToolResultText(
+            "Continued result",
+            false,
+            "sess_native",
+            "/tmp/native.json",
+          ),
+        ),
+      }),
+    };
+    let rounds = 0;
+    const { runtime } = runtimeFixture(
+      (state) =>
+        ++rounds === 1
+          ? toolCalls(state, [
+              {
+                id: "native-foreground",
+                name: "subagent",
+                argumentsJson: '{"prompt":"Continue","background":{"type":false}}',
+              },
+            ])
+          : finalResponse(state, "Parent done."),
+      undefined,
+      delegate,
+    );
+    if (mode === "streaming") {
+      await runtime.startUserTurnStreaming("Continue");
+      await advanceRuntime(runtime, 500);
+    } else {
+      await runtime.submitUserTurn("Continue");
+    }
+    const events = runtime.drainEvents();
+    const completionIndex = events.findIndex((event) => event.kind === "tool-execution-finished");
+    const responseIndex = events.findIndex(
+      (event) => event.kind === "assistant-chunk" && event.text === "Parent done.",
+    );
+    expect(completionIndex).toBeGreaterThanOrEqual(0);
+    expect(responseIndex).toBeGreaterThanOrEqual(0);
+    expect(completionIndex).toBeLessThan(responseIndex);
+    await runtime.shutdown();
+  },
+);
