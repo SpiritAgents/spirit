@@ -101,7 +101,7 @@ describe("background task contracts", () => {
     const record: BackgroundTaskRecord = {
       version: 1,
       id: "task_one",
-      sessionKey: "conversation",
+      ownerSessionId: "conversation",
       runtimeId: "main",
       toolCallId: "call_one",
       kind: "shell",

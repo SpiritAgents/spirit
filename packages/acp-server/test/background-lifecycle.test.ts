@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import * as acp from "@agentclientprotocol/sdk";
 import { setLlmFetchTransportOverrideForTests } from "@spiritagent/agent-core";
+import { isSessionId } from "@spiritagent/host-internal";
 import type { BackgroundTaskRecord } from "@spiritagent/agent-core";
 import { afterEach, expect, it } from "vitest";
 import { SpiritAcpAgent } from "../src/acp-agent.js";
@@ -401,7 +402,10 @@ it("runs ACP worktree children against committed files with scoped context and r
   expect(requests).toHaveLength(4);
   expect(permissionRequests).toHaveLength(1);
   expect(permissionRequests[0]?.sessionId).toBe(sessionId);
-  expect(permissionRequests[0]?.toolCall.toolCallId).toMatch(/^sess_[0-9a-f]{32}:/);
+  expect(
+    permissionRequests[0]?.toolCall.toolCallId.split(":")[0] &&
+      isSessionId(permissionRequests[0].toolCall.toolCallId.split(":")[0]!),
+  ).toBe(true);
   expect(JSON.stringify(requests[1])).toContain("Use the scoped fixture marker.");
   const result = JSON.parse(
     requests[2]!.messages.find((message) => message.role === "tool")!.content,

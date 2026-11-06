@@ -12,12 +12,12 @@ afterEach(async () => {
   }
 });
 
-async function fixture(sessionKey = "conversation") {
+async function fixture(ownerSessionId = "conversation") {
   const spiritDataDir = await mkdtemp(path.join(tmpdir(), "spirit-background-store-"));
   directories.push(spiritDataDir);
   const store = new FileBackgroundTaskStore({
     spiritDataDir,
-    sessionKey,
+    ownerSessionId,
     owner: { id: "test-owner", pid: process.pid },
   });
   return {
@@ -25,7 +25,7 @@ async function fixture(sessionKey = "conversation") {
     spiritDataDir,
     create: (kind: "shell" | "subagent" = "shell") =>
       store.create({
-        sessionKey,
+        ownerSessionId,
         runtimeId: "main",
         toolCallId: "call-one",
         kind,
@@ -113,7 +113,7 @@ describe("background task storage", () => {
     });
     const restored = new FileBackgroundTaskStore({
       spiritDataDir,
-      sessionKey: "conversation",
+      ownerSessionId: "conversation",
       owner: { id: "new-owner", pid: process.pid },
     });
     expect(await restored.recoverInterrupted(async () => true)).toEqual([]);
@@ -137,7 +137,7 @@ describe("background task storage", () => {
     const record = await create();
     const other = new FileBackgroundTaskStore({
       spiritDataDir,
-      sessionKey: "other-conversation",
+      ownerSessionId: "other-conversation",
       owner: { id: "same-owner", pid: process.pid },
     });
     expect(await other.list()).toEqual([]);

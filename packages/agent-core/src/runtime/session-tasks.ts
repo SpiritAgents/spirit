@@ -37,7 +37,7 @@ export interface SessionTaskResult {
 }
 
 export interface SessionTaskManagerOptions {
-  sessionKey: string;
+  ownerSessionId: string;
   store: BackgroundTaskStore;
   onChanged?(record: BackgroundTaskRecord): void;
   onOutput?(record: BackgroundTaskRecord, chunk: string): void;
@@ -113,7 +113,8 @@ export class SessionTaskManager {
 
   async restore(): Promise<void> {
     for (const record of await this.options.store.list()) {
-      if (record.sessionKey !== this.options.sessionKey) throw new Error("Task session mismatch.");
+      if (record.ownerSessionId !== this.options.ownerSessionId)
+        throw new Error("Task session mismatch.");
       if (!this.entries.has(record.id)) this.restored.set(record.id, record);
     }
   }
@@ -176,7 +177,7 @@ export class SessionTaskManager {
   }
 
   launch(
-    input: Omit<BackgroundTaskCreateInput, "sessionKey">,
+    input: Omit<BackgroundTaskCreateInput, "ownerSessionId">,
     run: (context: SessionTaskContext) => Promise<SessionTaskResult>,
     foregroundSignal?: AbortSignal,
   ): Promise<string> {
@@ -199,13 +200,13 @@ export class SessionTaskManager {
   }
 
   private async launchOwned(
-    input: Omit<BackgroundTaskCreateInput, "sessionKey">,
+    input: Omit<BackgroundTaskCreateInput, "ownerSessionId">,
     run: (context: SessionTaskContext) => Promise<SessionTaskResult>,
     foregroundSignal?: AbortSignal,
   ): Promise<string> {
     const record = await this.options.store.create({
       ...input,
-      sessionKey: this.options.sessionKey,
+      ownerSessionId: this.options.ownerSessionId,
     });
     let resolve!: TaskEntry["resolve"];
     let reject!: TaskEntry["reject"];

@@ -5,7 +5,11 @@ import { join } from "node:path";
 import { describe, it } from "vitest";
 
 import { toolNamesFromDefinitions } from "@spiritagent/agent-core";
-import { setKeyringStoreForTests, providerInternalKeyAccount } from "@spiritagent/host-internal";
+import {
+  isSessionId,
+  setKeyringStoreForTests,
+  providerInternalKeyAccount,
+} from "@spiritagent/host-internal";
 
 import { createServerRuntime } from "../src/runtime-factory.js";
 import { SessionManager } from "../src/session-manager.js";
@@ -109,7 +113,7 @@ describe("dream-collector session", () => {
         modelRef: { providerId: "openai", name: "gpt-4o-mini" },
       });
 
-      assert.ok(created.sessionId.startsWith("sess_"));
+      assert.ok(isSessionId(created.sessionId));
       assert.equal(created.isBusy, false);
       await manager.closeSession(created.sessionId);
     });

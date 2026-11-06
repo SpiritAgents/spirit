@@ -21,7 +21,6 @@ export type BackgroundTaskStatus =
 export interface BackgroundTaskRecord {
   version: 1;
   id: string;
-  sessionKey: string;
   runtimeId: string;
   parentTaskId?: string;
   toolCallId: string;
@@ -29,6 +28,7 @@ export interface BackgroundTaskRecord {
   input: string;
   argumentsJson: string;
   owner: { id: string; pid: number };
+  ownerSessionId: string;
   status: BackgroundTaskStatus;
   background: boolean;
   outputPath: string;
@@ -63,7 +63,13 @@ export interface BackgroundTaskOutputPreview {
 
 export type BackgroundTaskCreateInput = Pick<
   BackgroundTaskRecord,
-  "sessionKey" | "runtimeId" | "parentTaskId" | "toolCallId" | "kind" | "input" | "argumentsJson"
+  | "ownerSessionId"
+  | "runtimeId"
+  | "parentTaskId"
+  | "toolCallId"
+  | "kind"
+  | "input"
+  | "argumentsJson"
 >;
 
 /** Host-owned storage; runtime task semantics never access the filesystem directly. */

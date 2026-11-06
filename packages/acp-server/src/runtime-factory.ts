@@ -61,6 +61,7 @@ import {
   FileBackgroundTaskStore,
   isBackgroundTaskOwnerAlive,
   ensureSessionStorageKey,
+  isSessionId,
   readSessionStorageKey,
   RuntimeSessionStore,
   acquireRuntimeSessionLease,
@@ -93,7 +94,7 @@ export interface AcpRuntimeResult {
   setAgentMode: (mode: AgentMode) => Promise<void>;
   agentModeSnapshot(): AgentMode;
   tasks: SessionTaskManager;
-  storageSessionKey: string;
+  sessionId: string;
   restoredFromDisk: boolean;
   persist(): Promise<void>;
   dispose(): Promise<void>;
@@ -116,18 +117,22 @@ export async function createAcpRuntime(
     adoptStoredWorkspace?: boolean;
   } = {},
 ): Promise<AcpRuntimeResult> {
-  const storageKey = options.requireExisting
+  const sessionId = options.requireExisting
     ? readSessionStorageKey(config.spiritDataDir, transcriptSessionKey)
-    : await ensureSessionStorageKey(config.spiritDataDir, transcriptSessionKey);
-  if (!storageKey) throw new Error("Stored ACP session not found.");
-  const sessionStore = new RuntimeSessionStore(config.spiritDataDir, storageKey);
+    : await ensureSessionStorageKey(
+        config.spiritDataDir,
+        transcriptSessionKey,
+        isSessionId(transcriptSessionKey) ? transcriptSessionKey : randomUUID(),
+      );
+  if (!sessionId) throw new Error("Stored ACP session not found.");
+  const sessionStore = new RuntimeSessionStore(config.spiritDataDir, sessionId);
   const owner = options.taskOwner ?? (await createBackgroundTaskOwner(config.spiritDataDir));
   let result: AcpRuntimeResult | undefined;
   let lease: RuntimeSessionLease | undefined;
   try {
     const sessionLease = await acquireRuntimeSessionLease(
       config.spiritDataDir,
-      storageKey,
+      sessionId,
       owner.owner,
     );
     lease = sessionLease;
@@ -153,7 +158,7 @@ export async function createAcpRuntime(
       if (!result) throw new Error("ACP runtime is not initialized.");
       await sessionStore.save({
         version: 1,
-        sessionKey: storageKey,
+        sessionId: sessionId,
         workspaceRoot: result.workspaceRoot,
         agentMode: result.agentModeSnapshot(),
         workLocation: result.workLocation,
@@ -167,7 +172,7 @@ export async function createAcpRuntime(
     };
     const store = new FileBackgroundTaskStore({
       spiritDataDir: config.spiritDataDir,
-      sessionKey: storageKey,
+      ownerSessionId: sessionId,
       owner: owner.owner,
     });
     await store.recoverInterrupted((identity) =>
@@ -177,7 +182,7 @@ export async function createAcpRuntime(
       throw new Error("This session has active tasks in another runtime. Reconnect to that host.");
     }
     const tasks = new SessionTaskManager({
-      sessionKey: storageKey,
+      ownerSessionId: sessionId,
       store,
       onError: report,
       onOutput: (task, chunk) => {
@@ -197,7 +202,7 @@ export async function createAcpRuntime(
       { ...config, workspaceRoot },
       onEvent,
       saved?.agentMode ?? initialMode,
-      storageKey,
+      sessionId,
     );
     const configurePreparedRuntime = (environment: PreparedAcpRuntime): void => {
       environment.runtimeOptions.backgroundTasks = {
@@ -224,7 +229,7 @@ export async function createAcpRuntime(
       ...(subagentOrigin ? { subagentOrigin } : {}),
       runtime,
       tasks,
-      storageSessionKey: storageKey,
+      sessionId: sessionId,
       restoredFromDisk: Boolean(saved),
       persist,
       setAgentMode: async (mode) => {
@@ -238,7 +243,7 @@ export async function createAcpRuntime(
           { ...config, workspaceRoot: next.workspaceRoot },
           onEvent,
           current.agentModeSnapshot(),
-          storageKey,
+          sessionId,
         );
         configurePreparedRuntime(nextPrepared);
         runtime.replaceHostOptions(nextPrepared.runtimeOptions);
@@ -252,7 +257,7 @@ export async function createAcpRuntime(
           ...(current.subagentOrigin ? { subagentOrigin: current.subagentOrigin } : {}),
           runtime,
           tasks,
-          storageSessionKey: storageKey,
+          sessionId: sessionId,
           restoredFromDisk: current.restoredFromDisk,
           persist,
           setAgentMode: async (mode) => {

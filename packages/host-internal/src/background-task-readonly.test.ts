@@ -11,11 +11,11 @@ it("keeps task logs readable while denying file-tool mutation, including symlink
   try {
     const store = new FileBackgroundTaskStore({
       spiritDataDir,
-      sessionKey: "session",
+      ownerSessionId: "session",
       owner: { id: "test", pid: process.pid },
     });
     const task = await store.create({
-      sessionKey: "session",
+      ownerSessionId: "session",
       runtimeId: "main",
       kind: "shell",
       toolCallId: "call",

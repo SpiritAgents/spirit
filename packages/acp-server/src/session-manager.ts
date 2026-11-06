@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import path from "node:path";
 import {
   buildParentSubagentToolResultText,
@@ -13,11 +12,13 @@ import {
 } from "@spiritagent/agent-core";
 import {
   createBackgroundTaskOwner,
+  createSessionId,
   createSubagentWorkspaceBootstrap,
   acquireRuntimeSessionLease,
   deleteTranscriptSessionDir,
   FileBackgroundTaskStore,
   isBackgroundTaskOwnerAlive,
+  isSessionId,
   readSessionStorageKey,
   resolveSubagentTranscriptFilePath,
   type BackgroundTaskOwner,
@@ -86,7 +87,7 @@ export class SessionManager {
     options: CreateAcpSessionOptions = {},
   ) {
     return this.openSession(
-      options.sessionId?.trim() || `sess_${randomUUID().replaceAll("-", "")}`,
+      options.sessionId?.trim() || createSessionId(),
       workspaceRoot,
       onEvent,
       initialMode,
@@ -101,7 +102,7 @@ export class SessionManager {
     onEvent: EventSink,
     adoptStoredWorkspace = false,
   ): Promise<SessionSummary> {
-    if (!/^sess_[0-9a-f]{32}$/.test(sessionId)) throw new Error("Invalid ACP session ID.");
+    if (!isSessionId(sessionId)) throw new Error("Invalid ACP session ID.");
     const live = this.sessions.get(sessionId);
     if (live) {
       if (adoptStoredWorkspace) return this.summary(live);
@@ -585,7 +586,7 @@ export class SessionManager {
   }
 
   async deleteSession(sessionId: string): Promise<void> {
-    if (!/^sess_[0-9a-f]{32}$/.test(sessionId)) throw new Error("Invalid ACP session ID.");
+    if (!isSessionId(sessionId)) throw new Error("Invalid ACP session ID.");
     await this.closeSession(sessionId);
     const sessionKey = readSessionStorageKey(this.globalConfig.spiritDataDir, sessionId);
     if (sessionKey) {
@@ -600,7 +601,7 @@ export class SessionManager {
       try {
         const store = new FileBackgroundTaskStore({
           spiritDataDir: this.globalConfig.spiritDataDir,
-          sessionKey,
+          ownerSessionId: sessionKey,
           owner: owner.owner,
         });
         await store.recoverInterrupted((identity) =>

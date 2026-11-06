@@ -1,10 +1,18 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { link, mkdir, open, readdir, rmdir, unlink } from "node:fs/promises";
 import path from "node:path";
 
 export const SESSION_STORAGE_INDEX_DIR = "session-storage-index";
-const INTERNAL_KEY = /^storage_([a-f0-9]{32})$/u;
+const SESSION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
+
+export function createSessionId(): string {
+  return randomUUID();
+}
+
+export function isSessionId(value: string): boolean {
+  return SESSION_ID_PATTERN.test(value);
+}
 
 export function sessionLookupHash(key: string): string {
   const trimmed = key.trim();
@@ -20,7 +28,7 @@ export function readSessionStorageKey(
   spiritDataDir: string,
   lookupKey: string,
 ): string | undefined {
-  if (INTERNAL_KEY.test(lookupKey)) return lookupKey;
+  if (isSessionId(lookupKey)) return lookupKey;
   let value: unknown;
   try {
     value = JSON.parse(readFileSync(referencePath(spiritDataDir, lookupKey), "utf8"));
@@ -35,7 +43,7 @@ export function readSessionStorageKey(
     value.version !== 1 ||
     !("storageKey" in value) ||
     typeof value.storageKey !== "string" ||
-    !INTERNAL_KEY.test(value.storageKey) ||
+    !isSessionId(value.storageKey) ||
     !("lookupHash" in value) ||
     value.lookupHash !== sessionLookupHash(lookupKey)
   ) {
@@ -45,17 +53,16 @@ export function readSessionStorageKey(
 }
 
 export function sessionStorageDirectoryName(key: string): string {
-  return INTERNAL_KEY.exec(key)?.[1] ?? sessionLookupHash(key);
+  return isSessionId(key) ? key : sessionLookupHash(key);
 }
 
-/** Register a lookup alias without moving transcripts or changing their internal identity. */
+/** Register a conversation lookup alias without moving transcripts or changing the Session ID. */
 export async function bindSessionStorageKey(
   spiritDataDir: string,
   lookupKey: string,
   storageKey: string,
 ): Promise<void> {
-  if (!lookupKey.trim() || !INTERNAL_KEY.test(storageKey))
-    throw new Error("Invalid session storage key.");
+  if (!lookupKey.trim() || !isSessionId(storageKey)) throw new Error("Invalid session ID.");
   const existing = readSessionStorageKey(spiritDataDir, lookupKey);
   if (existing) {
     if (existing !== storageKey)
@@ -103,14 +110,14 @@ export async function bindSessionStorageKey(
 export async function ensureSessionStorageKey(
   spiritDataDir: string,
   lookupKey: string,
+  sessionId = createSessionId(),
 ): Promise<string> {
   if (!lookupKey.trim()) throw new Error("A session lookup key is required.");
+  if (!isSessionId(sessionId)) throw new Error("Invalid session ID.");
   const existing = readSessionStorageKey(spiritDataDir, lookupKey);
   if (existing) return existing;
-  // Adopting the existing directory preserves every previously issued transcript path.
-  const storageKey = `storage_${sessionLookupHash(lookupKey)}`;
-  await bindSessionStorageKey(spiritDataDir, lookupKey, storageKey);
-  return storageKey;
+  await bindSessionStorageKey(spiritDataDir, lookupKey, sessionId);
+  return sessionId;
 }
 
 export async function deleteSessionStorageReferences(

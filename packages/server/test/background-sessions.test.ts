@@ -15,6 +15,7 @@ import {
   createBackgroundTaskOwner,
   ensureSessionStorageKey,
   FileBackgroundTaskStore,
+  isSessionId,
   readSessionStorageKey,
   RuntimeSessionStore,
 } from "@spiritagent/host-internal";
@@ -523,11 +524,11 @@ it("restores interrupted work and its UI timeline without invoking the model or 
   const owner = await createBackgroundTaskOwner(dataDir);
   const tasks = new FileBackgroundTaskStore({
     spiritDataDir: dataDir,
-    sessionKey: storageKey,
+    ownerSessionId: storageKey,
     owner: owner.owner,
   });
   const task = await tasks.create({
-    sessionKey: storageKey,
+    ownerSessionId: storageKey,
     runtimeId: "main",
     toolCallId: "orphan",
     kind: "shell",
@@ -537,7 +538,7 @@ it("restores interrupted work and its UI timeline without invoking the model or 
   await tasks.save({ ...task, status: "running", background: true, elapsedMs: 175 });
   await new RuntimeSessionStore(dataDir, storageKey).save({
     version: 1,
-    sessionKey: storageKey,
+    sessionId: storageKey,
     workspaceRoot,
     agentMode: "plan",
     initialized: true,
@@ -815,7 +816,7 @@ it("creates and continues native subagent sessions by ID", async () => {
     context: first.context,
   });
   const targetId = first.updates[0]?.sessionId;
-  expect(targetId).toMatch(/^sess_/);
+  expect(targetId && isSessionId(targetId)).toBe(true);
   if (!targetId) throw new Error("Missing delegated session ID.");
   expect(created.output.summaryText).toContain("Reply 1");
   expect(created.output.summaryText).toContain(targetId);

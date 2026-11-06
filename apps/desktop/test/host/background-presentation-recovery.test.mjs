@@ -226,7 +226,7 @@ test("child events never enter the parent's event drain", () => {
 test("native session archives refresh independently and retain their latest summaries", async () => {
   let listener;
   let listedSessions = [];
-  const sessionId = `sess_${"a".repeat(32)}`;
+  const sessionId = "00000000-0000-4000-8000-000000000001";
   const nativeArchive = {
     summary: {
       sessionId,
@@ -322,7 +322,7 @@ test("native session archives refresh independently and retain their latest summ
 });
 
 test("native archives retain separate parent links for continued sessions", async () => {
-  const sessionId = `sess_${"b".repeat(32)}`;
+  const sessionId = "00000000-0000-4000-8000-000000000002";
   const summaries = ["delegate-first", "delegate-second"].map((parentToolCallId) => ({
     sessionId,
     parentToolCallId,

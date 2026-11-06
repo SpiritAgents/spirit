@@ -7,6 +7,7 @@ import { RuntimeSessionStore, type RuntimePresentationState } from "./runtime-se
 import {
   bindSessionStorageKey,
   ensureSessionStorageKey,
+  isSessionId,
   readSessionStorageKey,
 } from "./session-storage-identity.js";
 import { deleteTranscriptSessionDir, resolveTranscriptSessionDir } from "./transcript.js";
@@ -29,14 +30,16 @@ it("keeps running task files and runtime recovery stable when a conversation get
   const provisional = "ephemeral-session";
   const permanent = path.join(root, "chat.json");
   const key = await ensureSessionStorageKey(root, provisional);
+  expect(isSessionId(key)).toBe(true);
+  expect(resolveTranscriptSessionDir(root, key)).toBe(path.join(root, "transcripts", key));
   expect(await ensureSessionStorageKey(root, provisional)).toBe(key);
   const tasks = new FileBackgroundTaskStore({
     spiritDataDir: root,
-    sessionKey: key,
+    ownerSessionId: key,
     owner: { id: "owner", pid: process.pid },
   });
   const task = await tasks.create({
-    sessionKey: key,
+    ownerSessionId: key,
     runtimeId: "main",
     toolCallId: "call",
     kind: "shell",
@@ -47,7 +50,7 @@ it("keeps running task files and runtime recovery stable when a conversation get
   const runtimeStore = new RuntimeSessionStore(root, key);
   const state = {
     version: 1 as const,
-    sessionKey: key,
+    sessionId: key,
     workspaceRoot: root,
     agentMode: "plan" as const,
     initialized: true,
@@ -66,7 +69,7 @@ it("keeps running task files and runtime recovery stable when a conversation get
   expect(
     await new FileBackgroundTaskStore({
       spiritDataDir: root,
-      sessionKey: key,
+      ownerSessionId: key,
       owner: { id: "new-owner", pid: process.pid },
     }).list(),
   ).toHaveLength(1);
@@ -108,7 +111,7 @@ it.each<RuntimePresentationState>([
   const store = new RuntimeSessionStore(root, "journal");
   await store.save({
     version: 1,
-    sessionKey: "journal",
+    sessionId: "journal",
     workspaceRoot: root,
     agentMode: "agent",
     initialized: true,

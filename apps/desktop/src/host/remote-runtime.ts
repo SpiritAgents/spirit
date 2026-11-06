@@ -29,7 +29,7 @@ import type {
   HostDreamScope,
   HostDreamSourceSessionRef,
 } from "@spiritagent/host-internal";
-import { loadModelProfile } from "@spiritagent/host-internal";
+import { isSessionId, loadModelProfile } from "@spiritagent/host-internal";
 import {
   connectOrSpawnServer,
   type ServerNotificationListener,
@@ -115,7 +115,7 @@ interface SessionCreateResult {
 }
 
 function isNativeDesktopSessionId(sessionId: string): boolean {
-  return /^sess_[0-9a-f]{32}$/u.test(sessionId);
+  return isSessionId(sessionId);
 }
 
 function childArchiveIdentity(entry: RuntimeSubagentSessionArchiveEntry): string {

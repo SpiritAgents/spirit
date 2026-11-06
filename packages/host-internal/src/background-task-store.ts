@@ -70,7 +70,7 @@ function isTaskRecord(value: unknown): value is BackgroundTaskRecord {
   const record = value as Record<string, unknown>;
   const strings = [
     "id",
-    "sessionKey",
+    "ownerSessionId",
     "runtimeId",
     "toolCallId",
     "input",
@@ -128,7 +128,7 @@ function isTaskRecord(value: unknown): value is BackgroundTaskRecord {
 
 export interface FileBackgroundTaskStoreOptions {
   spiritDataDir: string;
-  sessionKey: string;
+  ownerSessionId: string;
   owner: BackgroundTaskRecord["owner"];
 }
 
@@ -136,9 +136,9 @@ export class FileBackgroundTaskStore implements BackgroundTaskStore {
   readonly directory: string;
 
   constructor(private readonly options: FileBackgroundTaskStoreOptions) {
-    if (!options.sessionKey.trim()) throw new Error("Background tasks require a session key.");
+    if (!options.ownerSessionId.trim()) throw new Error("Background tasks require a session ID.");
     this.directory = path.join(
-      resolveTranscriptSessionDir(options.spiritDataDir, options.sessionKey),
+      resolveTranscriptSessionDir(options.spiritDataDir, options.ownerSessionId),
       BACKGROUND_TASKS_DIR_NAME,
     );
   }
@@ -160,7 +160,7 @@ export class FileBackgroundTaskStore implements BackgroundTaskStore {
     if (!isTaskRecord(value)) throw new Error(`Invalid background task record: ${expectedId}`);
     if (
       value.id !== expectedId ||
-      value.sessionKey !== this.options.sessionKey ||
+      value.ownerSessionId !== this.options.ownerSessionId ||
       value.outputPath !== this.outputPath(value)
     )
       throw new Error(`Background task identity or path mismatch: ${expectedId}`);
@@ -174,7 +174,8 @@ export class FileBackgroundTaskStore implements BackgroundTaskStore {
   }
 
   async create(input: BackgroundTaskCreateInput): Promise<BackgroundTaskRecord> {
-    if (input.sessionKey !== this.options.sessionKey) throw new Error("Task session mismatch.");
+    if (input.ownerSessionId !== this.options.ownerSessionId)
+      throw new Error("Task session mismatch.");
     await mkdir(this.directory, { recursive: true, mode: 0o700 });
     for (;;) {
       const id = `task_${randomBytes(6).toString("hex")}`;

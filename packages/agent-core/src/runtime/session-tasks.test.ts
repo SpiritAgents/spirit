@@ -57,7 +57,7 @@ function fixture() {
     },
   };
   const errors = vi.fn();
-  const manager = new SessionTaskManager({ sessionKey: "test", store, onError: errors });
+  const manager = new SessionTaskManager({ ownerSessionId: "test", store, onError: errors });
   const scope = { runtimeId: "main" };
   const input = {
     runtimeId: "main",
@@ -337,7 +337,7 @@ describe("session task lifecycle", () => {
     });
     await manager.initialResult(id, scope, { delay: 0 });
     await vi.advanceTimersByTimeAsync(1000);
-    const restored = new SessionTaskManager({ sessionKey: "test", store, onError: vi.fn() });
+    const restored = new SessionTaskManager({ ownerSessionId: "test", store, onError: vi.fn() });
     await restored.restore();
     expect(restored.hasActive(scope)).toBe(false);
     expect(restored.pendingNotifications(scope)).toHaveLength(1);

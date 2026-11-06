@@ -24,6 +24,7 @@ import type { BridgeRuntimeSnapshot } from "@spiritagent/agent-core/host-bridge"
 import {
   createHostTodoStore,
   createBackgroundTaskOwner,
+  createSessionId,
   createSubagentWorkspaceBootstrap,
   readSessionStorageKey,
   resolveSubagentTranscriptFilePath,
@@ -392,9 +393,11 @@ export class SessionManager {
       }
     }
 
-    const sessionId = params.sessionId?.trim() || `sess_${randomUUID().replaceAll("-", "")}`;
-    // Transcript / basicInfo sessionKey: prefer conversationKey (chat path) so Desktop can
-    // resolve transcript.json from listSessions without a sess_* mapping.
+    const sessionId =
+      params.sessionId?.trim() ||
+      (trimmedKey ? readSessionStorageKey(this.spiritDataDir, trimmedKey) : undefined) ||
+      createSessionId();
+    // Transcript lookup prefers conversationKey (chat path); its alias resolves to sessionId.
     const transcriptSessionKey = trimmedKey || sessionId;
     const runtimeResult = await createServerRuntime({
       workspaceRoot: params.workspaceRoot,
@@ -708,7 +711,7 @@ export class SessionManager {
     return current.reconfigure({
       workspaceRoot,
       spiritDataDir: this.spiritDataDir,
-      sessionKey: current.storageSessionKey,
+      sessionKey: current.sessionId,
       agentMode: current.agentModeSnapshot(),
       ...(session.createParams.modelRef ? { modelRef: session.createParams.modelRef } : {}),
       todoSessionKey: session.todoSessionKey,
@@ -1851,7 +1854,7 @@ export class SessionManager {
       const fresh = await old.reconfigure({
         workspaceRoot: session.createParams.workspaceRoot,
         spiritDataDir: this.spiritDataDir,
-        sessionKey: old.storageSessionKey,
+        sessionKey: old.sessionId,
         agentMode: mode,
         ...(session.createParams.modelRef ? { modelRef: session.createParams.modelRef } : {}),
         todoSessionKey: session.todoSessionKey,

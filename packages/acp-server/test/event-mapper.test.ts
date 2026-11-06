@@ -11,7 +11,7 @@ test("background tasks keep distinct IDs, bounded output, and terminal metadata"
   const task: BackgroundTaskRecord = {
     version: 1,
     id: "task_000000000001",
-    sessionKey: "session",
+    ownerSessionId: "session",
     runtimeId: "main",
     toolCallId: "call_1",
     kind: "shell",

@@ -82,6 +82,7 @@ import {
   type RuntimeSessionLease,
   type RuntimeSessionState,
   ensureSessionStorageKey,
+  createSessionId,
   bindSessionStorageKey,
   readSessionStorageKey,
   ensureBuiltInExtensions,
@@ -233,7 +234,7 @@ interface ServerRuntimeBindings {
 
 export interface ServerRuntimeResult extends ServerRuntimeBindings {
   presentation: PresentationJournal;
-  storageSessionKey: string;
+  sessionId: string;
   workspaceRoot: string;
   sessionKind?: ServerSessionKind;
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
@@ -271,21 +272,25 @@ const builtInSeededTrees = new Set<string>();
 export async function createServerRuntime(
   options: ServerRuntimeOptions,
 ): Promise<ServerRuntimeResult> {
-  const storageSessionKey = options.requireExisting
+  const sessionId = options.requireExisting
     ? readSessionStorageKey(options.spiritDataDir, options.sessionKey)
-    : await ensureSessionStorageKey(options.spiritDataDir, options.sessionKey);
-  if (!storageSessionKey) throw new Error("Stored session not found.");
+    : await ensureSessionStorageKey(
+        options.spiritDataDir,
+        options.sessionKey,
+        options.sessionId ?? createSessionId(),
+      );
+  if (!sessionId) throw new Error("Stored session not found.");
   if (options.sessionId) {
-    await bindSessionStorageKey(options.spiritDataDir, options.sessionId, storageSessionKey);
+    await bindSessionStorageKey(options.spiritDataDir, options.sessionId, sessionId);
   }
-  const sessionStore = new RuntimeSessionStore(options.spiritDataDir, storageSessionKey);
+  const sessionStore = new RuntimeSessionStore(options.spiritDataDir, sessionId);
   const owner = options.taskOwner ?? (await createBackgroundTaskOwner(options.spiritDataDir));
   const executors = new Set<HostToolExecutorProxy>();
   let lease: RuntimeSessionLease | undefined;
   try {
     const sessionLease = await acquireRuntimeSessionLease(
       options.spiritDataDir,
-      storageSessionKey,
+      sessionId,
       owner.owner,
     );
     lease = sessionLease;
@@ -320,7 +325,7 @@ export async function createServerRuntime(
       const activePlanPath = result.activePlanPathSnapshot();
       await sessionStore.save({
         version: 1,
-        sessionKey: storageSessionKey,
+        sessionId: sessionId,
         workspaceRoot: result.workspaceRoot,
         agentMode: result.agentModeSnapshot(),
         ...(modelRef ? { modelRef } : {}),
@@ -338,7 +343,7 @@ export async function createServerRuntime(
     };
     const taskStore = new FileBackgroundTaskStore({
       spiritDataDir: options.spiritDataDir,
-      sessionKey: storageSessionKey,
+      ownerSessionId: sessionId,
       owner: owner.owner,
     });
     await taskStore.recoverInterrupted((identity) =>
@@ -348,7 +353,7 @@ export async function createServerRuntime(
       throw new Error("This session has active tasks in another runtime. Reconnect to that host.");
     }
     const tasks = new SessionTaskManager({
-      sessionKey: storageSessionKey,
+      ownerSessionId: sessionId,
       store: taskStore,
       onChanged: (task) => {
         onEvent({ kind: "background-task-changed", task });
@@ -364,7 +369,7 @@ export async function createServerRuntime(
     const prepared = await prepareServerRuntime({
       ...options,
       onEvent,
-      sessionKey: storageSessionKey,
+      sessionKey: sessionId,
       ...(sessionKind ? { sessionKind } : {}),
       ...(modelRef ? { modelRef } : {}),
       ...(saved ? { agentMode: saved.agentMode } : {}),
@@ -398,7 +403,7 @@ export async function createServerRuntime(
         workLocation,
         ...(worktreePath ? { worktreePath } : {}),
         ...(worktreeBranch ? { worktreeBranch } : {}),
-        storageSessionKey,
+        sessionId,
         restoredFromDisk: saved?.initialized === true,
         restoredDesktopTimeline: desktopTimeline,
         tasks,
@@ -411,7 +416,7 @@ export async function createServerRuntime(
           const fresh = await prepareServerRuntime({
             ...next,
             onEvent,
-            sessionKey: storageSessionKey,
+            sessionKey: sessionId,
             ...(activePlanPath ? { activePlanPath } : {}),
           });
           configurePreparedRuntime(fresh);

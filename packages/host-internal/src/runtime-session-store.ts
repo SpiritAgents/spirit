@@ -18,7 +18,7 @@ export interface RuntimePresentationState {
 
 export interface RuntimeSessionState {
   version: 1;
-  sessionKey: string;
+  sessionId: string;
   workspaceRoot: string;
   agentMode: AgentMode;
   modelRef?: import("./config.js").ModelRef;
@@ -45,10 +45,10 @@ export class RuntimeSessionStore {
 
   constructor(
     private readonly spiritDataDir: string,
-    private readonly sessionKey: string,
+    private readonly sessionId: string,
   ) {
     this.file = path.join(
-      resolveTranscriptSessionDir(spiritDataDir, sessionKey),
+      resolveTranscriptSessionDir(spiritDataDir, sessionId),
       "background-tasks",
       "runtime-session.json",
     );
@@ -64,8 +64,8 @@ export class RuntimeSessionStore {
     }
     if (
       !isRuntimeSessionState(value) ||
-      resolveTranscriptSessionDir(this.spiritDataDir, value.sessionKey) !==
-        resolveTranscriptSessionDir(this.spiritDataDir, this.sessionKey)
+      resolveTranscriptSessionDir(this.spiritDataDir, value.sessionId) !==
+        resolveTranscriptSessionDir(this.spiritDataDir, this.sessionId)
     ) {
       throw new Error("Invalid persisted runtime session.");
     }
@@ -89,8 +89,8 @@ function isRuntimeSessionState(value: unknown): value is RuntimeSessionState {
     value === null ||
     !("version" in value) ||
     value.version !== 1 ||
-    !("sessionKey" in value) ||
-    typeof value.sessionKey !== "string" ||
+    !("sessionId" in value) ||
+    typeof value.sessionId !== "string" ||
     !("workspaceRoot" in value) ||
     typeof value.workspaceRoot !== "string" ||
     !("agentMode" in value) ||

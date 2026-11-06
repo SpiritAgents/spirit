@@ -6,7 +6,7 @@ import { describe, it } from "vitest";
 
 import { setLlmFetchTransportOverrideForTests } from "@spiritagent/agent-core";
 import { setKeyringStoreForTests, providerInternalKeyAccount } from "@spiritagent/host-internal";
-import { readSessionStorageKey } from "@spiritagent/host-internal";
+import { isSessionId, readSessionStorageKey } from "@spiritagent/host-internal";
 
 import { SessionManager } from "../src/session-manager.js";
 
@@ -91,7 +91,7 @@ describe("SessionManager", () => {
         sessionKind: "subagent",
         subagentOrigin: origin,
       });
-      assert.ok(created.sessionId.startsWith("sess_"));
+      assert.ok(isSessionId(created.sessionId));
       assert.equal(created.sessionKind, "subagent");
       assert.deepEqual(created.subagentOrigin, origin);
       assert.ok(readSessionStorageKey(dataDir, created.sessionId));
@@ -130,7 +130,7 @@ describe("SessionManager", () => {
         workspaceRoot: tmpdir(),
         hostKind: "cli",
       });
-      assert.ok(created.sessionId.startsWith("sess_"));
+      assert.ok(isSessionId(created.sessionId));
       assert.equal(created.isBusy, false);
       assert.equal(created.approvalLevel, "default");
 
@@ -461,7 +461,7 @@ describe("SessionManager", () => {
       workspaceRoot: tmpdir(),
       hostKind: "cli",
     });
-    assert.ok(created.sessionId.startsWith("sess_"));
+    assert.ok(isSessionId(created.sessionId));
     assert.equal(created.model, "");
 
     await assert.rejects(
