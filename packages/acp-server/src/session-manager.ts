@@ -37,6 +37,7 @@ interface SessionSummary {
 }
 interface LiveSession extends AcpSessionState {
   result: AcpRuntimeResult;
+  agentWriter?: { ownerSessionId: string; toolCallId: string };
   operations: Promise<void>;
   pump: NodeJS.Timeout;
   polling: boolean;
@@ -236,7 +237,11 @@ export class SessionManager {
   ): Promise<StopReason> {
     const session = this.sessions.get(sessionId);
     if (!session || session.closing) throw new Error(`Session ${sessionId} not found`);
+    const agentWriter = session.agentWriter;
     this.cancel(sessionId);
+    if (agentWriter) {
+      session.agentWriter = agentWriter;
+    }
     const generation = session.generation;
     delete session.lastTurnResult;
     session.pendingPrompt = new AbortController();
@@ -263,6 +268,7 @@ export class SessionManager {
     const session = this.sessions.get(sessionId);
     if (!session) return;
     session.generation += 1;
+    delete session.agentWriter;
     session.pendingPrompt?.abort();
     session.pendingPrompt = null;
     session.runtime.abort();
@@ -297,6 +303,7 @@ export class SessionManager {
         if (result?.kind === "completed" || result?.kind === "failed") {
           await session.result.persist();
           if (generation !== session.generation) return;
+          delete session.agentWriter;
           session.lastTurnResult =
             result.kind === "completed"
               ? { assistantText: result.assistantText }
@@ -358,8 +365,20 @@ export class SessionManager {
     if (session.runtime.hasPendingApproval() || session.runtime.hasPendingQuestions()) {
       throw new Error("Answer the target session's pending approval or questionnaire first.");
     }
+    if (session.agentWriter) {
+      throw new Error("The target session is already being prompted by another agent.");
+    }
+    session.agentWriter = {
+      ownerSessionId: parentSessionId,
+      toolCallId: request.parentToolCallId,
+    };
     if (session.turnActive || session.waiter) {
-      throw new Error("The target session is busy; wait for the current turn to finish.");
+      this.cancel(target.sessionId);
+      await session.operations;
+      session.agentWriter = {
+        ownerSessionId: parentSessionId,
+        toolCallId: request.parentToolCallId,
+      };
     }
     const cancel = () => this.cancel(target.sessionId);
     request.context.signal.addEventListener("abort", cancel, { once: true });
@@ -387,6 +406,7 @@ export class SessionManager {
       };
     } finally {
       request.context.signal.removeEventListener("abort", cancel);
+      delete session.agentWriter;
     }
   }
 

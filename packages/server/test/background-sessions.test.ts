@@ -248,7 +248,7 @@ it.each(["approval", "questions"] as const)(
 
 it("starts two streamed default-delay shells before either hands off", async () => {
   const { root, dataDir, workspaceRoot } = await fixture();
-  const { manager, finished } = managerFor(dataDir);
+  const { manager } = managerFor(dataDir);
   const requests = scriptedModel(() =>
     response(
       "",
@@ -286,7 +286,7 @@ it("starts two streamed default-delay shells before either hands off", async () 
 
 it("restores offline background replies after the acknowledged UI checkpoint without running the model", async () => {
   const { root, dataDir, workspaceRoot } = await fixture();
-  const { manager, finished } = managerFor(dataDir);
+  const { manager } = managerFor(dataDir);
   const gate = path.join(root, "release");
   const requests = scriptedModel((_body, index) =>
     index === 0
@@ -811,4 +811,87 @@ it("creates and continues native subagent sessions by ID", async () => {
   expect(JSON.stringify(archive)).toContain("Second continuation");
   expect(JSON.stringify(archive)).toContain("Reply 2");
   expect(replies).toBe(2);
+});
+
+it("rejects a second agent while a target turn is active and allows the next one", async () => {
+  const { dataDir, workspaceRoot } = await fixture();
+  const { manager } = managerFor(dataDir);
+  const firstParent = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
+  const secondParent = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
+  const target = await manager.createSession({
+    workspaceRoot,
+    hostKind: "desktop",
+    sessionKind: "subagent",
+    subagentOrigin: { parentSessionId: firstParent.sessionId, parentToolCallId: "call-target" },
+  });
+  let releaseFirst!: () => void;
+  let calls = 0;
+  setLlmFetchTransportOverrideForTests(async () => {
+    calls += 1;
+    if (calls === 1) {
+      return new Promise<Response>((resolve) => {
+        releaseFirst = () => resolve(response("First done"));
+      });
+    }
+    return response("Next done");
+  });
+  const first = delegatedContext();
+  const firstPromise = manager.delegateSubagentTurn(firstParent.sessionId, {
+    sessionId: target.sessionId,
+    prompt: "First writer",
+    parentToolCallId: "call-first",
+    context: first.context,
+  });
+  await waitUntil(() => calls === 1);
+  await expect(
+    manager.delegateSubagentTurn(secondParent.sessionId, {
+      sessionId: target.sessionId,
+      prompt: "Second writer",
+      parentToolCallId: "call-second",
+      context: delegatedContext().context,
+    }),
+  ).rejects.toThrow(/already being prompted by another agent/);
+  releaseFirst();
+  await firstPromise;
+
+  await manager.delegateSubagentTurn(secondParent.sessionId, {
+    sessionId: target.sessionId,
+    prompt: "Third writer",
+    parentToolCallId: "call-third",
+    context: delegatedContext().context,
+  });
+  const archive = manager.exportArchive(target.sessionId, [], []);
+  expect(JSON.stringify(archive)).toContain("First writer");
+  expect(JSON.stringify(archive)).not.toContain("Second writer");
+  expect(JSON.stringify(archive)).toContain("Third writer");
+});
+
+it("interrupts an ordinary target turn before continuing it", async () => {
+  const { dataDir, workspaceRoot } = await fixture();
+  const { manager, finished } = managerFor(dataDir);
+  const parent = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
+  const target = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
+  let calls = 0;
+  setLlmFetchTransportOverrideForTests(async () => {
+    calls += 1;
+    return response("Continued reply");
+  });
+  const internal = manager["sessions"].get(target.sessionId)!;
+  internal.turnActive = true;
+  internal.runtimeResult.runtime.replaceHistory([
+    ...internal.runtimeResult.runtime.history(),
+    { role: "user", content: [{ type: "text", text: "Ordinary old turn" }] },
+  ]);
+  const continuation = manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: target.sessionId,
+    prompt: "Continued turn",
+    parentToolCallId: "call-continue",
+    context: delegatedContext().context,
+  });
+  const result = await continuation;
+  expect(result.output.summaryText).toContain("Continued reply");
+  expect(finished).toContain("cancelled");
+  const archive = manager.exportArchive(target.sessionId, [], []);
+  expect(JSON.stringify(archive)).toContain("Ordinary old turn");
+  expect(JSON.stringify(archive)).toContain("Continued turn");
 });

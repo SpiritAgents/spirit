@@ -461,3 +461,54 @@ it("continues native subagent sessions with normal user turns", async () => {
   expect(requests).toBe(2);
   await manager.shutdown();
 });
+
+it("rejects a second agent while an ACP target turn is active and allows the next one", async () => {
+  const { config } = await fixture();
+  const manager = new SessionManager(config);
+  const firstParent = await manager.createSession(config.workspaceRoot, () => {});
+  const secondParent = await manager.createSession(config.workspaceRoot, () => {});
+  const target = await manager.createSession(config.workspaceRoot, () => {}, "agent", {
+    sessionKind: "subagent",
+    subagentOrigin: { parentSessionId: firstParent.sessionId, parentToolCallId: "call-target" },
+  });
+  let releaseFirst!: () => void;
+  let calls = 0;
+  setLlmFetchTransportOverrideForTests(async () => {
+    calls += 1;
+    if (calls === 1) {
+      return new Promise<Response>((resolve) => {
+        releaseFirst = () => resolve(response());
+      });
+    }
+    return response();
+  });
+  const firstPromise = manager.delegateSubagentTurn(firstParent.sessionId, {
+    sessionId: target.sessionId,
+    prompt: "First writer",
+    parentToolCallId: "call-first",
+    context: delegatedContext().context,
+  });
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await expect(
+    manager.delegateSubagentTurn(secondParent.sessionId, {
+      sessionId: target.sessionId,
+      prompt: "Second writer",
+      parentToolCallId: "call-second",
+      context: delegatedContext().context,
+    }),
+  ).rejects.toThrow(/already being prompted by another agent/);
+  releaseFirst();
+  await firstPromise;
+
+  await manager.delegateSubagentTurn(secondParent.sessionId, {
+    sessionId: target.sessionId,
+    prompt: "Third writer",
+    parentToolCallId: "call-third",
+    context: delegatedContext().context,
+  });
+  const history = manager.getSession(target.sessionId)!.runtime.history();
+  expect(JSON.stringify(history)).toContain("First writer");
+  expect(JSON.stringify(history)).not.toContain("Second writer");
+  expect(JSON.stringify(history)).toContain("Third writer");
+  await manager.shutdown();
+});

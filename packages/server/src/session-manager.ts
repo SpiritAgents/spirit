@@ -103,6 +103,7 @@ interface PendingTrustRequest {
 interface ServerSession {
   info: ServerSessionInfo;
   runtimeResult: ServerRuntimeResult;
+  agentWriter?: { ownerSessionId: string; toolCallId: string };
   /** Incremented per turn; stale completions drop their broadcast. */
   turnGeneration: number;
   queue: QueuedUserTurn[];
@@ -510,8 +511,20 @@ export class SessionManager {
     if (runtime.hasPendingApproval() || runtime.hasPendingQuestions()) {
       throw new Error("Answer the target session's pending approval or questionnaire first.");
     }
+    if (targetSession.agentWriter) {
+      throw new Error("The target session is already being prompted by another agent.");
+    }
+    targetSession.agentWriter = {
+      ownerSessionId: parentSessionId,
+      toolCallId: request.parentToolCallId,
+    };
     if (runtime.isBusy() || targetSession.turnActive) {
-      throw new Error("The target session is busy; wait for the current turn to finish.");
+      this.abort(target.sessionId);
+      await targetSession.operations;
+      targetSession.agentWriter = {
+        ownerSessionId: parentSessionId,
+        toolCallId: request.parentToolCallId,
+      };
     }
     const completion = this.waitForAgentTurn(target.sessionId);
     const cancel = () => this.abort(target.sessionId);
@@ -547,6 +560,7 @@ export class SessionManager {
         failed: result.failed,
       };
     } catch (error) {
+      delete targetSession.agentWriter;
       this.failAgentTurnWaiters(target.sessionId, error);
       throw error;
     } finally {
@@ -1048,6 +1062,7 @@ export class SessionManager {
     session.turnActive = false;
     session.idleTicksWhileActive = 0;
     session.info.isBusy = false;
+    delete session.agentWriter;
     await session.runtimeResult.persist();
     this.callbacks.broadcastTurnFinished(session.info.sessionId, stopReason, result);
     this.callbacks.broadcastSnapshot(session.info.sessionId, this.snapshotForSession(session));
@@ -1091,6 +1106,7 @@ export class SessionManager {
   abort(sessionId: string): void {
     const session = this.requireSession(sessionId);
     session.turnGeneration += 1;
+    delete session.agentWriter;
     session.runtimeResult.runtime.abort();
     session.turnActive = false;
     session.idleTicksWhileActive = 0;
@@ -1778,6 +1794,7 @@ export class SessionManager {
       return;
     }
     this.failAgentTurnWaiters(sessionId, new Error("The target session was closed."));
+    delete session.agentWriter;
     session.closing = true;
     const conversationKey = session.info.conversationKey?.trim();
     if (conversationKey && this.conversationIndex.get(conversationKey) === sessionId) {
