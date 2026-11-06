@@ -438,6 +438,7 @@ import {
 } from "./sessions.js";
 import { prepareSessionTitleForFirstUserTurn as resetSessionTitleForFirstUserTurn } from "./session-title-first-turn.js";
 import { applyGeneratedSessionTitle } from "./session-title-service.js";
+import { isForegroundProvisionalSessionPath } from "../lib/session-path-kind.js";
 import {
   abortCodeCompletionCommand,
   recordCodeCompletionFileStateCommand,
@@ -3184,9 +3185,17 @@ export class DesktopHostService {
     };
     try {
       const previousSessionId = remoteDesktopSessionId(previousRuntime);
-      const runtime = conversationKey
-        ? await openRemoteDesktopRuntime({ ...remoteRuntimeInput, conversationKey })
-        : await createRemoteDesktopRuntime(remoteRuntimeInput);
+      // A reused draft path may still alias an older transcript. Start a fresh daemon identity;
+      // first-send promotion binds the stable chat path to that identity instead.
+      const freshForegroundDraft =
+        conversationKey !== undefined &&
+        isForegroundProvisionalSessionPath(conversationKey) &&
+        desktopMessages.length === 0;
+      const runtime = freshForegroundDraft
+        ? await createRemoteDesktopRuntime(remoteRuntimeInput)
+        : conversationKey
+          ? await openRemoteDesktopRuntime({ ...remoteRuntimeInput, conversationKey })
+          : await createRemoteDesktopRuntime(remoteRuntimeInput);
       runtime.setLoopEnabled(bundle.loopEnabled);
       bundle.runtime = runtime;
       const restoredPresentation = runtime.takeRestoredPresentation();

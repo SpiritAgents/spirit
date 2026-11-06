@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
+import path from "node:path";
 import { afterEach, test, vi } from "vitest";
 
 import { createEmptySessionBundle } from "../../dist-electron/src/host/session-bundle.js";
-import { loadConfig, saveConfig, spiritDataDir } from "../../dist-electron/src/host/storage.js";
+import {
+  loadConfig,
+  provisionalNewSessionPath,
+  saveConfig,
+  spiritDataDir,
+} from "../../dist-electron/src/host/storage.js";
 import { closeSharedDesktopServerClient } from "../../dist-electron/src/host/remote-runtime.js";
 import { DesktopHostService } from "../../dist-electron/src/host/service.js";
 import {
@@ -17,6 +23,7 @@ const daemon = vi.hoisted(() => ({
   listeners: new Set(),
   failure: undefined,
   archive: undefined,
+  freshCreate: false,
 }));
 
 vi.mock("@spiritagent/server/client", () => ({
@@ -27,14 +34,24 @@ vi.mock("@spiritagent/server/client", () => ({
         switch (method) {
           case "server.initialize":
           case "session.attach":
+            if (params.conversationKey) {
+              throw new Error("no live session for conversationKey");
+            }
+            return { ok: true };
           case "session.setLoopEnabled":
           case "session.pushDesktopTimeline":
           case "session.submitUserTurn":
           case "session.detach":
           case "session.replaceFromArchive":
+          case "session.migrateConversationKey":
+          case "session.runSessionEnd":
+          case "session.runSessionStart":
             return { ok: true };
           case "session.create":
             if (daemon.failure) throw daemon.failure;
+            if (daemon.freshCreate && !params.conversationKey) {
+              daemon.archive = { ...daemon.archive, desktopMessageTimeline: [] };
+            }
             return { sessionId: "test-session" };
           case "session.poll":
             return {
@@ -72,6 +89,7 @@ afterEach(async () => {
   daemon.calls = [];
   daemon.listeners.clear();
   daemon.failure = undefined;
+  daemon.freshCreate = false;
 });
 
 async function withHostService(run) {
@@ -184,6 +202,42 @@ test("a fresh empty daemon timeline initializes the runtime and permits the firs
     const submitted = daemon.calls.find((call) => call.method === "session.submitUserTurn");
     assert.equal(submitted.params.text, "First request.");
     assert.equal(submitted.params.sessionId, "test-session");
+  });
+});
+
+test("an empty foreground draft creates a fresh runtime instead of restoring its provisional key", async () => {
+  await withHostService(async ({ service, bundle }) => {
+    const provisionalPath = provisionalNewSessionPath(bundle.workspaceRoot);
+    bundle.id = provisionalPath;
+    bundle.activeSession = {
+      filePath: provisionalPath,
+      displayName: "New conversation",
+      kind: "stored",
+    };
+    daemon.archive.desktopMessageTimeline = timelineWithUser("Old transcript");
+    daemon.freshCreate = true;
+
+    await service["refreshRuntimeForBundle"](bundle);
+
+    const created = daemon.calls.find((call) => call.method === "session.create");
+    assert.equal(created.params.conversationKey, undefined);
+    assert.deepEqual(bundle.messageTimeline.toMessages(), []);
+
+    service["promoteProvisionalSessionIfNeeded"]("First request", bundle);
+    const promotedPath = bundle.activeSession.filePath;
+    assert.notEqual(promotedPath, provisionalPath);
+    assert.equal(service["sessionRegistry"].findBySessionPath(promotedPath), bundle);
+    assert.equal(
+      daemon.calls.find((call) => call.method === "session.migrateConversationKey").params
+        .conversationKey,
+      path.resolve(promotedPath),
+    );
+
+    await service.submitUserTurn({ text: "First request", sessionPath: promotedPath });
+    assert.equal(
+      daemon.calls.find((call) => call.method === "session.submitUserTurn").params.sessionId,
+      "test-session",
+    );
   });
 });
 

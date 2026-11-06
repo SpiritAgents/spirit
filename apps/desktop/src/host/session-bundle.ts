@@ -202,6 +202,8 @@ export function sessionBundleFromRestored(
 }
 
 export function resetSessionBundleInPlace(bundle: SessionBundle): void {
+  // A fresh draft must not reuse the previous conversation's live runtime without reinitialization.
+  bundle.runtimeActivationSignature = undefined;
   bundle.activeSession = undefined;
   bundle.messages = [];
   bundle.messageTimeline = TimelineCtor.fromMessages([], {
