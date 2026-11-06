@@ -114,6 +114,7 @@ fn build_view_model(message: ChatMessage) -> TuiViewModel {
         bottom_form: None,
         history_offset_from_bottom: 0,
         pending_response_active: false,
+        move_background_hint_visible: false,
         pending_assistant_msg_index: None,
         pending_aux: None,
         thinking_spinner_index: 0,
@@ -326,6 +327,27 @@ fn footer_shows_mode_without_tab_toggle_hint() {
         approval_pos < loop_pos,
         "approval should appear before loop in footer"
     );
+}
+
+#[test]
+fn footer_prioritizes_the_move_background_hint_after_a_long_running_tool() {
+    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "working"));
+    app.move_background_hint_visible = true;
+    app.pending_response_active = true;
+    app.pending_aux = Some(PendingAssistantAux {
+        kind: AssistantAuxKind::Thinking,
+        status_text: "Thinking…".to_string(),
+        detail_text: None,
+    });
+
+    let footer = render_text_lines(vec![build_footer_line(&app, 160)]).join("\n");
+    let shortcut = if cfg!(target_os = "macos") {
+        "Ctrl+B / ⌘B"
+    } else {
+        "Ctrl+B"
+    };
+    assert!(footer.contains(t!("ui.footer.move_background_hint", shortcut = shortcut).as_ref()));
+    assert!(!footer.contains(t!("ui.footer.interrupt_reply_hint").as_ref()));
 }
 
 #[test]

@@ -274,6 +274,10 @@ impl RuntimeHandle {
         self.backend.abort()
     }
 
+    pub fn move_to_background(&mut self, tool_call_id: &str) -> Result<()> {
+        self.backend.move_to_background(tool_call_id)
+    }
+
     pub fn continue_assistant_completion(&mut self) -> Result<()> {
         self.backend.continue_assistant_completion()
     }

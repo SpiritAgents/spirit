@@ -1272,6 +1272,14 @@ fn process_key_event(
             }
         }
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => shell.request_quit(),
+        KeyCode::Char(ch)
+            if ch.eq_ignore_ascii_case(&'b')
+                && (key.modifiers.contains(KeyModifiers::CONTROL)
+                    || key.modifiers.contains(KeyModifiers::SUPER))
+                && !key.modifiers.contains(KeyModifiers::ALT) =>
+        {
+            shell.move_foreground_tool_to_background();
+        }
         KeyCode::Char('o') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             shell.toggle_aux_details()
         }

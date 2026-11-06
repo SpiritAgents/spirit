@@ -94,6 +94,7 @@ impl TuiShell {
             bottom_form: self.forms.active.clone(),
             history_offset_from_bottom: self.conversation.history_offset_from_bottom,
             pending_response_active: self.runtime.is_busy(),
+            move_background_hint_visible: self.move_background_hint.visible(Instant::now()),
             pending_assistant_msg_index: self.pending_assistant_msg_index,
             pending_aux: self.runtime.pending_aux_state(),
             thinking_spinner_index: self.thinking_spinner_index,

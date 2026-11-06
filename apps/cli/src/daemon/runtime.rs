@@ -657,6 +657,14 @@ impl DaemonRuntime {
         }
     }
 
+    pub fn move_to_background(&mut self, tool_call_id: &str) -> Result<()> {
+        self.call_daemon(
+            "session.moveToBackground",
+            Some(json!({ "toolCallId": tool_call_id })),
+        )?;
+        Ok(())
+    }
+
     pub fn continue_assistant_completion(&mut self) -> Result<()> {
         if self.daemon_failed {
             return Err(anyhow!(

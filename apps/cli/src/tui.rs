@@ -23,6 +23,7 @@ use crate::{
     locale, logging,
     mcp_types::{ManagedMcpServer, McpDiscoveredPrompt},
     model_registry::ModelTransportKind,
+    move_background::{MoveBackgroundHintState, first_moveable_background_tool_call_id},
     openai_models_list,
     plan::PlanMetadata,
     ports::{
@@ -84,6 +85,7 @@ pub struct TuiShell {
     show_aux_details: bool,
     pending_assistant_msg_index: Option<usize>,
     thinking_spinner_index: u8,
+    move_background_hint: MoveBackgroundHintState,
     last_completed_assistant_msg_index: Option<usize>,
     last_mcp_status_revision: u64,
     slash: slash::SlashState,
@@ -214,6 +216,7 @@ impl TuiShell {
             show_aux_details: true,
             pending_assistant_msg_index: None,
             thinking_spinner_index: 0,
+            move_background_hint: MoveBackgroundHintState::default(),
             last_completed_assistant_msg_index: None,
             last_mcp_status_revision: initial_mcp_status.revision,
             slash: slash::SlashState::new(),
@@ -448,6 +451,8 @@ impl TuiShell {
     }
 
     pub fn tick(&mut self) {
+        self.move_background_hint
+            .sync(&self.messages, Instant::now());
         if self.runtime.is_busy() {
             self.thinking_spinner_index = (self.thinking_spinner_index + 1) % 4;
         } else {
@@ -461,6 +466,19 @@ impl TuiShell {
 
     pub fn request_quit(&mut self) {
         self.should_quit = true;
+    }
+
+    pub fn move_foreground_tool_to_background(&mut self) {
+        let Some(tool_call_id) = first_moveable_background_tool_call_id(&self.messages) else {
+            return;
+        };
+        let tool_call_id = tool_call_id.to_string();
+        if let Err(err) = self.runtime.move_to_background(&tool_call_id) {
+            self.push_session_notice(
+                t!("tui.session.move_to_background_failed", err = err).into_owned(),
+            );
+        }
+        self.apply_runtime_events();
     }
 
     pub fn push_agent_message(&mut self, content: impl Into<String>) {

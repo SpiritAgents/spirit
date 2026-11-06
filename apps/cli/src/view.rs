@@ -423,6 +423,7 @@ pub struct TuiViewModel {
     pub bottom_form: Option<BottomFormView>,
     pub history_offset_from_bottom: usize,
     pub pending_response_active: bool,
+    pub move_background_hint_visible: bool,
     pub pending_assistant_msg_index: Option<usize>,
     pub pending_aux: Option<PendingAssistantAux>,
     pub thinking_spinner_index: u8,
