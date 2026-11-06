@@ -793,7 +793,7 @@ export class SessionManager {
   }
 
   /** Move a live session to a new conversation key (e.g. provisional → stable chat path). */
-  async migrateConversationKey(sessionId: string, nextKey: string): Promise<void> {
+  async migrateConversationKey(sessionId: string, nextKey: string): Promise<ServerSessionInfo> {
     const trimmed = nextKey.trim();
     if (!trimmed) {
       throw new Error("missing conversationKey");
@@ -801,7 +801,27 @@ export class SessionManager {
     const session = this.requireSession(sessionId);
     const previousKey = session.info.conversationKey?.trim();
     if (previousKey === trimmed) {
-      return;
+      return this.projectInfo(session);
+    }
+    const inflight = this.creatingByConversationKey.get(trimmed);
+    if (inflight) await inflight;
+    const operation = this.migrateConversationKeyInner(session, trimmed);
+    this.creatingByConversationKey.set(trimmed, operation);
+    try {
+      return await operation;
+    } finally {
+      this.creatingByConversationKey.delete(trimmed);
+    }
+  }
+
+  private async migrateConversationKeyInner(
+    session: ServerSession,
+    trimmed: string,
+  ): Promise<ServerSessionInfo> {
+    const sessionId = session.info.sessionId;
+    const previousKey = session.info.conversationKey?.trim();
+    if (previousKey === trimmed) {
+      return this.projectInfo(session);
     }
     const occupied = this.conversationIndex.get(trimmed);
     if (occupied && occupied !== sessionId) {
@@ -817,6 +837,7 @@ export class SessionManager {
     session.info.conversationKey = trimmed;
     this.conversationIndex.set(trimmed, sessionId);
     await session.runtimeResult.persist();
+    return this.projectInfo(session);
   }
 
   private resolveSessionId(params: AttachSessionParams): string {

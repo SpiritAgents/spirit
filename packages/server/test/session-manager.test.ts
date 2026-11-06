@@ -679,3 +679,31 @@ describe("SessionManager", () => {
     });
   });
 });
+
+it("serializes stable conversation creation with provisional promotion", async () => {
+  await withMockKeyring(async () => {
+    const dataDir = freshDataDir();
+    const manager = new SessionManager(dataDir, {
+      broadcastRuntimeEvent: () => {},
+      broadcastTurnFinished: () => {},
+      broadcastSnapshot: () => {},
+      broadcastTrustRequest: () => {},
+      broadcastFileChange: () => {},
+    });
+    const created = await manager.createSession({
+      workspaceRoot: tmpdir(),
+      hostKind: "desktop",
+      conversationKey: "ephemeral://provisional-race",
+    });
+    const stable = "ephemeral://stable-race";
+    const promoted = manager.migrateConversationKey(created.sessionId, stable);
+    const reopened = await manager.createSession({
+      workspaceRoot: tmpdir(),
+      hostKind: "desktop",
+      conversationKey: stable,
+    });
+    await promoted;
+    assert.equal(reopened.sessionId, created.sessionId);
+    await manager.shutdown();
+  });
+});
