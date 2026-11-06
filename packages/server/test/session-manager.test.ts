@@ -85,9 +85,12 @@ describe("SessionManager", () => {
       };
       const first = new SessionManager(dataDir, callbacks);
       const origin = { parentSessionId: "sess_parent", parentToolCallId: "call-1" };
+      const conversationKey = join(tmpdir(), "native-chat.json");
       const created = await first.createSession({
         workspaceRoot: tmpdir(),
         hostKind: "desktop",
+        title: "Original session title",
+        conversationKey,
         sessionKind: "subagent",
         subagentOrigin: origin,
       });
@@ -102,13 +105,21 @@ describe("SessionManager", () => {
       const resumed = await second.resumeSession(created.sessionId, tmpdir());
       assert.equal(resumed.sessionId, created.sessionId);
       assert.equal(resumed.sessionKind, "subagent");
+      assert.equal(resumed.title, "Original session title");
+      assert.equal(resumed.conversationKey, conversationKey);
       assert.deepEqual(resumed.subagentOrigin, origin);
       assert.deepEqual(second.listSessions(), []);
+      await second.rename(created.sessionId, "Renamed original session");
+      await second.shutdown();
+
+      const third = new SessionManager(dataDir, callbacks);
+      const renamed = await third.resumeSession(created.sessionId, tmpdir());
+      assert.equal(renamed.title, "Renamed original session");
       await assert.rejects(
-        second.resumeSession("sess_missing", tmpdir()),
+        third.resumeSession("sess_missing", tmpdir()),
         /Stored session not found/,
       );
-      await second.shutdown();
+      await third.shutdown();
     });
   });
 

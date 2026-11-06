@@ -126,6 +126,8 @@ export interface ServerRuntimeOptions {
   sessionKey: string;
   /** Stable session ID used to restore this runtime later. */
   sessionId?: string;
+  title?: string;
+  conversationKey?: string;
   /** Restore only from an existing persisted session; never create an empty replacement. */
   requireExisting?: boolean;
   taskOwner?: BackgroundTaskOwner;
@@ -235,6 +237,8 @@ interface ServerRuntimeBindings {
 export interface ServerRuntimeResult extends ServerRuntimeBindings {
   presentation: PresentationJournal;
   sessionId: string;
+  title?: string;
+  conversationKey?: string;
   workspaceRoot: string;
   sessionKind?: ServerSessionKind;
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
@@ -328,6 +332,8 @@ export async function createServerRuntime(
         sessionId: sessionId,
         workspaceRoot: result.workspaceRoot,
         agentMode: result.agentModeSnapshot(),
+        ...(result.title ? { title: result.title } : {}),
+        ...(result.conversationKey ? { conversationKey: result.conversationKey } : {}),
         ...(modelRef ? { modelRef } : {}),
         ...(sessionKind ? { sessionKind } : {}),
         ...(subagentOrigin ? { subagentOrigin } : {}),
@@ -365,6 +371,8 @@ export async function createServerRuntime(
       },
     });
     const sessionKind = options.sessionKind ?? saved?.sessionKind;
+    const title = options.title ?? saved?.title;
+    const conversationKey = options.conversationKey ?? saved?.conversationKey;
     let modelRef = options.modelRef ?? saved?.modelRef;
     const prepared = await prepareServerRuntime({
       ...options,
@@ -404,6 +412,8 @@ export async function createServerRuntime(
         ...(worktreePath ? { worktreePath } : {}),
         ...(worktreeBranch ? { worktreeBranch } : {}),
         sessionId,
+        ...(title ? { title } : {}),
+        ...(conversationKey ? { conversationKey } : {}),
         restoredFromDisk: saved?.initialized === true,
         restoredDesktopTimeline: desktopTimeline,
         tasks,

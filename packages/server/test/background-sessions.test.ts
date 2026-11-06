@@ -856,6 +856,30 @@ it("creates and continues native subagent sessions by ID", async () => {
   expect(replies).toBe(2);
 });
 
+it("keeps the target session title in native continuation archives", async () => {
+  const { dataDir, workspaceRoot } = await fixture();
+  const { manager } = managerFor(dataDir);
+  const parent = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
+  const target = await manager.createSession({
+    workspaceRoot,
+    hostKind: "desktop",
+    title: "Human-created session title",
+    conversationKey: "ephemeral://human-title",
+  });
+  setLlmFetchTransportOverrideForTests(async () => response("Continued reply"));
+
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: target.sessionId,
+    prompt: "New prompt",
+    parentToolCallId: "call-title",
+    context: delegatedContext().context,
+  });
+  const archive = await manager.subagentSessionArchive(parent.sessionId, target.sessionId);
+  expect(archive?.summary.title).toBe("Human-created session title");
+  expect(archive?.summary.title).not.toBe("New prompt");
+  expect(manager.getSession(target.sessionId)?.conversationKey).toBe("ephemeral://human-title");
+});
+
 it("rejects a second agent while a target turn is active and allows the next one", async () => {
   const { dataDir, workspaceRoot } = await fixture();
   const { manager } = managerFor(dataDir);

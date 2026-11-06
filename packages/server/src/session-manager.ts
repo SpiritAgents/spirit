@@ -221,6 +221,7 @@ export interface CreateSessionParams {
   workspaceRoot: string;
   hostKind: ServerClientKind;
   sessionId?: string;
+  title?: string;
   workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
   worktreePath?: string;
   worktreeBranch?: string;
@@ -404,6 +405,8 @@ export class SessionManager {
       spiritDataDir: this.spiritDataDir,
       sessionKey: transcriptSessionKey,
       sessionId,
+      ...(params.title?.trim() ? { title: params.title.trim() } : {}),
+      ...(trimmedKey ? { conversationKey: trimmedKey } : {}),
       subagentSessionDelegate: {
         execute: (request: SubagentSessionExecutionRequest) =>
           this.delegateSubagentTurn(sessionId, request),
@@ -439,11 +442,13 @@ export class SessionManager {
     if (params.agentMode) await runtimeResult.setAgentMode(params.agentMode);
     this.attachDesktopMcpUiOpener(sessionId, runtimeResult, params.hostKind);
 
+    const resolvedConversationKey = runtimeResult.conversationKey ?? trimmedKey;
     const info: ServerSessionInfo = {
       sessionId,
       workspaceRoot: runtimeResult.workspaceRoot,
       hostKind: params.hostKind,
       createdAt: new Date().toISOString(),
+      ...(runtimeResult.title ? { title: runtimeResult.title } : {}),
       isBusy: false,
       approvalLevel: params.approvalLevel ?? "default",
       model: runtimeResult.transportConfig.model,
@@ -455,7 +460,7 @@ export class SessionManager {
       ...(runtimeResult.worktreeBranch ? { worktreeBranch: runtimeResult.worktreeBranch } : {}),
       ...(runtimeResult.sessionKind ? { sessionKind: runtimeResult.sessionKind } : {}),
       ...(runtimeResult.subagentOrigin ? { subagentOrigin: runtimeResult.subagentOrigin } : {}),
-      ...(trimmedKey ? { conversationKey: trimmedKey } : {}),
+      ...(resolvedConversationKey ? { conversationKey: resolvedConversationKey } : {}),
     };
     const session: ServerSession = {
       info,
@@ -766,6 +771,16 @@ export class SessionManager {
   attachSession(clientId: string, params: AttachSessionParams): AttachSessionResult {
     const sessionId = this.resolveSessionId(params);
     const session = this.requireSession(sessionId);
+    const conversationKey = params.conversationKey?.trim();
+    if (conversationKey && session.info.conversationKey !== conversationKey) {
+      session.info.conversationKey = conversationKey;
+      session.runtimeResult.conversationKey = conversationKey;
+      void session.runtimeResult.persist().catch((error: unknown) => {
+        this.callbacks.log?.(
+          `session ${sessionId}: conversation metadata persistence failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
+    }
     let clients = this.attachments.get(sessionId);
     if (!clients) {
       clients = new Set();
@@ -1291,6 +1306,8 @@ export class SessionManager {
           return;
         }
         live.info.title = result.title;
+        live.runtimeResult.title = result.title;
+        void live.runtimeResult.persist();
         this.callbacks.broadcastTitleUpdated?.(sessionId, result.title);
       })
       .catch((error) => {
@@ -1487,14 +1504,18 @@ export class SessionManager {
     });
   }
 
-  rename(sessionId: string, title: string): void {
+  async rename(sessionId: string, title: string): Promise<void> {
     const session = this.requireSession(sessionId);
     const trimmed = title.trim();
     if (trimmed) {
       session.info.title = trimmed;
+      session.runtimeResult.title = trimmed;
     } else {
       delete session.info.title;
+      delete session.runtimeResult.title;
     }
+    await session.runtimeResult.persist();
+    if (trimmed) this.callbacks.broadcastTitleUpdated?.(sessionId, trimmed);
   }
 
   // ---------------------------------------------------- archive / restore
@@ -1828,7 +1849,10 @@ export class SessionManager {
       ...(target.info.worktreeBranch ? { worktreeBranch: target.info.worktreeBranch } : {}),
     };
     return {
-      summary: { ...summary },
+      summary: {
+        ...summary,
+        ...(target.info.title ? { title: target.info.title } : {}),
+      },
       llmHistory: [...target.runtimeResult.runtime.history()],
     };
   }

@@ -179,6 +179,7 @@ export interface SessionBasicInfoHost {
 export interface SessionCreateParams {
   workspaceRoot: string;
   sessionId?: string;
+  title?: string;
   /** Stable chat file path; re-create returns the existing live session. */
   conversationKey?: string;
   approvalLevel?: SessionApprovalLevel;

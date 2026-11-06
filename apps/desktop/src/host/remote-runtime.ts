@@ -76,6 +76,7 @@ interface RemoteDesktopRuntimeInput {
   webToolExposure?: { providerToolsEnabled: boolean; webFetchEnabled: boolean };
   /** Resolved chat file path for multi-host session identity. */
   conversationKey?: string;
+  title?: string;
   workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
   worktreePath?: string;
   worktreeBranch?: string;
@@ -340,6 +341,12 @@ export async function attachRemoteDesktopRuntime(
     await client.call("session.close", { sessionId: synced.session.sessionId });
     throw new Error(`stale daemon workspace for conversationKey: ${input.conversationKey}`);
   }
+  if (input.title?.trim()) {
+    await client.call("session.rename", {
+      sessionId: synced.session.sessionId,
+      title: input.title.trim(),
+    });
+  }
   const runtime = buildRemoteDesktopRuntime(client, synced.session.sessionId, input);
   try {
     await runtime.initializeFromSnapshot(synced.snapshot, input.restorePresentation);
@@ -377,6 +384,12 @@ export async function createRemoteDesktopRuntime(
     ...(input.basicInfoHost ? { basicInfoHost: input.basicInfoHost } : {}),
   });
   await client.call("session.attach", { sessionId: created.sessionId });
+  if (input.title?.trim()) {
+    await client.call("session.rename", {
+      sessionId: created.sessionId,
+      title: input.title.trim(),
+    });
+  }
   const runtime = buildRemoteDesktopRuntime(client, created.sessionId, input);
   try {
     await runtime.initialize(created.restoredFromDisk === true, input.restorePresentation);

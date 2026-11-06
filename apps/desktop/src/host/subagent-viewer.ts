@@ -358,6 +358,7 @@ export function buildSubagentViewerSnapshot(
   return {
     parentToolCallId: trimmed,
     sessionId: session.summary.sessionId,
+    title: session.summary.title,
     status: session.summary.status,
     promptText: resolveSubagentPromptText(bundle, trimmed),
     messages,

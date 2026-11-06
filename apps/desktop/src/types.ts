@@ -1260,6 +1260,8 @@ export type SubagentViewerSessionStatus =
 export interface SubagentViewerSnapshot {
   parentToolCallId: string;
   sessionId: string;
+  /** Canonical title of the target session, not the continuation prompt. */
+  title: string;
   status: SubagentViewerSessionStatus;
   /** Same text as subagent tool card headlineDetail (delegated task). */
   promptText: string;

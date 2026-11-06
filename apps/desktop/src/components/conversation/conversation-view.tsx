@@ -506,7 +506,13 @@ export function ConversationView({
           onPaneDragEnter={onPaneDragEnter}
           onPaneDragLeave={onPaneDragLeave}
           onPaneDrop={onPaneDrop}
-          sessionTitle={sessionTitleVisible ? snapshot?.activeSession?.displayName : null}
+          sessionTitle={
+            sessionTitleVisible
+              ? subagentViewActive
+                ? snapshot?.subagentViewer?.title
+                : snapshot?.activeSession?.displayName
+              : null
+          }
           sessionTitleSuffix={sessionTitleSuffix}
           sessionTooltip={sessionTooltip}
           subagentPromptText={subagentViewActive ? snapshot?.subagentViewer?.promptText : null}

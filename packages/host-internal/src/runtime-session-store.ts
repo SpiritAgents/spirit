@@ -22,6 +22,8 @@ export interface RuntimeSessionState {
   workspaceRoot: string;
   agentMode: AgentMode;
   modelRef?: import("./config.js").ModelRef;
+  title?: string;
+  conversationKey?: string;
   sessionKind?: "default" | "dream-collector" | "subagent";
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
   workLocation?: WorkLocationKind;
@@ -122,6 +124,8 @@ function isRuntimeSessionState(value: unknown): value is RuntimeSessionState {
       return false;
   }
   if ("activePlanPath" in value && typeof value.activePlanPath !== "string") return false;
+  if ("title" in value && typeof value.title !== "string") return false;
+  if ("conversationKey" in value && typeof value.conversationKey !== "string") return false;
   if (
     "modelRef" in value &&
     (typeof value.modelRef !== "object" ||

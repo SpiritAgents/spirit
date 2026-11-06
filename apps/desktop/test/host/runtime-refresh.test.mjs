@@ -44,6 +44,7 @@ vi.mock("@spiritagent/server/client", () => ({
           case "session.detach":
           case "session.replaceFromArchive":
           case "session.migrateConversationKey":
+          case "session.rename":
           case "session.runSessionEnd":
           case "session.runSessionStart":
             return { ok: true };

@@ -411,6 +411,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         const modelRef = params["modelRef"];
         const agentMode = params["agentMode"];
         const conversationKey = params["conversationKey"];
+        const title = params["title"];
         const sessionKind = params["sessionKind"];
         const workLocation = params["workLocation"];
         const worktreePath = params["worktreePath"];
@@ -482,6 +483,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         const info = await sessionManager.createSession({
           workspaceRoot,
           hostKind: clientState?.clientKind ?? "cli",
+          ...(typeof title === "string" && title.trim() ? { title: title.trim() } : {}),
           ...(typeof conversationKey === "string" && conversationKey.trim()
             ? { conversationKey: conversationKey.trim() }
             : {}),
@@ -657,7 +659,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         if (typeof title !== "string") {
           throw new Error("missing title");
         }
-        sessionManager.rename(readSessionId(params), title);
+        await sessionManager.rename(readSessionId(params), title);
         return { ok: true };
       }
       case SESSION_CONTINUE_COMPLETION:
