@@ -28,6 +28,11 @@ export type ModelPickerLabels = {
   /** Catalog detail field labels. */
   detailContext: string;
   detailMaxOutput: string;
+  detailBaseModel: string;
+  detailInputModalities: string;
+  detailOutputModalities: string;
+  detailSamplingParameters: string;
+  detailReasoningField: string;
   detailInput: string;
   detailOutput: string;
   detailCachedInput: string;
@@ -43,7 +48,6 @@ export type ModelPickerLabels = {
   detailRequestRate: string;
   detailBurstRatio: string;
   detailFeatures: string;
-  detailSamplingParameters: string;
   detailPerMinute: string;
   detailAdditionalPricing: string;
   /** Catalog detail / pricing line templates (values are pre-formatted). */
@@ -111,6 +115,11 @@ export function buildModelPickerLabels(t: LabelTranslator): ModelPickerLabels {
     providerGroupLabel: (labelKey, fallback) => t(labelKey, { defaultValue: fallback }),
     detailContext: t("settings.modelDetailLabelContext"),
     detailMaxOutput: t("settings.modelDetailLabelMaxOutput"),
+    detailBaseModel: t("settings.modelDetailLabelBaseModel"),
+    detailInputModalities: t("settings.modelDetailLabelInputModalities"),
+    detailOutputModalities: t("settings.modelDetailLabelOutputModalities"),
+    detailSamplingParameters: t("settings.modelDetailLabelSamplingParameters"),
+    detailReasoningField: t("settings.modelDetailLabelReasoningField"),
     detailInput: t("settings.modelDetailLabelInput"),
     detailOutput: t("settings.modelDetailLabelOutput"),
     detailCachedInput: t("settings.modelDetailLabelCachedInput"),
@@ -126,7 +135,6 @@ export function buildModelPickerLabels(t: LabelTranslator): ModelPickerLabels {
     detailRequestRate: t("settings.modelDetailLabelRequestRate"),
     detailBurstRatio: t("settings.modelDetailLabelBurstRatio"),
     detailFeatures: t("settings.modelDetailLabelFeatures"),
-    detailSamplingParameters: t("settings.modelDetailLabelSamplingParameters"),
     detailPerMinute: t("settings.modelDetailLabelPerMinute"),
     detailAdditionalPricing: t("settings.modelDetailLabelAdditionalPricing"),
     detailPricingInput: (value) => t("settings.modelDetailPricingInput", { value }),

@@ -512,9 +512,26 @@ export function ModelsSettingsPanel({
                       {t("settings.deleteGroup")}
                     </Button>
                   </div>
-                  {groupModels.some((model) =>
-                    catalogDetailByModelName.has(modelCatalogScopeEntryKey(model)),
-                  ) ? (
+                  {groupModels.length === 0 ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        {providerEntry.id === "modal"
+                          ? t("settings.modalProviderCatalogEmpty")
+                          : t("settings.providerCatalogEmpty")}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={modelsBusy || modelsPreviewBusy}
+                        onClick={() => startConnect(providerEntry.id)}
+                      >
+                        {t("settings.reconnectProvider")}
+                      </Button>
+                    </div>
+                  ) : groupModels.some((model) =>
+                      catalogDetailByModelName.has(modelCatalogScopeEntryKey(model)),
+                    ) ? (
                     <Tooltip<SettingsModelProfile>
                       getItemId={(model) => modelRefKey(settingsModelRef(model))}
                       delayDuration={300}

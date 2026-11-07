@@ -255,6 +255,8 @@ export interface PreviewModelCatalogPricing {
 export interface PreviewModelCatalogEntry {
   id: string;
   transportOverride?: { transportKind: "anthropic"; sdk: "@ai-sdk/anthropic" };
+  /** Library model id used only for catalog knowledge lookup; inference keeps `id`. */
+  baseModelId?: string;
   displayName?: string;
   description?: string;
   pricing?: PreviewModelCatalogPricing;
@@ -267,6 +269,11 @@ export interface PreviewModelCatalogEntry {
   catalogCapabilities?: ProviderListedCatalogCapabilities;
   /** Additional API-sourced catalog facts retained by preview/cache refresh. */
   catalogMetadata?: ProviderListedModelCatalogMetadata;
+  inputModalities?: string[];
+  outputModalities?: string[];
+  supportedFeatures?: string[];
+  supportedSamplingParameters?: string[];
+  reasoningField?: string;
   /** Kimi Code `think_efforts.default_effort` when present. */
   defaultReasoningEffort?: DesktopModelReasoningEffort;
   supportedReasoningModes?: DesktopModelReasoningMode[];

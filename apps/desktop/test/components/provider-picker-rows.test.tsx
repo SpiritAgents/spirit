@@ -94,3 +94,41 @@ test("settings keeps a connected provider group visible when its catalog is empt
   expect(screen.getByRole("button", { name: "Delete Group" })).toBeTruthy();
   expect(screen.queryByText("No saved models yet")).toBeNull();
 });
+
+test("modal empty state explains deployment and offers reconnect", () => {
+  render(
+    <ModelsSettingsPanel
+      settings={{ activeModel: emptyModelRef() } as SettingsFormState}
+      snapshot={
+        {
+          config: {
+            providers: [
+              {
+                id: "modal",
+                apiBase: "https://inference.us-west.modal.direct/v1",
+                models: [],
+              },
+            ],
+            providerPickerPresets: [{ id: "modal", label: "Modal" }],
+            models: [],
+            activeModel: emptyModelRef(),
+            modelCatalogHints: [],
+          },
+        } as never
+      }
+      modelsBusy={false}
+      modelsPreviewBusy={false}
+      onSavePatch={vi.fn()}
+      onAddModel={vi.fn()}
+      onAddProviderModels={vi.fn()}
+      onPreviewModels={vi.fn()}
+      onRemoveModel={vi.fn()}
+      onRemoveProviderModels={vi.fn()}
+    />,
+  );
+
+  expect(screen.getByText(/No Shared Endpoints are deployed/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Reconnect" }));
+  expect(screen.getByRole("dialog", { name: "Connect Modal" })).toBeTruthy();
+  expect(screen.getByLabelText("Proxy Token")).toBeTruthy();
+});

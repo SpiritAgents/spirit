@@ -16,6 +16,11 @@ import { desktopModelPickerRuntime } from "@/lib/model-picker-runtime";
 const labels = {
   detailContext: "Context",
   detailMaxOutput: "Max output",
+  detailBaseModel: "Base Model",
+  detailInputModalities: "Input Modalities",
+  detailOutputModalities: "Output Modalities",
+  detailSamplingParameters: "Sampling Parameters",
+  detailReasoningField: "Reasoning Field",
   detailInput: "Input",
   detailOutput: "Output",
   detailCachedInput: "Cached input",
@@ -31,7 +36,6 @@ const labels = {
   detailRequestRate: "Request Rate",
   detailBurstRatio: "Burst Ratio",
   detailFeatures: "Features",
-  detailSamplingParameters: "Sampling Parameters",
   detailPerMinute: "Per Minute",
   detailAdditionalPricing: "Additional Pricing",
   detailPricingInput: (value) => `${value} / M`,
@@ -110,6 +114,35 @@ test("buildModelCatalogDetailFields renders video duration pricing rows", () => 
     { id: "video-duration-0-720p", label: "720p", value: "$0.10 / sec" },
     { id: "video-duration-1-1080p", label: "1080p", value: "$0.15 / sec" },
   ]);
+});
+
+test("buildModelCatalogDetailFields renders deployment and technical metadata", () => {
+  const catalogEntry = {
+    id: "example--ep-glm-5-3-server.us-west.modal.direct",
+    baseModelId: "zai-org/GLM-5.3",
+    inputModalities: ["text"],
+    outputModalities: ["text"],
+    supportedFeatures: ["tools", "reasoning"],
+    supportedSamplingParameters: ["temperature", "top_p"],
+    reasoningField: "reasoning_content",
+  };
+  const fields = buildModelCatalogDetailFields({ catalogEntry, labels });
+
+  assert.deepEqual(fields, [
+    { id: "base-model", label: "Base Model", value: "zai-org/GLM-5.3" },
+    { id: "input-modalities", label: "Input Modalities", value: "text" },
+    { id: "output-modalities", label: "Output Modalities", value: "text" },
+    { id: "features", label: "Features", value: "tools, reasoning" },
+    { id: "sampling-parameters", label: "Sampling Parameters", value: "temperature, top_p" },
+    { id: "reasoning-field", label: "Reasoning Field", value: "reasoning_content" },
+  ]);
+  assert.equal(
+    modelCatalogHasDetailBody({
+      model: { providerId: "modal", ref: { providerId: "modal", name: catalogEntry.id } },
+      catalogEntry,
+    }),
+    true,
+  );
 });
 
 test("buildModelCatalogDetailFields renders Together megapixel and example pricing", () => {

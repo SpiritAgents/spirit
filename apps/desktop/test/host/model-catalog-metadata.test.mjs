@@ -139,6 +139,68 @@ test("cerebras preview retains rich API catalog metadata and output limits", () 
   ]);
 });
 
+test("modal uses base_model_id only for knowledge and keeps exact API reasoning metadata", () => {
+  const preview = previewModelCatalogForTransport({
+    providerId: "modal",
+    transportKind: "openai-compatible",
+    listedModels: [
+      {
+        id: "example--ep-deepseek-v4-1-flash-server.us-west.modal.direct",
+        baseModelId: "deepseek-ai/DeepSeek-V4.1-Flash",
+        displayName: "DeepSeek: DeepSeek V4.1 Flash",
+        contextLength: 1048576,
+        outputLimit: 1048576,
+        inputModalities: ["text", "image"],
+        outputModalities: ["text"],
+        supportsImageInput: true,
+        supportsReasoning: true,
+        supportedReasoningEfforts: ["none", "low", "high", "xhigh", "max"],
+        supportedFeatures: ["tools", "json_mode", "structured_outputs", "reasoning"],
+        supportedSamplingParameters: ["temperature", "top_p", "stop", "max_tokens"],
+        reasoningField: "reasoning_content",
+      },
+      {
+        id: "example--ep-glm-5-3-server.us-west.modal.direct",
+        baseModelId: "zai-org/GLM-5.3",
+        displayName: "Z.AI: GLM 5.3",
+        supportsReasoning: true,
+        supportedReasoningEfforts: ["low", "high", "max"],
+      },
+      {
+        id: "example--ep-kimi-k3-1-pro-server.us-west.modal.direct",
+        baseModelId: "moonshotai/Kimi-K3.1-Pro",
+        displayName: "MoonshotAI: Kimi K3.1 Pro",
+        supportsReasoning: true,
+        supportedReasoningEfforts: ["low", "high", "max"],
+      },
+    ],
+  });
+
+  assert.deepEqual(preview?.[0], {
+    id: "example--ep-deepseek-v4-1-flash-server.us-west.modal.direct",
+    baseModelId: "deepseek-ai/DeepSeek-V4.1-Flash",
+    displayName: "DeepSeek: DeepSeek V4.1 Flash",
+    capabilities: ["languageModel", "image"],
+    contextLength: 1048576,
+    outputLimit: 1048576,
+    supportedReasoningEfforts: ["none", "low", "high", "xhigh", "max"],
+    inputModalities: ["text", "image"],
+    outputModalities: ["text"],
+    supportedFeatures: ["tools", "json_mode", "structured_outputs", "reasoning"],
+    supportedSamplingParameters: ["temperature", "top_p", "stop", "max_tokens"],
+    reasoningField: "reasoning_content",
+  });
+  // GLM family knowledge declares a provider-specific thinking switch; Modal exposes only the
+  // exact API effort list, so that switch and unrelated service tiers must not leak onto the entry.
+  assert.deepEqual(preview?.[1]?.supportedReasoningEfforts, ["low", "high", "max"]);
+  assert.equal(preview?.[1]?.supportsThinkingSwitch, undefined);
+  assert.equal(preview?.[1]?.thinkingSwitch, undefined);
+  assert.equal(preview?.[1]?.serviceTiers, undefined);
+  assert.equal(preview?.[1]?.supportsThinkingType, "only");
+  assert.equal(preview?.[2]?.supportsThinkingType, "only");
+  assert.equal(preview?.[2]?.effortSemantics, undefined);
+});
+
 test("custom anthropic transport consumes Anthropic model catalog metadata", () => {
   assert.equal(usesAnthropicModelCatalogMetadata({ transportKind: "anthropic" }), true);
 

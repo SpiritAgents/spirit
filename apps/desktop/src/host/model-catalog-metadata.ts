@@ -353,6 +353,7 @@ function basePreviewEntryFields(
     ...(entry.transportOverride !== undefined
       ? { transportOverride: { ...entry.transportOverride } }
       : {}),
+    ...(entry.baseModelId !== undefined ? { baseModelId: entry.baseModelId } : {}),
     capabilities: previewCapabilitiesFromListedEntry(entry, parserName, transportKind),
     ...resolvePreviewCatalogDisplayName(parserName, entry),
     ...(entry.description !== undefined ? { description: entry.description } : {}),
@@ -387,12 +388,17 @@ function basePreviewEntryFields(
     ...(entry.regions !== undefined
       ? { regions: entry.regions.map((region) => ({ ...region })) }
       : {}),
+    ...(entry.inputModalities !== undefined ? { inputModalities: [...entry.inputModalities] } : {}),
+    ...(entry.outputModalities !== undefined
+      ? { outputModalities: [...entry.outputModalities] }
+      : {}),
     ...(entry.supportedFeatures !== undefined
       ? { supportedFeatures: [...entry.supportedFeatures] }
       : {}),
     ...(entry.supportedSamplingParameters !== undefined
       ? { supportedSamplingParameters: [...entry.supportedSamplingParameters] }
       : {}),
+    ...(entry.reasoningField !== undefined ? { reasoningField: entry.reasoningField } : {}),
   };
 }
 
@@ -407,12 +413,15 @@ function previewEntryFromListedEntry(
   transportKind: DesktopTransportKind | undefined,
 ): PreviewModelCatalogEntry {
   const base = basePreviewEntryFields(parserName, entry, transportKind);
-  // Nebius verbose metadata does not declare per-model effort, thinking, tiers, or hosted tools.
-  // Do not fill those controls from similarly named models hosted elsewhere.
-  const knowledge =
+  // Nebius has no per-model reasoning declarations. Modal looks up only its library id; its
+  // deployment-specific runtime hostname never participates in model-knowledge lookup.
+  const knowledgeLookupId =
     parserName === "nebius-token-factory-models"
       ? undefined
-      : lookupCatalogModelKnowledge(entry.id);
+      : parserName === "modal-models"
+        ? entry.baseModelId
+        : entry.id;
+  const knowledge = knowledgeLookupId ? lookupCatalogModelKnowledge(knowledgeLookupId) : undefined;
   const knowledgeEfforts = knowledge ? knowledgeDeclaredReasoningEfforts(knowledge) : undefined;
   const knowledgeModes = knowledge ? knowledgeDeclaredReasoningModes(knowledge) : undefined;
   const knowledgeTiers =
@@ -425,6 +434,29 @@ function previewEntryFromListedEntry(
       : knowledgeTiers !== undefined
         ? { serviceTiers: knowledgeTiers }
         : {};
+
+  if (parserName === "modal-models") {
+    const supportedReasoningEfforts =
+      entry.supportedReasoningEfforts !== undefined
+        ? normalizePreviewSupportedReasoningEfforts(entry.supportedReasoningEfforts)
+        : knowledgeEfforts;
+    const apiDeclaresAlwaysOnThinking =
+      entry.supportsReasoning === true &&
+      entry.supportedReasoningEfforts !== undefined &&
+      supportedReasoningEfforts !== undefined &&
+      !supportedReasoningEfforts.includes("none");
+    return {
+      ...base,
+      ...(supportedReasoningEfforts !== undefined ? { supportedReasoningEfforts } : {}),
+      ...resolvePreviewDefaultReasoningEffortForEntry(entry),
+      ...(entry.supportsThinkingType !== undefined
+        ? { supportsThinkingType: entry.supportsThinkingType }
+        : apiDeclaresAlwaysOnThinking
+          ? { supportsThinkingType: "only" as const }
+          : {}),
+      ...(entry.supportsThinkingSwitch === true ? { supportsThinkingSwitch: true } : {}),
+    };
+  }
 
   if (entry.effortSemantics !== "output" && knowledge?.["effortSemantics"] !== "output") {
     const knowledgeThinkingSwitch =

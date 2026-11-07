@@ -551,9 +551,18 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
       record.supportedSamplingParameters,
     );
     const transportOverride = normalizeCachedTransportOverride(record.transportOverride);
+    const baseModelId = normalizeCachedString(record.baseModelId);
+    const inputModalities = normalizeCachedStringArray(record.inputModalities);
+    const outputModalities = normalizeCachedStringArray(record.outputModalities);
+    const supportedFeatures = normalizeCachedStringArray(record.supportedFeatures);
+    const supportedSamplingParameters = normalizeCachedStringArray(
+      record.supportedSamplingParameters,
+    );
+    const reasoningField = normalizeCachedString(record.reasoningField);
     normalized.push({
       id,
       ...(transportOverride !== undefined ? { transportOverride } : {}),
+      ...(baseModelId !== undefined ? { baseModelId } : {}),
       ...(displayName !== undefined ? { displayName } : {}),
       ...(description !== undefined ? { description } : {}),
       ...(pricing !== undefined ? { pricing } : {}),
@@ -582,9 +591,28 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
       ...(regions !== undefined ? { regions } : {}),
       ...(supportedFeatures !== undefined ? { supportedFeatures } : {}),
       ...(supportedSamplingParameters !== undefined ? { supportedSamplingParameters } : {}),
+      ...(inputModalities !== undefined ? { inputModalities } : {}),
+      ...(outputModalities !== undefined ? { outputModalities } : {}),
+      ...(reasoningField !== undefined ? { reasoningField } : {}),
     });
   }
 
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeCachedString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function normalizeCachedStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const normalized = [
+    ...new Set(
+      value.map(normalizeCachedString).filter((item): item is string => item !== undefined),
+    ),
+  ];
   return normalized.length > 0 ? normalized : undefined;
 }
 
@@ -823,6 +851,7 @@ function clonePreviewModelCatalog(
     ...(entry.transportOverride !== undefined
       ? { transportOverride: { ...entry.transportOverride } }
       : {}),
+    ...(entry.baseModelId !== undefined ? { baseModelId: entry.baseModelId } : {}),
     ...(entry.displayName !== undefined ? { displayName: entry.displayName } : {}),
     ...(entry.description !== undefined ? { description: entry.description } : {}),
     ...(entry.pricing !== undefined
@@ -888,11 +917,16 @@ function clonePreviewModelCatalog(
     ...(entry.regions !== undefined
       ? { regions: entry.regions.map((region) => ({ ...region })) }
       : {}),
+    ...(entry.inputModalities !== undefined ? { inputModalities: [...entry.inputModalities] } : {}),
+    ...(entry.outputModalities !== undefined
+      ? { outputModalities: [...entry.outputModalities] }
+      : {}),
     ...(entry.supportedFeatures !== undefined
       ? { supportedFeatures: [...entry.supportedFeatures] }
       : {}),
     ...(entry.supportedSamplingParameters !== undefined
       ? { supportedSamplingParameters: [...entry.supportedSamplingParameters] }
       : {}),
+    ...(entry.reasoningField !== undefined ? { reasoningField: entry.reasoningField } : {}),
   }));
 }
