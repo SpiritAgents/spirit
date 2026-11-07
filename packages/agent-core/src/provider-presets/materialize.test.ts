@@ -20,6 +20,7 @@ test("meta materializes the Model API transports with the Responses OpenAI SDK b
     apiBase: "https://api.meta.ai/v1",
     transportKind: "open-responses",
     sdk: "@ai-sdk/openai",
+    imageApi: "meta-images",
     options: { reasoningSummary: true, responsesFileUpload: true },
     fileUpload: {
       url: "https://api.meta.ai/v1/files",

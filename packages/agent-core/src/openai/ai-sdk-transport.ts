@@ -76,6 +76,7 @@ import { generateSiliconFlowImage } from "../image-generation/siliconflow-backen
 import { generateHuggingFaceImage } from "../image-generation/huggingface-backend.js";
 import { generateStepfunImage } from "../image-generation/stepfun-backend.js";
 import { buildGeneratedImageToolOutput } from "../image-generation/output.js";
+import { generateMetaImage } from "../image-generation/meta-backend.js";
 import { generateVideoWithRouter } from "../video-generation/router.js";
 import { getLlmFetch } from "../llm-fetch.js";
 import { createDeclaredWireMergeFetch } from "../llm-declared-wire-fetch.js";
@@ -177,6 +178,10 @@ export class AiSdkOpenAiCompatibleTransport
 
     if (imageApi === "stepfun-images") {
       return generateStepfunImage(imageConfig, request, saveGeneratedImage);
+    }
+
+    if (imageApi === "meta-images") {
+      return generateMetaImage(imageConfig, request, saveGeneratedImage);
     }
 
     if (!KNOWN_AI_SDK_IMAGE_API_SHAPES.has(imageApi)) {
@@ -716,6 +721,7 @@ const KNOWN_IMAGE_API_SHAPES: readonly string[] = [
   "siliconflow-images",
   "huggingface-inference",
   "stepfun-images",
+  "meta-images",
 ];
 
 function createAiSdkImageModel(

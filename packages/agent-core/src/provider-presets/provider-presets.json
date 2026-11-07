@@ -55,6 +55,7 @@
           "maxBytes": 1073741824
         }
       },
+      "imageApi": "meta-images",
       "providerToolsByTransport": {
         "open-responses": [
           {

@@ -163,7 +163,22 @@ export const DEFAULT_VIDEO_GENERATION_DURATION = 5;
 
 export interface ImageGenerationRequest {
   prompt: string;
+  /** Provider-specific aspect-ratio dimensions; not a guarantee of exact output pixels. */
   size: string;
+  count?: number;
+  outputFormat?: "webp" | "png" | "jpeg";
+  reasoningStrength?: "low" | "high";
+  responseFormat?: "b64_json" | "url";
+  referenceImages?: ImageGenerationReferenceImage[];
+}
+
+export interface ImageGenerationReferenceImage {
+  path?: string;
+  url?: string;
+  fileId?: string;
+  data?: Uint8Array;
+  mediaType?: string;
+  filename?: string;
 }
 
 export interface VideoGenerationRequest {
