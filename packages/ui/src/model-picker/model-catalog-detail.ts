@@ -107,6 +107,17 @@ export function modelHasCatalogDetail(entry: ModelCatalogEntry | undefined): boo
   );
 }
 
+function modelCatalogHasTechnicalMetadata(entry: ModelCatalogEntry): boolean {
+  return Boolean(
+    entry.baseModelId?.trim() ||
+    entry.reasoningField?.trim() ||
+    (entry.inputModalities?.length ?? 0) > 0 ||
+    (entry.outputModalities?.length ?? 0) > 0 ||
+    (entry.supportedFeatures?.length ?? 0) > 0 ||
+    (entry.supportedSamplingParameters?.length ?? 0) > 0,
+  );
+}
+
 function catalogMetadataHasAnyValue(entry: ModelCatalogEntry | undefined): boolean {
   return Boolean(
     entry?.architecture?.modality?.trim() ||
