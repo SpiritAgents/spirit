@@ -4,7 +4,6 @@ import { normalizeModelEffort } from "../model-effort.js";
 import type { JsonObject, JsonValue } from "../ports.js";
 import { resolveThinkingSwitchWirePatch } from "../thinking-switch.js";
 import { isJsonObject } from "../tool-agent.js";
-import type { AnthropicEffort } from "./anthropic-compat.js";
 
 export interface AnthropicOutputWireConfig {
   body?: JsonObject;
@@ -16,7 +15,7 @@ export interface AnthropicOutputWireConfig {
 }
 
 export interface AnthropicOutputWireResolution {
-  effort?: AnthropicEffort;
+  effort?: string;
   thinking?: JsonValue;
   omitThinking: boolean;
 }
@@ -24,7 +23,7 @@ export interface AnthropicOutputWireResolution {
 export function resolveAnthropicOutputWire(
   config: AnthropicOutputWireConfig,
 ): AnthropicOutputWireResolution {
-  const effort = isCodeCompletionTransportProfile(config)
+  const selectedEffort = isCodeCompletionTransportProfile(config)
     ? undefined
     : normalizeModelEffort(config.effort);
   const thinkingPatch = resolveThinkingSwitchWirePatch({
@@ -32,8 +31,17 @@ export function resolveAnthropicOutputWire(
       ? { vendorExtendedThinking: config.vendorExtendedThinking }
       : {}),
     ...(config.thinkingSwitch !== undefined ? { thinkingSwitch: config.thinkingSwitch } : {}),
-    ...(effort !== undefined ? { effort } : {}),
+    ...(selectedEffort !== undefined ? { effort: selectedEffort } : {}),
   });
+  const patchOutputConfig =
+    thinkingPatch !== "omit" && isJsonObject(thinkingPatch?.body?.output_config)
+      ? thinkingPatch.body.output_config
+      : undefined;
+  const patchEffort =
+    typeof patchOutputConfig?.effort === "string" && patchOutputConfig.effort.trim().length > 0
+      ? patchOutputConfig.effort.trim()
+      : undefined;
+  const effort = patchEffort ?? selectedEffort;
   const patchThinking = thinkingPatch === "omit" ? undefined : thinkingPatch?.body?.thinking;
   const explicitThinking = config.body?.thinking;
   let thinking = patchThinking ?? explicitThinking;

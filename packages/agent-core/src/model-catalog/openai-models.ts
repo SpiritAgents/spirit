@@ -128,6 +128,8 @@ export interface ProviderListedModelRegion {
 export interface ProviderListedModelEntry {
   id: string;
   transportOverride?: ProviderListedTransportOverride;
+  /** Library/Hugging Face selection id when the runtime id is deployment-specific. */
+  baseModelId?: string;
   displayName?: string;
   description?: string;
   pricing?: ProviderListedModelPricing;
@@ -136,6 +138,12 @@ export interface ProviderListedModelEntry {
   supportsVideoGeneration?: boolean;
   supportsImageGeneration?: boolean;
   supportsReasoning?: boolean;
+  inputModalities?: string[];
+  outputModalities?: string[];
+  supportedFeatures?: string[];
+  supportedSamplingParameters?: string[];
+  /** Provider-reported interleaved reasoning message field. */
+  reasoningField?: string;
   /** LongCat etc.: when `supported_parameters` includes `thinking`, extended thinking can be toggled. */
   supportsThinkingSwitch?: boolean;
   supportsThinkingType?: KimiCodeSupportsThinkingType;
@@ -162,8 +170,6 @@ export interface ProviderListedModelEntry {
   quantization?: string;
   perRequestLimits?: ProviderListedModelRateLimits;
   regions?: ProviderListedModelRegion[];
-  supportedFeatures?: string[];
-  supportedSamplingParameters?: string[];
   /**
    * Raw catalog fact for the upstream provider behind an aggregator route
    * (Vercel AI Gateway `owned_by`, OpenRouter `canonical_slug` author prefix);
@@ -3419,6 +3425,7 @@ export function dedupeProviderListedModelEntries(
       ...(entry.transportOverride !== undefined
         ? { transportOverride: { ...entry.transportOverride } }
         : {}),
+      ...(entry.baseModelId !== undefined ? { baseModelId: entry.baseModelId } : {}),
       ...(entry.displayName !== undefined ? { displayName: entry.displayName } : {}),
       ...(entry.description !== undefined ? { description: entry.description } : {}),
       ...(entry.pricing !== undefined
@@ -3446,6 +3453,19 @@ export function dedupeProviderListedModelEntries(
       ...(entry.supportsReasoning !== undefined
         ? { supportsReasoning: entry.supportsReasoning }
         : {}),
+      ...(entry.inputModalities !== undefined
+        ? { inputModalities: [...entry.inputModalities] }
+        : {}),
+      ...(entry.outputModalities !== undefined
+        ? { outputModalities: [...entry.outputModalities] }
+        : {}),
+      ...(entry.supportedFeatures !== undefined
+        ? { supportedFeatures: [...entry.supportedFeatures] }
+        : {}),
+      ...(entry.supportedSamplingParameters !== undefined
+        ? { supportedSamplingParameters: [...entry.supportedSamplingParameters] }
+        : {}),
+      ...(entry.reasoningField !== undefined ? { reasoningField: entry.reasoningField } : {}),
       ...(entry.supportsThinkingType !== undefined
         ? { supportsThinkingType: entry.supportsThinkingType }
         : {}),

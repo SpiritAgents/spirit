@@ -474,7 +474,7 @@ export function ModelsSettingsPanel({
       </div>
 
       <div className="space-y-3">
-        {models.length === 0 ? (
+        {configProviders.length === 0 ? (
           <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "px-4 py-10 text-center")}>
             <p className="text-sm text-muted-foreground">{t("settings.noSavedModels")}</p>
           </div>
@@ -482,9 +482,6 @@ export function ModelsSettingsPanel({
           <>
             {configProviders.map((providerEntry) => {
               const groupModels = modelsForProvider(providerEntry);
-              if (groupModels.length === 0) {
-                return null;
-              }
               const groupHasKey = groupModels.some((m) => m.keyConfigured);
               const groupLabel = groupDisplayLabel(providerEntry);
               return (
@@ -515,9 +512,26 @@ export function ModelsSettingsPanel({
                       {t("settings.deleteGroup")}
                     </Button>
                   </div>
-                  {groupModels.some((model) =>
-                    catalogDetailByModelName.has(modelCatalogScopeEntryKey(model)),
-                  ) ? (
+                  {groupModels.length === 0 ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        {providerEntry.id === "modal"
+                          ? t("settings.modalProviderCatalogEmpty")
+                          : t("settings.providerCatalogEmpty")}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={modelsBusy || modelsPreviewBusy}
+                        onClick={() => startConnect(providerEntry.id)}
+                      >
+                        {t("settings.reconnectProvider")}
+                      </Button>
+                    </div>
+                  ) : groupModels.some((model) =>
+                      catalogDetailByModelName.has(modelCatalogScopeEntryKey(model)),
+                    ) ? (
                     <Tooltip<SettingsModelProfile>
                       getItemId={(model) => modelRefKey(settingsModelRef(model))}
                       delayDuration={300}

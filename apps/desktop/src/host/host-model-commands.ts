@@ -1017,9 +1017,6 @@ export async function addProviderModelsCommand(
 
     const rawIds = request.modelIds.map((id) => id.trim()).filter((id) => id.length > 0);
     const uniqueIds = [...new Set(rawIds)];
-    if (uniqueIds.length === 0) {
-      throw new Error(i18n.t("error.emptyModelList"));
-    }
 
     const materializeInput = buildMaterializeInput({
       provider,
@@ -1070,7 +1067,12 @@ export async function addProviderModelsCommand(
         ? syncExistingModelsFromCatalog(configPreview, previewConfigEntry, catalogRefreshResult)
         : 0;
 
-    if (toAdd.length === 0 && syncedPreview === 0 && prunedPreview.length === 0) {
+    if (
+      uniqueIds.length > 0 &&
+      toAdd.length === 0 &&
+      syncedPreview === 0 &&
+      prunedPreview.length === 0
+    ) {
       throw new Error(i18n.t("error.modelsAlreadyExist"));
     }
 
@@ -1326,7 +1328,7 @@ export async function removeProviderGroupCommand(
       throw new Error(i18n.t("error.modelNameRequired"));
     }
     const provider = findProviderEntry(state.config.providers, providerId);
-    if (!provider || provider.models.length === 0) {
+    if (!provider) {
       throw new Error(i18n.t("error.noModelsInProvider"));
     }
 

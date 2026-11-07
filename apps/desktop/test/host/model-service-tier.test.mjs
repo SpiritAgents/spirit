@@ -59,6 +59,33 @@ test("model catalog cache round-trips upstreamProvider display metadata", async 
   });
 });
 
+test("model catalog cache round-trips deployment and technical catalog metadata", async () => {
+  await withCatalogCacheDir(async () => {
+    const apiBase = "https://inference.us-west.modal.direct/v1";
+    const id = "example--ep-glm-5-3-server.us-west.modal.direct";
+    const catalogEntry = {
+      id,
+      baseModelId: "zai-org/GLM-5.3",
+      displayName: "Z.AI: GLM 5.3",
+      capabilities: ["languageModel"],
+      contextLength: 1048576,
+      outputLimit: 1048576,
+      supportedReasoningEfforts: ["low", "high", "max"],
+      supportsThinkingType: "only",
+      inputModalities: ["text"],
+      outputModalities: ["text"],
+      supportedFeatures: ["tools", "json_mode", "structured_outputs", "reasoning"],
+      supportedSamplingParameters: ["temperature", "top_p", "stop", "max_tokens"],
+      reasoningField: "reasoning_content",
+    };
+    await writeModelCatalogCache(apiBase, [id], "test-key", [catalogEntry], "modal");
+
+    const entry = await readModelCatalogCache(apiBase, "test-key", "modal");
+    assert.ok(entry);
+    assert.deepEqual(entry.modelCatalog, [catalogEntry]);
+  });
+});
+
 test("model catalog cache parses sparse entries", async () => {
   await withCatalogCacheDir(async (dir) => {
     await writeModelCatalogCache(

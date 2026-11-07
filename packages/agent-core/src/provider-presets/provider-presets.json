@@ -267,6 +267,22 @@
       "catalog": { "parser": "baseten-models", "endpoint": "/models" }
     },
     {
+      "id": "modal",
+      "label": "Modal",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/openai-compatible",
+      "transports": {
+        "openai-compatible": "https://inference.us-west.modal.direct/v1",
+        "open-responses": "https://inference.us-west.modal.direct/v1",
+        "anthropic": "https://inference.us-west.modal.direct/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "catalog": {
+        "parser": "modal-models",
+        "endpoint": "https://inference.us-west.modal.direct/v1/models"
+      }
+    },
+    {
       "id": "hugging-face",
       "label": "Hugging Face",
       "defaultTransport": "open-responses",

@@ -22,6 +22,7 @@ import { parseBedrockFoundationModelSummaries } from "./bedrock-models.js";
 import { parseCerebrasModelEntriesPayload } from "./cerebras-models.js";
 import { parseVertexModelEntriesPayload } from "./google-vertex-models.js";
 import { parseNebiusTokenFactoryModelEntriesPayload } from "./nebius-token-factory-models.js";
+import { parseModalModelEntriesPayload } from "./modal-models.js";
 import {
   mergeSiliconFlowListedModelEntries,
   minimaxOpenAiCompatibleListingBaseFromConnectBase,
@@ -116,6 +117,7 @@ export const MODEL_CATALOG_PARSERS: Readonly<Record<string, ModelCatalogParserDe
   "cerebras-models": { parseList: parseCerebrasModelEntriesPayload },
   "deepinfra-models": { parseList: parseDeepInfraModelEntriesPayload },
   "baseten-models": { parseList: parseBasetenModelEntriesPayload },
+  "modal-models": { parseList: parseModalModelEntriesPayload },
   "huggingface-models": { parseList: parseHuggingFaceRouterModelsPayload },
   "moonshot-models": { parseList: parseMoonshotModelEntriesPayload },
   "kimi-code-models": { parseList: parseKimiCodeModelEntriesPayload },

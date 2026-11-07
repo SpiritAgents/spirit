@@ -55,6 +55,7 @@ export type ModelCatalogPricing = {
 /** Catalog-listing entry subset the picker reads (display + controls + detail fields). */
 export type ModelCatalogEntry = {
   id: string;
+  baseModelId?: string;
   displayName?: string;
   description?: string;
   pricing?: ModelCatalogPricing;
@@ -85,6 +86,9 @@ export type ModelCatalogEntry = {
   regions?: Array<{ countryCode?: string; name?: string }>;
   supportedFeatures?: string[];
   supportedSamplingParameters?: string[];
+  inputModalities?: string[];
+  outputModalities?: string[];
+  reasoningField?: string;
 };
 
 export type ModelCatalogHint = {

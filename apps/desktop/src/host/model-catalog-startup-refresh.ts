@@ -532,9 +532,6 @@ export function removeDelistedModelsFromCatalog(
   result: LoadedPreviewModelsResult,
 ): readonly string[] {
   const catalogIds = new Set(result.modelIds.map((id) => id.trim()).filter((id) => id.length > 0));
-  if (catalogIds.size === 0) {
-    return [];
-  }
 
   const target = findProviderEntry(config.providers, provider.id);
   if (!target) {

@@ -98,6 +98,54 @@ test("ADC connect previews and adds the catalog with credentialKind vertex and n
   expect(props.onOpenChange).toHaveBeenCalledWith(false);
 });
 
+test("a valid empty catalog still completes a generic provider connection", async () => {
+  const props = renderProviderDialog({
+    provider: "mistral",
+    providerPresets: [{ id: "mistral", label: "Mistral" }],
+    onPreviewModels: vi.fn().mockResolvedValue({ modelIds: [], models: [], fromCache: false }),
+  });
+
+  fireEvent.change(screen.getByLabelText("API Key"), { target: { value: "test-key" } });
+  fireEvent.click(screen.getByRole("button", { name: "Connect Provider" }));
+
+  await waitFor(() => expect(props.onAddProviderModels).toHaveBeenCalledTimes(1));
+  expect(props.onAddProviderModels.mock.calls[0]![0]).toMatchObject({
+    provider: "mistral",
+    apiKey: "test-key",
+    modelIds: [],
+    modelCatalog: [],
+  });
+  expect(props.onOpenChange).toHaveBeenCalledWith(false);
+});
+
+test("modal collects a Proxy Token and reconnect bypasses the cached catalog", async () => {
+  const props = renderProviderDialog({
+    provider: "modal",
+    providerPresets: [{ id: "modal", label: "Modal" }],
+    reconnect: true,
+    onPreviewModels: vi.fn().mockResolvedValue({ modelIds: [], models: [], fromCache: false }),
+  });
+
+  expect(screen.getByText("Use a Modal Proxy Token, not a Member/API Token.")).toBeTruthy();
+  expect(screen.getByText(/The catalog lists only Shared Endpoints/)).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Proxy Token"), {
+    target: { value: "wk-id.ws-secret" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Connect Provider" }));
+
+  await waitFor(() => expect(props.onPreviewModels).toHaveBeenCalledTimes(1));
+  expect(props.onPreviewModels.mock.calls[0]![0]).toMatchObject({
+    provider: "modal",
+    apiKey: "wk-id.ws-secret",
+    forceRefresh: true,
+  });
+  await waitFor(() => expect(props.onAddProviderModels).toHaveBeenCalledTimes(1));
+  expect(props.onAddProviderModels.mock.calls[0]![0]).toMatchObject({
+    provider: "modal",
+    modelIds: [],
+  });
+});
+
 test("ADC mode does not leak a typed service-account secret into the request", async () => {
   const props = renderProviderDialog();
 

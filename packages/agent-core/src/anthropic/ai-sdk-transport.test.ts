@@ -2,7 +2,68 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { createLlmMessageContentFromText, type LlmMessage } from "../ports.js";
+import { setLlmFetchTransportOverrideForTests } from "../llm-fetch.js";
 import { AiSdkAnthropicTransport } from "./ai-sdk-transport.js";
+
+test("image input survives capability filtering when video input is undeclared", async () => {
+  let capturedBody: Record<string, unknown> | undefined;
+  setLlmFetchTransportOverrideForTests(async (_input, init) => {
+    capturedBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return new Response(
+      JSON.stringify({
+        id: "msg_image_input",
+        type: "message",
+        role: "assistant",
+        model: "test-model",
+        content: [{ type: "text", text: "ok" }],
+        stop_reason: "end_turn",
+        usage: { input_tokens: 1, output_tokens: 1 },
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  });
+
+  try {
+    const result = await new AiSdkAnthropicTransport().startToolAgentRound(
+      {
+        transportKind: "anthropic",
+        apiKey: "test-key",
+        model: "test-model",
+        baseUrl: "http://127.0.0.1:18080/v1",
+        modelCapabilities: { languageModel: true, imageInput: true },
+      },
+      {
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "describe" },
+              {
+                type: "image_url",
+                image_url: { url: "data:image/png;base64,aGVsbG8=" },
+              },
+            ],
+          },
+        ],
+        steps: 0,
+      },
+      [],
+    );
+    assert.equal(result.kind, "success");
+  } finally {
+    setLlmFetchTransportOverrideForTests(undefined);
+  }
+
+  const messages = capturedBody?.messages as Array<Record<string, unknown>>;
+  const content = messages[0]?.content as Array<Record<string, unknown>>;
+  assert.equal(content[0]?.type, "text");
+  assert.equal(content[1]?.type, "image");
+  assert.deepEqual(content[1]?.source, {
+    type: "base64",
+    media_type: "image/png",
+    data: "aGVsbG8=",
+  });
+});
 
 test("llmHistoryAsApiMessages serializes image and video user parts", () => {
   const transport = new AiSdkAnthropicTransport();

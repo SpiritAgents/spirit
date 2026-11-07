@@ -11,6 +11,31 @@ import {
   slugifyCustomProviderLabel,
 } from "./materialize.js";
 
+test("modal materializes every Shared Endpoint transport with the common models URL", () => {
+  const preset = PROVIDER_PRESET_MANIFEST.providers.find((entry) => entry.id === "modal");
+  assert.ok(preset);
+  assert.equal(preset.catalog?.endpoint, "https://inference.us-west.modal.direct/v1/models");
+
+  const chat = materializeProviderPreset({ presetId: "modal" });
+  assert.equal(chat.apiBase, "https://inference.us-west.modal.direct/v1");
+  assert.equal(chat.transportKind, undefined);
+  assert.equal(chat.sdk, "@ai-sdk/openai-compatible");
+  assert.deepEqual(chat.models, []);
+
+  const responses = materializeProviderPreset({
+    presetId: "modal",
+    transportKind: "open-responses",
+  });
+  assert.equal(responses.apiBase, "https://inference.us-west.modal.direct/v1");
+  assert.equal(responses.transportKind, "open-responses");
+  assert.equal(responses.sdk, "@ai-sdk/open-responses");
+
+  const messages = materializeProviderPreset({ presetId: "modal", transportKind: "anthropic" });
+  assert.equal(messages.apiBase, "https://inference.us-west.modal.direct/v1");
+  assert.equal(messages.transportKind, "anthropic");
+  assert.equal(messages.sdk, "@ai-sdk/anthropic");
+});
+
 test("minimax materializes the anthropic default with the server-tool and upload templates", () => {
   const entry = materializeProviderPreset({ presetId: "minimax" });
   assert.deepEqual(entry, {

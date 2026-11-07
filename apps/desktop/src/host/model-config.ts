@@ -195,6 +195,17 @@ async function fetchCatalogJson(
   return json;
 }
 
+function assertCompatibleCatalogListPayload(payload: unknown): void {
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    !("data" in payload) ||
+    !Array.isArray((payload as { data?: unknown }).data)
+  ) {
+    throw new Error("Model list response does not contain a compatible model list.");
+  }
+}
+
 /** Generic descriptor-composed fetch: list (plus typed sub-listings / per-model detail). */
 async function fetchCatalogEntriesWithDescriptor(
   input: CatalogFetchInput,
@@ -214,6 +225,7 @@ async function fetchCatalogEntriesWithDescriptor(
     entries = descriptor.merge ? descriptor.merge(all) : dedupeProviderListedModelEntries(all);
   } else {
     const json = await fetchCatalogJson(url, input.apiKey, input.signal);
+    assertCompatibleCatalogListPayload(json);
     entries = descriptor.parseList(json);
   }
 

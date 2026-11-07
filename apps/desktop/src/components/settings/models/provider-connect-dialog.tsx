@@ -278,11 +278,10 @@ export function ProviderConnectDialog({
         ? { workspaceId: connectAlibabaWorkspaceIdForRequest }
         : {}),
       ...(connectBillingPlanIdForRequest ? { billingPlanId: connectBillingPlanIdForRequest } : {}),
-      forceRefresh,
+      // Reconnect is the manual refresh path for deployment-driven catalogs: ignore a previously
+      // cached empty list so newly deployed endpoints appear immediately.
+      forceRefresh: forceRefresh || reconnect,
     });
-    if (res.modelIds.length === 0) {
-      throw new Error(t("settings.noModelsReturned"));
-    }
     const bulk: AddProviderModelsRequest = {
       apiBase: provider === CUSTOM_PROVIDER_PRESET_ID ? connectApiBase.trim() : "",
       apiKey: connectApiKey,
@@ -967,9 +966,11 @@ export function ProviderConnectDialog({
               <Label htmlFor="connect-api-key">
                 {connectCredentialKind === "bedrock"
                   ? t("settings.bedrockApiKeyLabel")
-                  : provider === "cloudflare-ai-gateway"
-                    ? t("settings.cloudflareAiGatewayApiToken")
-                    : "API Key"}
+                  : provider === "modal"
+                    ? t("settings.modalProxyTokenLabel")
+                    : provider === "cloudflare-ai-gateway"
+                      ? t("settings.cloudflareAiGatewayApiToken")
+                      : "API Key"}
               </Label>
               <DesktopFormInput
                 id="connect-api-key"
@@ -977,9 +978,11 @@ export function ProviderConnectDialog({
                 value={connectApiKey}
                 onChange={(e) => setConnectApiKey(e.target.value)}
                 placeholder={
-                  provider === "cloudflare-ai-gateway"
-                    ? t("settings.cloudflareAiGatewayApiTokenPlaceholder")
-                    : t("settings.enterApiKey")
+                  provider === "modal"
+                    ? t("settings.modalProxyTokenPlaceholder")
+                    : provider === "cloudflare-ai-gateway"
+                      ? t("settings.cloudflareAiGatewayApiTokenPlaceholder")
+                      : t("settings.enterApiKey")
                 }
                 autoComplete="off"
               />
@@ -987,6 +990,16 @@ export function ProviderConnectDialog({
                 <p className="text-xs leading-5 text-muted-foreground">
                   {t("settings.bedrockBearerHint")}
                 </p>
+              ) : null}
+              {provider === "modal" ? (
+                <>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    {t("settings.modalProxyTokenHint")}
+                  </p>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    {t("settings.modalSharedEndpointHint")}
+                  </p>
+                </>
               ) : null}
             </div>
           ) : null}

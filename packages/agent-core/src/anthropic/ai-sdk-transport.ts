@@ -650,13 +650,12 @@ function sanitizeAnthropicMessageForCompatibility(
     content = content.filter((part) => !(isJsonObject(part) && part.type === "video_url"));
   }
 
-  if (content !== cloned.content) {
-    const textParts = content.filter(
-      (part) => isJsonObject(part) && part.type === "text" && typeof part.text === "string",
-    );
+  // Filtering allocates a new array even when no part was removed. Only collapse after an actual
+  // removal, and preserve every remaining supported part (not just text).
+  if (content.length !== cloned.content.length) {
     return {
       ...cloned,
-      content: textParts.length > 0 ? textParts : "",
+      content: content.length > 0 ? content : "",
     };
   }
 

@@ -85,7 +85,7 @@ export function modelHasCatalogDetail(entry: ModelCatalogEntry | undefined): boo
   if (entry.description?.trim()) {
     return true;
   }
-  if (catalogMetadataHasAnyValue(entry)) {
+  if (catalogMetadataHasAnyValue(entry) || modelCatalogHasTechnicalMetadata(entry)) {
     return true;
   }
   const pricing = entry.pricing;
@@ -104,6 +104,17 @@ export function modelHasCatalogDetail(entry: ModelCatalogEntry | undefined): boo
     pricing.imageExamplePricing?.priceUsd?.trim() ||
     pricing.videoExamplePricing?.priceUsd?.trim() ||
     Object.keys(pricing.additionalPricing ?? {}).length > 0,
+  );
+}
+
+function modelCatalogHasTechnicalMetadata(entry: ModelCatalogEntry): boolean {
+  return Boolean(
+    entry.baseModelId?.trim() ||
+    entry.reasoningField?.trim() ||
+    (entry.inputModalities?.length ?? 0) > 0 ||
+    (entry.outputModalities?.length ?? 0) > 0 ||
+    (entry.supportedFeatures?.length ?? 0) > 0 ||
+    (entry.supportedSamplingParameters?.length ?? 0) > 0,
   );
 }
 
@@ -199,7 +210,11 @@ export function modelCatalogHasDetailBody(input: {
   if (input.catalogEntry?.description?.trim()) {
     return true;
   }
-  if (catalogMetadataHasAnyValue(input.catalogEntry)) {
+  if (
+    input.catalogEntry &&
+    (catalogMetadataHasAnyValue(input.catalogEntry) ||
+      modelCatalogHasTechnicalMetadata(input.catalogEntry))
+  ) {
     return true;
   }
   const contextLength =
@@ -317,6 +332,19 @@ export function buildModelCatalogDetailFields(input: {
       value: String(metadata.perRequestLimits.burstRatio),
     });
   }
+  appendTechnicalDetailField(fields, "base-model", labels.detailBaseModel, metadata?.baseModelId);
+  appendTechnicalDetailField(
+    fields,
+    "input-modalities",
+    labels.detailInputModalities,
+    metadata?.inputModalities,
+  );
+  appendTechnicalDetailField(
+    fields,
+    "output-modalities",
+    labels.detailOutputModalities,
+    metadata?.outputModalities,
+  );
   if (metadata?.supportedFeatures?.length) {
     fields.push({
       id: "features",
@@ -331,6 +359,12 @@ export function buildModelCatalogDetailFields(input: {
       value: metadata.supportedSamplingParameters.join(", "),
     });
   }
+  appendTechnicalDetailField(
+    fields,
+    "reasoning-field",
+    labels.detailReasoningField,
+    metadata?.reasoningField,
+  );
   const pricing = input.pricing ?? metadata?.pricing;
   if (pricing) {
     const inputPrice = formatUsdPerMillionTokens(pricing.inputPerTokenUsd);
@@ -440,6 +474,18 @@ function humanizeAdditionalPricingKey(key: string): string {
     .filter(Boolean)
     .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
     .join(" ");
+}
+
+function appendTechnicalDetailField(
+  fields: ModelCatalogDetailField[],
+  id: string,
+  label: string,
+  value: string | readonly string[] | undefined,
+): void {
+  const text = typeof value === "string" ? value.trim() : value?.join(", ");
+  if (text) {
+    fields.push({ id, label, value: text });
+  }
 }
 
 export function formatModelCatalogPricingLines(
