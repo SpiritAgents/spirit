@@ -32,6 +32,20 @@
       "catalog": { "parser": "anthropic-models", "endpoint": "/models" }
     },
     {
+      "id": "meta",
+      "label": "Meta",
+      "defaultTransport": "open-responses",
+      "sdk": "@ai-sdk/openai",
+      "transports": {
+        "open-responses": "https://api.meta.ai/v1",
+        "openai-compatible": "https://api.meta.ai/v1",
+        "anthropic": "https://api.meta.ai/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "options": { "reasoningSummary": true },
+      "catalog": { "parser": "openai-models", "endpoint": "/models" }
+    },
+    {
       "id": "google",
       "label": "Google",
       "defaultTransport": "openai-compatible",

@@ -47,6 +47,7 @@ test("the bundled manifest loads with the 33 presets in picker order", () => {
     [
       "openai",
       "anthropic",
+      "meta",
       "google",
       "xai",
       "vercel-ai-gateway",

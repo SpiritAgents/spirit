@@ -10,6 +10,33 @@ import {
   ProviderPresetMaterializeError,
   slugifyCustomProviderLabel,
 } from "./materialize.js";
+import { openAiCompatibleModelsListUrl } from "../model-catalog/openai-models.js";
+
+test("meta materializes the Model API transports with the Responses OpenAI SDK by default", () => {
+  const responses = materializeProviderPreset({ presetId: "meta" });
+  assert.deepEqual(responses, {
+    id: "meta",
+    label: "Meta",
+    apiBase: "https://api.meta.ai/v1",
+    transportKind: "open-responses",
+    sdk: "@ai-sdk/openai",
+    options: { reasoningSummary: true },
+    models: [],
+  });
+  assert.equal(openAiCompatibleModelsListUrl(responses.apiBase), "https://api.meta.ai/v1/models");
+
+  const chat = materializeProviderPreset({ presetId: "meta", transportKind: "openai-compatible" });
+  assert.equal(chat.apiBase, "https://api.meta.ai/v1");
+  assert.equal(chat.sdk, "@ai-sdk/openai-compatible");
+  assert.equal(chat.options, undefined);
+  assert.equal(openAiCompatibleModelsListUrl(chat.apiBase), "https://api.meta.ai/v1/models");
+
+  const messages = materializeProviderPreset({ presetId: "meta", transportKind: "anthropic" });
+  assert.equal(messages.apiBase, "https://api.meta.ai/v1");
+  assert.equal(messages.sdk, "@ai-sdk/anthropic");
+  assert.equal(messages.options, undefined);
+  assert.equal(openAiCompatibleModelsListUrl(messages.apiBase), "https://api.meta.ai/v1/models");
+});
 
 test("modal materializes every Shared Endpoint transport with the common models URL", () => {
   const preset = PROVIDER_PRESET_MANIFEST.providers.find((entry) => entry.id === "modal");
