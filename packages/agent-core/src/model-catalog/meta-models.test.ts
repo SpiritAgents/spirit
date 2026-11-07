@@ -105,8 +105,8 @@ test("meta parser enriches the sparse Muse catalog and excludes non-selector rol
     displayName: "Muse Image 1.0",
     supportsImageGeneration: true,
   });
-  assert.equal(entries[6]?.description, undefined);
-  assert.equal(entries[6]?.pricing, undefined);
+  assert.equal(entries[6] && "description" in entries[6], false);
+  assert.equal(entries[6] && "pricing" in entries[6], false);
 });
 
 test("meta parser tolerates empty and malformed sparse listings", () => {
