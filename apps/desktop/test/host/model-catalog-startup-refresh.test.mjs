@@ -360,6 +360,32 @@ test("applyCatalogEntryToStoredModel backfills contextLength only when unset", (
   assert.equal(model.contextLength, 128000);
 });
 
+test("catalog maxCompletionTokens materializes as the stored output limit", () => {
+  const added = catalogEntryToModelEntry("qwen-3.8-27b", {
+    id: "qwen-3.8-27b",
+    maxCompletionTokens: 32768,
+  });
+  assert.equal(added.outputLimit, 32768);
+
+  const existing = { name: "qwen-3.8-27b" };
+  assert.equal(
+    applyCatalogEntryToStoredModel(existing, {
+      id: "qwen-3.8-27b",
+      maxCompletionTokens: 32768,
+    }),
+    true,
+  );
+  assert.equal(existing.outputLimit, 32768);
+  assert.equal(
+    applyCatalogEntryToStoredModel(existing, {
+      id: "qwen-3.8-27b",
+      maxCompletionTokens: 65536,
+    }),
+    false,
+  );
+  assert.equal(existing.outputLimit, 32768);
+});
+
 test("applyCatalogEntryToStoredModel backfills outputLimit only when unset", () => {
   const model = { name: "gpt-5.4" };
   assert.equal(applyCatalogEntryToStoredModel(model, { id: "gpt-5.4", outputLimit: 32000 }), true);

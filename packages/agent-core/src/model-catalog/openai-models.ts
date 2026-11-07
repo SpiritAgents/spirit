@@ -2,7 +2,11 @@
  * OpenAI-compatible `GET /v1/models` listing (host-side; no secrets stored here).
  */
 
-import type { LlmTransportKind, ThinkingCapabilities } from "../llm-provider-shared.js";
+import type {
+  LlmTransportKind,
+  ThinkingCapabilities,
+  ThinkingSwitchDeclaration,
+} from "../llm-provider-shared.js";
 import type { JsonObject } from "../ports.js";
 import {
   serviceTierMaxInputTokens,
@@ -69,6 +73,34 @@ export interface ProviderListedCatalogCapabilities {
   citations?: JsonObject;
 }
 
+export interface ProviderListedModelArchitecture {
+  modality?: string;
+  tokenizer?: string;
+  instructType?: string;
+}
+
+export interface ProviderListedModelRateLimits {
+  /** Explicit null is retained when the API reports no fixed request limit. */
+  requestsPerMinute?: number | null;
+  /** Explicit null is retained when the API reports no fixed token limit. */
+  tokensPerMinute?: number | null;
+}
+
+/** Optional API-sourced catalog facts without a dedicated model-control slot. */
+export interface ProviderListedModelCatalogMetadata {
+  created?: number;
+  ownedBy?: string;
+  huggingFaceId?: string;
+  capabilities?: Record<string, boolean>;
+  supportedParameters?: Record<string, boolean>;
+  architecture?: ProviderListedModelArchitecture;
+  datacenterLocations?: string[];
+  deprecated?: boolean;
+  preview?: boolean;
+  quantization?: string;
+  rateLimits?: ProviderListedModelRateLimits;
+}
+
 export interface ProviderListedTransportOverride {
   transportKind: "anthropic";
   sdk: "@ai-sdk/anthropic";
@@ -88,6 +120,8 @@ export interface ProviderListedModelEntry {
   /** LongCat etc.: when `supported_parameters` includes `thinking`, extended thinking can be toggled. */
   supportsThinkingSwitch?: boolean;
   supportsThinkingType?: KimiCodeSupportsThinkingType;
+  /** Provider-specific thinking on/off wire encoding resolved while materializing the catalog. */
+  thinkingSwitch?: ThinkingSwitchDeclaration;
   contextLength?: number;
   /** Output token cap reported by the listing; kept separate from `contextLength` (never folded in). */
   outputLimit?: number;
@@ -98,6 +132,7 @@ export interface ProviderListedModelEntry {
   defaultEffort?: string;
   thinkingCapabilities?: ThinkingCapabilities;
   catalogCapabilities?: ProviderListedCatalogCapabilities;
+  catalogMetadata?: ProviderListedModelCatalogMetadata;
   /** Kimi Code `reasoning.effort.default` when `valid` is non-empty. */
   defaultReasoningEffort?: string;
   /** Hugging Face Hub media models: Inference Providers routing hint (optional for backend use). */
@@ -3383,6 +3418,9 @@ export function dedupeProviderListedModelEntries(
       ...(entry.supportsThinkingSwitch !== undefined
         ? { supportsThinkingSwitch: entry.supportsThinkingSwitch }
         : {}),
+      ...(entry.thinkingSwitch !== undefined
+        ? { thinkingSwitch: structuredClone(entry.thinkingSwitch) }
+        : {}),
       ...(entry.contextLength !== undefined ? { contextLength: entry.contextLength } : {}),
       ...(entry.outputLimit !== undefined ? { outputLimit: entry.outputLimit } : {}),
       ...(entry.supportedReasoningEfforts !== undefined
@@ -3398,6 +3436,12 @@ export function dedupeProviderListedModelEntries(
         : {}),
       ...(entry.catalogCapabilities !== undefined
         ? { catalogCapabilities: structuredClone(entry.catalogCapabilities) }
+        : {}),
+      ...(entry.catalogMetadata !== undefined
+        ? { catalogMetadata: structuredClone(entry.catalogMetadata) }
+        : {}),
+      ...(entry.maxCompletionTokens !== undefined
+        ? { maxCompletionTokens: entry.maxCompletionTokens }
         : {}),
       ...(entry.defaultReasoningEffort !== undefined
         ? { defaultReasoningEffort: entry.defaultReasoningEffort }

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { extname } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   cloneLlmProviderState,
@@ -11,6 +12,7 @@ import {
 } from "../ports.js";
 import { uploadDeclaredFile } from "../file-upload/uploader.js";
 import type { FileUploadConfig } from "../file-upload/config.js";
+import { getLlmFetch } from "../llm-fetch.js";
 import {
   pathToLocalVideoReference,
   resolveLocalMediaPath,
@@ -97,8 +99,118 @@ export interface DeclaredMediaConfig {
   apiKey: string;
   baseUrl?: string;
   fileUpload?: FileUploadConfig;
-  modelCapabilities?: { videoInput?: true };
+  modelCapabilities?: { imageInput?: true; videoInput?: true };
   options?: Record<string, unknown>;
+}
+
+const INLINE_IMAGE_MIME_TYPES: ReadonlySet<string> = new Set([
+  "image/bmp",
+  "image/gif",
+  "image/x-icon",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
+function supportedInlineImageMime(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const mime = value.split(";", 1)[0]?.trim().toLowerCase();
+  if (mime === "image/jpg") {
+    return "image/jpeg";
+  }
+  return mime !== undefined && INLINE_IMAGE_MIME_TYPES.has(mime) ? mime : undefined;
+}
+
+function inlineImageDataUrl(mimeType: string, bytes: Uint8Array): string {
+  return `data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`;
+}
+
+function readInlineImageFile(path: string): string {
+  const mimeType = supportedInlineImageMime(guessImageMimeFromPath(path));
+  if (mimeType === undefined) {
+    throw new Error(`Unsupported inline image format for ${path}.`);
+  }
+  return inlineImageDataUrl(mimeType, readFileSync(path));
+}
+
+async function downloadInlineImage(url: string): Promise<string> {
+  const response = await getLlmFetch()(url);
+  if (!response.ok) {
+    throw new Error(`Image download failed (HTTP ${String(response.status)}).`);
+  }
+  const mimeType =
+    supportedInlineImageMime(response.headers.get("content-type")) ??
+    supportedInlineImageMime(guessImageMimeFromPath(new URL(url).pathname));
+  if (mimeType === undefined) {
+    throw new Error("The remote image content type is not supported for inline image input.");
+  }
+  return inlineImageDataUrl(mimeType, new Uint8Array(await response.arrayBuffer()));
+}
+
+/**
+ * `options.inlineImageInput`: resolve local files and supported remote images to base64 data URLs
+ * before AI SDK serialization. This declaration is for Chat Completions providers that reject
+ * external image URLs and file IDs; no provider identity is consulted on the runtime path.
+ */
+export async function resolveDeclaredImageInputsInMessages(
+  config: DeclaredMediaConfig,
+  messages: JsonValue[],
+  assetRoot = process.cwd(),
+): Promise<void> {
+  if (config.options?.inlineImageInput !== true || config.modelCapabilities?.imageInput !== true) {
+    return;
+  }
+
+  for (const message of messages) {
+    if (!isJsonObject(message) || message.role !== "user" || !Array.isArray(message.content)) {
+      continue;
+    }
+    for (const part of message.content) {
+      if (!isJsonObject(part) || part.type !== "image_url") {
+        continue;
+      }
+      const rawImageUrl = part.image_url;
+      if (typeof rawImageUrl !== "object" || rawImageUrl === null || Array.isArray(rawImageUrl)) {
+        continue;
+      }
+      if (typeof rawImageUrl.url !== "string") {
+        if (rawImageUrl.file_id !== undefined) {
+          throw new Error(
+            "This provider accepts images only as base64 data URLs; file IDs are not supported.",
+          );
+        }
+        continue;
+      }
+
+      const url = rawImageUrl.url.trim();
+      if (!url) {
+        continue;
+      }
+      if (/^data:/i.test(url)) {
+        const mimeType = supportedInlineImageMime(url.slice(5).split(";", 1)[0]);
+        if (mimeType === undefined || !/^data:[^;]+;base64,/i.test(url)) {
+          throw new Error("Inline images must use a supported base64 image data URL.");
+        }
+        continue;
+      }
+      if (/^https?:\/\//i.test(url)) {
+        rawImageUrl.url = await downloadInlineImage(url);
+        continue;
+      }
+      if (/^file:\/\//i.test(url)) {
+        rawImageUrl.url = readInlineImageFile(fileURLToPath(url));
+        continue;
+      }
+      if (urlHasWireScheme(url)) {
+        throw new Error(
+          "This provider accepts images only as local files, HTTP(S) images, or base64 data URLs.",
+        );
+      }
+      rawImageUrl.url = readInlineImageFile(resolveLocalMediaPath(url, assetRoot));
+    }
+  }
 }
 
 /**

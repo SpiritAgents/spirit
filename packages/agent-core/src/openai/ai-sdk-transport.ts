@@ -4,6 +4,7 @@ import { createBaseten } from "@ai-sdk/baseten";
 import { createGroq } from "@ai-sdk/groq";
 import { createTogetherAI } from "@ai-sdk/togetherai";
 import { createCohere } from "@ai-sdk/cohere";
+import { createCerebras } from "@ai-sdk/cerebras";
 import { createDeepSeek } from "@ai-sdk/deepseek";
 import { createDeepInfra } from "@ai-sdk/deepinfra";
 import { createGoogle, type GoogleLanguageModelOptions } from "@ai-sdk/google";
@@ -104,6 +105,7 @@ import {
 } from "./video-message-stash.js";
 import {
   llmHistoryToOpenAiMessages,
+  resolveDeclaredImageInputsInMessages,
   resolveDeclaredVideoInputsInMessages,
 } from "./openai-multimodal-messages.js";
 import {
@@ -235,6 +237,11 @@ export class AiSdkOpenAiCompatibleTransport
     request: OpenAiJsonSchemaCompletionRequest,
   ): Promise<OpenAiJsonSchemaCompletionResult<T>> {
     const rawMessages = buildJsonSchemaCompletionMessages(config, request);
+    await resolveDeclaredImageInputsInMessages(
+      config,
+      rawMessages,
+      openAiTransportAssetRoot(config),
+    );
     await resolveDeclaredVideoInputsInMessages(
       config,
       rawMessages,
@@ -276,6 +283,11 @@ export class AiSdkOpenAiCompatibleTransport
       steps: state.steps + 1,
     };
 
+    await resolveDeclaredImageInputsInMessages(
+      config,
+      nextState.messages,
+      openAiTransportAssetRoot(config),
+    );
     await resolveDeclaredVideoInputsInMessages(
       config,
       nextState.messages,
@@ -372,6 +384,11 @@ export class AiSdkOpenAiCompatibleTransport
     let requestMessages: JsonValue[];
     let providerTools = EMPTY_RESOLVED_PROVIDER_TOOLS;
     try {
+      await resolveDeclaredImageInputsInMessages(
+        config,
+        nextState.messages,
+        openAiTransportAssetRoot(config),
+      );
       await resolveDeclaredVideoInputsInMessages(
         config,
         nextState.messages,
@@ -479,18 +496,21 @@ export class AiSdkOpenAiCompatibleTransport
       };
     }
 
-    const promptMessages = openAiMessagesToAiSdkMessages(
-      config,
-      llmHistoryToOpenAiMessages(
-        buildCompactHistoryPromptMessages(
-          history,
-          context?.transcriptDirPath === undefined
-            ? {}
-            : { transcriptDirPath: context.transcriptDirPath },
-        ),
-        openAiTransportAssetRoot(config),
+    const rawMessages = llmHistoryToOpenAiMessages(
+      buildCompactHistoryPromptMessages(
+        history,
+        context?.transcriptDirPath === undefined
+          ? {}
+          : { transcriptDirPath: context.transcriptDirPath },
       ),
+      openAiTransportAssetRoot(config),
     );
+    await resolveDeclaredImageInputsInMessages(
+      config,
+      rawMessages,
+      openAiTransportAssetRoot(config),
+    );
+    const promptMessages = openAiMessagesToAiSdkMessages(config, rawMessages);
     const compactConfig: OpenAiTransportConfig = {
       ...config,
       model: config.compactModel ?? config.model,
@@ -654,6 +674,8 @@ function createAiSdkLanguageModel(
       return createAiSdkDeepInfraProvider(config, providerTools)(config.model);
     case "@ai-sdk/cohere":
       return createAiSdkCohereProvider(config, providerTools)(config.model);
+    case "@ai-sdk/cerebras":
+      return createAiSdkCerebrasProvider(config, providerTools)(config.model);
     case "@ai-sdk/openai-compatible":
       return createAiSdkOpenAiCompatibleProvider(config, { providerTools }).chatModel(config.model);
     default:
@@ -668,6 +690,7 @@ const OPENAI_COMPATIBLE_SDK_ADAPTER_PACKAGES = [
   "@ai-sdk/openai-compatible",
   "@ai-sdk/alibaba",
   "@ai-sdk/baseten",
+  "@ai-sdk/cerebras",
   "@ai-sdk/cohere",
   "@ai-sdk/deepinfra",
   "@ai-sdk/deepseek",
@@ -1012,6 +1035,17 @@ function createAiSdkCohereProvider(
   providerTools: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">,
 ) {
   return createCohere({
+    apiKey: config.apiKey,
+    ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
+    fetch: llmFetchForChat(config, providerTools),
+  });
+}
+
+function createAiSdkCerebrasProvider(
+  config: OpenAiTransportConfig,
+  providerTools: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">,
+) {
+  return createCerebras({
     apiKey: config.apiKey,
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
     fetch: llmFetchForChat(config, providerTools),

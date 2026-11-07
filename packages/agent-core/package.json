@@ -169,6 +169,7 @@
     "@ai-sdk/anthropic": "4.0.78",
     "@ai-sdk/azure": "4.0.99",
     "@ai-sdk/baseten": "2.1.45",
+    "@ai-sdk/cerebras": "3.0.85",
     "@ai-sdk/cohere": "4.0.59",
     "@ai-sdk/deepinfra": "3.0.67",
     "@ai-sdk/deepseek": "3.0.63",

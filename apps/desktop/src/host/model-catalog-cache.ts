@@ -4,7 +4,10 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { normalizeOpenAiApiBase } from "@spiritagent/agent-core/model-catalog/openai-api-base";
-import type { ProviderListedCatalogCapabilities } from "@spiritagent/agent-core/model-catalog";
+import type {
+  ProviderListedCatalogCapabilities,
+  ProviderListedModelCatalogMetadata,
+} from "@spiritagent/agent-core/model-catalog";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 import type { ThinkingCapabilities } from "@spiritagent/agent-core";
 import type {
@@ -265,6 +268,99 @@ function normalizeCachedCatalogCapabilities(
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
+function cachedMetadataRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function cachedMetadataString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function cachedMetadataBooleanRecord(value: unknown): Record<string, boolean> | undefined {
+  const record = cachedMetadataRecord(value);
+  if (!record) {
+    return undefined;
+  }
+  const result: Record<string, boolean> = {};
+  for (const [key, item] of Object.entries(record)) {
+    if (typeof item === "boolean") {
+      result[key] = item;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+function normalizeCachedCatalogMetadata(
+  value: unknown,
+): ProviderListedModelCatalogMetadata | undefined {
+  const record = cachedMetadataRecord(value);
+  if (!record) {
+    return undefined;
+  }
+  const created =
+    typeof record.created === "number" &&
+    Number.isSafeInteger(record.created) &&
+    record.created >= 0
+      ? record.created
+      : undefined;
+  const ownedBy = cachedMetadataString(record.ownedBy);
+  const huggingFaceId = cachedMetadataString(record.huggingFaceId);
+  const capabilities = cachedMetadataBooleanRecord(record.capabilities);
+  const supportedParameters = cachedMetadataBooleanRecord(record.supportedParameters);
+  const architectureRecord = cachedMetadataRecord(record.architecture);
+  const modality = cachedMetadataString(architectureRecord?.modality);
+  const tokenizer = cachedMetadataString(architectureRecord?.tokenizer);
+  const instructType = cachedMetadataString(architectureRecord?.instructType);
+  const architecture =
+    modality !== undefined || tokenizer !== undefined || instructType !== undefined
+      ? {
+          ...(modality !== undefined ? { modality } : {}),
+          ...(tokenizer !== undefined ? { tokenizer } : {}),
+          ...(instructType !== undefined ? { instructType } : {}),
+        }
+      : undefined;
+  const datacenterLocations = Array.isArray(record.datacenterLocations)
+    ? record.datacenterLocations.flatMap((location) =>
+        typeof location === "string" && location.trim().length > 0 ? [location.trim()] : [],
+      )
+    : undefined;
+  const quantization = cachedMetadataString(record.quantization);
+  const rateRecord = cachedMetadataRecord(record.rateLimits);
+  const readRateLimit = (input: unknown): number | null | undefined => {
+    if (input === null) {
+      return null;
+    }
+    return typeof input === "number" && Number.isSafeInteger(input) && input >= 0
+      ? input
+      : undefined;
+  };
+  const requestsPerMinute = readRateLimit(rateRecord?.requestsPerMinute);
+  const tokensPerMinute = readRateLimit(rateRecord?.tokensPerMinute);
+  const rateLimits =
+    requestsPerMinute !== undefined || tokensPerMinute !== undefined
+      ? {
+          ...(requestsPerMinute !== undefined ? { requestsPerMinute } : {}),
+          ...(tokensPerMinute !== undefined ? { tokensPerMinute } : {}),
+        }
+      : undefined;
+  const result: ProviderListedModelCatalogMetadata = {
+    ...(created !== undefined ? { created } : {}),
+    ...(ownedBy !== undefined ? { ownedBy } : {}),
+    ...(huggingFaceId !== undefined ? { huggingFaceId } : {}),
+    ...(capabilities !== undefined ? { capabilities } : {}),
+    ...(supportedParameters !== undefined ? { supportedParameters } : {}),
+    ...(architecture !== undefined ? { architecture } : {}),
+    ...(datacenterLocations !== undefined ? { datacenterLocations } : {}),
+    ...(typeof record.deprecated === "boolean" ? { deprecated: record.deprecated } : {}),
+    ...(typeof record.preview === "boolean" ? { preview: record.preview } : {}),
+    ...(quantization !== undefined ? { quantization } : {}),
+    ...(rateLimits !== undefined ? { rateLimits } : {}),
+  };
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
 function normalizeCachedThinkingSwitch(value: unknown): ThinkingSwitchDeclaration | undefined {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return undefined;
@@ -335,6 +431,7 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
     const defaultEffort = normalizeCachedDefaultEffort(record.defaultEffort);
     const thinkingCapabilities = normalizeCachedThinkingCapabilities(record.thinkingCapabilities);
     const catalogCapabilities = normalizeCachedCatalogCapabilities(record.catalogCapabilities);
+    const catalogMetadata = normalizeCachedCatalogMetadata(record.catalogMetadata);
     const thinkingSwitch = normalizeCachedThinkingSwitch(record.thinkingSwitch);
     const defaultReasoningEffort = normalizeCachedDefaultReasoningEffort(
       record.defaultReasoningEffort,
@@ -379,6 +476,7 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
       ...(defaultEffort !== undefined ? { defaultEffort } : {}),
       ...(thinkingCapabilities !== undefined ? { thinkingCapabilities } : {}),
       ...(catalogCapabilities !== undefined ? { catalogCapabilities } : {}),
+      ...(catalogMetadata !== undefined ? { catalogMetadata } : {}),
       ...(defaultReasoningEffort !== undefined ? { defaultReasoningEffort } : {}),
       ...(contextLength !== undefined ? { contextLength } : {}),
       ...(outputLimit !== undefined ? { outputLimit } : {}),
@@ -628,6 +726,9 @@ function clonePreviewModelCatalog(
       : {}),
     ...(entry.catalogCapabilities !== undefined
       ? { catalogCapabilities: structuredClone(entry.catalogCapabilities) }
+      : {}),
+    ...(entry.catalogMetadata !== undefined
+      ? { catalogMetadata: structuredClone(entry.catalogMetadata) }
       : {}),
     ...(entry.defaultReasoningEffort !== undefined
       ? { defaultReasoningEffort: entry.defaultReasoningEffort }

@@ -658,7 +658,11 @@ test("mechanism options keys validate value shapes and transport scope", () => {
     validateSpiritConfig(
       validConfig([
         validProvider({
-          options: { toolsRejectReasoningEffort: true, maxInlineMediaBytes: 52428800 },
+          options: {
+            toolsRejectReasoningEffort: true,
+            maxInlineMediaBytes: 52428800,
+            inlineImageInput: true,
+          },
         }),
       ]),
     ),
@@ -669,6 +673,23 @@ test("mechanism options keys validate value shapes and transport scope", () => {
         validConfig([validProvider({ options: { toolsRejectReasoningEffort: false } })]),
       ),
     '"options.toolsRejectReasoningEffort" must be true',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(validConfig([validProvider({ options: { inlineImageInput: false } })])),
+    '"options.inlineImageInput" must be true',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([
+          validProvider({
+            transportKind: "open-responses",
+            options: { inlineImageInput: true },
+          }),
+        ]),
+      ),
+    'unknown "options" key "inlineImageInput" for transportKind "open-responses"',
   );
   assertSchemaError(
     () =>
@@ -835,6 +856,13 @@ test("preset mechanism options round trip through save/load", async () => {
         options: { maxInlineMediaBytes: 52428800 },
         models: [{ name: "mimo-v2.5" }],
       },
+      {
+        id: "cerebras",
+        apiBase: "https://api.cerebras.ai/v1",
+        sdk: "@ai-sdk/cerebras",
+        options: { inlineImageInput: true },
+        models: [{ name: "qwen-3.8-27b" }],
+      },
     ],
     activeModel: { providerId: "deepseek", name: "deepseek-v4-flash" },
   };
@@ -849,6 +877,7 @@ test("preset mechanism options round trip through save/load", async () => {
   assert.deepEqual(byId.get("volcengine")?.options, { defaultInputItemStatus: "completed" });
   assert.deepEqual(byId.get("byteplus")?.options, { defaultInputItemStatus: "completed" });
   assert.deepEqual(byId.get("xiaomi")?.options, { maxInlineMediaBytes: 52428800 });
+  assert.deepEqual(byId.get("cerebras")?.options, { inlineImageInput: true });
 });
 
 test("credentials slots are scoped by mechanism and conflict with flat keys", () => {

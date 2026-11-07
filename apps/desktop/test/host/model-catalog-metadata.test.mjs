@@ -68,6 +68,77 @@ test("siliconflow provider uses listed model catalog metadata", () => {
   ]);
 });
 
+test("cerebras materializes only the documented Shared reasoning constraints", () => {
+  const preview = previewModelCatalogForTransport({
+    providerId: "cerebras",
+    transportKind: "openai-compatible",
+    listedModels: [
+      { id: "gpt-oss-120b", supportsThinkingType: "only", supportsThinkingSwitch: false },
+      {
+        id: "qwen-3.8-27b",
+        supportsThinkingSwitch: true,
+        thinkingSwitch: { off: { body: { reasoning_effort: "none" } } },
+      },
+    ],
+  });
+
+  assert.equal(preview[0].supportsThinkingType, "only");
+  assert.equal(preview[0].supportsThinkingSwitch, undefined);
+  assert.equal(preview[0].supportedReasoningEfforts, undefined);
+  assert.equal(preview[0].thinkingSwitch, undefined);
+  assert.equal(preview[1].supportsThinkingSwitch, true);
+  assert.deepEqual(preview[1].thinkingSwitch, {
+    off: { body: { reasoning_effort: "none" } },
+  });
+  assert.equal(preview[1].supportedReasoningEfforts, undefined);
+  assert.equal(preview[1].defaultReasoningEffort, undefined);
+  assert.equal(preview[0].serviceTiers, undefined);
+  assert.equal(preview[1].serviceTiers, undefined);
+});
+
+test("cerebras preview retains rich API catalog metadata and output limits", () => {
+  const catalogMetadata = {
+    created: 0,
+    ownedBy: "Cerebras",
+    capabilities: { tools: true, vision: true },
+    supportedParameters: { temperature: true, stop: false },
+    architecture: { modality: "text+image", tokenizer: "Qwen", instructType: "chatml" },
+    datacenterLocations: ["US-Central"],
+    deprecated: false,
+    preview: true,
+    quantization: "FP8",
+    rateLimits: { requestsPerMinute: 60, tokensPerMinute: null },
+  };
+  const preview = previewModelCatalogForTransport({
+    providerId: "cerebras",
+    transportKind: "openai-compatible",
+    listedModels: [
+      {
+        id: "qwen-3.8-27b",
+        displayName: "Qwen 3.8 27B",
+        description: "Shared multilingual reasoning model.",
+        pricing: { inputPerTokenUsd: "0.000001", outputPerTokenUsd: "0.000002" },
+        supportsImageInput: true,
+        contextLength: 131072,
+        maxCompletionTokens: 32768,
+        catalogMetadata,
+      },
+    ],
+  });
+  assert.deepEqual(preview, [
+    {
+      id: "qwen-3.8-27b",
+      displayName: "Qwen 3.8 27B",
+      description: "Shared multilingual reasoning model.",
+      pricing: { inputPerTokenUsd: "0.000001", outputPerTokenUsd: "0.000002" },
+      capabilities: ["languageModel", "image"],
+      contextLength: 131072,
+      maxCompletionTokens: 32768,
+      catalogMetadata,
+    },
+  ]);
+});
+
 test("custom anthropic transport consumes Anthropic model catalog metadata", () => {
   assert.equal(usesAnthropicModelCatalogMetadata({ transportKind: "anthropic" }), true);
 

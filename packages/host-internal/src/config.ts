@@ -113,6 +113,8 @@ export interface ProviderOptions {
   toolsRejectReasoningEffort?: true;
   /** openai-compatible: byte cap on base64-encoded inline media payloads. */
   maxInlineMediaBytes?: number;
+  /** openai-compatible: materialize every image input as a base64 data URL before SDK serialization. */
+  inlineImageInput?: true;
   /** open-responses: the endpoint honors OpenAI-style `reasoning.summary`; absent = never sent. */
   reasoningSummary?: true;
   /** open-responses: status value filled onto replayed input items that lack one. */
@@ -205,6 +207,7 @@ export const KNOWN_SDK_PACKAGE_NAMES: readonly string[] = [
   "@ai-sdk/anthropic",
   "@ai-sdk/azure",
   "@ai-sdk/baseten",
+  "@ai-sdk/cerebras",
   "@ai-sdk/cohere",
   "@ai-sdk/deepinfra",
   "@ai-sdk/deepseek",
@@ -342,6 +345,7 @@ const TRANSPORT_OPTION_KEYS: Record<SpiritTransportKind, readonly string[]> = {
   "openai-compatible": [
     "toolsRejectReasoningEffort",
     "maxInlineMediaBytes",
+    "inlineImageInput",
     "openRouterAnthropicReasoning",
   ],
   "open-responses": [
@@ -803,6 +807,7 @@ function validateProviderOptions(
     "storedState",
     "applyPatch",
     "toolsRejectReasoningEffort",
+    "inlineImageInput",
     "reasoningSummary",
     "openRouterAnthropicReasoning",
   ] as const) {

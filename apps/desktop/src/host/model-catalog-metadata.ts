@@ -361,6 +361,9 @@ function basePreviewEntryFields(
     ...(entry.maxCompletionTokens !== undefined
       ? { maxCompletionTokens: entry.maxCompletionTokens }
       : {}),
+    ...(entry.catalogMetadata !== undefined
+      ? { catalogMetadata: structuredClone(entry.catalogMetadata) }
+      : {}),
     ...(entry.inferenceProvider !== undefined
       ? { inferenceProvider: entry.inferenceProvider }
       : {}),
@@ -425,7 +428,9 @@ function previewEntryFromListedEntry(
         : {}),
       ...(knowledgeThinkingSwitchEncoding !== undefined
         ? { thinkingSwitch: knowledgeThinkingSwitchEncoding }
-        : {}),
+        : entry.thinkingSwitch !== undefined
+          ? { thinkingSwitch: entry.thinkingSwitch }
+          : {}),
     };
   }
 
@@ -451,7 +456,7 @@ function previewEntryFromListedEntry(
     entry,
     knowledge,
     knowledgeCapabilities: knowledgeDeclaredThinkingCapabilities(knowledge),
-    knowledgeSwitch: knowledgeThinkingSwitch,
+    knowledgeSwitch: knowledgeThinkingSwitch ?? entry.thinkingSwitch,
     knowledgeSwitchSupport,
     knowledgeType: knowledgeThinkingType,
   });
