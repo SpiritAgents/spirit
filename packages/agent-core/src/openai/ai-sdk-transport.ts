@@ -79,6 +79,7 @@ import { buildGeneratedImageToolOutput } from "../image-generation/output.js";
 import { generateVideoWithRouter } from "../video-generation/router.js";
 import { getLlmFetch } from "../llm-fetch.js";
 import { createDeclaredWireMergeFetch } from "../llm-declared-wire-fetch.js";
+import { createChatMediaValidationFetch } from "./chat-media-validation-fetch.js";
 import { buildGeminiThinkingConfigForEffort } from "./gemini-thinking-config.js";
 import { createToolsRejectReasoningEffortFetch } from "./tools-reject-reasoning-effort-fetch.js";
 import { createOpenRouterAnthropicReasoningFetch } from "../openrouter-anthropic-reasoning.js";
@@ -849,7 +850,7 @@ function llmFetchForChat(
       });
     };
   }
-  return fetch;
+  return createChatMediaValidationFetch(config, fetch);
 }
 
 function createAiSdkOpenAiCompatibleProvider(
@@ -1268,6 +1269,10 @@ function openAiUserContentToAiSdkContent(
           parts.push(buildAiSdkUserVideoFilePartFromUrl(part.video_url.url));
         }
         break;
+      case "local_file":
+        throw new Error(
+          "Audio and PDF input require a Responses connection with file upload support.",
+        );
       default:
         break;
     }
@@ -1879,6 +1884,28 @@ function sanitizeMessageForCompatibility(
   }
   if (profile.hasExplicitCapabilities && !profile.capabilities.videoInput) {
     content = content.filter((part) => !(isJsonObject(part) && part.type === "video_url"));
+  }
+  if (profile.hasExplicitCapabilities && !profile.capabilities.audioInput) {
+    content = content.filter(
+      (part) =>
+        !(
+          isJsonObject(part) &&
+          part.type === "local_file" &&
+          isJsonObject(part.local_file) &&
+          part.local_file.assetKind === "audio"
+        ),
+    );
+  }
+  if (profile.hasExplicitCapabilities && !profile.capabilities.documentInput) {
+    content = content.filter(
+      (part) =>
+        !(
+          isJsonObject(part) &&
+          part.type === "local_file" &&
+          isJsonObject(part.local_file) &&
+          part.local_file.assetKind === "document"
+        ),
+    );
   }
 
   // filter always produces a new array, so a reference change does not mean a part was actually dropped;

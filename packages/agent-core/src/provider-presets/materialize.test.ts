@@ -20,7 +20,13 @@ test("meta materializes the Model API transports with the Responses OpenAI SDK b
     apiBase: "https://api.meta.ai/v1",
     transportKind: "open-responses",
     sdk: "@ai-sdk/openai",
-    options: { reasoningSummary: true },
+    options: { reasoningSummary: true, responsesFileUpload: true },
+    fileUpload: {
+      url: "https://api.meta.ai/v1/files",
+      purpose: "user_data",
+      refTemplate: "{id}",
+      maxBytes: 1_073_741_824,
+    },
     providerTools: [{ label: "Web Search", tools: [{ type: "web_search" }] }],
     models: [],
   });
@@ -29,7 +35,8 @@ test("meta materializes the Model API transports with the Responses OpenAI SDK b
   const chat = materializeProviderPreset({ presetId: "meta", transportKind: "openai-compatible" });
   assert.equal(chat.apiBase, "https://api.meta.ai/v1");
   assert.equal(chat.sdk, "@ai-sdk/openai-compatible");
-  assert.equal(chat.options, undefined);
+  assert.deepEqual(chat.options, { chatMediaValidation: true });
+  assert.equal(chat.fileUpload, undefined);
   assert.deepEqual(chat.providerTools, []);
   assert.equal(openAiCompatibleModelsListUrl(chat.apiBase), "https://api.meta.ai/v1/models");
 
@@ -37,6 +44,7 @@ test("meta materializes the Model API transports with the Responses OpenAI SDK b
   assert.equal(messages.apiBase, "https://api.meta.ai/v1");
   assert.equal(messages.sdk, "@ai-sdk/anthropic");
   assert.equal(messages.options, undefined);
+  assert.equal(messages.fileUpload, undefined);
   assert.deepEqual(messages.providerTools, [
     {
       label: "Web Search",

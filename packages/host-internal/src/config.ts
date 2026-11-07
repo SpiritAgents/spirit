@@ -109,6 +109,10 @@ export interface ProviderOptions {
   location?: string;
   auth?: "aws-sigv4";
   storedState?: true;
+  /** open-responses: upload non-image media through the declared Files channel before inference. */
+  responsesFileUpload?: true;
+  /** openai-compatible: enforce declared inline image and MP4 input constraints. */
+  chatMediaValidation?: true;
   applyPatch?: true;
   /** openai-compatible: the upstream rejects function tools with a non-`none` reasoning effort. */
   toolsRejectReasoningEffort?: true;
@@ -348,11 +352,13 @@ const TRANSPORT_OPTION_KEYS: Record<SpiritTransportKind, readonly string[]> = {
     "toolsRejectReasoningEffort",
     "maxInlineMediaBytes",
     "inlineImageInput",
+    "chatMediaValidation",
     "openRouterAnthropicReasoning",
   ],
   "open-responses": [
     "auth",
     "storedState",
+    "responsesFileUpload",
     "applyPatch",
     "reasoningSummary",
     "defaultInputItemStatus",

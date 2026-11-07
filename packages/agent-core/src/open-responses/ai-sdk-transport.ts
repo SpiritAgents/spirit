@@ -70,6 +70,8 @@ import {
 } from "./model-factory.js";
 import {
   attachResponseIdToAssistantMessage,
+  attachReasoningReplayToAssistantMessage,
+  extractResponsesReasoningReplayItems,
   extractResponseIdFromGenerateTextResult,
 } from "./provider-state.js";
 import {
@@ -255,14 +257,20 @@ export class AiSdkOpenResponsesTransport
                 executedProviderBuiltinToolCallIds.has(toolCall.toolCallId)
               ),
           );
-          const assistantMessage = attachResponseIdToAssistantMessage(
+          const assistantMessage = attachReasoningReplayToAssistantMessage(
             config,
-            buildAssistantMessageFromResponsesGenerateText(
-              result.text,
-              pendingAssistantToolCalls,
-              result.reasoningText ?? "",
+            attachResponseIdToAssistantMessage(
+              config,
+              buildAssistantMessageFromResponsesGenerateText(
+                result.text,
+                pendingAssistantToolCalls,
+                result.reasoningText ?? "",
+              ),
+              extractResponseIdFromGenerateTextResult(result),
             ),
-            extractResponseIdFromGenerateTextResult(result),
+            extractResponsesReasoningReplayItems(
+              (result.response as { body?: unknown } | undefined)?.body,
+            ),
           );
           if (applyPatchCalls.length > 0 && isJsonObject(assistantMessage as JsonValue)) {
             appendApplyPatchToolCallsToAssistantMessage(

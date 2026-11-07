@@ -42,7 +42,19 @@
         "anthropic": "https://api.meta.ai/v1"
       },
       "credentials": { "kind": "apiKey" },
-      "options": { "reasoningSummary": true },
+      "options": {
+        "reasoningSummary": true,
+        "responsesFileUpload": true,
+        "chatMediaValidation": true
+      },
+      "fileUploadByTransport": {
+        "open-responses": {
+          "path": "/files",
+          "purpose": "user_data",
+          "refTemplate": "{id}",
+          "maxBytes": 1073741824
+        }
+      },
       "providerToolsByTransport": {
         "open-responses": [
           {

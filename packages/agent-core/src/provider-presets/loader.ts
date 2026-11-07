@@ -267,6 +267,29 @@ function readProviderPreset(value: unknown, index: number): ProviderPreset {
       fail(`${context}.fileUpload: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
+  let fileUploadByTransport: ProviderPreset["fileUploadByTransport"];
+  if (value["fileUploadByTransport"] !== undefined) {
+    const raw = value["fileUploadByTransport"];
+    if (!isRecord(raw)) {
+      fail(`${context}.fileUploadByTransport must be an object.`);
+    }
+    fileUploadByTransport = {};
+    for (const [transport, upload] of Object.entries(raw)) {
+      const transportKind = readTransportKind(transport, `${context}.fileUploadByTransport key`);
+      if (transports[transportKind] === undefined) {
+        fail(
+          `${context}.fileUploadByTransport.${transport} has no matching transport declaration.`,
+        );
+      }
+      try {
+        fileUploadByTransport[transportKind] = validateFileUploadConfig(upload);
+      } catch (error) {
+        fail(
+          `${context}.fileUploadByTransport.${transport}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+  }
   const imageApi = readOptionalString(value, "imageApi", context);
   const videoApi = readOptionalString(value, "videoApi", context);
   const expressApiBase = readOptionalString(value, "expressApiBase", context);
@@ -312,6 +335,7 @@ function readProviderPreset(value: unknown, index: number): ProviderPreset {
     ...(providerTools !== undefined ? { providerTools } : {}),
     ...(providerToolsByTransport !== undefined ? { providerToolsByTransport } : {}),
     ...(fileUpload !== undefined ? { fileUpload } : {}),
+    ...(fileUploadByTransport !== undefined ? { fileUploadByTransport } : {}),
     ...(imageApi !== undefined ? { imageApi } : {}),
     ...(videoApi !== undefined ? { videoApi } : {}),
     ...(expressApiBase !== undefined ? { expressApiBase } : {}),

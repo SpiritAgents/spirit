@@ -11,7 +11,12 @@ import {
 } from "./apply-patch-bridge.js";
 import { resolveStreamingToolPreviewEmit } from "../tool-streaming-preview-gate.js";
 import { isJsonObject, type ToolAgentState } from "../tool-agent.js";
-import { attachResponseIdToAssistantMessage } from "./provider-state.js";
+import {
+  attachReasoningReplayToAssistantMessage,
+  attachResponseIdToAssistantMessage,
+  extractResponsesReasoningReplayItems,
+  type ResponsesReasoningReplayItem,
+} from "./provider-state.js";
 import type { OpenResponsesTransportConfig } from "./responses-compat.js";
 import { renderResponsesTransportError } from "./ai-sdk-message-bridge.js";
 import {
@@ -73,6 +78,7 @@ export async function* responsesEventStreamToRuntimeEvents(
   const executedProviderBuiltinToolCallIds = new Set<string>();
   const providerBuiltinToolResults = new Map<string, AccumulatedProviderBuiltinToolResult>();
   let responseId: string | undefined;
+  let reasoningReplayItems: ResponsesReasoningReplayItem[] = [];
   /**
    * Reasoning arrives via the adapter's reasoning-delta parts or, for endpoints the adapter does
    * not parse, via raw SSE chunks. Whichever channel delivers first owns the stream's reasoning —
@@ -281,6 +287,10 @@ export async function* responsesEventStreamToRuntimeEvents(
           if (rawResponseId) {
             responseId = rawResponseId;
           }
+          const rawChunk = part.rawValue as JsonValue;
+          if (isJsonObject(rawChunk) && rawChunk.type === "response.completed") {
+            reasoningReplayItems = extractResponsesReasoningReplayItems(rawChunk.response);
+          }
 
           if (activeReasoningDeltaId === undefined) {
             const rawReasoningText = extractOpenResponsesReasoningTextFromRawChunk(part.rawValue);
@@ -328,30 +338,38 @@ export async function* responsesEventStreamToRuntimeEvents(
       const pendingHostToolCallIds = new Set(calls.map((call) => call.id));
       persistProviderBuiltinToolRoundToState(
         nextState,
-        attachResponseIdToAssistantMessage(
+        attachReasoningReplayToAssistantMessage(
           config,
-          buildStreamingAssistantMessage(
-            resumeStreamingAfterProviderSearch ? resolvedAssistantContent : "",
-            resumeStreamingAfterProviderSearch ? reasoningContent : "",
-            toolCalls,
-            pendingHostToolCallIds,
+          attachResponseIdToAssistantMessage(
+            config,
+            buildStreamingAssistantMessage(
+              resumeStreamingAfterProviderSearch ? resolvedAssistantContent : "",
+              resumeStreamingAfterProviderSearch ? reasoningContent : "",
+              toolCalls,
+              pendingHostToolCallIds,
+            ),
+            responseId,
           ),
-          responseId,
+          reasoningReplayItems,
         ),
         providerBuiltinToolResults,
         executedProviderBuiltinToolCallIds,
       );
     }
     if (!resumeStreamingAfterProviderSearch) {
-      const assistantMessage = attachResponseIdToAssistantMessage(
+      const assistantMessage = attachReasoningReplayToAssistantMessage(
         config,
-        buildStreamingAssistantMessage(
-          resolvedAssistantContent,
-          reasoningContent,
-          toolCalls,
-          executedProviderBuiltinToolCallIds,
+        attachResponseIdToAssistantMessage(
+          config,
+          buildStreamingAssistantMessage(
+            resolvedAssistantContent,
+            reasoningContent,
+            toolCalls,
+            executedProviderBuiltinToolCallIds,
+          ),
+          responseId,
         ),
-        responseId,
+        reasoningReplayItems,
       );
       nextState.messages.push(assistantMessage);
     }
