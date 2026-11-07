@@ -75,6 +75,7 @@ test("the bundled manifest loads with the 33 presets in picker order", () => {
       "tencent-tokenhub",
       "mistral",
       "cohere",
+      "nebius-token-factory",
       "azure",
       "amazon-bedrock",
       "google-vertex-ai",

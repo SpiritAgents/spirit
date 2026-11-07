@@ -381,6 +381,29 @@ test("a non-default transport falls back to the transport-generic sdk", () => {
   assert.equal(openrouter.sdk, "@ai-sdk/open-responses");
 });
 
+test("nebius token factory exposes global serverless chat and responses transports", () => {
+  const chat = materializeProviderPreset({ presetId: "nebius-token-factory" });
+  assert.deepEqual(chat, {
+    id: "nebius-token-factory",
+    label: "Nebius Token Factory",
+    apiBase: "https://api.tokenfactory.nebius.com/v1",
+    sdk: "@ai-sdk/openai-compatible",
+    models: [],
+  });
+
+  const responses = materializeProviderPreset({
+    presetId: "nebius-token-factory",
+    transportKind: "open-responses",
+  });
+  assert.equal(responses.apiBase, "https://api.tokenfactory.nebius.com/v1");
+  assert.equal(responses.transportKind, "open-responses");
+  assert.equal(responses.sdk, "@ai-sdk/open-responses");
+  assert.equal(responses.providerTools, undefined);
+  assert.equal(responses.imageApi, undefined);
+  assert.equal(responses.videoApi, undefined);
+  assert.equal(responses.fileUpload, undefined);
+});
+
 test("amazon-bedrock omits the sdk (self-held transport) and substitutes the region", () => {
   const entry = materializeProviderPreset({
     presetId: "amazon-bedrock",
