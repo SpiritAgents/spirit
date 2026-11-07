@@ -702,19 +702,21 @@ mod tests {
     #[test]
     fn picker_order_is_manifest_order_with_custom_last() {
         let ids = model_add_picker_order_ids();
-        assert_eq!(ids.len(), 35);
+        assert_eq!(ids.len(), 36);
         assert_eq!(ids[0], "openai");
         assert_eq!(ids[11], "cerebras");
-        assert_eq!(ids[30], "nebius-token-factory");
-        assert_eq!(ids[33], "google-vertex-ai");
-        assert_eq!(ids[34], "custom");
+        assert_eq!(ids[14], "modal");
+        assert_eq!(ids[31], "nebius-token-factory");
+        assert_eq!(ids[34], "google-vertex-ai");
+        assert_eq!(ids[35], "custom");
         assert_eq!(model_add_provider_id_at_choice_index(11), Some("cerebras"));
+        assert_eq!(model_add_provider_id_at_choice_index(14), Some("modal"));
         assert_eq!(
-            model_add_provider_id_at_choice_index(30),
+            model_add_provider_id_at_choice_index(31),
             Some("nebius-token-factory")
         );
-        assert_eq!(model_add_provider_id_at_choice_index(34), Some("custom"));
-        assert!(model_add_provider_id_at_choice_index(35).is_none());
+        assert_eq!(model_add_provider_id_at_choice_index(35), Some("custom"));
+        assert!(model_add_provider_id_at_choice_index(36).is_none());
         assert!(is_known_preset_id("nebius-token-factory"));
         assert!(is_known_preset_id("kimi-code"));
         assert!(is_known_preset_id("custom"));
