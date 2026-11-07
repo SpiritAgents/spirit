@@ -108,6 +108,7 @@ test("manifest catalog parser names are the coordinated shape-name set", () => {
     "ark-models",
     "baseten-models",
     "bedrock-models",
+    "cerebras-models",
     "cohere-models",
     "deepinfra-models",
     "fireworks-gateway-models",

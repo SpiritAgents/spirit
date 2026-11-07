@@ -19,6 +19,7 @@ const CANONICAL_PARSER_NAMES = [
   "fireworks-gateway-models",
   "together-models",
   "groq-models",
+  "cerebras-models",
   "deepinfra-models",
   "baseten-models",
   "huggingface-models",

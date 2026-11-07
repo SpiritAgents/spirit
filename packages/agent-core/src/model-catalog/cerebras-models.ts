@@ -1,0 +1,195 @@
+import type {
+  ListOpenAiCompatibleModelIdsOptions,
+  ProviderListedModelEntry,
+} from "./openai-models.js";
+import { openAiCompatibleModelsListUrl } from "./openai-models.js";
+
+export const CEREBRAS_SHARED_MODEL_IDS = ["gpt-oss-120b", "qwen-3.8-27b"] as const;
+
+const SHARED_MODEL_IDS: ReadonlySet<string> = new Set(CEREBRAS_SHARED_MODEL_IDS);
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function modelRecords(payload: unknown): Record<string, unknown>[] {
+  const data = asRecord(payload)?.data;
+  return Array.isArray(data)
+    ? data.map(asRecord).filter((entry): entry is Record<string, unknown> => entry !== undefined)
+    : [];
+}
+
+function sharedModelId(record: Record<string, unknown>): string | undefined {
+  const id = typeof record.id === "string" ? record.id.trim() : "";
+  return SHARED_MODEL_IDS.has(id) ? id : undefined;
+}
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function optionalPositiveInteger(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : undefined;
+}
+
+/** Authenticated Shared Inference ids. Dedicated and public-only entries are never imported. */
+export function parseCerebrasModelEntriesPayload(payload: unknown): ProviderListedModelEntry[] {
+  const entries = modelRecords(payload)
+    .map((record) => sharedModelId(record))
+    .filter((id): id is string => id !== undefined)
+    .map((id) => ({ id }));
+  return [...new Map(entries.map((entry) => [entry.id, entry])).values()];
+}
+
+/** Rich public metadata, still restricted to the documented Shared Inference allowlist. */
+export function parseCerebrasPublicModelEntriesPayload(
+  payload: unknown,
+): ProviderListedModelEntry[] {
+  const entries: ProviderListedModelEntry[] = [];
+  for (const record of modelRecords(payload)) {
+    const id = sharedModelId(record);
+    if (!id) {
+      continue;
+    }
+
+    const capabilities = asRecord(record.capabilities);
+    const limits = asRecord(record.limits);
+    const pricing = asRecord(record.pricing);
+    const inputPerTokenUsd = optionalString(pricing?.prompt);
+    const outputPerTokenUsd = optionalString(pricing?.completion);
+    const entry: ProviderListedModelEntry = { id };
+    const displayName = optionalString(record.name);
+    const description = optionalString(record.description);
+    const contextLength = optionalPositiveInteger(limits?.max_context_length);
+    const maxCompletionTokens = optionalPositiveInteger(limits?.max_completion_tokens);
+    if (displayName !== undefined) {
+      entry.displayName = displayName;
+    }
+    if (description !== undefined) {
+      entry.description = description;
+    }
+    if (inputPerTokenUsd !== undefined || outputPerTokenUsd !== undefined) {
+      entry.pricing = {
+        ...(inputPerTokenUsd !== undefined ? { inputPerTokenUsd } : {}),
+        ...(outputPerTokenUsd !== undefined ? { outputPerTokenUsd } : {}),
+      };
+    }
+    if (typeof capabilities?.vision === "boolean") {
+      entry.supportsImageInput = capabilities.vision;
+    }
+    if (typeof capabilities?.reasoning === "boolean") {
+      entry.supportsReasoning = capabilities.reasoning;
+    }
+    if (contextLength !== undefined) {
+      entry.contextLength = contextLength;
+    }
+    if (maxCompletionTokens !== undefined) {
+      entry.maxCompletionTokens = maxCompletionTokens;
+    }
+    entries.push(entry);
+  }
+  return entries;
+}
+
+/** Join rich metadata onto the authenticated inventory; the public list cannot add models. */
+export function mergeCerebrasModelEntries(
+  authenticatedEntries: readonly ProviderListedModelEntry[],
+  publicEntries: readonly ProviderListedModelEntry[],
+): ProviderListedModelEntry[] {
+  const publicById = new Map(publicEntries.map((entry) => [entry.id, entry]));
+  return authenticatedEntries.map((entry) => ({
+    ...entry,
+    ...publicById.get(entry.id),
+    id: entry.id,
+  }));
+}
+
+export function cerebrasPublicModelsListUrl(baseUrl: string): string {
+  const authenticatedUrl = new URL(openAiCompatibleModelsListUrl(baseUrl));
+  authenticatedUrl.pathname = authenticatedUrl.pathname.replace(
+    /(?:\/v1)?\/models$/u,
+    "/public/v1/models",
+  );
+  return authenticatedUrl.toString();
+}
+
+async function fetchCerebrasCatalogJson(
+  url: string,
+  apiKey: string | undefined,
+  signal: AbortSignal | undefined,
+): Promise<unknown> {
+  const headers: Record<string, string> = {};
+  if (apiKey !== undefined) {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "GET",
+      headers,
+      ...(signal !== undefined ? { signal } : {}),
+    });
+  } catch (cause) {
+    throw new Error(
+      `Model list request failed: ${cause instanceof Error ? cause.message : String(cause)}`,
+      { cause },
+    );
+  }
+  const text = await response.text();
+  let payload: unknown;
+  try {
+    payload = text.length > 0 ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(
+      response.ok
+        ? "Model list response is not valid JSON."
+        : `Model listing failed (HTTP ${String(response.status)}).`,
+    );
+  }
+  if (!response.ok) {
+    const error = asRecord(asRecord(payload)?.error);
+    const message = optionalString(error?.message) ?? optionalString(asRecord(payload)?.message);
+    throw new Error(
+      `Model listing failed (HTTP ${String(response.status)}).${message ? ` ${message}` : ""}`,
+    );
+  }
+  return payload;
+}
+
+export async function listCerebrasModels(
+  options: ListOpenAiCompatibleModelIdsOptions,
+): Promise<ProviderListedModelEntry[]> {
+  const apiKey = options.apiKey.trim();
+  if (!apiKey) {
+    throw new Error("API Key must not be empty.");
+  }
+
+  // The authenticated inventory is authoritative. In particular, never fall back to importing
+  // the public catalog when this request fails: it also contains Dedicated-only architectures.
+  const authenticatedPayload = await fetchCerebrasCatalogJson(
+    openAiCompatibleModelsListUrl(options.baseUrl),
+    apiKey,
+    options.signal,
+  );
+  const authenticatedEntries = parseCerebrasModelEntriesPayload(authenticatedPayload);
+  if (authenticatedEntries.length === 0) {
+    return [];
+  }
+
+  let publicEntries: ProviderListedModelEntry[] = [];
+  try {
+    const publicPayload = await fetchCerebrasCatalogJson(
+      cerebrasPublicModelsListUrl(options.baseUrl),
+      undefined,
+      options.signal,
+    );
+    publicEntries = parseCerebrasPublicModelEntriesPayload(publicPayload);
+  } catch {
+    // Rich metadata is additive; a public-catalog outage must not disconnect valid Shared access.
+  }
+  return mergeCerebrasModelEntries(authenticatedEntries, publicEntries).sort((a, b) =>
+    a.id.localeCompare(b.id),
+  );
+}

@@ -19,6 +19,7 @@ import type { FoundationModelSummary } from "@aws-sdk/client-bedrock";
 
 import { listProviderPresets } from "../provider-presets/index.js";
 import { parseBedrockFoundationModelSummaries } from "./bedrock-models.js";
+import { parseCerebrasModelEntriesPayload } from "./cerebras-models.js";
 import { parseVertexModelEntriesPayload } from "./google-vertex-models.js";
 import {
   mergeSiliconFlowListedModelEntries,
@@ -111,6 +112,7 @@ export const MODEL_CATALOG_PARSERS: Readonly<Record<string, ModelCatalogParserDe
   "fireworks-gateway-models": { parseList: parseFireworksAiGatewayModelsPayload },
   "together-models": { parseList: parseTogetherAiModelEntriesPayload },
   "groq-models": { parseList: parseGroqModelEntriesPayload },
+  "cerebras-models": { parseList: parseCerebrasModelEntriesPayload },
   "deepinfra-models": { parseList: parseDeepInfraModelEntriesPayload },
   "baseten-models": { parseList: parseBasetenModelEntriesPayload },
   "huggingface-models": { parseList: parseHuggingFaceRouterModelsPayload },

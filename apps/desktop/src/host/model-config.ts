@@ -3,6 +3,7 @@ import {
   dedupeProviderListedModelEntries,
   listAnthropicModels,
   listCohereModels,
+  listCerebrasModels,
   listFireworksAiModels,
   listGoogleModels,
   listHuggingFaceModels,
@@ -127,6 +128,12 @@ const SPECIALIZED_CATALOG_LISTERS: Readonly<Record<string, CatalogLister>> = {
   "fireworks-gateway-models": (input) =>
     listFireworksAiModels({ baseUrl: input.apiBase, apiKey: input.apiKey }),
   "cohere-models": (input) => listCohereModels({ baseUrl: input.apiBase, apiKey: input.apiKey }),
+  "cerebras-models": (input) =>
+    listCerebrasModels({
+      baseUrl: input.apiBase,
+      apiKey: input.apiKey,
+      ...(input.signal !== undefined ? { signal: input.signal } : {}),
+    }),
   "huggingface-models": (input) =>
     listHuggingFaceModels({ baseUrl: input.apiBase, apiKey: input.apiKey }),
   "meituan-models": (input) => listMeituanModels({ baseUrl: input.apiBase, apiKey: input.apiKey }),

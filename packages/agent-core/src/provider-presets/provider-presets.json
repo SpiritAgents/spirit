@@ -236,7 +236,7 @@
         "openai-compatible": "https://api.cerebras.ai/v1"
       },
       "credentials": { "kind": "apiKey" },
-      "catalog": { "parser": "openai-models", "endpoint": "/models" }
+      "catalog": { "parser": "cerebras-models", "endpoint": "/models" }
     },
     {
       "id": "deepinfra",
