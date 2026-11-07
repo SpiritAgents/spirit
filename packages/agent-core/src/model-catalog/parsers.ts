@@ -37,6 +37,7 @@ import {
   parseHuggingFaceRouterModelsPayload,
   parseKimiCodeModelEntriesPayload,
   parseMeituanModelDetailPayload,
+  parseMetaModelEntriesPayload,
   parseMinimaxModelEntriesPayload,
   parseMistralModelEntriesPayload,
   parseMoonshotModelEntriesPayload,
@@ -98,6 +99,7 @@ const SILICONFLOW_LISTING_QUERIES: readonly ModelCatalogListingQuery[] = [
 /** Parser descriptors keyed by the preset manifest's `catalog.parser` names. */
 export const MODEL_CATALOG_PARSERS: Readonly<Record<string, ModelCatalogParserDescriptor>> = {
   "openai-models": { parseList: (payload) => parseOpenAiCompatibleModelEntriesPayload(payload) },
+  "meta-models": { parseList: parseMetaModelEntriesPayload },
   "anthropic-models": { parseList: parseAnthropicModelEntriesPayload },
   "google-gemini-models": { parseList: parseGoogleModelEntriesPayload },
   "google-vertex-models": { parseList: parseVertexModelEntriesPayload },

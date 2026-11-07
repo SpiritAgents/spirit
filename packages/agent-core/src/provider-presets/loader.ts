@@ -235,6 +235,30 @@ function readProviderPreset(value: unknown, index: number): ProviderPreset {
       fail(error instanceof Error ? error.message : String(error));
     }
   }
+  let providerToolsByTransport: ProviderPreset["providerToolsByTransport"];
+  if (value["providerToolsByTransport"] !== undefined) {
+    const raw = value["providerToolsByTransport"];
+    if (!isRecord(raw)) {
+      fail(`${context}.providerToolsByTransport must be an object.`);
+    }
+    providerToolsByTransport = {};
+    for (const [transport, entries] of Object.entries(raw)) {
+      const transportKind = readTransportKind(transport, `${context}.providerToolsByTransport key`);
+      if (transports[transportKind] === undefined) {
+        fail(
+          `${context}.providerToolsByTransport.${transport} has no matching transport declaration.`,
+        );
+      }
+      try {
+        providerToolsByTransport[transportKind] = validateProviderToolEntries(
+          entries,
+          `${context}.providerToolsByTransport.${transport}`,
+        );
+      } catch (error) {
+        fail(error instanceof Error ? error.message : String(error));
+      }
+    }
+  }
   let fileUpload: ProviderPreset["fileUpload"];
   if (value["fileUpload"] !== undefined) {
     try {
@@ -286,6 +310,7 @@ function readProviderPreset(value: unknown, index: number): ProviderPreset {
     ...(billingPlans !== undefined ? { billingPlans } : {}),
     credentials: { kind: credentialKind as ProviderPreset["credentials"]["kind"] },
     ...(providerTools !== undefined ? { providerTools } : {}),
+    ...(providerToolsByTransport !== undefined ? { providerToolsByTransport } : {}),
     ...(fileUpload !== undefined ? { fileUpload } : {}),
     ...(imageApi !== undefined ? { imageApi } : {}),
     ...(videoApi !== undefined ? { videoApi } : {}),

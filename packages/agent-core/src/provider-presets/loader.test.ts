@@ -121,6 +121,7 @@ test("manifest catalog parser names are the coordinated shape-name set", () => {
     "huggingface-models",
     "kimi-code-models",
     "meituan-models",
+    "meta-models",
     "minimax-models",
     "mistral-models",
     "modal-models",

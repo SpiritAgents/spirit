@@ -32,6 +32,7 @@ const CANONICAL_PARSER_NAMES = [
   "stepfun-models",
   "ark-models",
   "meituan-models",
+  "meta-models",
   "tencent-tokenhub-models",
   "mistral-models",
   "cohere-models",

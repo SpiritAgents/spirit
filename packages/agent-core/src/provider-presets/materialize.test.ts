@@ -21,6 +21,7 @@ test("meta materializes the Model API transports with the Responses OpenAI SDK b
     transportKind: "open-responses",
     sdk: "@ai-sdk/openai",
     options: { reasoningSummary: true },
+    providerTools: [{ label: "Web Search", tools: [{ type: "web_search" }] }],
     models: [],
   });
   assert.equal(openAiCompatibleModelsListUrl(responses.apiBase), "https://api.meta.ai/v1/models");
@@ -29,12 +30,19 @@ test("meta materializes the Model API transports with the Responses OpenAI SDK b
   assert.equal(chat.apiBase, "https://api.meta.ai/v1");
   assert.equal(chat.sdk, "@ai-sdk/openai-compatible");
   assert.equal(chat.options, undefined);
+  assert.deepEqual(chat.providerTools, []);
   assert.equal(openAiCompatibleModelsListUrl(chat.apiBase), "https://api.meta.ai/v1/models");
 
   const messages = materializeProviderPreset({ presetId: "meta", transportKind: "anthropic" });
   assert.equal(messages.apiBase, "https://api.meta.ai/v1");
   assert.equal(messages.sdk, "@ai-sdk/anthropic");
   assert.equal(messages.options, undefined);
+  assert.deepEqual(messages.providerTools, [
+    {
+      label: "Web Search",
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
+    },
+  ]);
   assert.equal(openAiCompatibleModelsListUrl(messages.apiBase), "https://api.meta.ai/v1/models");
 });
 

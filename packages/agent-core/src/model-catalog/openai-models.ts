@@ -134,6 +134,10 @@ export interface ProviderListedModelEntry {
   description?: string;
   pricing?: ProviderListedModelPricing;
   supportsImageInput?: boolean;
+  supportsAudioInput?: boolean;
+  /** Present when the provider documents partial rather than complete audio understanding. */
+  audioInputSupport?: "partial";
+  supportsDocumentInput?: boolean;
   supportsVideoInput?: boolean;
   supportsVideoGeneration?: boolean;
   supportsImageGeneration?: boolean;
@@ -170,6 +174,8 @@ export interface ProviderListedModelEntry {
   quantization?: string;
   perRequestLimits?: ProviderListedModelRateLimits;
   regions?: ProviderListedModelRegion[];
+  /** Meta Muse Standard vs Contributor data-use policy. */
+  dataPolicy?: "standard" | "contributor";
   /**
    * Raw catalog fact for the upstream provider behind an aggregator route
    * (Vercel AI Gateway `owned_by`, OpenRouter `canonical_slug` author prefix);
@@ -285,6 +291,10 @@ export function parseOpenAiCompatibleModelEntriesPayload(
     return parseMistralModelEntriesPayload(body);
   }
 
+  if (provider === "meta") {
+    return parseMetaModelEntriesPayload(body);
+  }
+
   if (typeof body !== "object" || body === null || !("data" in body)) {
     return [];
   }
@@ -309,6 +319,71 @@ export function parseOpenAiCompatibleModelEntriesPayload(
     }
   }
   return entries.map(attachGatewayModelReasoningEfforts);
+}
+
+const META_MUSE_SPARK_VERSIONS = new Set(["1.1", "1.2", "1.3"]);
+const META_MUSE_CONTRIBUTOR_VERSIONS = new Set(["1.2", "1.3"]);
+
+function metaMuseLanguageModelEntry(
+  listed: ProviderListedModelEntry,
+): ProviderListedModelEntry | undefined {
+  const contributor = listed.id.endsWith("-contributor");
+  const baseId = contributor ? listed.id.slice(0, -"-contributor".length) : listed.id;
+  const wonder = baseId === "muse-wonder-1.0";
+  const sparkMatch = /^muse-spark-(\d+\.\d+)$/.exec(baseId);
+  const sparkVersion = sparkMatch?.[1];
+  if (
+    !wonder &&
+    (sparkVersion === undefined ||
+      !META_MUSE_SPARK_VERSIONS.has(sparkVersion) ||
+      (contributor && !META_MUSE_CONTRIBUTOR_VERSIONS.has(sparkVersion)))
+  ) {
+    return undefined;
+  }
+
+  const family = wonder ? "Muse Wonder" : "Muse Spark";
+  const version = wonder ? "1.0" : sparkVersion!;
+  return {
+    ...listed,
+    displayName: `${family} ${version}${contributor ? " Contributor" : ""}`,
+    description: wonder
+      ? "Meta's flagship Muse model for complex reasoning and multimodal understanding."
+      : "A fast Muse model for general reasoning and multimodal understanding.",
+    contextLength: 1_048_576,
+    supportsImageInput: true,
+    supportsAudioInput: true,
+    ...(sparkVersion === "1.3" ? { audioInputSupport: "partial" as const } : {}),
+    supportsDocumentInput: true,
+    supportsVideoInput: true,
+    supportsReasoning: true,
+    supportsThinkingSwitch: false,
+    dataPolicy: contributor ? "contributor" : "standard",
+  };
+}
+
+/**
+ * Meta's Models API is intentionally sparse. Recognized Muse IDs are enriched from the documented
+ * catalog while unrelated ASR and segmentation models stay out of Spirit's model selectors.
+ */
+export function parseMetaModelEntriesPayload(body: unknown): ProviderListedModelEntry[] {
+  const entries: ProviderListedModelEntry[] = [];
+  for (const listed of parseOpenAiCompatibleModelEntriesPayload(body)) {
+    if (listed.id === "muse-image-1.0") {
+      entries.push({
+        id: listed.id,
+        displayName: "Muse Image 1.0",
+        description: "Generates and edits images with Meta's Muse Image model.",
+        supportsImageGeneration: true,
+        pricing: { imagePerUnitUsd: "0.01" },
+      });
+      continue;
+    }
+    const languageModel = metaMuseLanguageModelEntry(listed);
+    if (languageModel !== undefined) {
+      entries.push(languageModel);
+    }
+  }
+  return entries;
 }
 
 const SKIPPED_TENCENT_TOKENHUB_MODEL_STATUSES = new Set(["pre-offline"]);
@@ -3441,6 +3516,15 @@ export function dedupeProviderListedModelEntries(
       ...(entry.supportsImageInput !== undefined
         ? { supportsImageInput: entry.supportsImageInput }
         : {}),
+      ...(entry.supportsAudioInput !== undefined
+        ? { supportsAudioInput: entry.supportsAudioInput }
+        : {}),
+      ...(entry.audioInputSupport !== undefined
+        ? { audioInputSupport: entry.audioInputSupport }
+        : {}),
+      ...(entry.supportsDocumentInput !== undefined
+        ? { supportsDocumentInput: entry.supportsDocumentInput }
+        : {}),
       ...(entry.supportsVideoInput !== undefined
         ? { supportsVideoInput: entry.supportsVideoInput }
         : {}),
@@ -3501,6 +3585,7 @@ export function dedupeProviderListedModelEntries(
         ? { defaultReasoningEffort: entry.defaultReasoningEffort }
         : {}),
       ...(entry.isPartner !== undefined ? { isPartner: entry.isPartner } : {}),
+      ...(entry.dataPolicy !== undefined ? { dataPolicy: entry.dataPolicy } : {}),
       ...(entry.upstreamProvider !== undefined ? { upstreamProvider: entry.upstreamProvider } : {}),
       ...(entry.architecture !== undefined ? { architecture: { ...entry.architecture } } : {}),
       ...(entry.quantization !== undefined ? { quantization: entry.quantization } : {}),

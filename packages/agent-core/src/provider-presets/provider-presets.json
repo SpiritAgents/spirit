@@ -43,7 +43,22 @@
       },
       "credentials": { "kind": "apiKey" },
       "options": { "reasoningSummary": true },
-      "catalog": { "parser": "openai-models", "endpoint": "/models" }
+      "providerToolsByTransport": {
+        "open-responses": [
+          {
+            "label": "Web Search",
+            "tools": [{ "type": "web_search" }]
+          }
+        ],
+        "openai-compatible": [],
+        "anthropic": [
+          {
+            "label": "Web Search",
+            "tools": [{ "type": "web_search_20250305", "name": "web_search" }]
+          }
+        ]
+      },
+      "catalog": { "parser": "meta-models", "endpoint": "/models" }
     },
     {
       "id": "google",

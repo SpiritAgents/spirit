@@ -259,6 +259,7 @@ export function materializeProviderPreset(
   const fileUpload =
     preset.sites?.items.find((item) => item.id === siteId)?.fileUpload ?? preset.fileUpload;
   const openAiCompatibleRoot = openAiCompatibleRootForBaking(preset, input);
+  const providerTools = preset.providerToolsByTransport?.[transportKind] ?? preset.providerTools;
 
   return {
     id: preset.id,
@@ -266,8 +267,8 @@ export function materializeProviderPreset(
     apiBase,
     ...(transportKind !== DEFAULT_PROVIDER_TRANSPORT_KIND ? { transportKind } : {}),
     ...(sdk !== undefined ? { sdk } : {}),
-    ...(preset.providerTools !== undefined
-      ? { providerTools: materializeProviderTools(preset.providerTools, openAiCompatibleRoot) }
+    ...(providerTools !== undefined
+      ? { providerTools: materializeProviderTools(providerTools, openAiCompatibleRoot) }
       : {}),
     ...(fileUpload !== undefined
       ? { fileUpload: materializeFileUpload(fileUpload, openAiCompatibleRoot) }
