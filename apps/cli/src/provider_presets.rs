@@ -723,7 +723,7 @@ mod tests {
 
     #[test]
     fn default_bases_come_from_the_manifest_default_transport_slot() {
-        let expected: [(&str, &str); 33] = [
+        let expected: [(&str, &str); 34] = [
             ("openai", "https://api.openai.com/v1"),
             ("anthropic", "https://api.anthropic.com/v1"),
             ("google", "https://generativelanguage.googleapis.com/v1beta"),
