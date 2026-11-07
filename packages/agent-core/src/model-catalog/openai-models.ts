@@ -372,9 +372,7 @@ export function parseMetaModelEntriesPayload(body: unknown): ProviderListedModel
       entries.push({
         id: listed.id,
         displayName: "Muse Image 1.0",
-        description: "Generates and edits images with Meta's Muse Image model.",
         supportsImageGeneration: true,
-        pricing: { imagePerUnitUsd: "0.01" },
       });
       continue;
     }

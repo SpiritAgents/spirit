@@ -103,10 +103,10 @@ test("meta parser enriches the sparse Muse catalog and excludes non-selector rol
   assert.deepEqual(entries[6], {
     id: "muse-image-1.0",
     displayName: "Muse Image 1.0",
-    description: "Generates and edits images with Meta's Muse Image model.",
     supportsImageGeneration: true,
-    pricing: { imagePerUnitUsd: "0.01" },
   });
+  assert.equal(entries[6]?.description, undefined);
+  assert.equal(entries[6]?.pricing, undefined);
 });
 
 test("meta parser tolerates empty and malformed sparse listings", () => {

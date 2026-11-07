@@ -52,7 +52,6 @@ test("meta preview keeps Muse roles, multimodal capabilities, and data policy me
         id: "muse-image-1.0",
         displayName: "Muse Image 1.0",
         supportsImageGeneration: true,
-        pricing: { imagePerUnitUsd: "0.01" },
       },
     ],
   });
@@ -72,9 +71,10 @@ test("meta preview keeps Muse roles, multimodal capabilities, and data policy me
       id: "muse-image-1.0",
       displayName: "Muse Image 1.0",
       capabilities: ["imageGeneration"],
-      pricing: { imagePerUnitUsd: "0.01" },
     },
   ]);
+  assert.equal(preview[1].description, undefined);
+  assert.equal(preview[1].pricing, undefined);
 });
 
 test("siliconflow provider uses listed model catalog metadata", () => {
