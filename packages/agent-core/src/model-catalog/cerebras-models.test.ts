@@ -78,8 +78,12 @@ afterEach(() => {
 
 test("authenticated Cerebras parsing keeps only documented Shared Inference ids", () => {
   assert.deepEqual(parseCerebrasModelEntriesPayload(AUTHENTICATED_LIST), [
-    { id: "gpt-oss-120b" },
-    { id: "qwen-3.8-27b" },
+    { id: "gpt-oss-120b", supportsThinkingType: "only", supportsThinkingSwitch: false },
+    {
+      id: "qwen-3.8-27b",
+      supportsThinkingSwitch: true,
+      thinkingSwitch: { off: { body: { reasoning_effort: "none" } } },
+    },
   ]);
   assert.deepEqual(parseCerebrasModelEntriesPayload({ data: "invalid" }), []);
 });
@@ -88,6 +92,8 @@ test("public Cerebras parsing reads API-sourced display, pricing, modalities, an
   assert.deepEqual(parseCerebrasPublicModelEntriesPayload(PUBLIC_LIST), [
     {
       id: "gpt-oss-120b",
+      supportsThinkingType: "only",
+      supportsThinkingSwitch: false,
       displayName: "OpenAI GPT OSS",
       description: "Efficient reasoning for science, math, and coding applications.",
       pricing: { inputPerTokenUsd: "0.00000035", outputPerTokenUsd: "0.00000075" },
@@ -98,6 +104,8 @@ test("public Cerebras parsing reads API-sourced display, pricing, modalities, an
     },
     {
       id: "qwen-3.8-27b",
+      supportsThinkingSwitch: true,
+      thinkingSwitch: { off: { body: { reasoning_effort: "none" } } },
       displayName: "Qwen 3.8 27B",
       description: "Shared multilingual reasoning model.",
       pricing: { inputPerTokenUsd: "0.000001", outputPerTokenUsd: "0.000002" },
@@ -165,7 +173,7 @@ test("Cerebras rich metadata failure retains only the authenticated Shared entri
   );
   assert.deepEqual(
     await listCerebrasModels({ baseUrl: "https://api.cerebras.ai/v1", apiKey: "test-key" }),
-    [{ id: "gpt-oss-120b" }, { id: "qwen-3.8-27b" }],
+    parseCerebrasModelEntriesPayload(AUTHENTICATED_LIST).sort((a, b) => a.id.localeCompare(b.id)),
   );
 });
 

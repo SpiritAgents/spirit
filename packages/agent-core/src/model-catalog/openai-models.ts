@@ -2,7 +2,11 @@
  * OpenAI-compatible `GET /v1/models` listing (host-side; no secrets stored here).
  */
 
-import type { LlmTransportKind, ThinkingCapabilities } from "../llm-provider-shared.js";
+import type {
+  LlmTransportKind,
+  ThinkingCapabilities,
+  ThinkingSwitchDeclaration,
+} from "../llm-provider-shared.js";
 import type { JsonObject } from "../ports.js";
 import {
   serviceTierMaxInputTokens,
@@ -88,6 +92,8 @@ export interface ProviderListedModelEntry {
   /** LongCat etc.: when `supported_parameters` includes `thinking`, extended thinking can be toggled. */
   supportsThinkingSwitch?: boolean;
   supportsThinkingType?: KimiCodeSupportsThinkingType;
+  /** Provider-specific thinking on/off wire encoding resolved while materializing the catalog. */
+  thinkingSwitch?: ThinkingSwitchDeclaration;
   contextLength?: number;
   /** Output token cap reported by the listing; kept separate from `contextLength` (never folded in). */
   outputLimit?: number;
@@ -3382,6 +3388,9 @@ export function dedupeProviderListedModelEntries(
         : {}),
       ...(entry.supportsThinkingSwitch !== undefined
         ? { supportsThinkingSwitch: entry.supportsThinkingSwitch }
+        : {}),
+      ...(entry.thinkingSwitch !== undefined
+        ? { thinkingSwitch: structuredClone(entry.thinkingSwitch) }
         : {}),
       ...(entry.contextLength !== undefined ? { contextLength: entry.contextLength } : {}),
       ...(entry.outputLimit !== undefined ? { outputLimit: entry.outputLimit } : {}),

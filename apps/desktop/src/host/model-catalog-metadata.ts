@@ -425,7 +425,9 @@ function previewEntryFromListedEntry(
         : {}),
       ...(knowledgeThinkingSwitchEncoding !== undefined
         ? { thinkingSwitch: knowledgeThinkingSwitchEncoding }
-        : {}),
+        : entry.thinkingSwitch !== undefined
+          ? { thinkingSwitch: entry.thinkingSwitch }
+          : {}),
     };
   }
 
@@ -451,7 +453,7 @@ function previewEntryFromListedEntry(
     entry,
     knowledge,
     knowledgeCapabilities: knowledgeDeclaredThinkingCapabilities(knowledge),
-    knowledgeSwitch: knowledgeThinkingSwitch,
+    knowledgeSwitch: knowledgeThinkingSwitch ?? entry.thinkingSwitch,
     knowledgeSwitchSupport,
     knowledgeType: knowledgeThinkingType,
   });

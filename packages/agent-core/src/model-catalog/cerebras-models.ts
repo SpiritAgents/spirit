@@ -26,6 +26,18 @@ function sharedModelId(record: Record<string, unknown>): string | undefined {
   return SHARED_MODEL_IDS.has(id) ? id : undefined;
 }
 
+function cerebrasReasoningDeclaration(id: string): Partial<ProviderListedModelEntry> {
+  if (id === "gpt-oss-120b") {
+    // Cerebras documents this Shared model as always-on; do not invent an off switch or efforts.
+    return { supportsThinkingType: "only", supportsThinkingSwitch: false };
+  }
+  // Qwen accepts `none` to disable reasoning. No on-state effort/default is documented here.
+  return {
+    supportsThinkingSwitch: true,
+    thinkingSwitch: { off: { body: { reasoning_effort: "none" } } },
+  };
+}
+
 function optionalString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
@@ -39,7 +51,7 @@ export function parseCerebrasModelEntriesPayload(payload: unknown): ProviderList
   const entries = modelRecords(payload)
     .map((record) => sharedModelId(record))
     .filter((id): id is string => id !== undefined)
-    .map((id) => ({ id }));
+    .map((id) => ({ id, ...cerebrasReasoningDeclaration(id) }));
   return [...new Map(entries.map((entry) => [entry.id, entry])).values()];
 }
 
@@ -59,7 +71,7 @@ export function parseCerebrasPublicModelEntriesPayload(
     const pricing = asRecord(record.pricing);
     const inputPerTokenUsd = optionalString(pricing?.prompt);
     const outputPerTokenUsd = optionalString(pricing?.completion);
-    const entry: ProviderListedModelEntry = { id };
+    const entry: ProviderListedModelEntry = { id, ...cerebrasReasoningDeclaration(id) };
     const displayName = optionalString(record.name);
     const description = optionalString(record.description);
     const contextLength = optionalPositiveInteger(limits?.max_context_length);
