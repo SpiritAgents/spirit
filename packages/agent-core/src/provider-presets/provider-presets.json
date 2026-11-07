@@ -278,7 +278,7 @@
       },
       "credentials": { "kind": "apiKey" },
       "catalog": {
-        "parser": "openai-models",
+        "parser": "modal-models",
         "endpoint": "https://inference.us-west.modal.direct/v1/models"
       }
     },

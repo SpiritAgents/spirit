@@ -22,6 +22,7 @@ const CANONICAL_PARSER_NAMES = [
   "cerebras-models",
   "deepinfra-models",
   "baseten-models",
+  "modal-models",
   "huggingface-models",
   "moonshot-models",
   "kimi-code-models",
