@@ -226,7 +226,10 @@ function buildTransportFromProfile(
   }
 
   if (transportKind === "anthropic") {
-    const effort = anthropicEffort(profile.effort);
+    const effort =
+      profile.effortSemantics === "output"
+        ? anthropicEffort(profile.effort)
+        : anthropicEffort(profile.reasoningEffort ?? profile.effort);
     return {
       transportKind: "anthropic",
       apiKey,

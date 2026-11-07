@@ -1503,6 +1503,13 @@ function llmMessageToToolStateMessage(message: LlmMessage, assetRoot: string): J
             url: pathToLocalVideoReference(part.path, assetRoot),
           },
         });
+        continue;
+      }
+
+      if (part.type === "audio" || part.type === "document") {
+        throw new Error(
+          "Audio and PDF input require a Responses connection with file upload support.",
+        );
       }
     }
 

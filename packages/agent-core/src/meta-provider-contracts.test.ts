@@ -105,6 +105,19 @@ test("Meta Messages sends the native output effort on the local loopback contrac
   }
 });
 
+test("Meta Messages rejects audio and PDF parts instead of silently dropping them", () => {
+  const transport = new AiSdkAnthropicTransport();
+  for (const type of ["audio", "document"] as const) {
+    assert.throws(
+      () =>
+        transport.llmHistoryAsApiMessages([
+          { role: "user", content: [{ type, path: type === "audio" ? "voice.mp3" : "paper.pdf" }] },
+        ]),
+      /require a Responses connection with file upload support/,
+    );
+  }
+});
+
 test("Meta Responses surfaces ZDR file-upload rejection without hiding the upstream reason", async () => {
   setLlmFetchTransportOverrideForTests(async () =>
     jsonResponse(
