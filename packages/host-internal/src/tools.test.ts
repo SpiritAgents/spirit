@@ -19,6 +19,34 @@ const execFileAsync = promisify(execFile);
 const ONE_PIXEL_PNG_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7Zp1cAAAAASUVORK5CYII=";
 
+test("generate_image request parsing retains provider-neutral generation and edit options", async () => {
+  const service = new NodeHostToolService({ workspaceRoot: "/tmp", spiritDataDir: "/tmp" });
+  assert.deepEqual(
+    await service.requestFromFunctionCall(
+      "generate_image",
+      JSON.stringify({
+        prompt: "Edit the references",
+        size: "1024x768",
+        count: 2,
+        output_format: "png",
+        reasoning_strength: "high",
+        response_format: "b64_json",
+        reference_images: ["one.png", "two.webp"],
+      }),
+    ),
+    {
+      name: "generate_image",
+      prompt: "Edit the references",
+      size: "1024x768",
+      count: 2,
+      output_format: "png",
+      reasoning_strength: "high",
+      response_format: "b64_json",
+      reference_images: ["one.png", "two.webp"],
+    },
+  );
+});
+
 function createMockImageFetch(): typeof fetch {
   return (async () => {
     const bytes = Buffer.from(ONE_PIXEL_PNG_BASE64, "base64");

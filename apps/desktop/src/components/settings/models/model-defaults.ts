@@ -56,6 +56,18 @@ export const modelCapabilityOptions: Array<{
     summaryKey: "settings.capabilityImage",
   },
   {
+    value: "audio",
+    label: "Audio",
+    labelKey: "settings.capabilityAudioLabel",
+    summaryKey: "settings.capabilityAudio",
+  },
+  {
+    value: "document",
+    label: "Document",
+    labelKey: "settings.capabilityDocumentLabel",
+    summaryKey: "settings.capabilityDocument",
+  },
+  {
     value: "video",
     label: "Video",
     labelKey: "settings.capabilityVideoLabel",

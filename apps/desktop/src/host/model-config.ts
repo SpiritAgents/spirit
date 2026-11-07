@@ -65,6 +65,7 @@ export function modelCapabilitiesFromConfig(
     ...(capabilities.includes("languageModel") ? { languageModel: true } : {}),
     ...(capabilities.includes("image") ? { imageInput: true } : {}),
     ...(capabilities.includes("audio") ? { audioInput: true } : {}),
+    ...(capabilities.includes("document") ? { documentInput: true } : {}),
     ...(capabilities.includes("video") ? { videoInput: true } : {}),
     ...(capabilities.includes("imageGeneration") ? { imageGeneration: true } : {}),
   };

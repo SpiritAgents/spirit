@@ -9,6 +9,7 @@ export interface LlmModelCapabilities {
   languageModel?: true;
   imageInput?: true;
   audioInput?: true;
+  documentInput?: true;
   videoInput?: true;
   imageGeneration?: true;
 }

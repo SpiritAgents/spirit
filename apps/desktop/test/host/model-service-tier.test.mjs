@@ -86,6 +86,36 @@ test("model catalog cache round-trips deployment and technical catalog metadata"
   });
 });
 
+test("model catalog cache round-trips Muse data policy and partial audio metadata", async () => {
+  await withCatalogCacheDir(async () => {
+    await writeModelCatalogCache(
+      "https://api.meta.ai/v1",
+      ["muse-spark-1.3-contributor"],
+      "test-key",
+      [
+        {
+          id: "muse-spark-1.3-contributor",
+          capabilities: ["languageModel", "image", "audio", "document", "video"],
+          contextLength: 1048576,
+          dataPolicy: "contributor",
+          audioInputSupport: "partial",
+        },
+      ],
+      "meta",
+    );
+
+    const entry = await readModelCatalogCache("https://api.meta.ai/v1", "test-key", "meta");
+    assert.ok(entry);
+    assert.deepEqual(entry.modelCatalog[0], {
+      id: "muse-spark-1.3-contributor",
+      capabilities: ["languageModel", "image", "audio", "document", "video"],
+      contextLength: 1048576,
+      dataPolicy: "contributor",
+      audioInputSupport: "partial",
+    });
+  });
+});
+
 test("model catalog cache parses sparse entries", async () => {
   await withCatalogCacheDir(async (dir) => {
     await writeModelCatalogCache(

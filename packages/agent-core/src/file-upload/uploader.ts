@@ -83,8 +83,60 @@ export async function uploadDeclaredFile(
   }
 
   const bytes = await readFile(absolutePath);
+  const uploaded = await postDeclaredFileUpload(config, connection, bytes, basename(absolutePath), {
+    purposeField,
+    endpoint,
+  });
+  if (uploaded.kind === "uploaded") {
+    uploadCache.set(cacheKey, uploaded.ref);
+  }
+  return uploaded;
+}
+
+/** Uploads bytes already held by a media decoder, using the same Files declaration and auth. */
+export async function uploadDeclaredFileBytes(
+  config: FileUploadConfig,
+  connection: DeclaredFileUploadConnection,
+  bytes: Uint8Array,
+  filename: string,
+  contentPurpose?: string,
+): Promise<UploadDeclaredFileResult> {
+  let purposeField: string | undefined;
+  if (typeof config.purpose === "string") {
+    purposeField = config.purpose;
+  } else if (config.purpose !== undefined) {
+    const mapped = contentPurpose === undefined ? undefined : config.purpose[contentPurpose];
+    if (mapped === undefined) {
+      return { kind: "inline" };
+    }
+    purposeField = mapped;
+  }
+
+  let endpoint: string;
+  try {
+    endpoint = resolveProviderEndpointUrl(connection.apiBase, config);
+  } catch (error) {
+    return { kind: "failed", error: error instanceof Error ? error.message : String(error) };
+  }
+  if (config.maxBytes !== undefined && bytes.byteLength > config.maxBytes) {
+    return {
+      kind: "failed",
+      error: `File size ${bytes.byteLength} bytes exceeds the ${config.maxBytes} byte upload limit.`,
+    };
+  }
+  return postDeclaredFileUpload(config, connection, bytes, filename, { purposeField, endpoint });
+}
+
+async function postDeclaredFileUpload(
+  config: FileUploadConfig,
+  connection: DeclaredFileUploadConnection,
+  bytes: Uint8Array,
+  filename: string,
+  prepared: { purposeField: string | undefined; endpoint: string },
+): Promise<UploadDeclaredFileResult> {
+  const { purposeField, endpoint } = prepared;
   const form = new FormData();
-  form.append("file", new Blob([bytes]), basename(absolutePath));
+  form.append("file", new Blob([new Uint8Array(bytes)]), filename);
   if (purposeField !== undefined) {
     form.append("purpose", purposeField);
   }
@@ -135,7 +187,6 @@ export async function uploadDeclaredFile(
   }
 
   const ref = config.refTemplate.replaceAll("{id}", fileId);
-  uploadCache.set(cacheKey, ref);
   return { kind: "uploaded", ref };
 }
 

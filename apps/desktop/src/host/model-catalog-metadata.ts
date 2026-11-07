@@ -399,6 +399,10 @@ function basePreviewEntryFields(
       ? { supportedSamplingParameters: [...entry.supportedSamplingParameters] }
       : {}),
     ...(entry.reasoningField !== undefined ? { reasoningField: entry.reasoningField } : {}),
+    ...(entry.dataPolicy !== undefined ? { dataPolicy: entry.dataPolicy } : {}),
+    ...(entry.audioInputSupport !== undefined
+      ? { audioInputSupport: entry.audioInputSupport }
+      : {}),
   };
 }
 
@@ -602,6 +606,8 @@ export function previewCatalogMapForTransport(input: {
         ...entry,
         // PreviewModelCatalogEntry carries resolved capabilities; re-derive the listed flags.
         supportsImageInput: entry.capabilities?.includes("image") === true,
+        supportsAudioInput: entry.capabilities?.includes("audio") === true,
+        supportsDocumentInput: entry.capabilities?.includes("document") === true,
         supportsVideoInput: entry.capabilities?.includes("video") === true,
         supportsImageGeneration: entry.capabilities?.includes("imageGeneration") === true,
         supportsVideoGeneration: entry.capabilities?.includes("videoGeneration") === true,
@@ -653,6 +659,12 @@ function previewCapabilitiesFromListedEntry(
   const capabilities: DesktopModelCapability[] = ["languageModel"];
   if (entry.supportsImageInput === true) {
     capabilities.push("image");
+  }
+  if (entry.supportsAudioInput === true) {
+    capabilities.push("audio");
+  }
+  if (entry.supportsDocumentInput === true) {
+    capabilities.push("document");
   }
   const videoInputConfirmed =
     entry.supportsVideoInput === true &&

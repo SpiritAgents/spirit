@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { extname } from "node:path";
+import { basename, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -73,6 +73,20 @@ export function llmMessageToOpenAiMessage(message: LlmMessage, assetRoot: string
             url: pathToLocalVideoReference(part.path, assetRoot),
           },
         });
+        continue;
+      }
+
+      if (part.type === "audio" || part.type === "document") {
+        const path = resolveLocalMediaPath(part.path, assetRoot);
+        parts.push({
+          type: "local_file",
+          local_file: {
+            path,
+            filename: basename(path),
+            mediaType: part.type === "document" ? "application/pdf" : audioMediaType(path),
+            assetKind: part.type,
+          },
+        });
       }
     }
 
@@ -92,6 +106,23 @@ export function llmMessageToOpenAiMessage(message: LlmMessage, assetRoot: string
     content: llmMessageTextContent(message.content),
     ...(message.toolCallId !== undefined ? { tool_call_id: message.toolCallId } : {}),
   };
+}
+
+function audioMediaType(path: string): string {
+  switch (extname(path).toLowerCase()) {
+    case ".mp3":
+      return "audio/mpeg";
+    case ".wav":
+      return "audio/wav";
+    case ".m4a":
+      return "audio/mp4";
+    case ".ogg":
+      return "audio/ogg";
+    case ".flac":
+      return "audio/flac";
+    default:
+      return "application/octet-stream";
+  }
 }
 
 /** Minimal structural read of a transport config for declaration-driven media resolution. */

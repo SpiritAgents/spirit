@@ -4,6 +4,88 @@ import type { OpenResponsesTransportConfig } from "./responses-compat.js";
 
 const RESPONSE_ID_PROVIDER_KEYS = ["openAiResponses", "openResponses"] as const;
 
+export interface ResponsesReasoningReplayItem {
+  id?: string;
+  encryptedContent?: string;
+  summaryText: string;
+}
+
+export function extractResponsesReasoningReplayItems(
+  responseBody: unknown,
+): ResponsesReasoningReplayItem[] {
+  const body = responseBody as JsonValue;
+  if (!isJsonObject(body) || !Array.isArray(body.output)) {
+    return [];
+  }
+  const items: ResponsesReasoningReplayItem[] = [];
+  for (const rawOutput of body.output) {
+    const output = rawOutput as JsonValue;
+    if (!isJsonObject(output) || output.type !== "reasoning") {
+      continue;
+    }
+    const summaryText = Array.isArray(output.summary)
+      ? output.summary
+          .map((rawPart) => {
+            const part = rawPart as JsonValue;
+            return isJsonObject(part) && typeof part.text === "string" ? part.text : "";
+          })
+          .join("")
+      : "";
+    items.push({
+      ...(typeof output.id === "string" && output.id ? { id: output.id } : {}),
+      ...(typeof output.encrypted_content === "string" && output.encrypted_content
+        ? { encryptedContent: output.encrypted_content }
+        : {}),
+      summaryText,
+    });
+  }
+  return items;
+}
+
+export function attachReasoningReplayToAssistantMessage(
+  config: OpenResponsesTransportConfig,
+  message: JsonValue,
+  items: readonly ResponsesReasoningReplayItem[],
+): JsonValue {
+  if (items.length === 0 || !isJsonObject(message)) {
+    return message;
+  }
+  return mergeOpenResponsesProviderBucket(message, openResponsesProviderKey(config), {
+    reasoningItems: items.map((item) => ({
+      ...(item.id !== undefined ? { id: item.id } : {}),
+      ...(item.encryptedContent !== undefined ? { encryptedContent: item.encryptedContent } : {}),
+      summaryText: item.summaryText,
+    })),
+  });
+}
+
+export function readResponsesReasoningReplayItems(
+  message: JsonObject,
+  config: Pick<OpenResponsesTransportConfig, "sdk">,
+): ResponsesReasoningReplayItem[] {
+  if (!isJsonObject(message.providerState)) {
+    return [];
+  }
+  const bucket = message.providerState[openResponsesProviderKey(config)];
+  if (!isJsonObject(bucket) || !Array.isArray(bucket.reasoningItems)) {
+    return [];
+  }
+  return bucket.reasoningItems.flatMap((item) => {
+    if (!isJsonObject(item) || typeof item.summaryText !== "string") {
+      return [];
+    }
+    return [
+      {
+        ...(typeof item.id === "string" && item.id ? { id: item.id } : {}),
+        ...(typeof item.encryptedContent === "string" && item.encryptedContent
+          ? { encryptedContent: item.encryptedContent }
+          : {}),
+        summaryText: item.summaryText,
+      },
+    ];
+  });
+}
+
 function readResponseIdFromProviderBucket(bucket: unknown): string | undefined {
   if (!isJsonObject(bucket as JsonValue | undefined)) {
     return undefined;

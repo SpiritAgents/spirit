@@ -52,6 +52,9 @@ pub(crate) fn model_capabilities_json(profile: &ModelProfile) -> Option<Value> {
             "audio" => {
                 object.insert("audioInput".to_string(), Value::Bool(true));
             }
+            "document" => {
+                object.insert("documentInput".to_string(), Value::Bool(true));
+            }
             "video" => {
                 object.insert("videoInput".to_string(), Value::Bool(true));
             }

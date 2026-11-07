@@ -47,6 +47,7 @@ test("the bundled manifest loads with the 33 presets in picker order", () => {
     [
       "openai",
       "anthropic",
+      "meta",
       "google",
       "xai",
       "vercel-ai-gateway",
@@ -120,6 +121,7 @@ test("manifest catalog parser names are the coordinated shape-name set", () => {
     "huggingface-models",
     "kimi-code-models",
     "meituan-models",
+    "meta-models",
     "minimax-models",
     "mistral-models",
     "modal-models",

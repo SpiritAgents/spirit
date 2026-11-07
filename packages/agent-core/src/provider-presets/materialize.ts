@@ -56,6 +56,8 @@ const PRESET_OPTIONS_TRANSPORT_SCOPE: Record<
   toolsRejectReasoningEffort: "openai-compatible",
   maxInlineMediaBytes: "openai-compatible",
   defaultInputItemStatus: "open-responses",
+  responsesFileUpload: "open-responses",
+  chatMediaValidation: "openai-compatible",
   applyPatch: "open-responses",
   reasoningSummary: "open-responses",
   storedState: "open-responses",
@@ -256,9 +258,11 @@ export function materializeProviderPreset(
       : undefined;
   // A site can pin its own upload channel (e.g. a region-pinned upload host).
   const siteId = input.siteId ?? preset.sites?.default;
-  const fileUpload =
-    preset.sites?.items.find((item) => item.id === siteId)?.fileUpload ?? preset.fileUpload;
+  const fileUpload = preset.fileUploadByTransport
+    ? preset.fileUploadByTransport[transportKind]
+    : (preset.sites?.items.find((item) => item.id === siteId)?.fileUpload ?? preset.fileUpload);
   const openAiCompatibleRoot = openAiCompatibleRootForBaking(preset, input);
+  const providerTools = preset.providerToolsByTransport?.[transportKind] ?? preset.providerTools;
 
   return {
     id: preset.id,
@@ -266,8 +270,8 @@ export function materializeProviderPreset(
     apiBase,
     ...(transportKind !== DEFAULT_PROVIDER_TRANSPORT_KIND ? { transportKind } : {}),
     ...(sdk !== undefined ? { sdk } : {}),
-    ...(preset.providerTools !== undefined
-      ? { providerTools: materializeProviderTools(preset.providerTools, openAiCompatibleRoot) }
+    ...(providerTools !== undefined
+      ? { providerTools: materializeProviderTools(providerTools, openAiCompatibleRoot) }
       : {}),
     ...(fileUpload !== undefined
       ? { fileUpload: materializeFileUpload(fileUpload, openAiCompatibleRoot) }

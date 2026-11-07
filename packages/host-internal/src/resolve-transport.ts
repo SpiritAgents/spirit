@@ -45,6 +45,7 @@ function modelCapabilitiesFromConfig(
     ...(capabilities.includes("languageModel") ? { languageModel: true } : {}),
     ...(capabilities.includes("image") ? { imageInput: true } : {}),
     ...(capabilities.includes("audio") ? { audioInput: true } : {}),
+    ...(capabilities.includes("document") ? { documentInput: true } : {}),
     ...(capabilities.includes("video") ? { videoInput: true } : {}),
     ...(capabilities.includes("imageGeneration") ? { imageGeneration: true } : {}),
   };
@@ -225,7 +226,10 @@ function buildTransportFromProfile(
   }
 
   if (transportKind === "anthropic") {
-    const effort = anthropicEffort(profile.effort);
+    const effort =
+      profile.effortSemantics === "output"
+        ? anthropicEffort(profile.effort)
+        : anthropicEffort(profile.reasoningEffort ?? profile.effort);
     return {
       transportKind: "anthropic",
       apiKey,

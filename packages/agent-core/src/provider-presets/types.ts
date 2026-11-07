@@ -61,7 +61,11 @@ export interface ProviderPreset {
   credentials: ProviderPresetCredentials;
   /** Materialization templates copied verbatim into the config `providers[]` entry. */
   providerTools?: ProviderToolEntry[];
+  /** Transport-scoped tool templates; an explicit empty array disables tools on that transport. */
+  providerToolsByTransport?: Partial<Record<LlmTransportKind, ProviderToolEntry[]>>;
   fileUpload?: FileUploadConfig;
+  /** Transport-scoped upload channel; when present, unlisted transports use inline media only. */
+  fileUploadByTransport?: Partial<Record<LlmTransportKind, FileUploadConfig>>;
   /** Provider-level literal body merge template (e.g. kimi-code's `stream_options.include_usage`). */
   body?: JsonObject;
   /** Provider-level thinking on/off wire encoding template (e.g. Meituan LongCat's `thinking.type`). */

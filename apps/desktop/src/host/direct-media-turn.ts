@@ -6,6 +6,7 @@ import {
   createToolExecutionTextOutput,
   DEFAULT_IMAGE_GENERATION_SIZE,
   type ImageGenerationRequest,
+  type PendingWorkspaceFile,
   type RuntimeEvent,
   type RuntimeToolExecution,
   type StoredLlmMessageArchiveEntry,
@@ -39,6 +40,11 @@ export interface DirectMediaTurnInput {
   prompt: string;
   userMessageId: number;
   beforeUserCheckpoint: unknown;
+  referenceImagePaths?: string[];
+  imageOptions?: Pick<
+    ImageGenerationRequest,
+    "count" | "outputFormat" | "reasoningStrength" | "responseFormat"
+  >;
 }
 
 /**
@@ -83,11 +89,27 @@ function buildMediaOnlyTransportConfig(
   } as LlmTransportConfig;
 }
 
-function buildMediaToolRequest(toolName: DirectMediaTool, prompt: string): DesktopToolRequest {
-  if (toolName === "generate_image") {
-    return { name: "generate_image", prompt };
+function buildMediaToolRequest(input: DirectMediaTurnInput): DesktopToolRequest {
+  if (input.toolName === "generate_image") {
+    return {
+      name: "generate_image",
+      prompt: input.prompt,
+      ...(input.imageOptions?.count !== undefined ? { count: input.imageOptions.count } : {}),
+      ...(input.imageOptions?.outputFormat !== undefined
+        ? { output_format: input.imageOptions.outputFormat }
+        : {}),
+      ...(input.imageOptions?.reasoningStrength !== undefined
+        ? { reasoning_strength: input.imageOptions.reasoningStrength }
+        : {}),
+      ...(input.imageOptions?.responseFormat !== undefined
+        ? { response_format: input.imageOptions.responseFormat }
+        : {}),
+      ...(input.referenceImagePaths && input.referenceImagePaths.length > 0
+        ? { reference_images: input.referenceImagePaths }
+        : {}),
+    };
   }
-  return { name: "generate_video", prompt };
+  return { name: "generate_video", prompt: input.prompt };
 }
 
 function buildMediaToolExecution(
@@ -176,7 +198,7 @@ export function beginDirectMediaTurn(
   ctx: SessionTurnOrchestratorContext,
   input: DirectMediaTurnInput & { toolCallId: string },
 ): DesktopToolRequest {
-  const request = buildMediaToolRequest(input.toolName, input.prompt);
+  const request = buildMediaToolRequest(input);
   const startedEvent: RuntimeEvent<DesktopToolRequest> = {
     kind: "tool-call-started",
     toolCallId: input.toolCallId,
@@ -238,6 +260,10 @@ async function runDirectMediaGeneration(
       const imageRequest: ImageGenerationRequest = {
         prompt: input.prompt,
         size: DEFAULT_IMAGE_GENERATION_SIZE,
+        ...input.imageOptions,
+        ...(input.referenceImagePaths && input.referenceImagePaths.length > 0
+          ? { referenceImages: input.referenceImagePaths.map((path) => ({ path })) }
+          : {}),
       };
       output = await llmTransport.generateImage(mediaTransportConfig, imageRequest, (saveRequest) =>
         toolExecutor.saveGeneratedImage(saveRequest),
@@ -341,7 +367,7 @@ export async function startComposerDirectMediaTurn(
 export function shouldUseComposerDirectMediaTurn(
   config: DesktopConfigFile,
   activeModel: ModelRef,
-  explicitWorkspaceFileCount: number,
+  explicitWorkspaceFiles: number | readonly PendingWorkspaceFile[],
 ): DirectMediaTool | null {
   const activeProfile = resolveModelProfile(config, activeModel);
   if (!activeProfile) {
@@ -358,7 +384,18 @@ export function shouldUseComposerDirectMediaTurn(
   if (!directMediaTool) {
     return null;
   }
-  if (explicitWorkspaceFileCount > 0) {
+  const attachmentCount =
+    typeof explicitWorkspaceFiles === "number"
+      ? explicitWorkspaceFiles
+      : explicitWorkspaceFiles.length;
+  const museImageReferences =
+    directMediaTool === "generate_image" &&
+    resolveModelProfile(config, config.imageGenerationModel)?.imageApi === "meta-images" &&
+    typeof explicitWorkspaceFiles !== "number" &&
+    explicitWorkspaceFiles.length > 0 &&
+    explicitWorkspaceFiles.length <= 10 &&
+    explicitWorkspaceFiles.every((file) => file.kind === "image");
+  if (attachmentCount > 0 && !museImageReferences) {
     console.warn("[desktop][composer-direct-media] attachments present; falling back to chat", {
       activeModel: activeProfile.name,
       tool: directMediaTool,

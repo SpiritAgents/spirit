@@ -56,7 +56,22 @@ export interface LlmVideoContentPart extends JsonObject {
   path: string;
 }
 
-export type LlmContentPart = LlmTextContentPart | LlmImageContentPart | LlmVideoContentPart;
+export interface LlmAudioContentPart extends JsonObject {
+  type: "audio";
+  path: string;
+}
+
+export interface LlmDocumentContentPart extends JsonObject {
+  type: "document";
+  path: string;
+}
+
+export type LlmContentPart =
+  | LlmTextContentPart
+  | LlmImageContentPart
+  | LlmVideoContentPart
+  | LlmAudioContentPart
+  | LlmDocumentContentPart;
 export type LlmMessageContent = LlmContentPart[];
 
 export interface LlmMessage {
@@ -148,7 +163,22 @@ export const DEFAULT_VIDEO_GENERATION_DURATION = 5;
 
 export interface ImageGenerationRequest {
   prompt: string;
+  /** Provider-specific aspect-ratio dimensions; not a guarantee of exact output pixels. */
   size: string;
+  count?: number;
+  outputFormat?: "webp" | "png" | "jpeg";
+  reasoningStrength?: "low" | "high";
+  responseFormat?: "b64_json" | "url";
+  referenceImages?: ImageGenerationReferenceImage[];
+}
+
+export interface ImageGenerationReferenceImage {
+  path?: string;
+  url?: string;
+  fileId?: string;
+  data?: Uint8Array;
+  mediaType?: string;
+  filename?: string;
 }
 
 export interface VideoGenerationRequest {
@@ -203,6 +233,14 @@ export function createLlmVideoContentPart(path: string): LlmVideoContentPart {
   return { type: "video", path };
 }
 
+export function createLlmAudioContentPart(path: string): LlmAudioContentPart {
+  return { type: "audio", path };
+}
+
+export function createLlmDocumentContentPart(path: string): LlmDocumentContentPart {
+  return { type: "document", path };
+}
+
 export function createLlmMessageContentFromText(text: string): LlmMessageContent {
   return text.length > 0 ? [createLlmTextContentPart(text)] : [];
 }
@@ -211,6 +249,8 @@ export function createLlmMessageContentFromTextAndImages(
   text: string,
   imagePaths: readonly string[] = [],
   videoPaths: readonly string[] = [],
+  audioPaths: readonly string[] = [],
+  documentPaths: readonly string[] = [],
 ): LlmMessageContent {
   const content: LlmMessageContent = [];
   if (text.length > 0) {
@@ -221,6 +261,12 @@ export function createLlmMessageContentFromTextAndImages(
   }
   for (const videoPath of videoPaths) {
     content.push(createLlmVideoContentPart(videoPath));
+  }
+  for (const audioPath of audioPaths) {
+    content.push(createLlmAudioContentPart(audioPath));
+  }
+  for (const documentPath of documentPaths) {
+    content.push(createLlmDocumentContentPart(documentPath));
   }
   return content;
 }
@@ -233,6 +279,14 @@ export function cloneLlmMessageContent(content: readonly LlmContentPart[]): LlmM
 
     if (part.type === "video") {
       return { type: "video", path: part.path };
+    }
+
+    if (part.type === "audio") {
+      return { type: "audio", path: part.path };
+    }
+
+    if (part.type === "document") {
+      return { type: "document", path: part.path };
     }
 
     return { type: "image", path: part.path };
@@ -266,8 +320,33 @@ export function llmMessageHasVideos(content: readonly LlmContentPart[]): boolean
   return content.some((part) => part.type === "video");
 }
 
+export function llmMessageAudioPaths(content: readonly LlmContentPart[]): string[] {
+  return content
+    .filter((part): part is LlmAudioContentPart => part.type === "audio")
+    .map((part) => part.path);
+}
+
+export function llmMessageHasAudios(content: readonly LlmContentPart[]): boolean {
+  return content.some((part) => part.type === "audio");
+}
+
+export function llmMessageDocumentPaths(content: readonly LlmContentPart[]): string[] {
+  return content
+    .filter((part): part is LlmDocumentContentPart => part.type === "document")
+    .map((part) => part.path);
+}
+
+export function llmMessageHasDocuments(content: readonly LlmContentPart[]): boolean {
+  return content.some((part) => part.type === "document");
+}
+
 export function llmMessageHasMedia(content: readonly LlmContentPart[]): boolean {
-  return llmMessageHasImages(content) || llmMessageHasVideos(content);
+  return (
+    llmMessageHasImages(content) ||
+    llmMessageHasVideos(content) ||
+    llmMessageHasAudios(content) ||
+    llmMessageHasDocuments(content)
+  );
 }
 
 export function llmMessageHasText(content: readonly LlmContentPart[]): boolean {

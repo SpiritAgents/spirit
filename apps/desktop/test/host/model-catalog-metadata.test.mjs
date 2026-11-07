@@ -30,6 +30,53 @@ const BUDGET_THINKING = {
   types: { adaptive: false, betweenTools: false, disabled: true, enabled: true },
 };
 
+test("meta preview keeps Muse roles, multimodal capabilities, and data policy metadata", () => {
+  const preview = previewModelCatalogForTransport({
+    providerId: "meta",
+    transportKind: "open-responses",
+    listedModels: [
+      {
+        id: "muse-spark-1.3-contributor",
+        displayName: "Muse Spark 1.3 Contributor",
+        description: "Fast multimodal Muse model.",
+        contextLength: 1048576,
+        supportsImageInput: true,
+        supportsAudioInput: true,
+        audioInputSupport: "partial",
+        supportsDocumentInput: true,
+        supportsVideoInput: true,
+        supportsReasoning: true,
+        dataPolicy: "contributor",
+      },
+      {
+        id: "muse-image-1.0",
+        displayName: "Muse Image 1.0",
+        supportsImageGeneration: true,
+      },
+    ],
+  });
+
+  assert.deepEqual(preview, [
+    {
+      id: "muse-spark-1.3-contributor",
+      displayName: "Muse Spark 1.3 Contributor",
+      description: "Fast multimodal Muse model.",
+      contextLength: 1048576,
+      capabilities: ["languageModel", "image", "audio", "document", "video"],
+      dataPolicy: "contributor",
+      audioInputSupport: "partial",
+      supportedReasoningEfforts: ["minimal", "low", "medium", "high", "xhigh"],
+    },
+    {
+      id: "muse-image-1.0",
+      displayName: "Muse Image 1.0",
+      capabilities: ["imageGeneration"],
+    },
+  ]);
+  assert.equal(preview[1].description, undefined);
+  assert.equal(preview[1].pricing, undefined);
+});
+
 test("siliconflow provider uses listed model catalog metadata", () => {
   assert.equal(
     usesProviderListedModelCatalogMetadata({

@@ -1,6 +1,7 @@
 import { jsonSchema, tool } from "ai";
 
 import { buildAiSdkUserImageFilePartFromUrl } from "../ai-sdk-image-url-part.js";
+import { buildResponsesLocalFileToken } from "./responses-file-upload.js";
 import { renderAiSdkProviderError } from "../openai/ai-sdk-provider-error.js";
 
 import type { JsonObject, JsonValue, ToolCallRequest } from "../ports.js";
@@ -16,6 +17,7 @@ import {
   shouldUseOpenAiSdkApplyPatchTool,
 } from "./apply-patch-eligibility.js";
 import type { OpenResponsesTransportConfig } from "./responses-compat.js";
+import { readResponsesReasoningReplayItems } from "./provider-state.js";
 
 type AiSdkToolCall = {
   toolCallId: string;
@@ -102,6 +104,7 @@ export function openAiMessagesToResponsesAiSdkMessages(
           message,
           useSdkApplyPatch,
           omitApplyPatchFromSdkMessages,
+          config,
         );
         return assistantMessage === undefined ? [] : [assistantMessage];
       }
@@ -163,9 +166,10 @@ export function renderResponsesTransportError(error: unknown): string {
 
 function openAiUserContentToAiSdkContent(
   content: JsonValue | undefined,
-  config:
-    | Pick<OpenResponsesTransportConfig, "modelCapabilities" | "transportKind" | "model">
-    | undefined,
+  config?: Pick<
+    OpenResponsesTransportConfig,
+    "options" | "modelCapabilities" | "transportKind" | "model"
+  >,
 ): string | Array<Record<string, unknown>> | undefined {
   if (typeof content === "string") {
     return content;
@@ -197,6 +201,60 @@ function openAiUserContentToAiSdkContent(
       throw new Error(
         "The selected model does not support video input on the Responses transport. Remove the video attachment or switch to a transport with video input support.",
       );
+    } else if (part.type === "local_file") {
+      if (config?.options?.responsesFileUpload !== true) {
+        throw new Error(
+          "Audio and PDF input require a Responses connection with file upload support.",
+        );
+      }
+      const file = part.local_file;
+      if (
+        !isJsonObject(file) ||
+        typeof file.path !== "string" ||
+        typeof file.filename !== "string" ||
+        typeof file.mediaType !== "string" ||
+        (file.assetKind !== "audio" && file.assetKind !== "document")
+      ) {
+        continue;
+      }
+      parts.push({
+        type: "file",
+        mediaType: file.mediaType,
+        filename: file.filename,
+        data: {
+          type: "data",
+          data: buildResponsesLocalFileToken({
+            path: file.path,
+            filename: file.filename,
+            mediaType: file.mediaType,
+            assetKind: file.assetKind,
+          }),
+        },
+      });
+    } else if (
+      config?.options?.responsesFileUpload === true &&
+      part.type === "video_url" &&
+      isJsonObject(part.video_url) &&
+      typeof part.video_url.url === "string"
+    ) {
+      const url = part.video_url.url;
+      const filename = url.startsWith("data:")
+        ? "video.mp4"
+        : url.split("/").pop()?.split("?")[0] || "video.mp4";
+      parts.push({
+        type: "file",
+        mediaType: "video/mp4",
+        filename,
+        data: {
+          type: "data",
+          data: buildResponsesLocalFileToken({
+            path: url,
+            filename,
+            mediaType: "video/mp4",
+            assetKind: "video",
+          }),
+        },
+      });
     }
   }
 
@@ -207,6 +265,7 @@ function openAiAssistantMessageToAiSdkMessage(
   message: JsonObject,
   useSdkApplyPatch: boolean,
   omitApplyPatchFromSdkMessages: boolean,
+  config?: Pick<OpenResponsesTransportConfig, "sdk">,
 ): Record<string, unknown> | undefined {
   const reasoningText = extractAssistantReasoningContentFromJson(message);
   const toolCallParts = extractAssistantToolCallParts(
@@ -216,7 +275,24 @@ function openAiAssistantMessageToAiSdkMessage(
   );
   const contentParts: Array<Record<string, unknown>> = [];
 
-  if (reasoningText) {
+  const replayItems =
+    config === undefined ? [] : readResponsesReasoningReplayItems(message, config);
+  if (replayItems.length > 0 && config?.sdk === "@ai-sdk/openai") {
+    for (const item of replayItems) {
+      contentParts.push({
+        type: "reasoning",
+        text: item.summaryText,
+        providerOptions: {
+          openai: {
+            ...(item.id !== undefined ? { itemId: item.id } : {}),
+            ...(item.encryptedContent !== undefined
+              ? { reasoningEncryptedContent: item.encryptedContent }
+              : {}),
+          },
+        },
+      });
+    }
+  } else if (reasoningText) {
     contentParts.push({ type: "reasoning", text: reasoningText });
   }
 

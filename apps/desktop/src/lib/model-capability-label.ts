@@ -12,6 +12,8 @@ const modelCapabilityOptions: Array<{
     labelKey: "settings.capabilityLanguageModelLabel",
   },
   { value: "image", label: "Image", labelKey: "settings.capabilityImageLabel" },
+  { value: "audio", label: "Audio", labelKey: "settings.capabilityAudioLabel" },
+  { value: "document", label: "Document", labelKey: "settings.capabilityDocumentLabel" },
   { value: "video", label: "Video", labelKey: "settings.capabilityVideoLabel" },
   {
     value: "imageGeneration",

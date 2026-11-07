@@ -41,6 +41,7 @@ import {
 } from "./apply-patch-eligibility.js";
 import { responsesUsesStoredState } from "./responses-incremental-input.js";
 import { createOpenRouterAnthropicReasoningFetch } from "../openrouter-anthropic-reasoning.js";
+import { createResponsesFileUploadFetch } from "./responses-file-upload.js";
 import { buildGatewayV3ProviderOptions } from "./gateway-v3-provider-options.js";
 import {
   openResponsesPostUrl,
@@ -144,7 +145,7 @@ function responsesFetchForConfig(
   if (shouldUseApplyPatchFileTools(config)) {
     fetchFn = createApplyPatchAwareFetch(config, fetchFn);
   }
-  return wrapFetchForBedrockMantleIamAuth(config, fetchFn);
+  return createResponsesFileUploadFetch(config, wrapFetchForBedrockMantleIamAuth(config, fetchFn));
 }
 
 function createOpenAIResponsesProvider(
@@ -290,6 +291,9 @@ export function buildResponsesProviderOptions(
     const openaiOptions: JsonObject = {
       store: config.store ?? responsesUsesStoredState(config),
       ...(config.truncation === "auto" ? { truncation: "auto" } : { truncation: "disabled" }),
+      ...(config.options?.responsesFileUpload === true
+        ? { passThroughUnsupportedFiles: true, forceReasoning: true }
+        : {}),
     };
 
     if (reasoningEffort !== undefined) {

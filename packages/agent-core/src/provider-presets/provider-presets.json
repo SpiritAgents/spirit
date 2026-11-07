@@ -32,6 +32,48 @@
       "catalog": { "parser": "anthropic-models", "endpoint": "/models" }
     },
     {
+      "id": "meta",
+      "label": "Meta",
+      "defaultTransport": "open-responses",
+      "sdk": "@ai-sdk/openai",
+      "transports": {
+        "open-responses": "https://api.meta.ai/v1",
+        "openai-compatible": "https://api.meta.ai/v1",
+        "anthropic": "https://api.meta.ai/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "options": {
+        "reasoningSummary": true,
+        "responsesFileUpload": true,
+        "chatMediaValidation": true
+      },
+      "fileUploadByTransport": {
+        "open-responses": {
+          "path": "/files",
+          "purpose": "user_data",
+          "refTemplate": "{id}",
+          "maxBytes": 1073741824
+        }
+      },
+      "imageApi": "meta-images",
+      "providerToolsByTransport": {
+        "open-responses": [
+          {
+            "label": "Web Search",
+            "tools": [{ "type": "web_search" }]
+          }
+        ],
+        "openai-compatible": [],
+        "anthropic": [
+          {
+            "label": "Web Search",
+            "tools": [{ "type": "web_search_20250305", "name": "web_search" }]
+          }
+        ]
+      },
+      "catalog": { "parser": "meta-models", "endpoint": "/models" }
+    },
+    {
       "id": "google",
       "label": "Google",
       "defaultTransport": "openai-compatible",

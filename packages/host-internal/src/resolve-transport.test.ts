@@ -318,6 +318,34 @@ test("anthropic transport maps effort onto the protocol enum", () => {
   assert.deepEqual(config.supportedEfforts, ["low", "medium", "xhigh"]);
 });
 
+test("anthropic transport maps Muse reasoning effort onto the native effort field", () => {
+  useMemoryKeyring(internalKeyEntry("meta"));
+  const spiritDataDir = configDir(
+    providerWithActiveModel(
+      {
+        id: "meta",
+        apiBase: "https://api.meta.ai/v1",
+        transportKind: "anthropic",
+        sdk: "@ai-sdk/anthropic",
+        models: [
+          {
+            name: "muse-spark-1.3-contributor",
+            reasoningEffort: "xhigh",
+            supportedReasoningEfforts: ["minimal", "low", "medium", "high", "xhigh"],
+          },
+        ],
+      },
+      "muse-spark-1.3-contributor",
+    ),
+  );
+  const config = resolveTransportConfig({ workspaceRoot: tmpdir(), spiritDataDir });
+  if (config.transportKind !== "anthropic") {
+    assert.fail(`expected anthropic transport, got ${config.transportKind}`);
+  }
+  assert.equal(config.effort, "xhigh");
+  assert.equal(config.effortSemantics, undefined);
+});
+
 test("anthropic transport sends no effort for the default pseudo-selection", () => {
   useMemoryKeyring(internalKeyEntry("acme-anthropic"));
   const spiritDataDir = configDir(

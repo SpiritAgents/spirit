@@ -235,12 +235,59 @@ function readProviderPreset(value: unknown, index: number): ProviderPreset {
       fail(error instanceof Error ? error.message : String(error));
     }
   }
+  let providerToolsByTransport: ProviderPreset["providerToolsByTransport"];
+  if (value["providerToolsByTransport"] !== undefined) {
+    const raw = value["providerToolsByTransport"];
+    if (!isRecord(raw)) {
+      fail(`${context}.providerToolsByTransport must be an object.`);
+    }
+    providerToolsByTransport = {};
+    for (const [transport, entries] of Object.entries(raw)) {
+      const transportKind = readTransportKind(transport, `${context}.providerToolsByTransport key`);
+      if (transports[transportKind] === undefined) {
+        fail(
+          `${context}.providerToolsByTransport.${transport} has no matching transport declaration.`,
+        );
+      }
+      try {
+        providerToolsByTransport[transportKind] = validateProviderToolEntries(
+          entries,
+          `${context}.providerToolsByTransport.${transport}`,
+        );
+      } catch (error) {
+        fail(error instanceof Error ? error.message : String(error));
+      }
+    }
+  }
   let fileUpload: ProviderPreset["fileUpload"];
   if (value["fileUpload"] !== undefined) {
     try {
       fileUpload = validateFileUploadConfig(value["fileUpload"]);
     } catch (error) {
       fail(`${context}.fileUpload: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  let fileUploadByTransport: ProviderPreset["fileUploadByTransport"];
+  if (value["fileUploadByTransport"] !== undefined) {
+    const raw = value["fileUploadByTransport"];
+    if (!isRecord(raw)) {
+      fail(`${context}.fileUploadByTransport must be an object.`);
+    }
+    fileUploadByTransport = {};
+    for (const [transport, upload] of Object.entries(raw)) {
+      const transportKind = readTransportKind(transport, `${context}.fileUploadByTransport key`);
+      if (transports[transportKind] === undefined) {
+        fail(
+          `${context}.fileUploadByTransport.${transport} has no matching transport declaration.`,
+        );
+      }
+      try {
+        fileUploadByTransport[transportKind] = validateFileUploadConfig(upload);
+      } catch (error) {
+        fail(
+          `${context}.fileUploadByTransport.${transport}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
     }
   }
   const imageApi = readOptionalString(value, "imageApi", context);
@@ -286,7 +333,9 @@ function readProviderPreset(value: unknown, index: number): ProviderPreset {
     ...(billingPlans !== undefined ? { billingPlans } : {}),
     credentials: { kind: credentialKind as ProviderPreset["credentials"]["kind"] },
     ...(providerTools !== undefined ? { providerTools } : {}),
+    ...(providerToolsByTransport !== undefined ? { providerToolsByTransport } : {}),
     ...(fileUpload !== undefined ? { fileUpload } : {}),
+    ...(fileUploadByTransport !== undefined ? { fileUploadByTransport } : {}),
     ...(imageApi !== undefined ? { imageApi } : {}),
     ...(videoApi !== undefined ? { videoApi } : {}),
     ...(expressApiBase !== undefined ? { expressApiBase } : {}),

@@ -76,3 +76,15 @@ export function buildGeneratedImageToolOutput(
     summaryText,
   };
 }
+
+/** Multi-image variant that preserves one generated-image block and one asset per saved result. */
+export function buildGeneratedImagesToolOutput(
+  saved: readonly GeneratedImageFile[],
+  model: string,
+): ToolExecutionOutput {
+  const outputs = saved.map((image) => buildGeneratedImageToolOutput(image, model));
+  return {
+    content: outputs.flatMap((output) => output.content),
+    summaryText: outputs.map((output) => output.summaryText).join("\n\n"),
+  };
+}
