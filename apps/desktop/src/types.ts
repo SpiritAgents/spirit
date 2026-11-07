@@ -305,8 +305,6 @@ export interface PreviewModelCatalogEntry {
     burstRatio?: number;
   };
   regions?: Array<{ countryCode?: string; name?: string }>;
-  supportedFeatures?: string[];
-  supportedSamplingParameters?: string[];
 }
 
 /** Preview the model ids listed under an endpoint (with a local TTL cache). */

@@ -146,7 +146,6 @@ export interface ProviderListedModelEntry {
   reasoningField?: string;
   /** LongCat etc.: when `supported_parameters` includes `thinking`, extended thinking can be toggled. */
   supportsThinkingSwitch?: boolean;
-  thinkingSwitch?: ThinkingSwitchDeclaration;
   supportsThinkingType?: KimiCodeSupportsThinkingType;
   /** Provider-specific thinking on/off wire encoding resolved while materializing the catalog. */
   thinkingSwitch?: ThinkingSwitchDeclaration;
@@ -171,8 +170,6 @@ export interface ProviderListedModelEntry {
   quantization?: string;
   perRequestLimits?: ProviderListedModelRateLimits;
   regions?: ProviderListedModelRegion[];
-  supportedFeatures?: string[];
-  supportedSamplingParameters?: string[];
   /**
    * Raw catalog fact for the upstream provider behind an aggregator route
    * (Vercel AI Gateway `owned_by`, OpenRouter `canonical_slug` author prefix);

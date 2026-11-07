@@ -554,10 +554,6 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
     const baseModelId = normalizeCachedString(record.baseModelId);
     const inputModalities = normalizeCachedStringArray(record.inputModalities);
     const outputModalities = normalizeCachedStringArray(record.outputModalities);
-    const supportedFeatures = normalizeCachedStringArray(record.supportedFeatures);
-    const supportedSamplingParameters = normalizeCachedStringArray(
-      record.supportedSamplingParameters,
-    );
     const reasoningField = normalizeCachedString(record.reasoningField);
     normalized.push({
       id,
@@ -602,18 +598,6 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
 
 function normalizeCachedString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
-}
-
-function normalizeCachedStringArray(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) {
-    return undefined;
-  }
-  const normalized = [
-    ...new Set(
-      value.map(normalizeCachedString).filter((item): item is string => item !== undefined),
-    ),
-  ];
-  return normalized.length > 0 ? normalized : undefined;
 }
 
 function normalizeCachedPricing(value: unknown): PreviewModelCatalogPricing | undefined {
