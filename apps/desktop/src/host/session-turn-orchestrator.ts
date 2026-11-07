@@ -40,6 +40,7 @@ import {
   startComposerDirectMediaTurn,
 } from "./direct-media-turn.js";
 import { syncSubagentConversationProjections } from "./subagent-conversation-projection.js";
+import { resolveModelProfile } from "./model-config-access.js";
 import { toRuntimeAskQuestionsResult } from "./service-utils.js";
 import {
   advancePendingWorktreeBootstrapCommand,
@@ -217,7 +218,7 @@ export async function submitUserTurnAfterInitializedCommand(
   const directMediaTool = shouldUseComposerDirectMediaTurn(
     config,
     config.activeModel,
-    explicitWorkspaceFiles.length,
+    explicitWorkspaceFiles,
   );
 
   if (directMediaTool && trimmed && !options.startImplementing) {
@@ -228,6 +229,22 @@ export async function submitUserTurnAfterInitializedCommand(
         prompt: trimmed,
         userMessageId: userMessage.id,
         beforeUserCheckpoint,
+        ...(directMediaTool === "generate_image"
+          ? {
+              referenceImagePaths: explicitWorkspaceFiles.map((file) => file.path),
+              ...(resolveModelProfile(config, config.imageGenerationModel)?.imageApi ===
+              "meta-images"
+                ? {
+                    imageOptions: {
+                      count: 1,
+                      outputFormat: "webp" as const,
+                      reasoningStrength: "high" as const,
+                      responseFormat: "b64_json" as const,
+                    },
+                  }
+                : {}),
+            }
+          : {}),
       });
     } catch (error) {
       bundle.currentTurnSkills = [];

@@ -283,6 +283,11 @@ export type HostToolRequest<QuestionSpec = HostAskQuestionsQuestionSpec> =
       name: "generate_image";
       prompt: string;
       size?: string;
+      count?: number;
+      output_format?: "webp" | "png" | "jpeg";
+      reasoning_strength?: "low" | "high";
+      response_format?: "b64_json" | "url";
+      reference_images?: string[];
     }
   | {
       name: "generate_video";
@@ -808,10 +813,42 @@ export class NodeHostToolService<
       }
       case "generate_image": {
         const size = optionalStringStrict(parsed, "size");
+        const count = optionalPositiveInt(parsed, "count");
+        const outputFormat = optionalStringStrict(parsed, "output_format");
+        if (
+          outputFormat !== undefined &&
+          outputFormat !== "webp" &&
+          outputFormat !== "png" &&
+          outputFormat !== "jpeg"
+        ) {
+          throw new Error("Field output_format must be webp, png, or jpeg");
+        }
+        const reasoningStrength = optionalStringStrict(parsed, "reasoning_strength");
+        if (
+          reasoningStrength !== undefined &&
+          reasoningStrength !== "low" &&
+          reasoningStrength !== "high"
+        ) {
+          throw new Error("Field reasoning_strength must be low or high");
+        }
+        const responseFormat = optionalStringStrict(parsed, "response_format");
+        if (
+          responseFormat !== undefined &&
+          responseFormat !== "b64_json" &&
+          responseFormat !== "url"
+        ) {
+          throw new Error("Field response_format must be b64_json or url");
+        }
+        const referenceImages = optionalStringArrayStrict(parsed, "reference_images");
         return {
           name,
           prompt: requiredString(parsed, "prompt"),
           ...(size ? { size } : {}),
+          ...(count !== undefined ? { count } : {}),
+          ...(outputFormat !== undefined ? { output_format: outputFormat } : {}),
+          ...(reasoningStrength !== undefined ? { reasoning_strength: reasoningStrength } : {}),
+          ...(responseFormat !== undefined ? { response_format: responseFormat } : {}),
+          ...(referenceImages.length > 0 ? { reference_images: referenceImages } : {}),
         };
       }
       case "generate_video": {

@@ -474,7 +474,7 @@ export function buildBuiltinHostToolDefinitions(
         ]),
     functionTool(
       "generate_image",
-      "Generate one image with the configured image generation model. Use this only when the user explicitly wants an image. First gather enough context and rewrite the final image prompt yourself, then call this tool. After it completes, you may continue with a normal assistant message when that helps the user.",
+      "Generate images or edit reference images with the configured image generation model. Use this only when the user explicitly wants an image. First gather enough context and rewrite the final image prompt yourself, then call this tool. After it completes, you may continue with a normal assistant message when that helps the user.",
       {
         type: "object",
         properties: {
@@ -487,6 +487,35 @@ export function buildBuiltinHostToolDefinitions(
             type: "string",
             pattern: "^[1-9][0-9]{1,4}x[1-9][0-9]{1,4}$",
             description: `Optional pixel size in WIDTHxHEIGHT format, such as 1024x1024 or 1536x1024. If omitted, default to ${DEFAULT_IMAGE_GENERATION_SIZE} so the image matches the square card unless the user asked otherwise.`,
+          },
+          count: {
+            type: "integer",
+            minimum: 1,
+            maximum: 10,
+            description: "Optional number of images to generate, from 1 to 10.",
+          },
+          output_format: {
+            type: "string",
+            enum: ["webp", "png", "jpeg"],
+            description: "Optional encoded image format for backends that expose this setting.",
+          },
+          reasoning_strength: {
+            type: "string",
+            enum: ["low", "high"],
+            description: "Optional image-reasoning strength for backends that expose this setting.",
+          },
+          response_format: {
+            type: "string",
+            enum: ["b64_json", "url"],
+            description: "Optional image result transport for backends that expose this setting.",
+          },
+          reference_images: {
+            type: "array",
+            items: { type: "string" },
+            minItems: 1,
+            maxItems: 10,
+            description:
+              "Optional local image paths to edit or use as visual references, from 1 to 10 images.",
           },
         },
         required: ["prompt"],

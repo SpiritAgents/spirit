@@ -37,7 +37,44 @@ test("shouldUseComposerDirectMediaTurn returns null when attachments are present
   assert.equal(shouldUseComposerDirectMediaTurn(config, imageRef, 1), null);
 });
 
-function createDirectMediaHarness() {
+test("shouldUseComposerDirectMediaTurn accepts only image references for Muse Image editing", () => {
+  const metaRef = { providerId: "meta", name: "muse-image-1.0" };
+  const metaConfig = {
+    providers: [
+      {
+        id: "meta",
+        apiBase: "https://api.meta.ai/v1",
+        imageApi: "meta-images",
+        models: [{ name: metaRef.name, capabilities: ["imageGeneration"] }],
+      },
+    ],
+    activeModel: metaRef,
+    imageGenerationModel: metaRef,
+  };
+  const images = [{ kind: "image", path: "/tmp/reference.png", attachedAtUnixMs: 1 }];
+  assert.equal(shouldUseComposerDirectMediaTurn(metaConfig, metaRef, images), "generate_image");
+  assert.equal(
+    shouldUseComposerDirectMediaTurn(metaConfig, metaRef, [
+      ...images,
+      { kind: "document", path: "/tmp/reference.pdf", attachedAtUnixMs: 1 },
+    ]),
+    null,
+  );
+  assert.equal(
+    shouldUseComposerDirectMediaTurn(
+      metaConfig,
+      metaRef,
+      Array.from({ length: 11 }, (_, index) => ({
+        kind: "image",
+        path: `/tmp/reference-${index}.png`,
+        attachedAtUnixMs: 1,
+      })),
+    ),
+    null,
+  );
+});
+
+function createDirectMediaHarness(harnessConfig = config) {
   let messages = [];
   let nextMessageId = 1;
   let nextTimelineMessageId = 1;
@@ -82,6 +119,7 @@ function createDirectMediaHarness() {
   });
 
   const runtimeHistory = [];
+  const imageRequests = [];
   const bundle = {
     archiveHistory: [],
     messages: [],
@@ -101,6 +139,7 @@ function createDirectMediaHarness() {
     },
     runtimeTransport: {
       async generateImage(_config, request, saveGenerated) {
+        imageRequests.push(request);
         await saveGenerated({
           data: new Uint8Array([1, 2, 3]),
           mediaType: "image/png",
@@ -125,7 +164,7 @@ function createDirectMediaHarness() {
   bundle.messages = timeline.toMessages();
 
   const ctx = {
-    requireConfig: () => config,
+    requireConfig: () => harnessConfig,
     resolveApiKeyForConfigModel: async () => "test-key",
     ensureToolExecutor: async () => ({
       async saveGeneratedImage(request) {
@@ -149,8 +188,50 @@ function createDirectMediaHarness() {
     notifySessionListUpdated: () => {},
   };
 
-  return { bundle, ctx, messages: () => messages };
+  return { bundle, ctx, messages: () => messages, imageRequests };
 }
+
+test("executeDirectMediaTurn forwards Muse options and reference images through generate_image", async () => {
+  const metaRef = { providerId: "meta", name: "muse-image-1.0" };
+  const metaConfig = {
+    providers: [
+      {
+        id: "meta",
+        apiBase: "https://api.meta.ai/v1",
+        imageApi: "meta-images",
+        models: [{ name: metaRef.name, capabilities: ["imageGeneration"] }],
+      },
+    ],
+    activeModel: metaRef,
+    imageGenerationModel: metaRef,
+  };
+  const harness = createDirectMediaHarness(metaConfig);
+  await executeDirectMediaTurn(harness.ctx, {
+    bundle: harness.bundle,
+    toolName: "generate_image",
+    prompt: "edit the reference",
+    userMessageId: 1,
+    beforeUserCheckpoint: undefined,
+    referenceImagePaths: ["/tmp/reference.png"],
+    imageOptions: {
+      count: 2,
+      outputFormat: "png",
+      reasoningStrength: "high",
+      responseFormat: "b64_json",
+    },
+  });
+  assert.deepEqual(harness.imageRequests, [
+    {
+      prompt: "edit the reference",
+      size: "1024x1024",
+      count: 2,
+      outputFormat: "png",
+      reasoningStrength: "high",
+      responseFormat: "b64_json",
+      referenceImages: [{ path: "/tmp/reference.png" }],
+    },
+  ]);
+});
 
 test("executeDirectMediaTurn emits succeeded generate_image tool card and archive rows", async () => {
   const harness = createDirectMediaHarness();

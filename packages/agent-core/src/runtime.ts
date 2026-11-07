@@ -4470,6 +4470,27 @@ function extractGenerateImageRequest<ToolRequest>(
   return {
     prompt,
     size: readOptionalStringField(value, "size") ?? DEFAULT_IMAGE_GENERATION_SIZE,
+    ...(typeof value.count === "number" && Number.isFinite(value.count)
+      ? { count: Math.trunc(value.count) }
+      : {}),
+    ...(value.output_format === "webp" ||
+    value.output_format === "png" ||
+    value.output_format === "jpeg"
+      ? { outputFormat: value.output_format }
+      : {}),
+    ...(value.reasoning_strength === "low" || value.reasoning_strength === "high"
+      ? { reasoningStrength: value.reasoning_strength }
+      : {}),
+    ...(value.response_format === "b64_json" || value.response_format === "url"
+      ? { responseFormat: value.response_format }
+      : {}),
+    ...(Array.isArray(value.reference_images)
+      ? {
+          referenceImages: value.reference_images.flatMap((path) =>
+            typeof path === "string" && path.trim() ? [{ path: path.trim() }] : [],
+          ),
+        }
+      : {}),
   };
 }
 
