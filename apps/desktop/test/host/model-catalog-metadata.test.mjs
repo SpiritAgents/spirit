@@ -199,6 +199,40 @@ test("modal uses base_model_id only for knowledge and keeps exact API reasoning 
   assert.equal(preview?.[1]?.supportsThinkingType, "only");
   assert.equal(preview?.[2]?.supportsThinkingType, "only");
   assert.equal(preview?.[2]?.effortSemantics, undefined);
+
+  const messages = previewModelCatalogForTransport({
+    providerId: "modal",
+    transportKind: "anthropic",
+    listedModels: [
+      {
+        id: "example--ep-deepseek-v4-1-flash-server.us-west.modal.direct",
+        baseModelId: "deepseek-ai/DeepSeek-V4.1-Flash",
+        supportsReasoning: true,
+        supportedReasoningEfforts: ["none", "low", "high", "xhigh", "max"],
+      },
+      {
+        id: "example--ep-glm-5-3-server.us-west.modal.direct",
+        baseModelId: "zai-org/GLM-5.3",
+        supportsReasoning: true,
+        supportedReasoningEfforts: ["low", "high", "max"],
+      },
+    ],
+  });
+  assert.deepEqual(messages?.[0]?.supportedEfforts, ["low", "high", "xhigh", "max"]);
+  assert.deepEqual(messages?.[1]?.supportedEfforts, ["low", "high", "max"]);
+  for (const entry of messages ?? []) {
+    assert.equal(entry.effortSemantics, "output");
+    assert.equal(entry.supportedReasoningEfforts, undefined);
+    assert.equal(entry.supportsThinkingSwitch, undefined);
+    assert.equal(entry.thinkingSwitch, undefined);
+  }
+
+  const refolded = previewCatalogMapForTransport({
+    providerId: "modal",
+    transportKind: "anthropic",
+    modelCatalog: messages,
+  });
+  assert.deepEqual(refolded.get(messages[0].id)?.supportedEfforts, ["low", "high", "xhigh", "max"]);
 });
 
 test("custom anthropic transport consumes Anthropic model catalog metadata", () => {

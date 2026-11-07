@@ -410,7 +410,7 @@ function basePreviewEntryFields(
 function previewEntryFromListedEntry(
   parserName: string | undefined,
   entry: ProviderListedModelEntry,
-  transportKind: DesktopTransportKind | undefined,
+  transportKind?: DesktopTransportKind,
 ): PreviewModelCatalogEntry {
   const base = basePreviewEntryFields(parserName, entry, transportKind);
   // Nebius has no per-model reasoning declarations. Modal looks up only its library id; its
@@ -440,6 +440,21 @@ function previewEntryFromListedEntry(
       entry.supportedReasoningEfforts !== undefined
         ? normalizePreviewSupportedReasoningEfforts(entry.supportedReasoningEfforts)
         : knowledgeEfforts;
+    if (transportKind === "anthropic") {
+      const supportedEfforts =
+        entry.supportedEfforts !== undefined
+          ? normalizePreviewSupportedEfforts(entry.supportedEfforts)
+          : supportedReasoningEfforts !== undefined
+            ? normalizePreviewSupportedEfforts(supportedReasoningEfforts)
+            : undefined;
+      const defaultEffort = normalizePreviewDefaultEffort(entry.defaultEffort);
+      return {
+        ...base,
+        effortSemantics: "output",
+        ...(supportedEfforts !== undefined ? { supportedEfforts } : {}),
+        ...(defaultEffort !== undefined ? { defaultEffort } : {}),
+      };
+    }
     const apiDeclaresAlwaysOnThinking =
       entry.supportsReasoning === true &&
       entry.supportedReasoningEfforts !== undefined &&
