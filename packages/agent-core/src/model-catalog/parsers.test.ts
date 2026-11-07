@@ -34,6 +34,7 @@ const CANONICAL_PARSER_NAMES = [
   "tencent-tokenhub-models",
   "mistral-models",
   "cohere-models",
+  "nebius-token-factory-models",
 ];
 
 test("registry covers exactly the canonical parser names", () => {

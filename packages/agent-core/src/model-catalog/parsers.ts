@@ -21,6 +21,7 @@ import { listProviderPresets } from "../provider-presets/index.js";
 import { parseBedrockFoundationModelSummaries } from "./bedrock-models.js";
 import { parseCerebrasModelEntriesPayload } from "./cerebras-models.js";
 import { parseVertexModelEntriesPayload } from "./google-vertex-models.js";
+import { parseNebiusTokenFactoryModelEntriesPayload } from "./nebius-token-factory-models.js";
 import {
   mergeSiliconFlowListedModelEntries,
   minimaxOpenAiCompatibleListingBaseFromConnectBase,
@@ -138,6 +139,7 @@ export const MODEL_CATALOG_PARSERS: Readonly<Record<string, ModelCatalogParserDe
   "tencent-tokenhub-models": { parseList: parseTencentTokenHubModelEntriesPayload },
   "mistral-models": { parseList: parseMistralModelEntriesPayload },
   "cohere-models": { parseList: parseCohereModelEntriesPayload },
+  "nebius-token-factory-models": { parseList: parseNebiusTokenFactoryModelEntriesPayload },
 };
 
 /** Looks up the parser descriptor for a preset `catalog.parser` name. */

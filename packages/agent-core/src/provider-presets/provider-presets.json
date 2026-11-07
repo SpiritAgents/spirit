@@ -921,7 +921,8 @@
         "openai-compatible": "https://api.tokenfactory.nebius.com/v1",
         "open-responses": "https://api.tokenfactory.nebius.com/v1"
       },
-      "credentials": { "kind": "apiKey" }
+      "credentials": { "kind": "apiKey" },
+      "catalog": { "parser": "nebius-token-factory-models", "endpoint": "/models?verbose=true" }
     },
     {
       "id": "azure",

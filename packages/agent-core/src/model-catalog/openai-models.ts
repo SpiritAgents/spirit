@@ -56,6 +56,8 @@ export interface ProviderListedModelPricing {
   cachedInputPerTokenUsd?: string;
   imagePerUnitUsd?: string;
   requestPerCallUsd?: string;
+  /** Provider-specific pricing fields without a common slot; display metadata only, never a capability signal. */
+  additionalPricing?: Record<string, string>;
   videoDurationPricing?: ProviderListedModelVideoDurationPricing[];
   /** Together `pricing.image_pixel.price_per_megapixel`。 */
   imagePerMegapixelUsd?: string;
@@ -106,6 +108,23 @@ export interface ProviderListedTransportOverride {
   sdk: "@ai-sdk/anthropic";
 }
 
+export interface ProviderListedModelArchitecture {
+  modality?: string;
+  tokenizer?: string;
+  instructType?: string;
+}
+
+export interface ProviderListedModelRateLimits {
+  tokensPerMinute?: number;
+  requestsPerMinute?: number;
+  burstRatio?: number;
+}
+
+export interface ProviderListedModelRegion {
+  countryCode?: string;
+  name?: string;
+}
+
 export interface ProviderListedModelEntry {
   id: string;
   transportOverride?: ProviderListedTransportOverride;
@@ -139,6 +158,12 @@ export interface ProviderListedModelEntry {
   inferenceProvider?: string;
   /** DeepInfra `is_partner`: partner models (data forwarded to third parties); kept as catalog metadata only in this first version, not filtered. */
   isPartner?: boolean;
+  architecture?: ProviderListedModelArchitecture;
+  quantization?: string;
+  perRequestLimits?: ProviderListedModelRateLimits;
+  regions?: ProviderListedModelRegion[];
+  supportedFeatures?: string[];
+  supportedSamplingParameters?: string[];
   /**
    * Raw catalog fact for the upstream provider behind an aggregator route
    * (Vercel AI Gateway `owned_by`, OpenRouter `canonical_slug` author prefix);
@@ -3396,7 +3421,16 @@ export function dedupeProviderListedModelEntries(
         : {}),
       ...(entry.displayName !== undefined ? { displayName: entry.displayName } : {}),
       ...(entry.description !== undefined ? { description: entry.description } : {}),
-      ...(entry.pricing !== undefined ? { pricing: { ...entry.pricing } } : {}),
+      ...(entry.pricing !== undefined
+        ? {
+            pricing: {
+              ...entry.pricing,
+              ...(entry.pricing.additionalPricing !== undefined
+                ? { additionalPricing: { ...entry.pricing.additionalPricing } }
+                : {}),
+            },
+          }
+        : {}),
       ...(entry.supportsImageInput !== undefined
         ? { supportsImageInput: entry.supportsImageInput }
         : {}),
@@ -3448,6 +3482,20 @@ export function dedupeProviderListedModelEntries(
         : {}),
       ...(entry.isPartner !== undefined ? { isPartner: entry.isPartner } : {}),
       ...(entry.upstreamProvider !== undefined ? { upstreamProvider: entry.upstreamProvider } : {}),
+      ...(entry.architecture !== undefined ? { architecture: { ...entry.architecture } } : {}),
+      ...(entry.quantization !== undefined ? { quantization: entry.quantization } : {}),
+      ...(entry.perRequestLimits !== undefined
+        ? { perRequestLimits: { ...entry.perRequestLimits } }
+        : {}),
+      ...(entry.regions !== undefined
+        ? { regions: entry.regions.map((region) => ({ ...region })) }
+        : {}),
+      ...(entry.supportedFeatures !== undefined
+        ? { supportedFeatures: [...entry.supportedFeatures] }
+        : {}),
+      ...(entry.supportedSamplingParameters !== undefined
+        ? { supportedSamplingParameters: [...entry.supportedSamplingParameters] }
+        : {}),
     });
   }
   return deduped;
@@ -3494,7 +3542,9 @@ function buildProviderListedModelPricing(
   const hasVideoDurationPricing =
     fields.videoDurationPricing !== undefined && fields.videoDurationPricing.length > 0;
   const hasExamplePricing = fields.imageExamplePricing || fields.videoExamplePricing;
-  if (!hasTokenPricing && !hasVideoDurationPricing && !hasExamplePricing) {
+  const hasAdditionalPricing =
+    fields.additionalPricing !== undefined && Object.keys(fields.additionalPricing).length > 0;
+  if (!hasTokenPricing && !hasVideoDurationPricing && !hasExamplePricing && !hasAdditionalPricing) {
     return undefined;
   }
   return {
@@ -3507,6 +3557,7 @@ function buildProviderListedModelPricing(
     ...(fields.requestPerCallUsd ? { requestPerCallUsd: fields.requestPerCallUsd } : {}),
     ...(hasVideoDurationPricing ? { videoDurationPricing: fields.videoDurationPricing } : {}),
     ...(fields.imagePerMegapixelUsd ? { imagePerMegapixelUsd: fields.imagePerMegapixelUsd } : {}),
+    ...(hasAdditionalPricing ? { additionalPricing: { ...fields.additionalPricing } } : {}),
     ...(fields.imageExamplePricing ? { imageExamplePricing: fields.imageExamplePricing } : {}),
     ...(fields.videoExamplePricing ? { videoExamplePricing: fields.videoExamplePricing } : {}),
   };

@@ -122,6 +122,7 @@ test("manifest catalog parser names are the coordinated shape-name set", () => {
     "minimax-models",
     "mistral-models",
     "moonshot-models",
+    "nebius-token-factory-models",
     "openai-models",
     "openrouter-models",
     "siliconflow-models",
