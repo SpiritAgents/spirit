@@ -59,6 +59,7 @@ test("the bundled manifest loads with the 33 presets in picker order", () => {
       "cerebras",
       "deepinfra",
       "baseten",
+      "modal",
       "hugging-face",
       "moonshot-ai",
       "kimi-code",
