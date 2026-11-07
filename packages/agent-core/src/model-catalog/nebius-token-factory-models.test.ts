@@ -82,11 +82,13 @@ test("parses rich active language models without inferring controls or generatio
       supportedSamplingParameters: ["temperature", "top_p"],
     },
   ]);
-  assert.equal(entries[0]?.supportedReasoningEfforts, undefined);
-  assert.equal(entries[0]?.supportsThinkingSwitch, undefined);
-  assert.equal(entries[0]?.serviceTiers, undefined);
-  assert.equal(entries[0]?.supportsImageGeneration, undefined);
-  assert.equal(entries[0]?.supportsVideoGeneration, undefined);
+  const [entry] = entries;
+  assert.ok(entry);
+  assert.equal("supportedReasoningEfforts" in entry, false);
+  assert.equal("supportsThinkingSwitch" in entry, false);
+  assert.equal("serviceTiers" in entry, false);
+  assert.equal("supportsImageGeneration" in entry, false);
+  assert.equal("supportsVideoGeneration" in entry, false);
 });
 
 test("accepts missing status and reports text-only input without using pricing as a capability signal", () => {
