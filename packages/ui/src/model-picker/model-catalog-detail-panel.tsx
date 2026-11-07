@@ -69,16 +69,10 @@ export function ModelCatalogDetailPanel({
       buildModelCatalogDetailFields({
         ...(contextLength !== undefined ? { contextLength } : {}),
         ...(maxCompletionTokens !== undefined ? { maxCompletionTokens } : {}),
-        pricing: catalogEntry?.pricing,
+        catalogEntry,
         labels,
       }),
-    [
-      catalogEntry?.outputLimit,
-      catalogEntry?.maxCompletionTokens,
-      catalogEntry?.pricing,
-      contextLength,
-      labels,
-    ],
+    [catalogEntry, contextLength, labels],
   );
   const hasDetailFields = detailFields.length > 0;
   const hasContentBelowHeader = Boolean(description || children || hasDetailFields);

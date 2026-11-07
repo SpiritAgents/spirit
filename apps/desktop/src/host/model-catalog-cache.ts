@@ -397,6 +397,86 @@ function normalizeCachedTransportOverride(
     : undefined;
 }
 
+function readCachedTrimmedString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function normalizeCachedStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const normalized = [
+    ...new Set(
+      value
+        .map((item) => readCachedTrimmedString(item))
+        .filter((item): item is string => item !== undefined),
+    ),
+  ];
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeCachedArchitecture(value: unknown): PreviewModelCatalogEntry["architecture"] {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  const record = value as Record<string, unknown>;
+  const modality = readCachedTrimmedString(record.modality);
+  const tokenizer = readCachedTrimmedString(record.tokenizer);
+  const instructType = readCachedTrimmedString(record.instructType);
+  return modality || tokenizer || instructType
+    ? {
+        ...(modality ? { modality } : {}),
+        ...(tokenizer ? { tokenizer } : {}),
+        ...(instructType ? { instructType } : {}),
+      }
+    : undefined;
+}
+
+function normalizeCachedRateLimits(value: unknown): PreviewModelCatalogEntry["perRequestLimits"] {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  const record = value as Record<string, unknown>;
+  const readLimit = (key: string): number | undefined => {
+    const limit = record[key];
+    return typeof limit === "number" && Number.isFinite(limit) && limit >= 0 ? limit : undefined;
+  };
+  const tokensPerMinute = readLimit("tokensPerMinute");
+  const requestsPerMinute = readLimit("requestsPerMinute");
+  const burstRatio = readLimit("burstRatio");
+  return tokensPerMinute !== undefined ||
+    requestsPerMinute !== undefined ||
+    burstRatio !== undefined
+    ? {
+        ...(tokensPerMinute !== undefined ? { tokensPerMinute } : {}),
+        ...(requestsPerMinute !== undefined ? { requestsPerMinute } : {}),
+        ...(burstRatio !== undefined ? { burstRatio } : {}),
+      }
+    : undefined;
+}
+
+function normalizeCachedRegions(value: unknown): PreviewModelCatalogEntry["regions"] {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const regions: NonNullable<PreviewModelCatalogEntry["regions"]> = [];
+  for (const item of value) {
+    if (typeof item !== "object" || item === null || Array.isArray(item)) {
+      continue;
+    }
+    const record = item as Record<string, unknown>;
+    const countryCode = readCachedTrimmedString(record.countryCode);
+    const name = readCachedTrimmedString(record.name);
+    if (countryCode || name) {
+      regions.push({
+        ...(countryCode ? { countryCode } : {}),
+        ...(name ? { name } : {}),
+      });
+    }
+  }
+  return regions.length > 0 ? regions : undefined;
+}
+
 function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[] | undefined {
   if (!Array.isArray(value)) {
     return undefined;
@@ -462,6 +542,14 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
       typeof record.upstreamProvider === "string" && record.upstreamProvider.trim().length > 0
         ? record.upstreamProvider.trim()
         : undefined;
+    const architecture = normalizeCachedArchitecture(record.architecture);
+    const quantization = readCachedTrimmedString(record.quantization);
+    const perRequestLimits = normalizeCachedRateLimits(record.perRequestLimits);
+    const regions = normalizeCachedRegions(record.regions);
+    const supportedFeatures = normalizeCachedStringArray(record.supportedFeatures);
+    const supportedSamplingParameters = normalizeCachedStringArray(
+      record.supportedSamplingParameters,
+    );
     const transportOverride = normalizeCachedTransportOverride(record.transportOverride);
     normalized.push({
       id,
@@ -488,6 +576,12 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
       ...(thinkingSwitch !== undefined ? { thinkingSwitch } : {}),
       ...(inferenceProvider !== undefined ? { inferenceProvider } : {}),
       ...(upstreamProvider !== undefined ? { upstreamProvider } : {}),
+      ...(architecture !== undefined ? { architecture } : {}),
+      ...(quantization !== undefined ? { quantization } : {}),
+      ...(perRequestLimits !== undefined ? { perRequestLimits } : {}),
+      ...(regions !== undefined ? { regions } : {}),
+      ...(supportedFeatures !== undefined ? { supportedFeatures } : {}),
+      ...(supportedSamplingParameters !== undefined ? { supportedSamplingParameters } : {}),
     });
   }
 
@@ -501,34 +595,54 @@ function normalizeCachedPricing(value: unknown): PreviewModelCatalogPricing | un
   const record = value as Record<string, unknown>;
   const inputPerTokenUsd = readCachedPricingField(record, "inputPerTokenUsd");
   const outputPerTokenUsd = readCachedPricingField(record, "outputPerTokenUsd");
+  const cachedInputPerTokenUsd = readCachedPricingField(record, "cachedInputPerTokenUsd");
   const imagePerUnitUsd = readCachedPricingField(record, "imagePerUnitUsd");
   const requestPerCallUsd = readCachedPricingField(record, "requestPerCallUsd");
   const imagePerMegapixelUsd = readCachedPricingField(record, "imagePerMegapixelUsd");
   const imageExamplePricing = normalizeCachedExamplePricing(record.imageExamplePricing);
   const videoExamplePricing = normalizeCachedExamplePricing(record.videoExamplePricing);
   const videoDurationPricing = normalizeCachedVideoDurationPricing(record.videoDurationPricing);
+  const additionalPricing = normalizeCachedAdditionalPricing(record.additionalPricing);
   if (
     !inputPerTokenUsd &&
     !outputPerTokenUsd &&
+    !cachedInputPerTokenUsd &&
     !imagePerUnitUsd &&
     requestPerCallUsd === undefined &&
     !imagePerMegapixelUsd &&
     imageExamplePricing === undefined &&
     videoExamplePricing === undefined &&
-    videoDurationPricing === undefined
+    videoDurationPricing === undefined &&
+    additionalPricing === undefined
   ) {
     return undefined;
   }
   return {
     ...(inputPerTokenUsd ? { inputPerTokenUsd } : {}),
     ...(outputPerTokenUsd ? { outputPerTokenUsd } : {}),
+    ...(cachedInputPerTokenUsd ? { cachedInputPerTokenUsd } : {}),
     ...(imagePerUnitUsd ? { imagePerUnitUsd } : {}),
     ...(requestPerCallUsd !== undefined ? { requestPerCallUsd } : {}),
     ...(imagePerMegapixelUsd ? { imagePerMegapixelUsd } : {}),
     ...(imageExamplePricing ? { imageExamplePricing } : {}),
     ...(videoExamplePricing ? { videoExamplePricing } : {}),
     ...(videoDurationPricing ? { videoDurationPricing } : {}),
+    ...(additionalPricing ? { additionalPricing } : {}),
   };
+}
+
+function normalizeCachedAdditionalPricing(value: unknown): Record<string, string> | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  const additionalPricing: Record<string, string> = {};
+  for (const [key, rawPrice] of Object.entries(value)) {
+    const price = readCachedTrimmedString(rawPrice);
+    if (key.trim() && price) {
+      additionalPricing[key] = price;
+    }
+  }
+  return Object.keys(additionalPricing).length > 0 ? additionalPricing : undefined;
 }
 
 function normalizeCachedExamplePricing(
@@ -711,7 +825,16 @@ function clonePreviewModelCatalog(
       : {}),
     ...(entry.displayName !== undefined ? { displayName: entry.displayName } : {}),
     ...(entry.description !== undefined ? { description: entry.description } : {}),
-    ...(entry.pricing !== undefined ? { pricing: { ...entry.pricing } } : {}),
+    ...(entry.pricing !== undefined
+      ? {
+          pricing: {
+            ...entry.pricing,
+            ...(entry.pricing.additionalPricing !== undefined
+              ? { additionalPricing: { ...entry.pricing.additionalPricing } }
+              : {}),
+          },
+        }
+      : {}),
     ...(entry.capabilities ? { capabilities: [...entry.capabilities] } : {}),
     ...(entry.supportedReasoningEfforts !== undefined
       ? { supportedReasoningEfforts: [...entry.supportedReasoningEfforts] }
@@ -757,5 +880,19 @@ function clonePreviewModelCatalog(
       ? { inferenceProvider: entry.inferenceProvider }
       : {}),
     ...(entry.upstreamProvider !== undefined ? { upstreamProvider: entry.upstreamProvider } : {}),
+    ...(entry.architecture !== undefined ? { architecture: { ...entry.architecture } } : {}),
+    ...(entry.quantization !== undefined ? { quantization: entry.quantization } : {}),
+    ...(entry.perRequestLimits !== undefined
+      ? { perRequestLimits: { ...entry.perRequestLimits } }
+      : {}),
+    ...(entry.regions !== undefined
+      ? { regions: entry.regions.map((region) => ({ ...region })) }
+      : {}),
+    ...(entry.supportedFeatures !== undefined
+      ? { supportedFeatures: [...entry.supportedFeatures] }
+      : {}),
+    ...(entry.supportedSamplingParameters !== undefined
+      ? { supportedSamplingParameters: [...entry.supportedSamplingParameters] }
+      : {}),
   }));
 }

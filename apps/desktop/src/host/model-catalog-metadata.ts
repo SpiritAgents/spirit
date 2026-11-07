@@ -355,7 +355,16 @@ function basePreviewEntryFields(
     capabilities: previewCapabilitiesFromListedEntry(entry),
     ...resolvePreviewCatalogDisplayName(parserName, entry),
     ...(entry.description !== undefined ? { description: entry.description } : {}),
-    ...(entry.pricing !== undefined ? { pricing: { ...entry.pricing } } : {}),
+    ...(entry.pricing !== undefined
+      ? {
+          pricing: {
+            ...entry.pricing,
+            ...(entry.pricing.additionalPricing !== undefined
+              ? { additionalPricing: { ...entry.pricing.additionalPricing } }
+              : {}),
+          },
+        }
+      : {}),
     ...(entry.contextLength !== undefined ? { contextLength: entry.contextLength } : {}),
     ...(entry.outputLimit !== undefined ? { outputLimit: entry.outputLimit } : {}),
     ...(entry.maxCompletionTokens !== undefined
@@ -369,6 +378,20 @@ function basePreviewEntryFields(
       : {}),
     ...(entry.upstreamProvider !== undefined ? { upstreamProvider: entry.upstreamProvider } : {}),
     ...(entry.isPartner !== undefined ? { isPartner: entry.isPartner } : {}),
+    ...(entry.architecture !== undefined ? { architecture: { ...entry.architecture } } : {}),
+    ...(entry.quantization !== undefined ? { quantization: entry.quantization } : {}),
+    ...(entry.perRequestLimits !== undefined
+      ? { perRequestLimits: { ...entry.perRequestLimits } }
+      : {}),
+    ...(entry.regions !== undefined
+      ? { regions: entry.regions.map((region) => ({ ...region })) }
+      : {}),
+    ...(entry.supportedFeatures !== undefined
+      ? { supportedFeatures: [...entry.supportedFeatures] }
+      : {}),
+    ...(entry.supportedSamplingParameters !== undefined
+      ? { supportedSamplingParameters: [...entry.supportedSamplingParameters] }
+      : {}),
   };
 }
 
