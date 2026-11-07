@@ -31,7 +31,7 @@ test("modal materializes every Shared Endpoint transport with the common models 
   assert.equal(responses.sdk, "@ai-sdk/open-responses");
 
   const messages = materializeProviderPreset({ presetId: "modal", transportKind: "anthropic" });
-  assert.equal(messages.apiBase, "https://inference.us-west.modal.direct");
+  assert.equal(messages.apiBase, "https://inference.us-west.modal.direct/v1");
   assert.equal(messages.transportKind, "anthropic");
   assert.equal(messages.sdk, "@ai-sdk/anthropic");
 });
