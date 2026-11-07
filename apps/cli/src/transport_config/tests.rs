@@ -779,6 +779,10 @@ fn env_api_key_override_wins_over_the_channels() {
 
 #[test]
 fn image_generation_block_attaches_without_vendor_fields() {
+    let _guard = shared_env_lock()
+        .lock()
+        .unwrap_or_else(|err| err.into_inner());
+    let _missing_override = ScopedEnv::remove(ENV_API_KEY);
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [
