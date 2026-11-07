@@ -37,6 +37,7 @@ export type SpiritModelCapability =
   | "languageModel"
   | "image"
   | "audio"
+  | "document"
   | "video"
   | "imageGeneration"
   | "videoGeneration";
@@ -243,6 +244,7 @@ const CAPABILITY_TOKENS: ReadonlySet<string> = new Set([
   "languageModel",
   "image",
   "audio",
+  "document",
   "video",
   "imageGeneration",
   "videoGeneration",

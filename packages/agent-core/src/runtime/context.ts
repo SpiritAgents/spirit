@@ -39,6 +39,8 @@ export async function prepareSubmittedUserTurn<Config, State, ToolRequest>(
   const resources = runtime.takePendingMcpResources();
   const imagePaths = new Set(images);
   const videoPaths = new Set<string>();
+  const audioPaths = new Set<string>();
+  const documentPaths = new Set<string>();
 
   for (const file of workspaceFiles) {
     if (file.kind === "image") {
@@ -48,6 +50,16 @@ export async function prepareSubmittedUserTurn<Config, State, ToolRequest>(
 
     if (file.kind === "video") {
       videoPaths.add(file.path);
+      continue;
+    }
+
+    if (file.kind === "audio") {
+      audioPaths.add(file.path);
+      continue;
+    }
+
+    if (file.kind === "document") {
+      documentPaths.add(file.path);
       continue;
     }
 
@@ -77,6 +89,8 @@ export async function prepareSubmittedUserTurn<Config, State, ToolRequest>(
       contentForLlm,
       [...imagePaths],
       [...videoPaths],
+      [...audioPaths],
+      [...documentPaths],
     ),
   });
   runtime.pendingUserTurnStore = userInput;

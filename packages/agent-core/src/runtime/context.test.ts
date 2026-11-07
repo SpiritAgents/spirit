@@ -63,3 +63,35 @@ test("prepareSubmittedUserTurn throws SubmitPromptHookDeniedError when hook deni
     },
   );
 });
+
+test("prepareSubmittedUserTurn carries audio and PDF attachments as typed content parts", async () => {
+  const runtime = {
+    options: {
+      createToolAgentState: (messages: unknown[], userInput: string) => ({ messages, userInput }),
+    },
+    historyStore: [] as Array<{ role: string; content: unknown }>,
+    pendingUserTurnStore: undefined,
+    takePendingImages: () => [],
+    takePendingMcpResources: () => [],
+    recordContextMessage: () => {
+      throw new Error("binary assets must not become text context");
+    },
+  };
+
+  await prepareSubmittedUserTurn(
+    runtime as never,
+    "review",
+    [],
+    [
+      { kind: "audio", path: "voice.mp3", attachedAtUnixMs: 1 },
+      { kind: "document", path: "paper.pdf", attachedAtUnixMs: 1 },
+    ],
+  );
+
+  const content = runtime.historyStore.at(-1)?.content as Array<Record<string, unknown>>;
+  assert.match(String(content[0]?.text), /review$/);
+  assert.deepEqual(content.slice(1), [
+    { type: "audio", path: "voice.mp3" },
+    { type: "document", path: "paper.pdf" },
+  ]);
+});

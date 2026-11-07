@@ -331,10 +331,24 @@ export interface PendingWorkspaceVideoFile {
   attachedAtUnixMs: number;
 }
 
+export interface PendingWorkspaceAudioFile {
+  kind: "audio";
+  path: string;
+  attachedAtUnixMs: number;
+}
+
+export interface PendingWorkspaceDocumentFile {
+  kind: "document";
+  path: string;
+  attachedAtUnixMs: number;
+}
+
 export type PendingWorkspaceFile =
   | PendingWorkspaceTextFile
   | PendingWorkspaceImageFile
-  | PendingWorkspaceVideoFile;
+  | PendingWorkspaceVideoFile
+  | PendingWorkspaceAudioFile
+  | PendingWorkspaceDocumentFile;
 
 export type AssistantAuxKind = "thinking" | "compacting";
 

@@ -21,6 +21,11 @@ import {
 import { CONTEXT_INJECTION_MAX_BYTES, decodeUtf8, sliceUtf8Head } from "@spiritagent/agent-core";
 import { detectSupportedImageFile, hasSupportedImageExtension } from "./image-file-support.js";
 import { detectSupportedVideoFile, hasSupportedVideoExtension } from "./video-file-support.js";
+import { detectSupportedAudioFile, hasSupportedAudioExtension } from "./audio-file-support.js";
+import {
+  detectSupportedDocumentFile,
+  hasSupportedDocumentExtension,
+} from "./document-file-support.js";
 
 const DEFAULT_IGNORED_DIRECTORY_NAMES = new Set([".git", "target", "node_modules", "bin", "obj"]);
 
@@ -52,10 +57,24 @@ export interface WorkspaceFileReferenceVideoAttachment {
   attachedAtUnixMs: number;
 }
 
+export interface WorkspaceFileReferenceAudioAttachment {
+  kind: "audio";
+  path: string;
+  attachedAtUnixMs: number;
+}
+
+export interface WorkspaceFileReferenceDocumentAttachment {
+  kind: "document";
+  path: string;
+  attachedAtUnixMs: number;
+}
+
 export type WorkspaceFileReferenceAttachment =
   | WorkspaceFileReferenceTextAttachment
   | WorkspaceFileReferenceImageAttachment
-  | WorkspaceFileReferenceVideoAttachment;
+  | WorkspaceFileReferenceVideoAttachment
+  | WorkspaceFileReferenceAudioAttachment
+  | WorkspaceFileReferenceDocumentAttachment;
 
 export interface ResolveWorkspaceFileReferenceAttachmentsOptions {
   maxContentBytes?: number;
@@ -226,7 +245,7 @@ export async function classifyLocalFileComposerRoute(
 ): Promise<LocalFileComposerRoute> {
   try {
     const attachment = await localFileAttachmentFromPath(absolutePath);
-    return attachment.kind === "image" || attachment.kind === "video" ? "media" : "reference";
+    return attachment.kind === "text" ? "reference" : "media";
   } catch {
     // Binary/validation failures are treated the same as @ references: the UI still shows the chip and silently ignores them on send (consistent with existing @ behavior)
     return "reference";
@@ -276,6 +295,32 @@ async function localFileAttachmentFromAbsolutePath(
 
   if (hasSupportedVideoExtension(absolutePath)) {
     throw new Error(`Video file validation failed: ${attachmentPath}`);
+  }
+
+  const audio = detectSupportedAudioFile(absolutePath, bytes);
+  if (audio) {
+    return {
+      kind: "audio",
+      path: attachmentPath,
+      attachedAtUnixMs: Date.now(),
+    };
+  }
+
+  if (hasSupportedAudioExtension(absolutePath)) {
+    throw new Error(`Audio file validation failed: ${attachmentPath}`);
+  }
+
+  const document = detectSupportedDocumentFile(absolutePath, bytes);
+  if (document) {
+    return {
+      kind: "document",
+      path: attachmentPath,
+      attachedAtUnixMs: Date.now(),
+    };
+  }
+
+  if (hasSupportedDocumentExtension(absolutePath)) {
+    throw new Error(`Document file validation failed: ${attachmentPath}`);
   }
 
   if (bytes.includes(0)) {

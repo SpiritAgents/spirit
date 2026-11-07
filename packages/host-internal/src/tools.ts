@@ -151,6 +151,7 @@ export type HostToolContentPart =
 export interface HostToolModelCapabilities {
   imageInput?: true;
   audioInput?: true;
+  documentInput?: true;
   videoInput?: true;
 }
 

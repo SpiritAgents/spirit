@@ -8,6 +8,7 @@ import {
   classifyLocalFileComposerRoute,
   clearWorkspaceFileReferenceIndexCache,
   collectWorkspaceFileReferenceIndex,
+  localFileAttachmentFromPath,
   listCachedWorkspaceFileReferenceSuggestions,
   resolveWorkspaceFileReferenceAttachmentsFromInput,
 } from "./workspace-file-references.js";
@@ -312,6 +313,8 @@ test("classifyLocalFileComposerRoute routes validated media and reference files"
     const pngPath = join(externalRoot, "diagram.png");
     const mp4Path = join(externalRoot, "clip.mp4");
     const fakePngPath = join(externalRoot, "fake.png");
+    const audioPath = join(externalRoot, "voice.mp3");
+    const documentPath = join(externalRoot, "paper.pdf");
     await writeFile(textPath, "hello\n");
     await writeFile(
       pngPath,
@@ -322,11 +325,17 @@ test("classifyLocalFileComposerRoute routes validated media and reference files"
     );
     await writeFile(mp4Path, MINIMAL_MP4_HEADER);
     await writeFile(fakePngPath, "not a png");
+    await writeFile(audioPath, "ID3\u0004");
+    await writeFile(documentPath, "%PDF-1.7\n");
 
     assert.equal(await classifyLocalFileComposerRoute(textPath), "reference");
     assert.equal(await classifyLocalFileComposerRoute(pngPath), "media");
     assert.equal(await classifyLocalFileComposerRoute(mp4Path), "media");
+    assert.equal(await classifyLocalFileComposerRoute(audioPath), "media");
+    assert.equal(await classifyLocalFileComposerRoute(documentPath), "media");
     assert.equal(await classifyLocalFileComposerRoute(fakePngPath), "reference");
+    assert.equal((await localFileAttachmentFromPath(audioPath)).kind, "audio");
+    assert.equal((await localFileAttachmentFromPath(documentPath)).kind, "document");
   } finally {
     await rm(externalRoot, { recursive: true, force: true });
   }
