@@ -236,6 +236,7 @@
         "openai-compatible": "https://api.cerebras.ai/v1"
       },
       "credentials": { "kind": "apiKey" },
+      "options": { "inlineImageInput": true },
       "catalog": { "parser": "cerebras-models", "endpoint": "/models" }
     },
     {

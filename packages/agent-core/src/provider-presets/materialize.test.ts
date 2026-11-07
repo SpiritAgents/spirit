@@ -41,6 +41,7 @@ test("cerebras materializes the official SDK on the chat-only shared inference e
     label: "Cerebras",
     apiBase: "https://api.cerebras.ai/v1",
     sdk: "@ai-sdk/cerebras",
+    options: { inlineImageInput: true },
     models: [],
   });
 });

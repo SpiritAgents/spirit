@@ -105,6 +105,7 @@ import {
 } from "./video-message-stash.js";
 import {
   llmHistoryToOpenAiMessages,
+  resolveDeclaredImageInputsInMessages,
   resolveDeclaredVideoInputsInMessages,
 } from "./openai-multimodal-messages.js";
 import {
@@ -236,6 +237,11 @@ export class AiSdkOpenAiCompatibleTransport
     request: OpenAiJsonSchemaCompletionRequest,
   ): Promise<OpenAiJsonSchemaCompletionResult<T>> {
     const rawMessages = buildJsonSchemaCompletionMessages(config, request);
+    await resolveDeclaredImageInputsInMessages(
+      config,
+      rawMessages,
+      openAiTransportAssetRoot(config),
+    );
     await resolveDeclaredVideoInputsInMessages(
       config,
       rawMessages,
@@ -277,6 +283,11 @@ export class AiSdkOpenAiCompatibleTransport
       steps: state.steps + 1,
     };
 
+    await resolveDeclaredImageInputsInMessages(
+      config,
+      nextState.messages,
+      openAiTransportAssetRoot(config),
+    );
     await resolveDeclaredVideoInputsInMessages(
       config,
       nextState.messages,
@@ -373,6 +384,11 @@ export class AiSdkOpenAiCompatibleTransport
     let requestMessages: JsonValue[];
     let providerTools = EMPTY_RESOLVED_PROVIDER_TOOLS;
     try {
+      await resolveDeclaredImageInputsInMessages(
+        config,
+        nextState.messages,
+        openAiTransportAssetRoot(config),
+      );
       await resolveDeclaredVideoInputsInMessages(
         config,
         nextState.messages,
@@ -480,18 +496,21 @@ export class AiSdkOpenAiCompatibleTransport
       };
     }
 
-    const promptMessages = openAiMessagesToAiSdkMessages(
-      config,
-      llmHistoryToOpenAiMessages(
-        buildCompactHistoryPromptMessages(
-          history,
-          context?.transcriptDirPath === undefined
-            ? {}
-            : { transcriptDirPath: context.transcriptDirPath },
-        ),
-        openAiTransportAssetRoot(config),
+    const rawMessages = llmHistoryToOpenAiMessages(
+      buildCompactHistoryPromptMessages(
+        history,
+        context?.transcriptDirPath === undefined
+          ? {}
+          : { transcriptDirPath: context.transcriptDirPath },
       ),
+      openAiTransportAssetRoot(config),
     );
+    await resolveDeclaredImageInputsInMessages(
+      config,
+      rawMessages,
+      openAiTransportAssetRoot(config),
+    );
+    const promptMessages = openAiMessagesToAiSdkMessages(config, rawMessages);
     const compactConfig: OpenAiTransportConfig = {
       ...config,
       model: config.compactModel ?? config.model,
