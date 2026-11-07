@@ -276,6 +276,37 @@ test("default output effort and omit thinking remove SDK-inferred fields", async
   });
 });
 
+test("thinking output_config effort takes precedence over the selected output effort", async () => {
+  const { fetch: base, captured } = capturingFetch();
+  const fetch = createDeclaredWireMergeFetch(
+    {
+      effortSemantics: "output",
+      effort: "xhigh",
+      thinkingSwitch: {
+        defaultState: "on",
+        off: { body: { output_config: { effort: "none" } } },
+      },
+      vendorExtendedThinking: false,
+    },
+    "messages",
+    base,
+  );
+
+  await fetch("https://upstream.example/v1/messages", {
+    method: "POST",
+    body: JSON.stringify({
+      model: "deployment-model",
+      thinking: { type: "adaptive" },
+      output_config: { effort: "high", task_budget: 4096 },
+    }),
+  });
+
+  assert.deepEqual(captured[0]!.body, {
+    model: "deployment-model",
+    output_config: { effort: "none", task_budget: 4096 },
+  });
+});
+
 test("no declarations returns the base fetch untouched", () => {
   const { fetch: base } = capturingFetch();
   assert.equal(createDeclaredWireMergeFetch({}, "chat-completions", base), base);

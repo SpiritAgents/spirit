@@ -242,3 +242,46 @@ test("modal Messages sends hostname ids, image input, tools, and declared effort
     );
   });
 });
+
+test("modal Messages maps the API none effort onto the declared thinking-off state", async () => {
+  const model = "example--ep-deepseek-v4-1-flash-server.us-west.modal.direct";
+  const preset = materializeProviderPreset({ presetId: "modal", transportKind: "anthropic" });
+  await withLoopback(
+    "/v1/messages",
+    {
+      id: "msg_modal_none",
+      type: "message",
+      role: "assistant",
+      model,
+      content: [{ type: "text", text: "ok" }],
+      stop_reason: "end_turn",
+      stop_sequence: null,
+      usage: { input_tokens: 1, output_tokens: 1 },
+    },
+    async ({ origin, captured }) => {
+      const result = await new AiSdkAnthropicTransport().startToolAgentRound(
+        {
+          transportKind: "anthropic",
+          apiKey: "test-proxy-token",
+          model,
+          ...(preset.sdk !== undefined ? { sdk: preset.sdk } : {}),
+          baseUrl: `${origin}/v1`,
+          effortSemantics: "output",
+          effort: "xhigh",
+          supportsThinkingSwitch: true,
+          vendorExtendedThinking: false,
+          thinkingSwitch: {
+            defaultState: "on",
+            off: { body: { output_config: { effort: "none" } } },
+          },
+        },
+        { messages: [{ role: "user", content: "Answer without reasoning" }], steps: 0 },
+        demoLookupToolDefinition(),
+      );
+      assert.equal(result.kind, "success", JSON.stringify(result));
+      assert.equal(captured[0]?.body.model, model);
+      assert.deepEqual(captured[0]?.body.output_config, { effort: "none" });
+      assert.equal("thinking" in captured[0]!.body, false);
+    },
+  );
+});
