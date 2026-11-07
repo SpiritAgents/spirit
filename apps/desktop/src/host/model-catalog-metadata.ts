@@ -448,11 +448,23 @@ function previewEntryFromListedEntry(
             ? normalizePreviewSupportedEfforts(supportedReasoningEfforts)
             : undefined;
       const defaultEffort = normalizePreviewDefaultEffort(entry.defaultEffort);
+      const supportsThinkingSwitch =
+        supportedReasoningEfforts?.includes("none") === true ||
+        entry.supportsThinkingSwitch === true;
       return {
         ...base,
         effortSemantics: "output",
         ...(supportedEfforts !== undefined ? { supportedEfforts } : {}),
         ...(defaultEffort !== undefined ? { defaultEffort } : {}),
+        ...(supportsThinkingSwitch
+          ? {
+              supportsThinkingSwitch: true,
+              thinkingSwitch: entry.thinkingSwitch ?? {
+                defaultState: "on",
+                off: { body: { output_config: { effort: "none" } } },
+              },
+            }
+          : {}),
       };
     }
     const apiDeclaresAlwaysOnThinking =

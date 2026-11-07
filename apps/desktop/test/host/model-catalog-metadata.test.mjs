@@ -220,11 +220,15 @@ test("modal uses base_model_id only for knowledge and keeps exact API reasoning 
   });
   assert.deepEqual(messages?.[0]?.supportedEfforts, ["low", "high", "xhigh", "max"]);
   assert.deepEqual(messages?.[1]?.supportedEfforts, ["low", "high", "max"]);
+  assert.deepEqual(messages?.[0]?.thinkingSwitch, {
+    defaultState: "on",
+    off: { body: { output_config: { effort: "none" } } },
+  });
+  assert.equal(messages?.[0]?.supportsThinkingSwitch, true);
+  assert.equal(messages?.[1]?.supportsThinkingSwitch, undefined);
   for (const entry of messages ?? []) {
     assert.equal(entry.effortSemantics, "output");
     assert.equal(entry.supportedReasoningEfforts, undefined);
-    assert.equal(entry.supportsThinkingSwitch, undefined);
-    assert.equal(entry.thinkingSwitch, undefined);
   }
 
   const refolded = previewCatalogMapForTransport({
@@ -233,6 +237,8 @@ test("modal uses base_model_id only for knowledge and keeps exact API reasoning 
     modelCatalog: messages,
   });
   assert.deepEqual(refolded.get(messages[0].id)?.supportedEfforts, ["low", "high", "xhigh", "max"]);
+  assert.equal(refolded.get(messages[0].id)?.supportsThinkingSwitch, true);
+  assert.deepEqual(refolded.get(messages[0].id)?.thinkingSwitch, messages[0].thinkingSwitch);
 });
 
 test("custom anthropic transport consumes Anthropic model catalog metadata", () => {

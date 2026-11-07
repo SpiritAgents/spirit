@@ -146,6 +146,7 @@ export interface ProviderListedModelEntry {
   reasoningField?: string;
   /** LongCat etc.: when `supported_parameters` includes `thinking`, extended thinking can be toggled. */
   supportsThinkingSwitch?: boolean;
+  thinkingSwitch?: ThinkingSwitchDeclaration;
   supportsThinkingType?: KimiCodeSupportsThinkingType;
   /** Provider-specific thinking on/off wire encoding resolved while materializing the catalog. */
   thinkingSwitch?: ThinkingSwitchDeclaration;
