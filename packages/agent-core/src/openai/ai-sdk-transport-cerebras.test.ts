@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createCerebras } from "@ai-sdk/cerebras";
 import { test } from "vitest";
 
 import type { JsonValue } from "../ports.js";
@@ -220,4 +221,99 @@ test("Cerebras capability trimming never sends video input", async () => {
   assert.equal(wire.includes("image_url"), true);
   assert.equal(wire.includes("video_url"), false);
   assert.equal(wire.includes("clip.mp4"), false);
+});
+
+async function runCerebrasStructuredToolResponse(content: string | null) {
+  let requestBody: Record<string, unknown> | undefined;
+  const provider = createCerebras({
+    apiKey: "test-key",
+    baseURL: "https://api.cerebras.ai/v1",
+    fetch: async (_input, init) => {
+      requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(
+        JSON.stringify({
+          id: "chatcmpl-local",
+          object: "chat.completion",
+          created: 0,
+          model: "gpt-oss-120b",
+          choices: [
+            {
+              index: 0,
+              finish_reason: "tool_calls",
+              message: {
+                role: "assistant",
+                content,
+                tool_calls: [
+                  {
+                    id: "call-local",
+                    type: "function",
+                    function: { name: "lookup", arguments: "{}" },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    },
+  });
+  const result = await provider("gpt-oss-120b").doGenerate({
+    prompt: [
+      { role: "user", content: [{ type: "text", text: "Start" }] },
+      {
+        role: "assistant",
+        content: [
+          { type: "reasoning", text: "earlier reasoning" },
+          { type: "text", text: "earlier answer" },
+        ],
+      },
+      { role: "user", content: [{ type: "text", text: "Return structured output" }] },
+    ],
+    responseFormat: {
+      type: "json",
+      name: "result",
+      schema: {
+        type: "object",
+        properties: { result: { type: "string" } },
+        required: ["result"],
+      },
+    },
+    tools: [
+      {
+        type: "function",
+        name: "lookup",
+        inputSchema: { type: "object", properties: {} },
+      },
+    ],
+  });
+  return { requestBody, result };
+}
+
+test("Cerebras SDK serializes tools plus response_format and replays reasoning", async () => {
+  const { requestBody, result } = await runCerebrasStructuredToolResponse('{"result":"local"}');
+  assert.ok(requestBody);
+  assert.equal((requestBody.response_format as { type?: string }).type, "json_schema");
+  assert.equal(Array.isArray(requestBody.tools), true);
+  const assistant = (requestBody.messages as Array<Record<string, unknown>>)[1];
+  assert.ok(assistant);
+  assert.equal(assistant.reasoning, "earlier reasoning");
+  assert.equal("reasoning_content" in assistant, false);
+  assert.equal(
+    result.content.some((part) => part.type === "text"),
+    true,
+  );
+  assert.equal(
+    result.content.some((part) => part.type === "tool-call"),
+    false,
+  );
+  assert.equal(result.finishReason.unified, "stop");
+});
+
+test("Cerebras SDK preserves tool calls when no structured text is returned", async () => {
+  const { result } = await runCerebrasStructuredToolResponse(null);
+  assert.equal(
+    result.content.some((part) => part.type === "tool-call"),
+    true,
+  );
 });

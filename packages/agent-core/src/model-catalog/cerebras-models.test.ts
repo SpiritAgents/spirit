@@ -235,3 +235,50 @@ test("Cerebras never uses the public catalog as an authentication fallback", asy
   );
   assert.equal(fetchMock.mock.calls.length, 1);
 });
+
+test("Cerebras empty or Dedicated-only authenticated inventories do not fetch public metadata", async () => {
+  const fetchMock = vi.fn(async () => new Response(JSON.stringify({ data: [] }), { status: 200 }));
+  vi.stubGlobal("fetch", fetchMock);
+  assert.deepEqual(
+    await listCerebrasModels({ baseUrl: "https://api.cerebras.ai/v1", apiKey: "test-key" }),
+    [],
+  );
+  assert.equal(fetchMock.mock.calls.length, 1);
+});
+
+test("Cerebras null rich fields stay absent while explicit null rate limits survive", () => {
+  assert.deepEqual(
+    parseCerebrasPublicModelEntriesPayload({
+      data: [
+        {
+          id: "gpt-oss-120b",
+          name: null,
+          description: null,
+          pricing: { prompt: null, completion: null },
+          capabilities: { vision: null, reasoning: null },
+          architecture: null,
+          limits: {
+            max_context_length: null,
+            max_completion_tokens: null,
+            requests_per_minute: null,
+            tokens_per_minute: null,
+          },
+          datacenter_locations: null,
+          deprecated: null,
+          preview: null,
+          quantization: null,
+        },
+      ],
+    }),
+    [
+      {
+        id: "gpt-oss-120b",
+        supportsThinkingType: "only",
+        supportsThinkingSwitch: false,
+        catalogMetadata: {
+          rateLimits: { requestsPerMinute: null, tokensPerMinute: null },
+        },
+      },
+    ],
+  );
+});
