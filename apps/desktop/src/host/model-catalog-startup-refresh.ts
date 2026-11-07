@@ -183,8 +183,9 @@ export function catalogEntryToModelEntry(
   if (catalogEntry.contextLength !== undefined) {
     entry.contextLength = catalogEntry.contextLength;
   }
-  if (catalogEntry.outputLimit !== undefined) {
-    entry.outputLimit = catalogEntry.outputLimit;
+  const outputLimit = catalogEntry.outputLimit ?? catalogEntry.maxCompletionTokens;
+  if (outputLimit !== undefined) {
+    entry.outputLimit = outputLimit;
   }
   if (catalogEntry.supportedReasoningEfforts !== undefined) {
     const efforts = normalizeSupportedReasoningEfforts(catalogEntry.supportedReasoningEfforts);
@@ -435,8 +436,9 @@ export function applyCatalogEntryToStoredModel(
     model.contextLength = Math.trunc(catalogEntry.contextLength);
     changed = true;
   }
-  if (model.outputLimit === undefined && catalogEntry.outputLimit !== undefined) {
-    model.outputLimit = Math.trunc(catalogEntry.outputLimit);
+  const outputLimit = catalogEntry.outputLimit ?? catalogEntry.maxCompletionTokens;
+  if (model.outputLimit === undefined && outputLimit !== undefined) {
+    model.outputLimit = Math.trunc(outputLimit);
     changed = true;
   }
 

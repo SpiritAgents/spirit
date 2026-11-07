@@ -15,7 +15,10 @@ import type {
   ModelEffort,
   ModelEffortSelection,
 } from "@spiritagent/agent-core/model-effort";
-import type { ProviderListedCatalogCapabilities } from "@spiritagent/agent-core/model-catalog";
+import type {
+  ProviderListedCatalogCapabilities,
+  ProviderListedModelCatalogMetadata,
+} from "@spiritagent/agent-core/model-catalog";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 import type {
   BackgroundTaskRecord,
@@ -261,6 +264,8 @@ export interface PreviewModelCatalogEntry {
   defaultEffort?: ModelEffort;
   thinkingCapabilities?: ThinkingCapabilities;
   catalogCapabilities?: ProviderListedCatalogCapabilities;
+  /** Additional API-sourced catalog facts retained by preview/cache refresh. */
+  catalogMetadata?: ProviderListedModelCatalogMetadata;
   /** Kimi Code `think_efforts.default_effort` when present. */
   defaultReasoningEffort?: DesktopModelReasoningEffort;
   supportedReasoningModes?: DesktopModelReasoningMode[];

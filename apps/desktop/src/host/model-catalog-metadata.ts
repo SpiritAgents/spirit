@@ -361,6 +361,9 @@ function basePreviewEntryFields(
     ...(entry.maxCompletionTokens !== undefined
       ? { maxCompletionTokens: entry.maxCompletionTokens }
       : {}),
+    ...(entry.catalogMetadata !== undefined
+      ? { catalogMetadata: structuredClone(entry.catalogMetadata) }
+      : {}),
     ...(entry.inferenceProvider !== undefined
       ? { inferenceProvider: entry.inferenceProvider }
       : {}),

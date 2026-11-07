@@ -96,6 +96,49 @@ test("cerebras materializes only the documented Shared reasoning constraints", (
   assert.equal(preview[1].serviceTiers, undefined);
 });
 
+test("cerebras preview retains rich API catalog metadata and output limits", () => {
+  const catalogMetadata = {
+    created: 0,
+    ownedBy: "Cerebras",
+    capabilities: { tools: true, vision: true },
+    supportedParameters: { temperature: true, stop: false },
+    architecture: { modality: "text+image", tokenizer: "Qwen", instructType: "chatml" },
+    datacenterLocations: ["US-Central"],
+    deprecated: false,
+    preview: true,
+    quantization: "FP8",
+    rateLimits: { requestsPerMinute: 60, tokensPerMinute: null },
+  };
+  const preview = previewModelCatalogForTransport({
+    providerId: "cerebras",
+    transportKind: "openai-compatible",
+    listedModels: [
+      {
+        id: "qwen-3.8-27b",
+        displayName: "Qwen 3.8 27B",
+        description: "Shared multilingual reasoning model.",
+        pricing: { inputPerTokenUsd: "0.000001", outputPerTokenUsd: "0.000002" },
+        supportsImageInput: true,
+        contextLength: 131072,
+        maxCompletionTokens: 32768,
+        catalogMetadata,
+      },
+    ],
+  });
+  assert.deepEqual(preview, [
+    {
+      id: "qwen-3.8-27b",
+      displayName: "Qwen 3.8 27B",
+      description: "Shared multilingual reasoning model.",
+      pricing: { inputPerTokenUsd: "0.000001", outputPerTokenUsd: "0.000002" },
+      capabilities: ["languageModel", "image"],
+      contextLength: 131072,
+      maxCompletionTokens: 32768,
+      catalogMetadata,
+    },
+  ]);
+});
+
 test("custom anthropic transport consumes Anthropic model catalog metadata", () => {
   assert.equal(usesAnthropicModelCatalogMetadata({ transportKind: "anthropic" }), true);
 

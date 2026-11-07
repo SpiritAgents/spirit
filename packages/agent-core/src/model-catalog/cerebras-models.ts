@@ -1,6 +1,8 @@
 import type {
   ListOpenAiCompatibleModelIdsOptions,
+  ProviderListedModelCatalogMetadata,
   ProviderListedModelEntry,
+  ProviderListedModelRateLimits,
 } from "./openai-models.js";
 import { openAiCompatibleModelsListUrl } from "./openai-models.js";
 
@@ -46,6 +48,88 @@ function optionalPositiveInteger(value: unknown): number | undefined {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : undefined;
 }
 
+function optionalNonnegativeInteger(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+}
+
+function optionalBooleanRecord(value: unknown): Record<string, boolean> | undefined {
+  const record = asRecord(value);
+  if (!record) {
+    return undefined;
+  }
+  const result: Record<string, boolean> = {};
+  for (const [key, item] of Object.entries(record)) {
+    if (typeof item === "boolean") {
+      result[key] = item;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+function parseRateLimits(
+  limits: Record<string, unknown> | undefined,
+): ProviderListedModelRateLimits | undefined {
+  if (!limits) {
+    return undefined;
+  }
+  const readLimit = (value: unknown): number | null | undefined =>
+    value === null ? null : optionalNonnegativeInteger(value);
+  const requestsPerMinute = readLimit(limits.requests_per_minute);
+  const tokensPerMinute = readLimit(limits.tokens_per_minute);
+  if (requestsPerMinute === undefined && tokensPerMinute === undefined) {
+    return undefined;
+  }
+  return {
+    ...(requestsPerMinute !== undefined ? { requestsPerMinute } : {}),
+    ...(tokensPerMinute !== undefined ? { tokensPerMinute } : {}),
+  };
+}
+
+function parseCatalogMetadata(
+  record: Record<string, unknown>,
+  capabilities: Record<string, unknown> | undefined,
+  limits: Record<string, unknown> | undefined,
+): ProviderListedModelCatalogMetadata | undefined {
+  const architectureRecord = asRecord(record.architecture);
+  const modality = optionalString(architectureRecord?.modality);
+  const tokenizer = optionalString(architectureRecord?.tokenizer);
+  const instructType = optionalString(architectureRecord?.instruct_type);
+  const architecture =
+    modality !== undefined || tokenizer !== undefined || instructType !== undefined
+      ? {
+          ...(modality !== undefined ? { modality } : {}),
+          ...(tokenizer !== undefined ? { tokenizer } : {}),
+          ...(instructType !== undefined ? { instructType } : {}),
+        }
+      : undefined;
+  const datacenterLocations = Array.isArray(record.datacenter_locations)
+    ? record.datacenter_locations.flatMap((location) =>
+        typeof location === "string" && location.trim().length > 0 ? [location.trim()] : [],
+      )
+    : undefined;
+  const created = optionalNonnegativeInteger(record.created);
+  const ownedBy = optionalString(record.owned_by);
+  const huggingFaceId = optionalString(record.hugging_face_id);
+  const booleanCapabilities = optionalBooleanRecord(capabilities);
+  const supportedParameters = optionalBooleanRecord(record.supported_parameters);
+  const quantization = optionalString(record.quantization);
+  const rateLimits = parseRateLimits(limits);
+  const metadata: ProviderListedModelCatalogMetadata = {
+    ...(created !== undefined ? { created } : {}),
+    ...(ownedBy !== undefined ? { ownedBy } : {}),
+    ...(huggingFaceId !== undefined ? { huggingFaceId } : {}),
+    ...(booleanCapabilities !== undefined ? { capabilities: booleanCapabilities } : {}),
+    ...(supportedParameters !== undefined ? { supportedParameters } : {}),
+    ...(architecture !== undefined ? { architecture } : {}),
+    ...(datacenterLocations !== undefined ? { datacenterLocations } : {}),
+    ...(typeof record.deprecated === "boolean" ? { deprecated: record.deprecated } : {}),
+    ...(typeof record.preview === "boolean" ? { preview: record.preview } : {}),
+    ...(quantization !== undefined ? { quantization } : {}),
+    ...(rateLimits !== undefined ? { rateLimits } : {}),
+  };
+  return Object.keys(metadata).length > 0 ? metadata : undefined;
+}
+
 /** Authenticated Shared Inference ids. Dedicated and public-only entries are never imported. */
 export function parseCerebrasModelEntriesPayload(payload: unknown): ProviderListedModelEntry[] {
   const entries = modelRecords(payload)
@@ -76,6 +160,7 @@ export function parseCerebrasPublicModelEntriesPayload(
     const description = optionalString(record.description);
     const contextLength = optionalPositiveInteger(limits?.max_context_length);
     const maxCompletionTokens = optionalPositiveInteger(limits?.max_completion_tokens);
+    const catalogMetadata = parseCatalogMetadata(record, capabilities, limits);
     if (displayName !== undefined) {
       entry.displayName = displayName;
     }
@@ -99,6 +184,9 @@ export function parseCerebrasPublicModelEntriesPayload(
     }
     if (maxCompletionTokens !== undefined) {
       entry.maxCompletionTokens = maxCompletionTokens;
+    }
+    if (catalogMetadata !== undefined) {
+      entry.catalogMetadata = catalogMetadata;
     }
     entries.push(entry);
   }
