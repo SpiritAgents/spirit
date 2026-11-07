@@ -346,13 +346,14 @@ function resolveThinkingMetadata(input: {
 function basePreviewEntryFields(
   parserName: string | undefined,
   entry: ProviderListedModelEntry,
+  transportKind: DesktopTransportKind | undefined,
 ): PreviewModelCatalogEntry {
   return {
     id: entry.id,
     ...(entry.transportOverride !== undefined
       ? { transportOverride: { ...entry.transportOverride } }
       : {}),
-    capabilities: previewCapabilitiesFromListedEntry(entry),
+    capabilities: previewCapabilitiesFromListedEntry(entry, parserName, transportKind),
     ...resolvePreviewCatalogDisplayName(parserName, entry),
     ...(entry.description !== undefined ? { description: entry.description } : {}),
     ...(entry.pricing !== undefined
@@ -403,9 +404,15 @@ function basePreviewEntryFields(
 function previewEntryFromListedEntry(
   parserName: string | undefined,
   entry: ProviderListedModelEntry,
+  transportKind: DesktopTransportKind | undefined,
 ): PreviewModelCatalogEntry {
-  const base = basePreviewEntryFields(parserName, entry);
-  const knowledge = lookupCatalogModelKnowledge(entry.id);
+  const base = basePreviewEntryFields(parserName, entry, transportKind);
+  // Nebius verbose metadata does not declare per-model effort, thinking, tiers, or hosted tools.
+  // Do not fill those controls from similarly named models hosted elsewhere.
+  const knowledge =
+    parserName === "nebius-token-factory-models"
+      ? undefined
+      : lookupCatalogModelKnowledge(entry.id);
   const knowledgeEfforts = knowledge ? knowledgeDeclaredReasoningEfforts(knowledge) : undefined;
   const knowledgeModes = knowledge ? knowledgeDeclaredReasoningModes(knowledge) : undefined;
   const knowledgeTiers =
@@ -507,7 +514,9 @@ export function previewModelCatalogForTransport(input: {
     return undefined;
   }
 
-  return input.listedModels.map((entry) => previewEntryFromListedEntry(parserName, entry));
+  return input.listedModels.map((entry) =>
+    previewEntryFromListedEntry(parserName, entry, input.transportKind),
+  );
 }
 
 export function previewCatalogMapForTransport(input: {
@@ -528,14 +537,18 @@ export function previewCatalogMapForTransport(input: {
     }
     // The wizard's preview entries already carry folded declarations; still fold knowledge here so
     // hand-written preview payloads get the same treatment.
-    const folded = previewEntryFromListedEntry(parserName, {
-      ...entry,
-      // PreviewModelCatalogEntry carries resolved capabilities; re-derive the listed flags.
-      supportsImageInput: entry.capabilities?.includes("image") === true,
-      supportsVideoInput: entry.capabilities?.includes("video") === true,
-      supportsImageGeneration: entry.capabilities?.includes("imageGeneration") === true,
-      supportsVideoGeneration: entry.capabilities?.includes("videoGeneration") === true,
-    });
+    const folded = previewEntryFromListedEntry(
+      parserName,
+      {
+        ...entry,
+        // PreviewModelCatalogEntry carries resolved capabilities; re-derive the listed flags.
+        supportsImageInput: entry.capabilities?.includes("image") === true,
+        supportsVideoInput: entry.capabilities?.includes("video") === true,
+        supportsImageGeneration: entry.capabilities?.includes("imageGeneration") === true,
+        supportsVideoGeneration: entry.capabilities?.includes("videoGeneration") === true,
+      },
+      input.transportKind,
+    );
     normalized.push([
       id,
       {
@@ -567,6 +580,8 @@ function resolvePreviewCatalogDisplayName(
 
 function previewCapabilitiesFromListedEntry(
   entry: ProviderListedModelEntry,
+  parserName: string | undefined,
+  transportKind: DesktopTransportKind | undefined,
 ): DesktopModelCapability[] {
   if (entry.supportsImageGeneration === true) {
     return ["imageGeneration"];
@@ -580,7 +595,10 @@ function previewCapabilitiesFromListedEntry(
   if (entry.supportsImageInput === true) {
     capabilities.push("image");
   }
-  if (entry.supportsVideoInput === true) {
+  const videoInputConfirmed =
+    entry.supportsVideoInput === true &&
+    !(parserName === "nebius-token-factory-models" && transportKind === "open-responses");
+  if (videoInputConfirmed) {
     capabilities.push("video");
   }
   return capabilities;

@@ -333,9 +333,18 @@ export async function loadPreviewModelsForTransport(input: {
   const cached = await readModelCatalogCache(input.apiBase, input.apiKey, cacheProviderId);
   const now = Date.now();
   if (cached && isModelCatalogCacheFresh(cached, now, input.forceRefresh)) {
+    const modelCatalog = cached.modelCatalog
+      ? [
+          ...previewCatalogMapForTransport({
+            ...(input.providerId ? { providerId: input.providerId } : {}),
+            transportKind: input.transportKind,
+            modelCatalog: cached.modelCatalog,
+          }).values(),
+        ]
+      : undefined;
     return {
       modelIds: cached.modelIds,
-      ...(cached.modelCatalog ? { modelCatalog: cached.modelCatalog } : {}),
+      ...(modelCatalog ? { modelCatalog } : {}),
       fromCache: true,
     };
   }
@@ -351,17 +360,28 @@ export async function loadPreviewModelsForTransport(input: {
     ...(input.vertexClientEmail ? { vertexClientEmail: input.vertexClientEmail } : {}),
     ...(input.vertexPrivateKey ? { vertexPrivateKey: input.vertexPrivateKey } : {}),
   });
-  const modelCatalog = previewModelCatalogForTransport({
+  // Cache the transport-neutral listing. The same apiBase serves Chat and Responses, whose
+  // confirmed media capabilities may differ; project a fresh copy for each reader instead of
+  // letting the first connected transport permanently remove a capability from the cache.
+  const cacheModelCatalog = previewModelCatalogForTransport({
     ...(input.providerId ? { providerId: input.providerId } : {}),
-    transportKind: input.transportKind,
     listedModels,
   });
+  const modelCatalog = cacheModelCatalog
+    ? [
+        ...previewCatalogMapForTransport({
+          ...(input.providerId ? { providerId: input.providerId } : {}),
+          transportKind: input.transportKind,
+          modelCatalog: cacheModelCatalog,
+        }).values(),
+      ]
+    : undefined;
   const modelIds = listedModels.map((entry) => entry.id);
   await writeModelCatalogCache(
     input.apiBase,
     modelIds,
     input.apiKey,
-    modelCatalog,
+    cacheModelCatalog,
     cacheProviderId,
   );
   // The catalog cache file was updated; invalidate the snapshot-side in-memory memo so the next buildSnapshot re-reads the new catalog

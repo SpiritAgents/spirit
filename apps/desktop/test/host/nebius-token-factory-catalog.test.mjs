@@ -9,6 +9,7 @@ import {
   writeModelCatalogCache,
 } from "../../dist-electron/src/host/model-catalog-cache.js";
 import { previewModelCatalogForTransport } from "../../dist-electron/src/host/model-catalog-metadata.js";
+import { loadPreviewModelsForTransport } from "../../dist-electron/src/host/model-config.js";
 import { setSpiritDataDirOverride } from "../../dist-electron/src/host/storage.js";
 
 const listedEntry = {
@@ -64,6 +65,28 @@ test("Nebius preview materializes all rich display metadata without generation r
   assert.equal(preview?.[0]?.capabilities.includes("videoGeneration"), false);
 });
 
+test("Nebius Responses keeps image input but not unconfirmed video input", () => {
+  const preview = previewModelCatalogForTransport({
+    providerId: "nebius-token-factory",
+    transportKind: "open-responses",
+    listedModels: [listedEntry],
+  });
+  assert.deepEqual(preview, [{ ...previewEntry, capabilities: ["languageModel", "image"] }]);
+});
+
+test("Nebius does not inherit effort, thinking, tier, or hosted-tool controls from model knowledge", () => {
+  const preview = previewModelCatalogForTransport({
+    providerId: "nebius-token-factory",
+    transportKind: "openai-compatible",
+    listedModels: [{ ...listedEntry, id: "openai/gpt-5.4" }],
+  });
+  assert.equal(preview?.[0]?.supportedReasoningEfforts, undefined);
+  assert.equal(preview?.[0]?.supportedEfforts, undefined);
+  assert.equal(preview?.[0]?.supportsThinkingSwitch, undefined);
+  assert.equal(preview?.[0]?.serviceTiers, undefined);
+  assert.equal(preview?.[0]?.catalogCapabilities, undefined);
+});
+
 test("Nebius catalog cache round-trips architecture, limits, regions, features, and pricing", async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "spirit-nebius-catalog-"));
   setSpiritDataDirOverride(dir);
@@ -82,6 +105,43 @@ test("Nebius catalog cache round-trips architecture, limits, regions, features, 
     );
     assert.ok(cached);
     assert.deepEqual(cached.modelCatalog, [previewEntry]);
+  } finally {
+    setSpiritDataDirOverride(undefined);
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("Nebius cached catalog projects both transports without losing video metadata", async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), "spirit-nebius-transport-cache-"));
+  setSpiritDataDirOverride(dir);
+  try {
+    const apiBase = "https://api.tokenfactory.nebius.com/v1";
+    await writeModelCatalogCache(
+      apiBase,
+      [previewEntry.id],
+      "test-key",
+      [previewEntry],
+      "nebius-token-factory",
+    );
+    const responses = await loadPreviewModelsForTransport({
+      providerId: "nebius-token-factory",
+      transportKind: "open-responses",
+      apiBase,
+      apiKey: "test-key",
+      forceRefresh: false,
+    });
+    assert.equal(responses.fromCache, true);
+    assert.deepEqual(responses.modelCatalog?.[0]?.capabilities, ["languageModel", "image"]);
+
+    const chat = await loadPreviewModelsForTransport({
+      providerId: "nebius-token-factory",
+      transportKind: "openai-compatible",
+      apiBase,
+      apiKey: "test-key",
+      forceRefresh: false,
+    });
+    assert.equal(chat.fromCache, true);
+    assert.deepEqual(chat.modelCatalog?.[0]?.capabilities, ["languageModel", "image", "video"]);
   } finally {
     setSpiritDataDirOverride(undefined);
     await rm(dir, { recursive: true, force: true });
