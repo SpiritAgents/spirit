@@ -50,6 +50,11 @@ export type ModelPickerLabels = {
   detailFeatures: string;
   detailPerMinute: string;
   detailAdditionalPricing: string;
+  detailDataPolicy: string;
+  detailAudioSupport: string;
+  detailDataPolicyStandard: string;
+  detailDataPolicyContributor: string;
+  detailAudioSupportPartial: string;
   /** Catalog detail / pricing line templates (values are pre-formatted). */
   detailPricingInput: (value: string) => string;
   detailPricingOutput: (value: string) => string;
@@ -79,6 +84,8 @@ const CAPABILITY_LABEL_KEYS: Record<string, { key: string; defaultValue: string 
   languageModel: { key: "settings.capabilityLanguageModelLabel", defaultValue: "Language Model" },
   image: { key: "settings.capabilityImageLabel", defaultValue: "Image" },
   video: { key: "settings.capabilityVideoLabel", defaultValue: "Video" },
+  audio: { key: "settings.capabilityAudioLabel", defaultValue: "Audio" },
+  document: { key: "settings.capabilityDocumentLabel", defaultValue: "Document" },
   imageGeneration: {
     key: "settings.capabilityImageGenerationLabel",
     defaultValue: "Image generation",
@@ -137,6 +144,11 @@ export function buildModelPickerLabels(t: LabelTranslator): ModelPickerLabels {
     detailFeatures: t("settings.modelDetailLabelFeatures"),
     detailPerMinute: t("settings.modelDetailLabelPerMinute"),
     detailAdditionalPricing: t("settings.modelDetailLabelAdditionalPricing"),
+    detailDataPolicy: t("settings.modelDetailLabelDataPolicy"),
+    detailAudioSupport: t("settings.modelDetailLabelAudioSupport"),
+    detailDataPolicyStandard: t("settings.modelDetailDataPolicyStandard"),
+    detailDataPolicyContributor: t("settings.modelDetailDataPolicyContributor"),
+    detailAudioSupportPartial: t("settings.modelDetailAudioSupportPartial"),
     detailPricingInput: (value) => t("settings.modelDetailPricingInput", { value }),
     detailPricingOutput: (value) => t("settings.modelDetailPricingOutput", { value }),
     detailPricingImage: (value) => t("settings.modelDetailPricingImage", { value }),

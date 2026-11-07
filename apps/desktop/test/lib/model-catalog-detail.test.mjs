@@ -38,6 +38,11 @@ const labels = {
   detailFeatures: "Features",
   detailPerMinute: "Per Minute",
   detailAdditionalPricing: "Additional Pricing",
+  detailDataPolicy: "Data Policy",
+  detailAudioSupport: "Audio Support",
+  detailDataPolicyStandard: "Standard",
+  detailDataPolicyContributor: "Contributor — inputs and outputs may be used for training",
+  detailAudioSupportPartial: "Partial — audio understanding is not fully supported",
   detailPricingInput: (value) => `${value} / M`,
   detailPricingOutput: (value) => `${value} / M`,
   detailPricingImage: (value) => value,
@@ -48,6 +53,28 @@ const labels = {
   detailVideoPerSecond: (value) => `${value} / sec`,
   detailVideoResolutionWithAudio: (resolution) => `${resolution} (audio)`,
 };
+
+test("Muse detail fields expose Contributor data use and partial audio support", () => {
+  assert.deepEqual(
+    buildModelCatalogDetailFields({
+      dataPolicy: "contributor",
+      audioInputSupport: "partial",
+      labels,
+    }),
+    [
+      {
+        id: "data-policy",
+        label: "Data Policy",
+        value: "Contributor — inputs and outputs may be used for training",
+      },
+      {
+        id: "audio-support",
+        label: "Audio Support",
+        value: "Partial — audio understanding is not fully supported",
+      },
+    ],
+  );
+});
 
 test("buildModelCatalogDisplayTitleMap uses catalog displayName for gateway models", () => {
   const hints = [

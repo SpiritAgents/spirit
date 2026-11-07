@@ -550,6 +550,11 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
     const supportedSamplingParameters = normalizeCachedStringArray(
       record.supportedSamplingParameters,
     );
+    const dataPolicy =
+      record.dataPolicy === "standard" || record.dataPolicy === "contributor"
+        ? record.dataPolicy
+        : undefined;
+    const audioInputSupport = record.audioInputSupport === "partial" ? "partial" : undefined;
     const transportOverride = normalizeCachedTransportOverride(record.transportOverride);
     const baseModelId = normalizeCachedString(record.baseModelId);
     const inputModalities = normalizeCachedStringArray(record.inputModalities);
@@ -590,6 +595,8 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
       ...(inputModalities !== undefined ? { inputModalities } : {}),
       ...(outputModalities !== undefined ? { outputModalities } : {}),
       ...(reasoningField !== undefined ? { reasoningField } : {}),
+      ...(dataPolicy !== undefined ? { dataPolicy } : {}),
+      ...(audioInputSupport !== undefined ? { audioInputSupport } : {}),
     });
   }
 
@@ -730,6 +737,8 @@ function normalizeCachedCapabilities(value: unknown): DesktopModelCapability[] |
   const allowed = new Set<DesktopModelCapability>([
     "languageModel",
     "image",
+    "audio",
+    "document",
     "video",
     "imageGeneration",
     "videoGeneration",
@@ -912,5 +921,9 @@ function clonePreviewModelCatalog(
       ? { supportedSamplingParameters: [...entry.supportedSamplingParameters] }
       : {}),
     ...(entry.reasoningField !== undefined ? { reasoningField: entry.reasoningField } : {}),
+    ...(entry.dataPolicy !== undefined ? { dataPolicy: entry.dataPolicy } : {}),
+    ...(entry.audioInputSupport !== undefined
+      ? { audioInputSupport: entry.audioInputSupport }
+      : {}),
   }));
 }

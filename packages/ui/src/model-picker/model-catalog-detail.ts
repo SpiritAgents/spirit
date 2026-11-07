@@ -85,7 +85,12 @@ export function modelHasCatalogDetail(entry: ModelCatalogEntry | undefined): boo
   if (entry.description?.trim()) {
     return true;
   }
-  if (catalogMetadataHasAnyValue(entry) || modelCatalogHasTechnicalMetadata(entry)) {
+  if (
+    catalogMetadataHasAnyValue(entry) ||
+    modelCatalogHasTechnicalMetadata(entry) ||
+    entry.dataPolicy !== undefined ||
+    entry.audioInputSupport !== undefined
+  ) {
     return true;
   }
   const pricing = entry.pricing;
@@ -213,7 +218,9 @@ export function modelCatalogHasDetailBody(input: {
   if (
     input.catalogEntry &&
     (catalogMetadataHasAnyValue(input.catalogEntry) ||
-      modelCatalogHasTechnicalMetadata(input.catalogEntry))
+      modelCatalogHasTechnicalMetadata(input.catalogEntry) ||
+      input.catalogEntry.dataPolicy !== undefined ||
+      input.catalogEntry.audioInputSupport !== undefined)
   ) {
     return true;
   }
@@ -254,6 +261,8 @@ export function buildModelCatalogDetailFields(input: {
   maxCompletionTokens?: number;
   pricing?: ModelCatalogPricing;
   catalogEntry?: ModelCatalogEntry;
+  dataPolicy?: "standard" | "contributor";
+  audioInputSupport?: "partial";
   labels: ModelPickerLabels;
 }): ModelCatalogDetailField[] {
   const labels = input.labels;
@@ -365,6 +374,25 @@ export function buildModelCatalogDetailFields(input: {
     labels.detailReasoningField,
     metadata?.reasoningField,
   );
+  const dataPolicy = input.dataPolicy ?? metadata?.dataPolicy;
+  if (dataPolicy !== undefined) {
+    fields.push({
+      id: "data-policy",
+      label: labels.detailDataPolicy,
+      value:
+        dataPolicy === "contributor"
+          ? labels.detailDataPolicyContributor
+          : labels.detailDataPolicyStandard,
+    });
+  }
+  const audioInputSupport = input.audioInputSupport ?? metadata?.audioInputSupport;
+  if (audioInputSupport === "partial") {
+    fields.push({
+      id: "audio-support",
+      label: labels.detailAudioSupport,
+      value: labels.detailAudioSupportPartial,
+    });
+  }
   const pricing = input.pricing ?? metadata?.pricing;
   if (pricing) {
     const inputPrice = formatUsdPerMillionTokens(pricing.inputPerTokenUsd);

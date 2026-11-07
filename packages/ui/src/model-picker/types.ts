@@ -89,6 +89,8 @@ export type ModelCatalogEntry = {
   inputModalities?: string[];
   outputModalities?: string[];
   reasoningField?: string;
+  dataPolicy?: "standard" | "contributor";
+  audioInputSupport?: "partial";
 };
 
 export type ModelCatalogHint = {

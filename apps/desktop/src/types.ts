@@ -305,6 +305,10 @@ export interface PreviewModelCatalogEntry {
     burstRatio?: number;
   };
   regions?: Array<{ countryCode?: string; name?: string }>;
+  /** Muse Standard / Contributor data-use policy; Contributor permits training on submitted data. */
+  dataPolicy?: "standard" | "contributor";
+  /** Provider-documented partial audio understanding (Muse Spark 1.3). */
+  audioInputSupport?: "partial";
 }
 
 /** Preview the model ids listed under an endpoint (with a local TTL cache). */
