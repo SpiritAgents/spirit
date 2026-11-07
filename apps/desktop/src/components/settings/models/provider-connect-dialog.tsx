@@ -280,9 +280,6 @@ export function ProviderConnectDialog({
       ...(connectBillingPlanIdForRequest ? { billingPlanId: connectBillingPlanIdForRequest } : {}),
       forceRefresh,
     });
-    if (res.modelIds.length === 0) {
-      throw new Error(t("settings.noModelsReturned"));
-    }
     const bulk: AddProviderModelsRequest = {
       apiBase: provider === CUSTOM_PROVIDER_PRESET_ID ? connectApiBase.trim() : "",
       apiKey: connectApiKey,

@@ -56,3 +56,41 @@ test("provider picker keeps a selection-specific accessible name", () => {
     screen.getByText("Connect Provider", { selector: "[data-slot=dialog-title]" }),
   ).toBeTruthy();
 });
+
+test("settings keeps a connected provider group visible when its catalog is empty", () => {
+  render(
+    <ModelsSettingsPanel
+      settings={{ activeModel: emptyModelRef() } as SettingsFormState}
+      snapshot={
+        {
+          config: {
+            providers: [
+              {
+                id: "mistral",
+                apiBase: "https://api.mistral.ai/v1",
+                models: [],
+              },
+            ],
+            providerPickerPresets: [{ id: "mistral", label: "Mistral" }],
+            models: [],
+            activeModel: emptyModelRef(),
+            modelCatalogHints: [],
+          },
+        } as never
+      }
+      modelsBusy={false}
+      modelsPreviewBusy={false}
+      onSavePatch={vi.fn()}
+      onAddModel={vi.fn()}
+      onAddProviderModels={vi.fn()}
+      onPreviewModels={vi.fn()}
+      onRemoveModel={vi.fn()}
+      onRemoveProviderModels={vi.fn()}
+    />,
+  );
+
+  expect(screen.getByText("Mistral")).toBeTruthy();
+  expect(screen.getByText("0 models")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Delete Group" })).toBeTruthy();
+  expect(screen.queryByText("No saved models yet")).toBeNull();
+});

@@ -549,7 +549,7 @@ test("removeDelistedModelsFromCatalog drops entry models missing from upstream i
   assert.equal(config.videoGenerationModel, undefined);
 });
 
-test("removeDelistedModelsFromCatalog keeps models when the upstream listing is empty", () => {
+test("removeDelistedModelsFromCatalog treats a valid empty listing as authoritative", () => {
   const gateway = gatewayProvider([
     {
       name: "alibaba/wan-v2.6-t2v",
@@ -566,18 +566,12 @@ test("removeDelistedModelsFromCatalog keeps models when the upstream listing is 
     modelCatalog: [],
   });
 
-  assert.deepEqual(pruned, []);
-  assert.deepEqual(
-    gateway.models.map((model) => model.name),
-    ["alibaba/wan-v2.6-t2v"],
-  );
-  assert.deepEqual(config.activeModel, {
-    providerId: gatewayProviderId,
-    name: "alibaba/wan-v2.6-t2v",
-  });
+  assert.deepEqual(pruned, ["alibaba/wan-v2.6-t2v"]);
+  assert.deepEqual(gateway.models, []);
+  assert.deepEqual(config.activeModel, { providerId: "", name: "" });
 });
 
-test("removeDelistedModelsFromCatalog keeps same-named models in other provider entries", () => {
+test("empty removal keeps same-named models in other provider entries", () => {
   const gateway = gatewayProvider([
     {
       name: "shared-id",
@@ -599,11 +593,12 @@ test("removeDelistedModelsFromCatalog keeps same-named models in other provider 
     modelCatalog: [],
   });
 
-  assert.deepEqual(pruned, []);
+  assert.deepEqual(pruned, ["shared-id"]);
   assert.deepEqual(
     config.providers.map((provider) => provider.id),
     ["vercel-ai-gateway", "openai"],
   );
+  assert.deepEqual(config.activeModel, { providerId: openAiProviderId, name: "shared-id" });
 });
 
 test("removeDelistedModelsFromCatalog prunes the delisted entry model but keeps the openai same name", () => {

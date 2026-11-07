@@ -98,6 +98,26 @@ test("ADC connect previews and adds the catalog with credentialKind vertex and n
   expect(props.onOpenChange).toHaveBeenCalledWith(false);
 });
 
+test("a valid empty catalog still completes a generic provider connection", async () => {
+  const props = renderProviderDialog({
+    provider: "mistral",
+    providerPresets: [{ id: "mistral", label: "Mistral" }],
+    onPreviewModels: vi.fn().mockResolvedValue({ modelIds: [], models: [], fromCache: false }),
+  });
+
+  fireEvent.change(screen.getByLabelText("API Key"), { target: { value: "test-key" } });
+  fireEvent.click(screen.getByRole("button", { name: "Connect Provider" }));
+
+  await waitFor(() => expect(props.onAddProviderModels).toHaveBeenCalledTimes(1));
+  expect(props.onAddProviderModels.mock.calls[0]![0]).toMatchObject({
+    provider: "mistral",
+    apiKey: "test-key",
+    modelIds: [],
+    modelCatalog: [],
+  });
+  expect(props.onOpenChange).toHaveBeenCalledWith(false);
+});
+
 test("ADC mode does not leak a typed service-account secret into the request", async () => {
   const props = renderProviderDialog();
 
