@@ -702,21 +702,23 @@ mod tests {
     #[test]
     fn picker_order_is_manifest_order_with_custom_last() {
         let ids = model_add_picker_order_ids();
-        assert_eq!(ids.len(), 36);
+        assert_eq!(ids.len(), 37);
         assert_eq!(ids[0], "openai");
-        assert_eq!(ids[11], "cerebras");
-        assert_eq!(ids[14], "modal");
-        assert_eq!(ids[31], "nebius-token-factory");
-        assert_eq!(ids[34], "google-vertex-ai");
-        assert_eq!(ids[35], "custom");
-        assert_eq!(model_add_provider_id_at_choice_index(11), Some("cerebras"));
-        assert_eq!(model_add_provider_id_at_choice_index(14), Some("modal"));
+        assert_eq!(ids[2], "meta");
+        assert_eq!(ids[12], "cerebras");
+        assert_eq!(ids[15], "modal");
+        assert_eq!(ids[32], "nebius-token-factory");
+        assert_eq!(ids[35], "google-vertex-ai");
+        assert_eq!(ids[36], "custom");
+        assert_eq!(model_add_provider_id_at_choice_index(2), Some("meta"));
+        assert_eq!(model_add_provider_id_at_choice_index(12), Some("cerebras"));
+        assert_eq!(model_add_provider_id_at_choice_index(15), Some("modal"));
         assert_eq!(
-            model_add_provider_id_at_choice_index(31),
+            model_add_provider_id_at_choice_index(32),
             Some("nebius-token-factory")
         );
-        assert_eq!(model_add_provider_id_at_choice_index(35), Some("custom"));
-        assert!(model_add_provider_id_at_choice_index(36).is_none());
+        assert_eq!(model_add_provider_id_at_choice_index(36), Some("custom"));
+        assert!(model_add_provider_id_at_choice_index(37).is_none());
         assert!(is_known_preset_id("nebius-token-factory"));
         assert!(is_known_preset_id("kimi-code"));
         assert!(is_known_preset_id("custom"));
@@ -725,9 +727,10 @@ mod tests {
 
     #[test]
     fn default_bases_come_from_the_manifest_default_transport_slot() {
-        let expected: [(&str, &str); 34] = [
+        let expected: [(&str, &str); 36] = [
             ("openai", "https://api.openai.com/v1"),
             ("anthropic", "https://api.anthropic.com/v1"),
+            ("meta", "https://api.meta.ai/v1"),
             ("google", "https://generativelanguage.googleapis.com/v1beta"),
             ("xai", "https://api.x.ai/v1"),
             ("vercel-ai-gateway", "https://ai-gateway.vercel.sh/v1"),
