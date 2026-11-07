@@ -702,12 +702,14 @@ mod tests {
     #[test]
     fn picker_order_is_manifest_order_with_custom_last() {
         let ids = model_add_picker_order_ids();
-        assert_eq!(ids.len(), 33);
+        assert_eq!(ids.len(), 34);
         assert_eq!(ids[0], "openai");
-        assert_eq!(ids[31], "google-vertex-ai");
-        assert_eq!(ids[32], "custom");
-        assert_eq!(model_add_provider_id_at_choice_index(32), Some("custom"));
-        assert!(model_add_provider_id_at_choice_index(33).is_none());
+        assert_eq!(ids[11], "cerebras");
+        assert_eq!(ids[32], "google-vertex-ai");
+        assert_eq!(ids[33], "custom");
+        assert_eq!(model_add_provider_id_at_choice_index(11), Some("cerebras"));
+        assert_eq!(model_add_provider_id_at_choice_index(33), Some("custom"));
+        assert!(model_add_provider_id_at_choice_index(34).is_none());
         assert!(is_known_preset_id("kimi-code"));
         assert!(is_known_preset_id("custom"));
         assert!(!is_known_preset_id("acme-unknown"));
@@ -715,7 +717,7 @@ mod tests {
 
     #[test]
     fn default_bases_come_from_the_manifest_default_transport_slot() {
-        let expected: [(&str, &str); 32] = [
+        let expected: [(&str, &str); 33] = [
             ("openai", "https://api.openai.com/v1"),
             ("anthropic", "https://api.anthropic.com/v1"),
             ("google", "https://generativelanguage.googleapis.com/v1beta"),
@@ -730,6 +732,7 @@ mod tests {
             ("fireworks-ai", "https://api.fireworks.ai/inference/v1"),
             ("together-ai", "https://api.together.ai/v1"),
             ("groq", "https://api.groq.com/openai/v1"),
+            ("cerebras", "https://api.cerebras.ai/v1"),
             ("deepinfra", "https://api.deepinfra.com/v1/openai"),
             ("baseten", "https://inference.baseten.co/v1"),
             ("hugging-face", "https://router.huggingface.co/v1"),
