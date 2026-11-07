@@ -913,6 +913,18 @@
       "catalog": { "parser": "cohere-models", "endpoint": "https://api.cohere.com/v1/models" }
     },
     {
+      "id": "nebius-token-factory",
+      "label": "Nebius Token Factory",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/openai-compatible",
+      "transports": {
+        "openai-compatible": "https://api.tokenfactory.nebius.com/v1",
+        "open-responses": "https://api.tokenfactory.nebius.com/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "catalog": { "parser": "nebius-token-factory-models", "endpoint": "/models?verbose=true" }
+    },
+    {
       "id": "azure",
       "label": "Azure",
       "defaultTransport": "open-responses",

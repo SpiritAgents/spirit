@@ -72,7 +72,7 @@ export function openAiMessagesToResponsesAiSdkMessages(
   messages: JsonValue[],
   config?: Pick<
     OpenResponsesTransportConfig,
-    "baseUrl" | "transportKind" | "model" | "sdk" | "options" | "agentMode"
+    "baseUrl" | "transportKind" | "model" | "sdk" | "options" | "agentMode" | "modelCapabilities"
   >,
 ): Array<Record<string, unknown>> {
   const useSdkApplyPatch = config !== undefined && shouldUseOpenAiSdkApplyPatchTool(config);
@@ -94,7 +94,7 @@ export function openAiMessagesToResponsesAiSdkMessages(
           ? [{ role: "system", content: message.content }]
           : [];
       case "user": {
-        const content = openAiUserContentToAiSdkContent(message.content);
+        const content = openAiUserContentToAiSdkContent(message.content, config);
         return content === undefined ? [] : [{ role: "user", content }];
       }
       case "assistant": {
@@ -163,6 +163,9 @@ export function renderResponsesTransportError(error: unknown): string {
 
 function openAiUserContentToAiSdkContent(
   content: JsonValue | undefined,
+  config:
+    | Pick<OpenResponsesTransportConfig, "modelCapabilities" | "transportKind" | "model">
+    | undefined,
 ): string | Array<Record<string, unknown>> | undefined {
   if (typeof content === "string") {
     return content;
@@ -186,6 +189,14 @@ function openAiUserContentToAiSdkContent(
       typeof part.image_url.url === "string"
     ) {
       parts.push(buildAiSdkUserImageFilePartFromUrl(part.image_url.url));
+    } else if (
+      part.type === "video_url" &&
+      config?.modelCapabilities !== undefined &&
+      config.modelCapabilities.videoInput !== true
+    ) {
+      throw new Error(
+        "The selected model does not support video input on the Responses transport. Remove the video attachment or switch to a transport with video input support.",
+      );
     }
   }
 

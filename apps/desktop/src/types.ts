@@ -245,6 +245,7 @@ export interface PreviewModelCatalogPricing {
   cachedInputPerTokenUsd?: string;
   imagePerUnitUsd?: string;
   requestPerCallUsd?: string;
+  additionalPricing?: Record<string, string>;
   videoDurationPricing?: PreviewModelCatalogVideoDurationPricing[];
   imagePerMegapixelUsd?: string;
   imageExamplePricing?: PreviewModelCatalogExamplePricing;
@@ -285,6 +286,20 @@ export interface PreviewModelCatalogEntry {
   upstreamProvider?: string;
   /** DeepInfra `is_partner`: partner model (data forwarded to a third party); first version keeps it as catalog metadata only, no filtering. */
   isPartner?: boolean;
+  architecture?: {
+    modality?: string;
+    tokenizer?: string;
+    instructType?: string;
+  };
+  quantization?: string;
+  perRequestLimits?: {
+    tokensPerMinute?: number;
+    requestsPerMinute?: number;
+    burstRatio?: number;
+  };
+  regions?: Array<{ countryCode?: string; name?: string }>;
+  supportedFeatures?: string[];
+  supportedSamplingParameters?: string[];
 }
 
 /** Preview the model ids listed under an endpoint (with a local TTL cache). */

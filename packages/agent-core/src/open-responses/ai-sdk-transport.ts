@@ -163,7 +163,7 @@ export class AiSdkOpenResponsesTransport
     try {
       const result = await generateObject({
         model: createResponsesLanguageModel(config) as any,
-        messages: openAiMessagesToResponsesAiSdkMessages(messages) as any,
+        messages: openAiMessagesToResponsesAiSdkMessages(messages, config) as any,
         allowSystemInMessages: true,
         ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
         schema: jsonSchema(request.schema as Record<string, unknown>),
@@ -454,6 +454,7 @@ export class AiSdkOpenResponsesTransport
         ),
         config.workspaceRoot ?? process.cwd(),
       ),
+      config,
     );
     const compactConfig: OpenResponsesTransportConfig = {
       ...config,

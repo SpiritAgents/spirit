@@ -22,6 +22,18 @@ const labels = {
   detailImage: "Image",
   detailRequest: "Request",
   detailVideo: "Video",
+  detailArchitecture: "Architecture",
+  detailTokenizer: "Tokenizer",
+  detailInstructType: "Instruct Type",
+  detailQuantization: "Quantization",
+  detailRegions: "Regions",
+  detailTokenRate: "Token Rate",
+  detailRequestRate: "Request Rate",
+  detailBurstRatio: "Burst Ratio",
+  detailFeatures: "Features",
+  detailSamplingParameters: "Sampling Parameters",
+  detailPerMinute: "Per Minute",
+  detailAdditionalPricing: "Additional Pricing",
   detailPricingInput: (value) => `${value} / M`,
   detailPricingOutput: (value) => `${value} / M`,
   detailPricingImage: (value) => value,
@@ -134,6 +146,62 @@ test("buildModelCatalogDetailFields appends audio suffix to video duration prici
     { id: "video-duration-1-720p-audio", label: "720p (audio)", value: "$0.40 / sec" },
     { id: "video-duration-2-4k-audio", label: "4k (audio)", value: "$0.60 / sec" },
   ]);
+});
+
+test("buildModelCatalogDetailFields renders rich catalog metadata and additional pricing", () => {
+  const catalogEntry = {
+    id: "example/multimodal-chat",
+    architecture: {
+      modality: "text+image+video->text",
+      tokenizer: "ExampleTokenizer",
+      instructType: "chat",
+    },
+    quantization: "fp8",
+    regions: [{ countryCode: "TL", name: "Testland" }, { name: "Global" }],
+    perRequestLimits: { tokensPerMinute: 800000, requestsPerMinute: 1200, burstRatio: 1.5 },
+    supportedFeatures: ["tools", "reasoning"],
+    supportedSamplingParameters: ["temperature", "top_p"],
+    pricing: {
+      cachedInputPerTokenUsd: "0.00000001",
+      additionalPricing: {
+        price_per_video_second: "0.125",
+        price_per_minute: "0.5",
+        future_meter: "1.25",
+      },
+    },
+  };
+  const fields = buildModelCatalogDetailFields({ catalogEntry, labels });
+  assert.deepEqual(fields, [
+    { id: "architecture", label: "Architecture", value: "text+image+video->text" },
+    { id: "tokenizer", label: "Tokenizer", value: "ExampleTokenizer" },
+    { id: "instruct-type", label: "Instruct Type", value: "chat" },
+    { id: "quantization", label: "Quantization", value: "fp8" },
+    { id: "regions", label: "Regions", value: "Testland (TL), Global" },
+    { id: "token-rate", label: "Token Rate", value: "800K TPM" },
+    { id: "request-rate", label: "Request Rate", value: "1.2K RPM" },
+    { id: "burst-ratio", label: "Burst Ratio", value: "1.5" },
+    { id: "features", label: "Features", value: "tools, reasoning" },
+    {
+      id: "sampling-parameters",
+      label: "Sampling Parameters",
+      value: "temperature, top_p",
+    },
+    { id: "cached-input", label: "Cached input", value: "$0.01 / M tokens" },
+    { id: "additional-price-per-video-second", label: "Video", value: "$0.13 / sec" },
+    { id: "additional-price-per-minute", label: "Per Minute", value: "$0.50 / min" },
+    {
+      id: "additional-future_meter",
+      label: "Additional Pricing",
+      value: "Future Meter: $1.25",
+    },
+  ]);
+  assert.equal(
+    modelCatalogHasDetailBody({
+      model: { name: catalogEntry.id, providerId: "nebius-token-factory" },
+      catalogEntry,
+    }),
+    true,
+  );
 });
 
 test("buildModelCatalogDisplayTitleMap formats non-gateway model ids", () => {

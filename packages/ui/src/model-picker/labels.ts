@@ -34,6 +34,18 @@ export type ModelPickerLabels = {
   detailImage: string;
   detailRequest: string;
   detailVideo: string;
+  detailArchitecture: string;
+  detailTokenizer: string;
+  detailInstructType: string;
+  detailQuantization: string;
+  detailRegions: string;
+  detailTokenRate: string;
+  detailRequestRate: string;
+  detailBurstRatio: string;
+  detailFeatures: string;
+  detailSamplingParameters: string;
+  detailPerMinute: string;
+  detailAdditionalPricing: string;
   /** Catalog detail / pricing line templates (values are pre-formatted). */
   detailPricingInput: (value: string) => string;
   detailPricingOutput: (value: string) => string;
@@ -105,6 +117,18 @@ export function buildModelPickerLabels(t: LabelTranslator): ModelPickerLabels {
     detailImage: t("settings.modelDetailLabelImage"),
     detailRequest: t("settings.modelDetailLabelRequest"),
     detailVideo: t("settings.modelDetailLabelVideo"),
+    detailArchitecture: t("settings.modelDetailLabelArchitecture"),
+    detailTokenizer: t("settings.modelDetailLabelTokenizer"),
+    detailInstructType: t("settings.modelDetailLabelInstructType"),
+    detailQuantization: t("settings.modelDetailLabelQuantization"),
+    detailRegions: t("settings.modelDetailLabelRegions"),
+    detailTokenRate: t("settings.modelDetailLabelTokenRate"),
+    detailRequestRate: t("settings.modelDetailLabelRequestRate"),
+    detailBurstRatio: t("settings.modelDetailLabelBurstRatio"),
+    detailFeatures: t("settings.modelDetailLabelFeatures"),
+    detailSamplingParameters: t("settings.modelDetailLabelSamplingParameters"),
+    detailPerMinute: t("settings.modelDetailLabelPerMinute"),
+    detailAdditionalPricing: t("settings.modelDetailLabelAdditionalPricing"),
     detailPricingInput: (value) => t("settings.modelDetailPricingInput", { value }),
     detailPricingOutput: (value) => t("settings.modelDetailPricingOutput", { value }),
     detailPricingImage: (value) => t("settings.modelDetailPricingImage", { value }),

@@ -702,14 +702,20 @@ mod tests {
     #[test]
     fn picker_order_is_manifest_order_with_custom_last() {
         let ids = model_add_picker_order_ids();
-        assert_eq!(ids.len(), 34);
+        assert_eq!(ids.len(), 35);
         assert_eq!(ids[0], "openai");
         assert_eq!(ids[11], "cerebras");
-        assert_eq!(ids[32], "google-vertex-ai");
-        assert_eq!(ids[33], "custom");
+        assert_eq!(ids[30], "nebius-token-factory");
+        assert_eq!(ids[33], "google-vertex-ai");
+        assert_eq!(ids[34], "custom");
         assert_eq!(model_add_provider_id_at_choice_index(11), Some("cerebras"));
-        assert_eq!(model_add_provider_id_at_choice_index(33), Some("custom"));
-        assert!(model_add_provider_id_at_choice_index(34).is_none());
+        assert_eq!(
+            model_add_provider_id_at_choice_index(30),
+            Some("nebius-token-factory")
+        );
+        assert_eq!(model_add_provider_id_at_choice_index(34), Some("custom"));
+        assert!(model_add_provider_id_at_choice_index(35).is_none());
+        assert!(is_known_preset_id("nebius-token-factory"));
         assert!(is_known_preset_id("kimi-code"));
         assert!(is_known_preset_id("custom"));
         assert!(!is_known_preset_id("acme-unknown"));
@@ -717,7 +723,7 @@ mod tests {
 
     #[test]
     fn default_bases_come_from_the_manifest_default_transport_slot() {
-        let expected: [(&str, &str); 33] = [
+        let expected: [(&str, &str); 34] = [
             ("openai", "https://api.openai.com/v1"),
             ("anthropic", "https://api.anthropic.com/v1"),
             ("google", "https://generativelanguage.googleapis.com/v1beta"),
@@ -754,6 +760,10 @@ mod tests {
             ("tencent-tokenhub", "https://tokenhub.tencentmaas.com/v1"),
             ("mistral", "https://api.mistral.ai/v1"),
             ("cohere", "https://api.cohere.com/v2"),
+            (
+                "nebius-token-factory",
+                "https://api.tokenfactory.nebius.com/v1",
+            ),
             ("azure", "https://{resourceName}.openai.azure.com/openai/v1"),
             (
                 "amazon-bedrock",

@@ -85,6 +85,9 @@ export function modelHasCatalogDetail(entry: ModelCatalogEntry | undefined): boo
   if (entry.description?.trim()) {
     return true;
   }
+  if (catalogMetadataHasAnyValue(entry)) {
+    return true;
+  }
   const pricing = entry.pricing;
   if (!pricing) {
     return false;
@@ -99,7 +102,23 @@ export function modelHasCatalogDetail(entry: ModelCatalogEntry | undefined): boo
     pricing.requestPerCallUsd?.trim() ||
     pricing.imagePerMegapixelUsd?.trim() ||
     pricing.imageExamplePricing?.priceUsd?.trim() ||
-    pricing.videoExamplePricing?.priceUsd?.trim(),
+    pricing.videoExamplePricing?.priceUsd?.trim() ||
+    Object.keys(pricing.additionalPricing ?? {}).length > 0,
+  );
+}
+
+function catalogMetadataHasAnyValue(entry: ModelCatalogEntry | undefined): boolean {
+  return Boolean(
+    entry?.architecture?.modality?.trim() ||
+    entry?.architecture?.tokenizer?.trim() ||
+    entry?.architecture?.instructType?.trim() ||
+    entry?.quantization?.trim() ||
+    entry?.regions?.length ||
+    entry?.supportedFeatures?.length ||
+    entry?.supportedSamplingParameters?.length ||
+    entry?.perRequestLimits?.tokensPerMinute !== undefined ||
+    entry?.perRequestLimits?.requestsPerMinute !== undefined ||
+    entry?.perRequestLimits?.burstRatio !== undefined,
   );
 }
 
@@ -180,6 +199,9 @@ export function modelCatalogHasDetailBody(input: {
   if (input.catalogEntry?.description?.trim()) {
     return true;
   }
+  if (catalogMetadataHasAnyValue(input.catalogEntry)) {
+    return true;
+  }
   const contextLength =
     parseModelContextLength(input.model.contextLength) ??
     parseModelContextLength(input.catalogEntry?.contextLength);
@@ -207,7 +229,8 @@ function pricingHasAnyValue(pricing: ModelCatalogPricing | undefined): boolean {
     pricing.requestPerCallUsd?.trim() ||
     pricing.imagePerMegapixelUsd?.trim() ||
     pricing.imageExamplePricing?.priceUsd?.trim() ||
-    pricing.videoExamplePricing?.priceUsd?.trim(),
+    pricing.videoExamplePricing?.priceUsd?.trim() ||
+    Object.keys(pricing.additionalPricing ?? {}).length > 0,
   );
 }
 
@@ -215,6 +238,7 @@ export function buildModelCatalogDetailFields(input: {
   contextLength?: number;
   maxCompletionTokens?: number;
   pricing?: ModelCatalogPricing;
+  catalogEntry?: ModelCatalogEntry;
   labels: ModelPickerLabels;
 }): ModelCatalogDetailField[] {
   const labels = input.labels;
@@ -233,7 +257,81 @@ export function buildModelCatalogDetailFields(input: {
       value: `${formatCompactTokenCount(input.maxCompletionTokens)} tokens`,
     });
   }
-  const pricing = input.pricing;
+  const metadata = input.catalogEntry;
+  if (metadata?.architecture?.modality) {
+    fields.push({
+      id: "architecture",
+      label: labels.detailArchitecture,
+      value: metadata.architecture.modality,
+    });
+  }
+  if (metadata?.architecture?.tokenizer) {
+    fields.push({
+      id: "tokenizer",
+      label: labels.detailTokenizer,
+      value: metadata.architecture.tokenizer,
+    });
+  }
+  if (metadata?.architecture?.instructType) {
+    fields.push({
+      id: "instruct-type",
+      label: labels.detailInstructType,
+      value: metadata.architecture.instructType,
+    });
+  }
+  if (metadata?.quantization) {
+    fields.push({
+      id: "quantization",
+      label: labels.detailQuantization,
+      value: metadata.quantization,
+    });
+  }
+  const regions = (metadata?.regions ?? [])
+    .map((region) => {
+      const name = region.name?.trim();
+      const countryCode = region.countryCode?.trim();
+      return name && countryCode ? `${name} (${countryCode})` : name || countryCode;
+    })
+    .filter((region): region is string => Boolean(region));
+  if (regions.length > 0) {
+    fields.push({ id: "regions", label: labels.detailRegions, value: regions.join(", ") });
+  }
+  if (metadata?.perRequestLimits?.tokensPerMinute !== undefined) {
+    fields.push({
+      id: "token-rate",
+      label: labels.detailTokenRate,
+      value: `${formatCompactTokenCount(metadata.perRequestLimits.tokensPerMinute)} TPM`,
+    });
+  }
+  if (metadata?.perRequestLimits?.requestsPerMinute !== undefined) {
+    fields.push({
+      id: "request-rate",
+      label: labels.detailRequestRate,
+      value: `${formatCompactTokenCount(metadata.perRequestLimits.requestsPerMinute)} RPM`,
+    });
+  }
+  if (metadata?.perRequestLimits?.burstRatio !== undefined) {
+    fields.push({
+      id: "burst-ratio",
+      label: labels.detailBurstRatio,
+      value: String(metadata.perRequestLimits.burstRatio),
+    });
+  }
+  if (metadata?.supportedFeatures?.length) {
+    fields.push({
+      id: "features",
+      label: labels.detailFeatures,
+      value: metadata.supportedFeatures.join(", "),
+    });
+  }
+  if (metadata?.supportedSamplingParameters?.length) {
+    fields.push({
+      id: "sampling-parameters",
+      label: labels.detailSamplingParameters,
+      value: metadata.supportedSamplingParameters.join(", "),
+    });
+  }
+  const pricing = input.pricing ?? metadata?.pricing;
   if (pricing) {
     const inputPrice = formatUsdPerMillionTokens(pricing.inputPerTokenUsd);
     if (inputPrice) {
@@ -291,6 +389,28 @@ export function buildModelCatalogDetailFields(input: {
         value: requestPrice,
       });
     }
+    for (const [key, rawPrice] of Object.entries(pricing.additionalPricing ?? {})) {
+      const price = formatUsdFlatRate(rawPrice) ?? rawPrice;
+      if (key === "price_per_video_second") {
+        fields.push({
+          id: "additional-price-per-video-second",
+          label: labels.detailVideo,
+          value: labels.detailVideoPerSecond(price),
+        });
+      } else if (key === "price_per_minute") {
+        fields.push({
+          id: "additional-price-per-minute",
+          label: labels.detailPerMinute,
+          value: `${price} / min`,
+        });
+      } else {
+        fields.push({
+          id: `additional-${key}`,
+          label: labels.detailAdditionalPricing,
+          value: `${humanizeAdditionalPricingKey(key)}: ${price}`,
+        });
+      }
+    }
     for (const [index, tier] of (pricing.videoDurationPricing ?? []).entries()) {
       const costPerSecond = formatUsdFlatRate(tier.costPerSecondUsd);
       if (!costPerSecond) {
@@ -312,6 +432,14 @@ export function buildModelCatalogDetailFields(input: {
     }
   }
   return fields;
+}
+
+function humanizeAdditionalPricingKey(key: string): string {
+  return key
+    .split("_")
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
 }
 
 export function formatModelCatalogPricingLines(
@@ -346,6 +474,16 @@ export function formatModelCatalogPricingLines(
   const request = formatUsdFlatRate(pricing.requestPerCallUsd);
   if (request) {
     lines.push(labels.detailPricingRequest(request));
+  }
+  for (const [key, rawPrice] of Object.entries(pricing.additionalPricing ?? {})) {
+    const price = formatUsdFlatRate(rawPrice) ?? rawPrice;
+    if (key === "price_per_video_second") {
+      lines.push(`${labels.detailVideo}: ${labels.detailVideoPerSecond(price)}`);
+    } else if (key === "price_per_minute") {
+      lines.push(`${labels.detailPerMinute}: ${price} / min`);
+    } else {
+      lines.push(`${humanizeAdditionalPricingKey(key)}: ${price}`);
+    }
   }
   for (const tier of pricing.videoDurationPricing ?? []) {
     const costPerSecond = formatUsdFlatRate(tier.costPerSecondUsd);

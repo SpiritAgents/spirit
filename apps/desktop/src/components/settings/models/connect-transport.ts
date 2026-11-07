@@ -67,6 +67,7 @@ const CONNECT_TRANSPORT_PICKER_PROVIDERS: ReadonlySet<string> = new Set([
   "fireworks-ai",
   "volcengine",
   "byteplus",
+  "nebius-token-factory",
 ]);
 
 export function providerShowsConnectTransportPicker(providerId: string | null): boolean {

@@ -45,6 +45,7 @@ export type ModelCatalogPricing = {
   cachedInputPerTokenUsd?: string;
   imagePerUnitUsd?: string;
   requestPerCallUsd?: string;
+  additionalPricing?: Record<string, string>;
   imagePerMegapixelUsd?: string;
   imageExamplePricing?: { priceUsd?: string; description?: string };
   videoExamplePricing?: { priceUsd?: string; description?: string };
@@ -70,6 +71,20 @@ export type ModelCatalogEntry = {
   thinkingSwitch?: ThinkingSwitchControlDeclaration;
   serviceTiers?: ModelServiceTiersDeclaration;
   upstreamProvider?: string;
+  architecture?: {
+    modality?: string;
+    tokenizer?: string;
+    instructType?: string;
+  };
+  quantization?: string;
+  perRequestLimits?: {
+    tokensPerMinute?: number;
+    requestsPerMinute?: number;
+    burstRatio?: number;
+  };
+  regions?: Array<{ countryCode?: string; name?: string }>;
+  supportedFeatures?: string[];
+  supportedSamplingParameters?: string[];
 };
 
 export type ModelCatalogHint = {
