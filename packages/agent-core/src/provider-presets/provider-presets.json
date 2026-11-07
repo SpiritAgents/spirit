@@ -228,6 +228,17 @@
       "catalog": { "parser": "groq-models", "endpoint": "/models" }
     },
     {
+      "id": "cerebras",
+      "label": "Cerebras",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/cerebras",
+      "transports": {
+        "openai-compatible": "https://api.cerebras.ai/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "catalog": { "parser": "openai-models", "endpoint": "/models" }
+    },
+    {
       "id": "deepinfra",
       "label": "DeepInfra",
       "defaultTransport": "openai-compatible",

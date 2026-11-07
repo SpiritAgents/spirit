@@ -35,6 +35,16 @@ test("minimax materializes the anthropic default with the server-tool and upload
   });
 });
 
+test("cerebras materializes the official SDK on the chat-only shared inference endpoint", () => {
+  assert.deepEqual(materializeProviderPreset({ presetId: "cerebras" }), {
+    id: "cerebras",
+    label: "Cerebras",
+    apiBase: "https://api.cerebras.ai/v1",
+    sdk: "@ai-sdk/cerebras",
+    models: [],
+  });
+});
+
 test("minimax cn site overrides the upload channel with the region-pinned host", () => {
   const entry = materializeProviderPreset({ presetId: "minimax", siteId: "cn" });
   assert.equal(entry.apiBase, "https://api.minimax.cn/anthropic/v1");

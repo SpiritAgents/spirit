@@ -205,6 +205,7 @@ export const KNOWN_SDK_PACKAGE_NAMES: readonly string[] = [
   "@ai-sdk/anthropic",
   "@ai-sdk/azure",
   "@ai-sdk/baseten",
+  "@ai-sdk/cerebras",
   "@ai-sdk/cohere",
   "@ai-sdk/deepinfra",
   "@ai-sdk/deepseek",
