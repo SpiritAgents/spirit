@@ -85,6 +85,11 @@ test("Nebius listing uses one authenticated verbose request and caches transport
       assert.equal(chat.modelCatalog?.[0]?.capabilities.includes("videoGeneration"), false);
       assert.equal(chat.modelCatalog?.[0]?.supportedReasoningEfforts, undefined);
       assert.equal(chat.modelCatalog?.[0]?.serviceTiers, undefined);
+      assert.equal(chat.modelCatalog?.[0]?.pricing?.imagePerUnitUsd, undefined);
+      assert.deepEqual(chat.modelCatalog?.[0]?.pricing?.additionalPricing, {
+        image: "1",
+        price_per_video_second: "2",
+      });
 
       const responses = await loadPreviewModelsForTransport({
         providerId: "nebius-token-factory",

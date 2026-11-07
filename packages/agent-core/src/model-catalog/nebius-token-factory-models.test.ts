@@ -64,9 +64,9 @@ test("parses rich active language models without inferring controls or generatio
         inputPerTokenUsd: "0.00000003",
         outputPerTokenUsd: "0.00000009",
         cachedInputPerTokenUsd: "0.00000001",
-        imagePerUnitUsd: "0",
         requestPerCallUsd: "0",
         additionalPricing: {
+          image: "0",
           price_per_video_second: "0.125",
           price_per_minute: "0.5",
           future_meter: "1.25",
@@ -106,8 +106,7 @@ test("accepts missing status and reports text-only input without using pricing a
       supportsVideoInput: false,
       architecture: { modality: "text->text" },
       pricing: {
-        imagePerUnitUsd: "1",
-        additionalPricing: { price_per_video_second: "2" },
+        additionalPricing: { image: "1", price_per_video_second: "2" },
       },
     },
   ]);

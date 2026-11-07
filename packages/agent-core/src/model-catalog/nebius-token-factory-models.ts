@@ -5,13 +5,7 @@ import type {
   ProviderListedModelRegion,
 } from "./openai-models.js";
 
-const COMMON_PRICING_FIELDS = new Set([
-  "prompt",
-  "completion",
-  "input_cache_read",
-  "image",
-  "request",
-]);
+const COMMON_PRICING_FIELDS = new Set(["prompt", "completion", "input_cache_read", "request"]);
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -85,13 +79,11 @@ function readPricing(record: Record<string, unknown>): ProviderListedModelPricin
   const inputPerTokenUsd = readString(pricing.prompt);
   const outputPerTokenUsd = readString(pricing.completion);
   const cachedInputPerTokenUsd = readString(pricing.input_cache_read);
-  const imagePerUnitUsd = readString(pricing.image);
   const requestPerCallUsd = readString(pricing.request);
   const result: ProviderListedModelPricing = {
     ...(inputPerTokenUsd ? { inputPerTokenUsd } : {}),
     ...(outputPerTokenUsd ? { outputPerTokenUsd } : {}),
     ...(cachedInputPerTokenUsd ? { cachedInputPerTokenUsd } : {}),
-    ...(imagePerUnitUsd ? { imagePerUnitUsd } : {}),
     ...(requestPerCallUsd ? { requestPerCallUsd } : {}),
     ...(Object.keys(additionalPricing).length > 0 ? { additionalPricing } : {}),
   };
