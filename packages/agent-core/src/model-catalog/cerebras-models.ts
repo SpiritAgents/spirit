@@ -1,8 +1,8 @@
 import type {
   ListOpenAiCompatibleModelIdsOptions,
   ProviderListedModelCatalogMetadata,
+  ProviderListedModelCatalogRateLimits,
   ProviderListedModelEntry,
-  ProviderListedModelRateLimits,
 } from "./openai-models.js";
 import { openAiCompatibleModelsListUrl } from "./openai-models.js";
 
@@ -68,7 +68,7 @@ function optionalBooleanRecord(value: unknown): Record<string, boolean> | undefi
 
 function parseRateLimits(
   limits: Record<string, unknown> | undefined,
-): ProviderListedModelRateLimits | undefined {
+): ProviderListedModelCatalogRateLimits | undefined {
   if (!limits) {
     return undefined;
   }

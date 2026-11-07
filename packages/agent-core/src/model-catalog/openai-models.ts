@@ -81,7 +81,7 @@ export interface ProviderListedModelArchitecture {
   instructType?: string;
 }
 
-export interface ProviderListedModelRateLimits {
+export interface ProviderListedModelCatalogRateLimits {
   /** Explicit null is retained when the API reports no fixed request limit. */
   requestsPerMinute?: number | null;
   /** Explicit null is retained when the API reports no fixed token limit. */
@@ -100,7 +100,7 @@ export interface ProviderListedModelCatalogMetadata {
   deprecated?: boolean;
   preview?: boolean;
   quantization?: string;
-  rateLimits?: ProviderListedModelRateLimits;
+  rateLimits?: ProviderListedModelCatalogRateLimits;
 }
 
 export interface ProviderListedTransportOverride {
