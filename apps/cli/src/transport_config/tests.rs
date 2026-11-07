@@ -98,8 +98,19 @@ fn base_fixture() -> TestTransportFixture {
     )
 }
 
+/// Keep the environment override test serialized with every resolution that expects provider
+/// credentials. Tuple fields drop in order: restore the process environment before unlocking.
+fn isolate_from_api_key_override() -> (ScopedEnv, std::sync::MutexGuard<'static, ()>) {
+    let guard = shared_env_lock()
+        .lock()
+        .unwrap_or_else(|err| err.into_inner());
+    let missing_override = ScopedEnv::remove(ENV_API_KEY);
+    (missing_override, guard)
+}
+
 #[test]
 fn resolve_transport_config_json_builds_openai_compatible_shape() {
+    let _env = isolate_from_api_key_override();
     let fixture = base_fixture();
     let transport = resolve_transport_config_json_for(&fixture.host(), &fixture.config)
         .expect("resolve transport config");
@@ -130,6 +141,7 @@ fn resolve_transport_config_json_builds_openai_compatible_shape() {
 
 #[test]
 fn reasoning_effort_default_is_omitted_and_declared_passes_through() {
+    let _env = isolate_from_api_key_override();
     let mut config = base_config();
     config
         .active_model_entry_mut()
@@ -157,6 +169,7 @@ fn reasoning_effort_default_is_omitted_and_declared_passes_through() {
 
 #[test]
 fn declaration_fields_pass_through_verbatim() {
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [{
@@ -229,6 +242,7 @@ fn declaration_fields_pass_through_verbatim() {
 
 #[test]
 fn anthropic_shape_filters_efforts_to_the_protocol_enum() {
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [{
@@ -288,6 +302,7 @@ fn anthropic_shape_filters_efforts_to_the_protocol_enum() {
 
 #[test]
 fn anthropic_shape_maps_output_effort_declarations() {
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [{
@@ -347,6 +362,7 @@ fn anthropic_shape_maps_output_effort_declarations() {
 
 #[test]
 fn thinking_enabled_false_stamps_vendor_extended_thinking() {
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [{
@@ -384,6 +400,7 @@ fn thinking_enabled_false_stamps_vendor_extended_thinking() {
 
 #[test]
 fn open_responses_shape_includes_agent_mode_and_service_tier() {
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [{
@@ -420,6 +437,7 @@ fn open_responses_shape_includes_agent_mode_and_service_tier() {
 
 #[test]
 fn bedrock_shape_reads_region_from_options_and_iam_from_slots() {
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [{
@@ -476,6 +494,7 @@ fn bedrock_shape_reads_region_from_options_and_iam_from_slots() {
 
 #[test]
 fn bedrock_shape_plumbs_thinking_enabled_off_state() {
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [{
@@ -505,6 +524,7 @@ fn bedrock_shape_plumbs_thinking_enabled_off_state() {
 
 #[test]
 fn bedrock_iam_slots_fall_back_to_internal_keyring_accounts() {
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [{
@@ -539,6 +559,7 @@ fn bedrock_iam_slots_fall_back_to_internal_keyring_accounts() {
 
 #[test]
 fn bedrock_without_region_is_a_setup_error() {
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [{
@@ -557,6 +578,7 @@ fn bedrock_without_region_is_a_setup_error() {
 
 #[test]
 fn sigv4_open_responses_maps_iam_slots_onto_bedrock_mantle_iam() {
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [{
@@ -608,6 +630,7 @@ fn sigv4_open_responses_maps_iam_slots_onto_bedrock_mantle_iam() {
 
 #[test]
 fn sigv4_open_responses_requires_iam_or_a_bearer_key() {
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [{
@@ -630,6 +653,7 @@ fn sigv4_open_responses_requires_iam_or_a_bearer_key() {
 
 #[test]
 fn sigv4_open_responses_requires_a_region_carrying_host() {
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [{
@@ -653,6 +677,7 @@ fn sigv4_open_responses_requires_a_region_carrying_host() {
 
 #[test]
 fn vertex_maps_options_and_service_account_slots_onto_wire_fields() {
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [{
@@ -705,6 +730,7 @@ fn vertex_maps_options_and_service_account_slots_onto_wire_fields() {
 
 #[test]
 fn vertex_without_any_credential_is_a_setup_error() {
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [{
@@ -727,10 +753,7 @@ fn vertex_without_any_credential_is_a_setup_error() {
 
 #[test]
 fn declared_key_channel_resolving_to_nothing_is_a_setup_error() {
-    let _guard = shared_env_lock()
-        .lock()
-        .unwrap_or_else(|err| err.into_inner());
-    let _missing_override = ScopedEnv::remove(ENV_API_KEY);
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [{
@@ -779,10 +802,7 @@ fn env_api_key_override_wins_over_the_channels() {
 
 #[test]
 fn image_generation_block_attaches_without_vendor_fields() {
-    let _guard = shared_env_lock()
-        .lock()
-        .unwrap_or_else(|err| err.into_inner());
-    let _missing_override = ScopedEnv::remove(ENV_API_KEY);
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [
@@ -829,6 +849,7 @@ fn image_generation_block_attaches_without_vendor_fields() {
 
 #[test]
 fn mcp_only_shape_when_no_active_model() {
+    let _env = isolate_from_api_key_override();
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [],
