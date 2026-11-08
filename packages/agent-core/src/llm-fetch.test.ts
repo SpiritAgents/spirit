@@ -109,7 +109,7 @@ test("flex dispatcher is constructed with the extended wait window", async () =>
   assert.equal(flex.options.headersTimeout, FLEX_SERVICE_TIER_WAIT_MS);
   assert.equal(flex.options.bodyTimeout, FLEX_SERVICE_TIER_WAIT_MS);
   assert.equal(FLEX_SERVICE_TIER_WAIT_MS, 1_800_000);
-  assert.equal("allowH2" in flex.options, false);
+  assert.equal(flex.options.allowH2, false);
   assert.equal(flex.options.pipelining, 0);
 });
 
@@ -138,7 +138,7 @@ test("default and explicitly non-flex fetches keep the standard dispatcher", asy
   assert.ok(standard);
   assert.equal(standard.options.headersTimeout, undefined);
   assert.equal(standard.options.bodyTimeout, undefined);
-  assert.equal("allowH2" in standard.options, false);
+  assert.equal(standard.options.allowH2, false);
   assert.ok(
     getLlmDispatcherConstructionsForTests().filter((entry) => entry.kind === "standard").length >=
       standardBefore,

@@ -23,6 +23,8 @@ let configuredClientVersion: string = defaultClientVersion;
 let llmFetchTransportOverride: typeof fetch | undefined;
 
 interface LlmDispatcherOptions {
+  /** H2 adds little value for LLM requests and shares session-level failures across streams. */
+  allowH2: false;
   pipelining: number;
   headersTimeout?: number;
   bodyTimeout?: number;
@@ -93,6 +95,7 @@ export function mergeLlmFetchInit(init?: RequestInit): RequestInit {
 function llmDispatcherInstance(): Agent {
   if (llmDispatcher === undefined) {
     const options: LlmDispatcherOptions = {
+      allowH2: false,
       pipelining: 0,
     };
     llmDispatcherConstructions.push({ kind: "standard", options });
@@ -105,6 +108,7 @@ function llmDispatcherInstance(): Agent {
 function flexLlmDispatcherInstance(): Agent {
   if (flexLlmDispatcher === undefined) {
     const options: LlmDispatcherOptions = {
+      allowH2: false,
       pipelining: 0,
       headersTimeout: FLEX_SERVICE_TIER_WAIT_MS,
       bodyTimeout: FLEX_SERVICE_TIER_WAIT_MS,
@@ -115,7 +119,7 @@ function flexLlmDispatcherInstance(): Agent {
   return flexLlmDispatcher;
 }
 
-/** LLM outbound requests use undici's default HTTP version behavior. */
+/** LLM outbound requests use HTTP/1.1-only dispatchers. */
 export function getLlmFetch(options?: { flexWaiting?: boolean | undefined }): typeof fetch {
   const dispatcher =
     options?.flexWaiting === true ? flexLlmDispatcherInstance() : llmDispatcherInstance();
