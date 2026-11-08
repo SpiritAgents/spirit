@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { product } from "@spiritagent/product";
 import { readFile, stat } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
@@ -6,6 +6,11 @@ import { isIP } from "node:net";
 import path from "node:path";
 
 import type { HostCommandName } from "../src/host/contracts.js";
+import type { DesktopWebHostDeviceRecord } from "../src/host/storage.js";
+import {
+  closeAllDesktopWebHostDeviceConnections,
+  registerDesktopWebHostDeviceConnection,
+} from "../src/host/web-host-state.js";
 
 import i18nHost from "../src/lib/i18n-host.js";
 import { parseChipNavigateMeta } from "../src/lib/composer-chip-navigate-meta.js";
@@ -35,11 +40,9 @@ export interface DesktopHttpHostState {
 }
 
 export interface DesktopHttpAuthOptions {
-  getTokenHash(): string | undefined;
-  getPairingCode(): string;
-  completePairing(authTokenHash: string): Promise<void>;
-  /** Called when the pairing failure limit is reached; the host should void the current pairing code and regenerate it after restarting the Web Host. */
-  onPairingLockout?(): void;
+  getDevices():
+    | readonly DesktopWebHostDeviceRecord[]
+    | Promise<readonly DesktopWebHostDeviceRecord[]>;
 }
 
 export interface DesktopHttpStaticOptions {
@@ -53,7 +56,7 @@ export interface DesktopHttpHostOptions {
   invokeHostCommand: DesktopHostCommandInvoker;
   onHostCommandResult?: DesktopHostCommandResultHandler;
   subscribeHostUpdates?: DesktopHostUpdateSubscriber;
-  auth?: DesktopHttpAuthOptions;
+  auth: DesktopHttpAuthOptions;
   static?: DesktopHttpStaticOptions;
   logger?: Pick<Console, "error" | "log">;
 }
@@ -141,6 +144,7 @@ export function createDesktopHttpHost(options: DesktopHttpHostOptions): DesktopH
         return { ...state };
       }
 
+      closeAllDesktopWebHostDeviceConnections();
       await new Promise<void>((resolve, reject) => {
         current.close((error) => {
           if (error) {
@@ -162,8 +166,6 @@ export function createDesktopHttpHost(options: DesktopHttpHostOptions): DesktopH
   };
 }
 
-export const MAX_PAIRING_FAILURES = 5;
-
 export function createDesktopHttpRequestHandler({
   host,
   invokeHostCommand,
@@ -177,13 +179,9 @@ export function createDesktopHttpRequestHandler({
   invokeHostCommand: DesktopHostCommandInvoker;
   onHostCommandResult?: DesktopHostCommandResultHandler;
   subscribeHostUpdates?: DesktopHostUpdateSubscriber;
-  auth?: DesktopHttpAuthOptions;
+  auth: DesktopHttpAuthOptions;
   static?: DesktopHttpStaticOptions;
 }) {
-  // The pairing failure count lives with the handler (i.e. a single Web Host run cycle);
-  // it only resets when the Web Host is restarted.
-  let pairingFailureCount = 0;
-
   return async (request: IncomingMessage, response: ServerResponse) => {
     const runHostCommand = async (command: HostCommandName, payload?: unknown) => {
       const result = await invokeHostCommand(command, payload);
@@ -226,13 +224,6 @@ export function createDesktopHttpRequestHandler({
           runHostCommand,
           auth,
           subscribeHostUpdates,
-          onPairingFailure: () => {
-            pairingFailureCount += 1;
-            if (pairingFailureCount === MAX_PAIRING_FAILURES) {
-              auth?.onPairingLockout?.();
-            }
-          },
-          isPairingLocked: () => pairingFailureCount >= MAX_PAIRING_FAILURES,
         });
         return;
       }
@@ -257,15 +248,11 @@ export function resolveDesktopWebHostFromEnv(): { host: string; port: number } {
   return { host, port };
 }
 
-export function createDesktopWebPairingCode(): string {
-  return String(randomInt(100000, 1000000));
-}
-
-export function createDesktopWebAuthToken(): string {
+export function createDesktopWebDeviceToken(): string {
   return randomBytes(32).toString("base64url");
 }
 
-export function hashDesktopWebAuthToken(token: string): string {
+export function hashDesktopWebDeviceToken(token: string): string {
   return createHash("sha256").update(token, "utf8").digest("hex");
 }
 
@@ -276,65 +263,35 @@ async function handleApiRequest({
   runHostCommand,
   auth,
   subscribeHostUpdates,
-  onPairingFailure,
-  isPairingLocked,
 }: {
   request: IncomingMessage;
   response: ServerResponse;
   pathname: string;
   runHostCommand: (command: HostCommandName, payload?: unknown) => Promise<unknown>;
-  auth?: DesktopHttpAuthOptions;
+  auth: DesktopHttpAuthOptions;
   subscribeHostUpdates?: DesktopHostUpdateSubscriber;
-  onPairingFailure: () => void;
-  isPairingLocked: () => boolean;
 }): Promise<void> {
-  if (request.method === "GET" && pathname === "/api/pairing/status") {
-    writeJson(request, response, 200, {
-      authMode: "pairing",
-      paired: Boolean(auth?.getTokenHash()),
-    });
-    return;
-  }
-
-  if (request.method === "POST" && pathname === "/api/pairing") {
-    if (!auth) {
-      writeJson(request, response, 404, { error: `Unknown route: ${request.method} ${pathname}` });
-      return;
-    }
-
-    if (isPairingLocked()) {
-      writeJson(request, response, 429, {
-        code: "PAIRING_LOCKED",
-        error: i18nHost.t("webHost.error.pairingLocked"),
-      });
-      return;
-    }
-
-    const body = await readJsonBody(request);
-    const jsonBody = isJsonObject(body) ? body : undefined;
-    const code = typeof jsonBody?.code === "string" ? jsonBody.code.trim() : "";
-    const expectedCode = auth.getPairingCode();
-    if (!code || !expectedCode || !safePairingCodeEquals(code, expectedCode)) {
-      onPairingFailure();
-      writeJson(request, response, 401, {
-        code: "PAIRING_FAILED",
-        error: i18nHost.t("webHost.error.pairingFailed"),
-      });
-      return;
-    }
-
-    const token = createDesktopWebAuthToken();
-    await auth.completePairing(hashDesktopWebAuthToken(token));
-    writeJson(request, response, 200, { token });
-    return;
-  }
-
-  if (auth && !isAuthorizedRequest(request, auth.getTokenHash())) {
+  const device = await authorizeDeviceRequest(request, auth);
+  if (!device) {
     writeJson(request, response, 401, {
-      code: "PAIRING_REQUIRED",
-      error: i18nHost.t("webHost.error.pairingRequired"),
+      code: "TOKEN_REQUIRED",
+      error: "A valid device token is required.",
     });
     return;
+  }
+
+  if (pathname === "/api/bootstrap" || pathname === "/api/events") {
+    const recorded = await runHostCommand("recordWebHostDeviceConnection", {
+      deviceId: device.id,
+      ...desktopWebRequestAuditMetadata(request),
+    });
+    if (!recorded) {
+      writeJson(request, response, 401, {
+        code: "TOKEN_REQUIRED",
+        error: "A valid device token is required.",
+      });
+      return;
+    }
   }
 
   if (request.method === "GET" && pathname === "/api/events") {
@@ -348,6 +305,7 @@ async function handleApiRequest({
       Connection: "keep-alive",
     });
     response.write("\n");
+    let unregisterConnection = () => {};
     const unsubscribe = subscribeHostUpdates((snapshot) => {
       if (!response.destroyed) {
         response.write(`${JSON.stringify(snapshot)}\n`);
@@ -360,9 +318,13 @@ async function handleApiRequest({
           return;
         }
         closed = true;
+        unregisterConnection();
         unsubscribe();
         resolve();
       };
+      unregisterConnection = registerDesktopWebHostDeviceConnection(device.id, () => {
+        response.end();
+      });
       response.once("close", close);
       request.once("aborted", close);
     });
@@ -1659,15 +1621,17 @@ function isPathUnderRoot(root: string, filePath: string): boolean {
   return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
-function isAuthorizedRequest(request: IncomingMessage, tokenHash: string | undefined): boolean {
-  if (!tokenHash) {
-    return false;
-  }
+async function authorizeDeviceRequest(
+  request: IncomingMessage,
+  auth: DesktopHttpAuthOptions,
+): Promise<DesktopWebHostDeviceRecord | undefined> {
   const token = authorizationBearerToken(request);
   if (!token) {
-    return false;
+    return undefined;
   }
-  return safeTokenHashEquals(hashDesktopWebAuthToken(token), tokenHash);
+  const tokenHash = hashDesktopWebDeviceToken(token);
+  const devices = await auth.getDevices();
+  return devices.find((device) => safeTokenHashEquals(tokenHash, device.tokenHash));
 }
 
 function authorizationBearerToken(request: IncomingMessage): string | undefined {
@@ -1686,14 +1650,17 @@ function safeTokenHashEquals(left: string, right: string): boolean {
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-/** Constant-time pairing code comparison; the length is fixed at 6 digits, so length differences leak no useful information. */
-function safePairingCodeEquals(candidate: string, expected: string): boolean {
-  const candidateBuffer = Buffer.from(candidate, "utf8");
-  const expectedBuffer = Buffer.from(expected, "utf8");
-  return (
-    candidateBuffer.length === expectedBuffer.length &&
-    timingSafeEqual(candidateBuffer, expectedBuffer)
-  );
+function desktopWebRequestAuditMetadata(request: IncomingMessage): {
+  userAgent?: string;
+  ip?: string;
+} {
+  const header = request.headers["user-agent"];
+  const userAgent = (Array.isArray(header) ? header[0] : header)?.trim();
+  const ip = request.socket.remoteAddress?.trim();
+  return {
+    ...(userAgent ? { userAgent: userAgent.slice(0, 512) } : {}),
+    ...(ip && isIP(ip.replace(/^::ffff:/, "")) ? { ip: ip.replace(/^::ffff:/, "") } : {}),
+  };
 }
 
 /**

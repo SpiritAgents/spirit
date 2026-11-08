@@ -238,7 +238,7 @@ import {
   refreshGitSnapshotCommand,
   rememberWorkspaceRootCommand,
   forgetWorkspaceRootCommand,
-  setWebHostAuthTokenHashCommand,
+  recordWebHostDeviceConnectionCommand,
   statHostTextFileCommand,
   writeHostTextFileCommand,
   writeWorkspaceTextFileCommand,
@@ -1664,8 +1664,15 @@ export class DesktopHostService {
     return updateConfigCommand(this.modelCommandContext(), request);
   }
 
-  async setWebHostAuthTokenHash(authTokenHash: string): Promise<DesktopSnapshot> {
-    return setWebHostAuthTokenHashCommand(this.workspaceGitCommandContext(), authTokenHash);
+  async recordWebHostDeviceConnection(
+    deviceId: string,
+    metadata: { userAgent?: string; ip?: string },
+  ): Promise<DesktopSnapshot | null> {
+    return recordWebHostDeviceConnectionCommand(
+      this.workspaceGitCommandContext(),
+      deviceId,
+      metadata,
+    );
   }
 
   async previewModels(request: PreviewModelsRequest): Promise<PreviewModelsResponse> {

@@ -184,16 +184,31 @@ export async function commitChangesCommand(
   });
 }
 
-export async function setWebHostAuthTokenHashCommand(
+export async function recordWebHostDeviceConnectionCommand(
   ctx: HostWorkspaceGitCommandContext,
-  authTokenHash: string,
-): Promise<DesktopSnapshot> {
+  deviceId: string,
+  metadata: { userAgent?: string; ip?: string },
+): Promise<DesktopSnapshot | null> {
   return ctx.runSerialized(async () => {
     await ctx.ensureInitialized();
     const state = ctx.requireState();
+    const device = state.config.webHost.devices.find((candidate) => candidate.id === deviceId);
+    if (!device) {
+      return null;
+    }
+    const now = new Date().toISOString();
     state.config.webHost = normalizeWebHostConfig({
       ...state.config.webHost,
-      authTokenHash,
+      devices: state.config.webHost.devices.map((candidate) =>
+        candidate.id === deviceId
+          ? {
+              ...candidate,
+              lastConnectedAt: now,
+              ...(metadata.userAgent ? { lastUserAgent: metadata.userAgent } : {}),
+              ...(metadata.ip ? { lastIp: metadata.ip } : {}),
+            }
+          : candidate,
+      ),
     });
     await saveConfig(state.config);
     return ctx.buildSnapshot();

@@ -104,7 +104,7 @@ export type CommandPayloads = {
   getGitHubPullRequestChecks: { request: GetGitHubPullRequestDetailRequest };
   mergeGitHubPullRequest: { request: MergeGitHubPullRequestRequest };
   markGitHubPullRequestReady: { request: GetGitHubPullRequestDetailRequest };
-  setWebHostAuthTokenHash: { authTokenHash: string };
+  recordWebHostDeviceConnection: { deviceId: string; userAgent?: string; ip?: string };
   addModel: { request: AddModelRequest };
   addProviderModels: { request: AddProviderModelsRequest };
   previewModels: { request: PreviewModelsRequest };

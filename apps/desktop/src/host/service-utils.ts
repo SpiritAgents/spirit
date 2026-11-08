@@ -27,6 +27,7 @@ import {
   mergeRecentWorkspaceRoots,
   resolveDesktopHomeDirectory,
 } from "./storage.js";
+import { isDesktopWebHostDeviceOnline } from "./web-host-state.js";
 import { flattenProviders, resolveActiveModelProfile } from "./model-config-access.js";
 import { DESKTOP_WEB_HOST_POLICY, getDesktopWebHostRuntimeStatus } from "./web-host-state.js";
 
@@ -208,7 +209,6 @@ export function buildWebHostSnapshot(config: DesktopWebHostConfigFile): DesktopW
         ...runtimeStatus,
         host: runtimeStatus.host || config.host,
         port: runtimeStatus.port || config.port,
-        ...(config.authTokenHash ? { pairingCode: undefined } : {}),
       }
     : {
         state: "disabled" as const,
@@ -233,7 +233,7 @@ export function buildWebHostSnapshot(config: DesktopWebHostConfigFile): DesktopW
       ...(device.lastConnectedAt ? { lastConnectedAt: device.lastConnectedAt } : {}),
       ...(device.lastUserAgent ? { lastUserAgent: device.lastUserAgent } : {}),
       ...(device.lastIp ? { lastIp: device.lastIp } : {}),
-      status: "offline",
+      status: isDesktopWebHostDeviceOnline(device.id) ? "online" : "offline",
     })),
   };
 }

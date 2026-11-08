@@ -15,7 +15,7 @@ export type HostCommandName =
   | "forgetWorkspace"
   | "commitChanges"
   | "updateConfig"
-  | "setWebHostAuthTokenHash"
+  | "recordWebHostDeviceConnection"
   | "addModel"
   | "addProviderModels"
   | "previewModels"

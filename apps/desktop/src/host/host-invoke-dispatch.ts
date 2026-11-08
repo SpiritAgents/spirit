@@ -9,7 +9,10 @@ export interface HostCommandDelegate {
   forgetWorkspace(request: CommandPayloads["forgetWorkspace"]["request"]): Promise<unknown>;
   commitChanges(request: CommandPayloads["commitChanges"]["request"]): Promise<unknown>;
   updateConfig(request: CommandPayloads["updateConfig"]["request"]): Promise<unknown>;
-  setWebHostAuthTokenHash(authTokenHash: string): Promise<unknown>;
+  recordWebHostDeviceConnection(
+    deviceId: string,
+    metadata: { userAgent?: string; ip?: string },
+  ): Promise<unknown>;
   addModel(request: CommandPayloads["addModel"]["request"]): Promise<unknown>;
   addProviderModels(request: CommandPayloads["addProviderModels"]["request"]): Promise<unknown>;
   previewModels(request: CommandPayloads["previewModels"]["request"]): Promise<unknown>;
@@ -246,7 +249,11 @@ const hostCommandDispatch = {
   forgetWorkspace: (host, payload) => host.forgetWorkspace(payload.request),
   commitChanges: (host, payload) => host.commitChanges(payload.request),
   updateConfig: (host, payload) => host.updateConfig(payload.request),
-  setWebHostAuthTokenHash: (host, payload) => host.setWebHostAuthTokenHash(payload.authTokenHash),
+  recordWebHostDeviceConnection: (host, payload) =>
+    host.recordWebHostDeviceConnection(payload.deviceId, {
+      ...(payload.userAgent ? { userAgent: payload.userAgent } : {}),
+      ...(payload.ip ? { ip: payload.ip } : {}),
+    }),
   addModel: (host, payload) => host.addModel(payload.request),
   addProviderModels: (host, payload) => host.addProviderModels(payload.request),
   previewModels: (host, payload) => host.previewModels(payload.request),

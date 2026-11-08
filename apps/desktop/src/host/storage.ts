@@ -177,8 +177,6 @@ export interface DesktopWebHostConfigFile {
   host: string;
   port: number;
   devices: DesktopWebHostDeviceRecord[];
-  /** @deprecated Legacy shared credential; normalization discards it. */
-  authTokenHash?: string;
 }
 
 export interface DesktopWebHostDeviceRecord {

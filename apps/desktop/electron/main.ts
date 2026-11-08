@@ -180,7 +180,6 @@ import {
 } from "./application-menu.js";
 import {
   createDesktopHttpHost,
-  createDesktopWebPairingCode,
   resolveDesktopWebHostFromEnv,
   type DesktopHttpHost,
 } from "./http-host.js";
@@ -214,9 +213,6 @@ const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
 
 let desktopWebHost: DesktopHttpHost | undefined;
 let desktopWebHostConfig: DesktopWebHostConfigFile | undefined;
-let desktopWebHostPairingCode = createDesktopWebPairingCode();
-/** True after the pairing failure limit is reached; must not regenerate the pairing code until the failure count inside the HTTP handler is reset. */
-let desktopWebHostPairingLocked = false;
 let quittingAfterDesktopWebHostStop = false;
 let unsubscribeDesktopDreamUpdates: (() => void) | undefined;
 let unsubscribeDesktopAutomationsUpdates: (() => void) | undefined;
@@ -282,10 +278,7 @@ function getDesktopWebHost(config: DesktopWebHostConfigFile): DesktopHttpHost {
       onHostCommandResult: handleDesktopWebHostCommandResult,
       subscribeHostUpdates: subscribeDesktopDreamUpdates,
       auth: {
-        getTokenHash: () => desktopWebHostConfig?.authTokenHash,
-        getPairingCode: () => desktopWebHostPairingCode,
-        completePairing: completeDesktopWebHostPairing,
-        onPairingLockout: handleDesktopWebHostPairingLockout,
+        getDevices: () => desktopWebHostConfig?.devices ?? [],
       },
       static: {
         root: rendererDistPath(),
@@ -413,7 +406,10 @@ async function handleDesktopWebHostCommandResult(
   _payload: unknown,
   result: unknown,
 ): Promise<void> {
-  if (command !== "updateConfig" || !isDesktopSnapshot(result)) {
+  if (
+    (command !== "updateConfig" && command !== "recordWebHostDeviceConnection") ||
+    !isDesktopSnapshot(result)
+  ) {
     return;
   }
   const config = await loadConfig();
@@ -425,11 +421,6 @@ async function syncDesktopWebHostWithConfig(config: DesktopWebHostConfigFile): P
   const changedEndpoint =
     previousConfig?.host !== config.host || previousConfig?.port !== config.port;
   desktopWebHostConfig = config;
-  if (config.authTokenHash) {
-    desktopWebHostPairingCode = "";
-  } else if (!desktopWebHostPairingCode && !desktopWebHostPairingLocked) {
-    desktopWebHostPairingCode = createDesktopWebPairingCode();
-  }
 
   if (!config.enabled) {
     await stopDesktopWebHostIfRunning();
@@ -450,7 +441,6 @@ async function syncDesktopWebHostWithConfig(config: DesktopWebHostConfigFile): P
             host: config.host,
             port: config.port,
             url: state.url,
-            ...(config.authTokenHash ? {} : { pairingCode: desktopWebHostPairingCode }),
           }
         : {
             state: "stopped",
@@ -468,14 +458,6 @@ async function syncDesktopWebHostWithConfig(config: DesktopWebHostConfigFile): P
     desktopWebHost = undefined;
   }
 
-  // Restarting the HTTP handler resets the pairing failure count inside it; only then unlock and issue a new code.
-  if (!config.authTokenHash) {
-    desktopWebHostPairingLocked = false;
-    if (!desktopWebHostPairingCode) {
-      desktopWebHostPairingCode = createDesktopWebPairingCode();
-    }
-  }
-
   setDesktopWebHostRuntimeStatus({
     state: "starting",
     host: config.host,
@@ -489,7 +471,6 @@ async function syncDesktopWebHostWithConfig(config: DesktopWebHostConfigFile): P
       host: state.host,
       port: state.port,
       ...(state.url ? { url: state.url } : {}),
-      ...(config.authTokenHash ? {} : { pairingCode: desktopWebHostPairingCode }),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -499,38 +480,6 @@ async function syncDesktopWebHostWithConfig(config: DesktopWebHostConfigFile): P
       host: config.host,
       port: config.port,
       error: message,
-    });
-  }
-}
-
-/** Pairing failure limit reached: void the current pairing code and stop displaying it; regenerated when the Web Host restarts. */
-function handleDesktopWebHostPairingLockout(): void {
-  console.warn("[spirit-desktop] web host pairing locked after too many failures");
-  desktopWebHostPairingLocked = true;
-  desktopWebHostPairingCode = "";
-  if (desktopWebHost?.isRunning() && desktopWebHostConfig) {
-    const state = desktopWebHost.getState();
-    setDesktopWebHostRuntimeStatus({
-      state: "running",
-      host: desktopWebHostConfig.host,
-      port: desktopWebHostConfig.port,
-      ...(state.url ? { url: state.url } : {}),
-    });
-  }
-}
-
-async function completeDesktopWebHostPairing(authTokenHash: string): Promise<void> {
-  await invokeDesktopHostCommand("setWebHostAuthTokenHash", { authTokenHash });
-  const config = await loadConfig();
-  desktopWebHostConfig = config.webHost;
-  desktopWebHostPairingCode = "";
-  if (desktopWebHost?.isRunning()) {
-    const state = desktopWebHost.getState();
-    setDesktopWebHostRuntimeStatus({
-      state: "running",
-      host: config.webHost.host,
-      port: config.webHost.port,
-      ...(state.url ? { url: state.url } : {}),
     });
   }
 }
