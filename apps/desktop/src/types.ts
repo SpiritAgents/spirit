@@ -1966,6 +1966,17 @@ export interface DesktopWebHostSnapshot {
   config: DesktopWebHostConfigSnapshot;
   status: DesktopWebHostStatusSnapshot;
   policy: DesktopWebHostPolicySnapshot;
+  devices: DesktopWebHostDeviceSnapshot[];
+}
+
+export interface DesktopWebHostDeviceSnapshot {
+  id: string;
+  name: string;
+  createdAt: string;
+  lastConnectedAt?: string;
+  lastUserAgent?: string;
+  lastIp?: string;
+  status: "online" | "offline";
 }
 
 export interface DesktopWebHostConfigSnapshot {

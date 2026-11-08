@@ -221,11 +221,20 @@ export function buildWebHostSnapshot(config: DesktopWebHostConfigFile): DesktopW
       enabled: config.enabled,
       host: config.host,
       port: config.port,
-      paired: Boolean(config.authTokenHash),
+      paired: config.devices.length > 0,
       authMode: "pairing",
     },
     status,
     policy: DESKTOP_WEB_HOST_POLICY,
+    devices: config.devices.map((device) => ({
+      id: device.id,
+      name: device.name,
+      createdAt: device.createdAt,
+      ...(device.lastConnectedAt ? { lastConnectedAt: device.lastConnectedAt } : {}),
+      ...(device.lastUserAgent ? { lastUserAgent: device.lastUserAgent } : {}),
+      ...(device.lastIp ? { lastIp: device.lastIp } : {}),
+      status: "offline",
+    })),
   };
 }
 

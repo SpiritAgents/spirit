@@ -2395,15 +2395,12 @@ export function useDesktopRuntime() {
         return;
       }
 
-      const webHostEndpointChanged =
-        s.webHostHost !== prev.webHostHost || s.webHostPort !== prev.webHostPort;
       try {
         const next = await api.updateConfig(
           updateConfigFromSettingsForm(s, {
             enabled: s.webHostEnabled,
             host: s.webHostHost,
             port: s.webHostPort,
-            ...(webHostEndpointChanged ? { resetPairing: true } : {}),
           }),
         );
         const staleTranslucencySave =

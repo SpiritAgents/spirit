@@ -441,9 +441,6 @@ export async function updateConfigCommand(
         ...state.config.webHost,
         ...request.webHost,
       });
-      if (request.webHost.resetPairing === true) {
-        delete nextWebHost.authTokenHash;
-      }
       state.config.webHost = nextWebHost;
     }
     if (request.dreams !== undefined) {

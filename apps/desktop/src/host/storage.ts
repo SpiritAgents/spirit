@@ -176,7 +176,19 @@ export interface DesktopWebHostConfigFile {
   enabled: boolean;
   host: string;
   port: number;
+  devices: DesktopWebHostDeviceRecord[];
+  /** @deprecated Legacy shared credential; normalization discards it. */
   authTokenHash?: string;
+}
+
+export interface DesktopWebHostDeviceRecord {
+  id: string;
+  tokenHash: string;
+  name: string;
+  createdAt: string;
+  lastConnectedAt?: string;
+  lastUserAgent?: string;
+  lastIp?: string;
 }
 
 /** Matches the keyring naming in `apps/cli/src/model_registry.rs` and host-internal. */
@@ -781,6 +793,7 @@ export function defaultWebHostConfig(): DesktopWebHostConfigFile {
     enabled: false,
     host: DEFAULT_DESKTOP_WEB_HOST,
     port: DEFAULT_DESKTOP_WEB_PORT,
+    devices: [],
   };
 }
 
@@ -1079,16 +1092,47 @@ export function normalizeWebHostConfig(
   const host =
     typeof raw?.host === "string" && raw.host.trim() ? raw.host.trim() : defaultConfig.host;
   const port = normalizePort(raw?.port, defaultConfig.port);
-  const authTokenHash =
-    typeof raw?.authTokenHash === "string" && raw.authTokenHash.trim()
-      ? raw.authTokenHash.trim()
-      : undefined;
+  const devices = Array.isArray(raw?.devices)
+    ? raw.devices
+        .map((device) => normalizeWebHostDeviceRecord(device))
+        .filter((device) => device !== undefined)
+    : [];
 
   return {
     enabled: raw?.enabled === true,
     host,
     port,
-    ...(authTokenHash ? { authTokenHash } : {}),
+    devices,
+  };
+}
+
+function normalizeWebHostDeviceRecord(
+  value: DesktopWebHostDeviceRecord,
+): DesktopWebHostDeviceRecord | undefined {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+  const id = typeof value.id === "string" ? value.id.trim() : "";
+  const tokenHash = typeof value.tokenHash === "string" ? value.tokenHash.trim() : "";
+  const createdAt = typeof value.createdAt === "string" ? value.createdAt.trim() : "";
+  if (!id || !/^[a-f0-9]{64}$/.test(tokenHash) || !createdAt) {
+    return undefined;
+  }
+  const name = typeof value.name === "string" ? value.name.trim() : "";
+  return {
+    id,
+    tokenHash,
+    name: name || `Device ${id.slice(0, 8)}`,
+    createdAt,
+    ...(typeof value.lastConnectedAt === "string" && value.lastConnectedAt.trim()
+      ? { lastConnectedAt: value.lastConnectedAt.trim() }
+      : {}),
+    ...(typeof value.lastUserAgent === "string" && value.lastUserAgent.trim()
+      ? { lastUserAgent: value.lastUserAgent.trim() }
+      : {}),
+    ...(typeof value.lastIp === "string" && value.lastIp.trim()
+      ? { lastIp: value.lastIp.trim() }
+      : {}),
   };
 }
 
