@@ -235,7 +235,10 @@ export interface HostApi {
   ): Promise<DesktopSnapshot>;
   deleteAutomation(automationId: string): Promise<DesktopSnapshot>;
   setAutomationEnabled(automationId: string, enabled: boolean): Promise<DesktopSnapshot>;
-  subscribeDreamUpdates?(callback: (update: DesktopLiveUpdate) => void): () => void;
+  subscribeDreamUpdates?(
+    callback: (update: DesktopLiveUpdate) => void,
+    onError?: (error: unknown) => void,
+  ): () => void;
   subscribeAutomationsUpdates?(callback: (snapshot: DesktopSnapshot) => void): () => void;
   subscribeSessionListUpdates?(callback: () => void): () => void;
   listTaskMenuItems(): Promise<DesktopTaskMenuItem[]>;

@@ -65,10 +65,6 @@ import type {
 const DEFAULT_HOST_URL = import.meta.env.VITE_SPIRIT_HOST_URL?.toString().trim() || "";
 const WEB_HOST_TOKEN_STORAGE_KEY = "spirit-web-host-token";
 
-type WebHostPairingResponse = {
-  token: string;
-};
-
 /** Remote web client viewing session; HTTP submit/poll always scope to this path. */
 let webViewingSessionPath = "";
 
@@ -107,6 +103,7 @@ function withWebViewingSessionPath<T extends { sessionPath?: string }>(request: 
 }
 
 function webClientHost(): { kind: "web"; pageUrl: string } {
+  consumeWebHostQueryToken();
   return { kind: "web", pageUrl: window.location.href };
 }
 
@@ -119,6 +116,7 @@ function withWebClientHost<T extends Record<string, unknown>>(
 }
 
 export function createWebHostApi(): HostApi {
+  consumeWebHostQueryToken();
   const baseUrl = DEFAULT_HOST_URL || "";
 
   return {
@@ -440,12 +438,13 @@ export function createWebHostApi(): HostApi {
     subscribeTasksUpdates() {
       return () => {};
     },
-    subscribeDreamUpdates(callback) {
+    subscribeDreamUpdates(callback, onError) {
       const controller = new AbortController();
       void consumeSnapshotStream(
         baseUrl,
         (snapshot) => callback({ kind: "full", snapshot }),
         controller.signal,
+        onError,
       );
       return () => controller.abort();
     },
@@ -648,17 +647,6 @@ export function createWebHostApi(): HostApi {
     async saveLocalImageAs() {
       return false;
     },
-    async pairWebHost(code: string) {
-      const result = await post<WebHostPairingResponse>(
-        baseUrl,
-        "/api/pairing",
-        { code },
-        {
-          auth: false,
-        },
-      );
-      storeWebHostToken(result.token);
-    },
   };
 }
 
@@ -672,17 +660,12 @@ async function get<T>(baseUrl: string, path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-async function post<T>(
-  baseUrl: string,
-  path: string,
-  body?: unknown,
-  options?: { auth?: boolean },
-): Promise<T> {
+async function post<T>(baseUrl: string, path: string, body?: unknown): Promise<T> {
   const response = await fetch(`${baseUrl}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(options?.auth === false ? {} : authHeaders()),
+      ...authHeaders(),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -715,10 +698,37 @@ function storeWebHostToken(token: string): void {
   }
 }
 
+function clearWebHostToken(): void {
+  try {
+    localStorage.removeItem(WEB_HOST_TOKEN_STORAGE_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+function consumeWebHostQueryToken(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("token")) {
+    return;
+  }
+  const token = url.searchParams.get("token")?.trim();
+  if (token) {
+    storeWebHostToken(token);
+  } else {
+    clearWebHostToken();
+  }
+  url.searchParams.delete("token");
+  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
 async function consumeSnapshotStream(
   baseUrl: string,
   callback: (snapshot: DesktopSnapshot) => void,
   signal: AbortSignal,
+  onError?: (error: unknown) => void,
 ): Promise<void> {
   let retryDelayMs = 250;
   while (!signal.aborted) {
@@ -768,6 +778,10 @@ async function consumeSnapshotStream(
       if (signal.aborted) {
         return;
       }
+      if (isResponseErrorWithStatus(error, 401)) {
+        onError?.(error);
+        return;
+      }
       console.error("[web-host] update stream failed", error);
     }
     await new Promise<void>((resolve) => {
@@ -786,6 +800,9 @@ async function consumeSnapshotStream(
 }
 
 async function responseError(response: Response): Promise<Error> {
+  if (response.status === 401) {
+    clearWebHostToken();
+  }
   const text = await response.text();
   try {
     const parsed = JSON.parse(text) as { error?: string; code?: string };
@@ -801,4 +818,13 @@ async function responseError(response: Response): Promise<Error> {
     error.status = response.status;
     return error;
   }
+}
+
+function isResponseErrorWithStatus(error: unknown, status: number): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    (error as { status?: unknown }).status === status
+  );
 }

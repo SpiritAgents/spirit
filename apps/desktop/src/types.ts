@@ -196,7 +196,6 @@ export interface DesktopWebHostConfigUpdate {
   enabled?: boolean;
   host?: string;
   port?: number;
-  resetPairing?: boolean;
 }
 
 export interface DesktopDreamConfigUpdate {

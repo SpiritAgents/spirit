@@ -1040,7 +1040,7 @@ export function useDesktopRuntime() {
         setWebHostPairingRequired(false);
         void refreshSessions();
       } catch (error) {
-        setWebHostPairingRequired(errorCode(error) === "PAIRING_REQUIRED");
+        setWebHostPairingRequired(errorCode(error) === "TOKEN_REQUIRED");
         setRuntimeError(describeError(error));
       } finally {
         setBusyAction("");
@@ -1530,45 +1530,51 @@ export function useDesktopRuntime() {
         });
     };
 
-    return api.subscribeDreamUpdates((update) => {
-      let next: DesktopSnapshot | undefined;
-      if (update.kind === "conversation-delta") {
-        next = applyConversationDelta(snapshotRef.current ?? undefined, update);
-        if (!next) {
-          resyncFromFullSnapshot();
-          return;
+    return api.subscribeDreamUpdates(
+      (update) => {
+        let next: DesktopSnapshot | undefined;
+        if (update.kind === "conversation-delta") {
+          next = applyConversationDelta(snapshotRef.current ?? undefined, update);
+          if (!next) {
+            resyncFromFullSnapshot();
+            return;
+          }
+        } else {
+          next = update.snapshot;
         }
-      } else {
-        next = update.snapshot;
-      }
-      const previous = snapshotRef.current;
-      const prevPath = previous?.activeSession?.filePath;
-      const nextPath = next.activeSession?.filePath;
-      const blockForegroundSwap =
-        api.kind === "electron" &&
-        Boolean(prevPath) &&
-        Boolean(nextPath) &&
-        prevPath !== nextPath &&
-        busyActionRef.current !== "session" &&
-        busyActionRef.current !== "session-mutation" &&
-        prevPath &&
-        nextPath &&
-        !isProvisionalSessionPromotion(prevPath, nextPath);
-      if (blockForegroundSwap && previous) {
-        applySnapshot({
-          ...next,
-          activeSession: previous.activeSession!,
-          conversation: previous.conversation,
-          composerSessionKey: previous.composerSessionKey,
-        });
-      } else {
-        applySnapshot(next);
-      }
-      const needRefreshSessions = previous ? shouldRefreshDreamSessions(previous, next) : false;
-      if (needRefreshSessions) {
-        void refreshSessions();
-      }
-    });
+        const previous = snapshotRef.current;
+        const prevPath = previous?.activeSession?.filePath;
+        const nextPath = next.activeSession?.filePath;
+        const blockForegroundSwap =
+          api.kind === "electron" &&
+          Boolean(prevPath) &&
+          Boolean(nextPath) &&
+          prevPath !== nextPath &&
+          busyActionRef.current !== "session" &&
+          busyActionRef.current !== "session-mutation" &&
+          prevPath &&
+          nextPath &&
+          !isProvisionalSessionPromotion(prevPath, nextPath);
+        if (blockForegroundSwap && previous) {
+          applySnapshot({
+            ...next,
+            activeSession: previous.activeSession!,
+            conversation: previous.conversation,
+            composerSessionKey: previous.composerSessionKey,
+          });
+        } else {
+          applySnapshot(next);
+        }
+        const needRefreshSessions = previous ? shouldRefreshDreamSessions(previous, next) : false;
+        if (needRefreshSessions) {
+          void refreshSessions();
+        }
+      },
+      (error) => {
+        setWebHostPairingRequired(true);
+        setRuntimeError(describeError(error));
+      },
+    );
   }, [api, applySnapshot, refreshSessions]);
 
   useEffect(() => {
@@ -2607,27 +2613,8 @@ export function useDesktopRuntime() {
     if (!api) {
       return;
     }
-
-    const s = settingsRef.current;
-    try {
-      const next = await api.updateConfig(
-        updateConfigFromSettingsForm(s, {
-          enabled: s.webHostEnabled,
-          host: s.webHostHost,
-          port: s.webHostPort,
-          resetPairing: true,
-        }),
-      );
-      applySnapshot(next);
-      setRuntimeError("");
-      setSettings((current) => ({
-        ...current,
-        apiKey: "",
-      }));
-    } catch (error) {
-      setRuntimeError(describeError(error));
-    }
-  }, [api, applySnapshot]);
+    setRuntimeError(i18n.t("error.hostNotSupportWebPair"));
+  }, [api]);
 
   const sendMessage = useCallback(
     async (request: SubmitUserTurnRequest = { text: composer }) => {
