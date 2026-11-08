@@ -29,7 +29,6 @@ use crate::{
     ports::{
         AssistantAuxArchiveEntry, AttachChatSessionOutcome, ChatArchive, McpStatusSnapshot,
         SecretStore, SubagentSessionArchiveEntry, SubagentSessionSummary, normalize_approval_level,
-        normalize_llm_http_version,
     },
     rewind::{self, DesktopRewindCheckpointSnapshot, RewindRestoreOutcome},
     runtime_sync::RuntimeSyncState,
@@ -95,7 +94,6 @@ impl DaemonRuntime {
             "[daemon-runtime] connected session={}",
             runtime.session_id.as_deref().unwrap_or("<none>")
         ));
-        runtime.apply_llm_http_version_from_config()?;
         runtime.apply_llm_client_version_from_build()?;
         runtime.sync_snapshot_remote()?;
         Ok(runtime)
@@ -741,9 +739,6 @@ impl DaemonRuntime {
         }
         let transport_changed = transport_config_will_change(&self.config, &config);
         self.config = config;
-        if let Err(err) = self.apply_llm_http_version_from_config() {
-            self.handle_daemon_error(err);
-        }
         if let Err(err) = self.apply_attribution_to_daemon() {
             self.handle_daemon_error(err);
         }
@@ -761,14 +756,6 @@ impl DaemonRuntime {
 
     pub fn store_config(&mut self, config: AppConfig) {
         self.config = config;
-    }
-
-    pub(crate) fn apply_llm_http_version_from_config(&mut self) -> Result<()> {
-        if self.daemon_failed {
-            return Err(anyhow!("daemon is already in a failed state."));
-        }
-        let version = self.config.networks.llm_http_version.clone();
-        self.set_llm_http_version(&version)
     }
 
     pub(crate) fn apply_llm_client_version_from_build(&mut self) -> Result<()> {
@@ -808,18 +795,6 @@ impl DaemonRuntime {
                 "webSearchEnabled": web_search_enabled,
                 "webFetchEnabled": web_fetch_enabled,
             })),
-        )?;
-        Ok(())
-    }
-
-    pub fn set_llm_http_version(&mut self, llm_http_version: &str) -> Result<()> {
-        if self.daemon_failed {
-            return Err(anyhow!("daemon is already in a failed state."));
-        }
-        let normalized = normalize_llm_http_version(llm_http_version);
-        self.client.call(
-            "server.setLlmHttpVersion",
-            json!({ "llmHttpVersion": normalized }),
         )?;
         Ok(())
     }

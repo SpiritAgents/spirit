@@ -93,8 +93,6 @@ fn build_view_model(message: ChatMessage) -> TuiViewModel {
         language_picker_index: 0,
         approval_picker_active: false,
         approval_picker_index: 0,
-        network_picker_active: false,
-        network_picker_index: 0,
         tui_picker_active: false,
         tui_picker_index: 0,
         chat_picker_active: false,

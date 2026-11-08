@@ -106,8 +106,7 @@ export const SESSION_SET_TODO_SESSION_KEY = "session.setTodoSessionKey";
 /** RPC: offline permission rule check for a shell command or read_file path. */
 export const HOST_CHECK_PERMISSION = "host.checkPermission";
 
-/** RPC: process-global LLM fetch knobs (match the legacy bridge semantics). */
-export const SERVER_SET_LLM_HTTP_VERSION = "server.setLlmHttpVersion";
+/** RPC: process-global LLM client version (matches the legacy bridge semantics). */
 export const SERVER_SET_LLM_CLIENT_VERSION = "server.setLlmClientVersion";
 
 /** Notification: one agent-core RuntimeEvent for a session. */

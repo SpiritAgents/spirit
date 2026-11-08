@@ -215,15 +215,6 @@ pub fn parse_approval_level_strict(value: &str) -> Option<String> {
     }
 }
 
-pub fn normalize_llm_http_version(value: &str) -> String {
-    let normalized = value.trim().to_ascii_lowercase();
-    if normalized == "http1.1" || normalized == "http/1.1" || normalized == "http1" {
-        "http1.1".to_string()
-    } else {
-        "http2".to_string()
-    }
-}
-
 pub const TUI_MODE_INLINE: &str = "inline";
 pub const TUI_MODE_FULLSCREEN: &str = "fullscreen";
 pub const TUI_MODES: [&str; 2] = [TUI_MODE_INLINE, TUI_MODE_FULLSCREEN];

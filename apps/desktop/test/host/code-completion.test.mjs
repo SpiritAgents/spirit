@@ -74,7 +74,6 @@ function withFixture(modelName, run) {
     webHost: { enabled: false, host: "127.0.0.1", port: 1421 },
     dreams: { enabled: false, debugMode: false },
     agents: defaultAgentsConfig(),
-    networks: { llmHttpVersion: "http2" },
   };
   try {
     return run(baseConfig);
@@ -95,7 +94,6 @@ test("requestCodeCompletionCommand returns empty when secondary model missing", 
     webHost: { enabled: false, host: "127.0.0.1", port: 1421 },
     dreams: { enabled: false, debugMode: false },
     agents: defaultAgentsConfig(),
-    networks: { llmHttpVersion: "http2" },
   };
   const result = await requestCodeCompletionCommand(
     {

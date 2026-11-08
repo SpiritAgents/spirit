@@ -282,9 +282,6 @@ function updateConfigFromSettingsForm(
         enabled: s.webFetchEnabled,
       },
     },
-    networks: {
-      llmHttpVersion: s.llmHttpVersion,
-    },
     ...(s.uiLocale.trim() ? { uiLocale: s.uiLocale.trim() } : { uiLocale: undefined }),
     ...(s.apiKey.trim() ? { apiKey: s.apiKey.trim() } : undefined),
   };
@@ -440,7 +437,6 @@ export function useDesktopRuntime() {
     prAttributionEnabled: true,
     providerToolsEnabled: true,
     webFetchEnabled: true,
-    llmHttpVersion: "http2",
   });
   const [busyAction, setBusyAction] = useState<BusyAction>("");
   const [paneWorkspaceBusySessionPath, setPaneWorkspaceBusySessionPath] = useState<string | null>(
@@ -841,7 +837,6 @@ export function useDesktopRuntime() {
           prAttributionEnabled: next.attribution.prEnabled,
           providerToolsEnabled: next.webToolExposure.providerToolsEnabled,
           webFetchEnabled: next.webToolExposure.webFetchEnabled,
-          llmHttpVersion: next.config.networks.llmHttpVersion,
         };
       });
     },

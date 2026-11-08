@@ -59,7 +59,6 @@ const DEFAULT_SLASH_COMMANDS: &[&str] = &[
     "/log",
     "/language",
     "/approval",
-    "/network",
     "/tui",
 ];
 
@@ -87,7 +86,6 @@ const RESERVED_SLASH_COMMANDS: &[&str] = &[
     "/log",
     "/language",
     "/approval",
-    "/network",
     "/tui",
 ];
 
@@ -149,7 +147,7 @@ fn command_suggestion(command: &str) -> InputSuggestion {
 fn command_replacement(command: &str) -> String {
     match command {
         "/model" | "/session" | "/rewind" | "/fork" | "/subagent" | "/image" | "/mcp" | "/hook"
-        | "/log" | "/language" | "/approval" | "/network" | "/tui" | "/extension" => {
+        | "/log" | "/language" | "/approval" | "/tui" | "/extension" => {
             format!("{} ", command)
         }
         _ => command.to_string(),
@@ -238,9 +236,6 @@ fn contextual_suggestions(shell: &mut TuiShell, query: &str) -> Vec<InputSuggest
     }
     if query == "/approval" || query.starts_with("/approval ") {
         return vec![primary_help_suggestion("/approval", query)];
-    }
-    if query == "/network" || query.starts_with("/network ") {
-        return vec![primary_help_suggestion("/network", query)];
     }
     if query == "/tui" || query.starts_with("/tui ") {
         return vec![primary_help_suggestion("/tui", query)];
@@ -459,7 +454,6 @@ pub(crate) fn help_text(has_active_plan: bool, can_continue_last_turn: bool) -> 
         t!("tui.help.log").into_owned(),
         t!("tui.help.language").into_owned(),
         t!("tui.help.approval").into_owned(),
-        t!("tui.help.networks").into_owned(),
         t!("tui.tui.help").into_owned(),
         t!("tui.help.mouse").into_owned(),
         t!("tui.help.ctrl_o").into_owned(),
@@ -508,7 +502,6 @@ pub(crate) fn handle_command(shell: &mut TuiShell, message: &str) {
         "/log" => shell.handle_log_slash(&parts[1..]),
         "/language" => shell.handle_language_slash(&parts[1..]),
         "/approval" => shell.handle_approval_slash(&parts[1..]),
-        "/network" => shell.handle_networks_slash(&parts[1..]),
         "/tui" => shell.handle_tui_slash(&parts[1..]),
         _ => {
             if !shell.handle_skill_alias_slash(message) {

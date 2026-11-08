@@ -12,12 +12,7 @@ import {
   type TranslucencyPreference,
 } from "../lib/translucency.js";
 import { deleteKeyringPassword, getKeyringPassword, setKeyringPassword } from "./keyring-secret.js";
-import {
-  configureLlmClientVersion,
-  configureLlmHttpVersion,
-  normalizeLlmHttpVersion,
-  type LlmHttpVersion,
-} from "@spiritagent/agent-core";
+import { configureLlmClientVersion } from "@spiritagent/agent-core";
 import { normalizeModelReasoningEffort } from "@spiritagent/agent-core/reasoning-effort";
 import {
   assertSpiritConfigSchemaVersion,
@@ -138,10 +133,6 @@ export interface DesktopAgentsConfigFile {
   webFetch: DesktopWebToolToggleConfigFile;
 }
 
-export interface DesktopNetworksConfigFile {
-  llmHttpVersion: LlmHttpVersion;
-}
-
 export interface DesktopConfigFile {
   schemaVersion: typeof SPIRIT_CONFIG_SCHEMA_VERSION;
   providers: ProviderEntry[];
@@ -167,7 +158,6 @@ export interface DesktopConfigFile {
   webHost: DesktopWebHostConfigFile;
   dreams: DesktopDreamConfigFile;
   agents: DesktopAgentsConfigFile;
-  networks: DesktopNetworksConfigFile;
   /** Three-state permission allowlist; written by host-internal `savePermissionRule`. Desktop round-trips this so saves do not drop it. */
   permission?: PermissionConfig;
   /** CLI TUI layout; omitted means inline. Desktop round-trips this so saves do not drop it. */
@@ -775,7 +765,6 @@ function defaultConfig(): DesktopConfigFile {
     webHost: defaultWebHostConfig(),
     dreams: defaultDreamConfig(),
     agents: defaultAgentsConfig(),
-    networks: defaultNetworksConfig(),
   };
 }
 
@@ -827,20 +816,6 @@ export function defaultAgentsConfig(): DesktopAgentsConfigFile {
   };
 }
 
-export function defaultNetworksConfig(): DesktopNetworksConfigFile {
-  return {
-    llmHttpVersion: "http2",
-  };
-}
-
-export function normalizeNetworksConfig(raw: unknown): DesktopNetworksConfigFile {
-  const record =
-    typeof raw === "object" && raw !== null ? (raw as Partial<DesktopNetworksConfigFile>) : {};
-  return {
-    llmHttpVersion: normalizeLlmHttpVersion(record.llmHttpVersion),
-  };
-}
-
 function resolveDesktopPackageJsonPath(): string {
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
   const candidates = [
@@ -865,10 +840,6 @@ export function resolveDesktopAppVersion(): string {
 
 export function applyLlmClientVersionFromApp(): void {
   configureLlmClientVersion(resolveDesktopAppVersion());
-}
-
-export function applyLlmHttpVersionFromConfig(config: Pick<DesktopConfigFile, "networks">): void {
-  configureLlmHttpVersion(config.networks.llmHttpVersion);
 }
 
 export function normalizeAgentsConfig(raw: unknown): DesktopAgentsConfigFile {
@@ -979,7 +950,6 @@ function normalizeConfig(raw: Partial<DesktopConfigFile>): DesktopConfigFile {
     webHost: normalizeWebHostConfig(raw.webHost),
     dreams,
     agents: normalizeAgentsConfig(raw.agents),
-    networks: normalizeNetworksConfig(raw.networks),
     // Rule-level validation lives in host-internal permissions/config-io; desktop only
     // round-trips the block so saves do not strip it.
     ...(typeof raw.permission === "object" &&

@@ -70,10 +70,6 @@ impl RuntimeHandle {
         self.backend.store_config(config)
     }
 
-    pub fn set_llm_http_version(&mut self, llm_http_version: &str) -> Result<()> {
-        self.backend.set_llm_http_version(llm_http_version)
-    }
-
     pub fn replace_plan_metadata(&mut self, metadata: PlanMetadata) {
         self.backend.replace_plan_metadata(metadata)
     }

@@ -137,12 +137,6 @@ export interface UpdateConfigRequest {
   dreams?: DesktopDreamConfigUpdate;
   /** Absent means no change to the saved agents config. */
   agents?: DesktopAgentsConfigUpdate;
-  /** Absent means no change to the saved networks config. */
-  networks?: DesktopNetworksConfigUpdate;
-}
-
-export interface DesktopNetworksConfigUpdate {
-  llmHttpVersion?: "http1.1" | "http2";
 }
 
 export interface DesktopAgentsConfigUpdate {
@@ -1348,9 +1342,6 @@ export interface DesktopConfigSnapshot {
   agentMode: DesktopAgentMode;
   /** Aligned with `spiritDataDir()/model-catalog-cache`; an empty array when there is no cache. */
   modelCatalogHints?: DesktopModelCatalogHint[];
-  networks: {
-    llmHttpVersion: "http1.1" | "http2";
-  };
 }
 
 export interface DesktopDreamSettingsSnapshot {

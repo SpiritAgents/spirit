@@ -12,7 +12,6 @@ test("buildDesktopSnapshot maps rulesList from metadata entries", () => {
       activeModel: { providerId: "", name: "" },
       recentWorkspaces: [],
       dreams: {},
-      networks: { llmHttpVersion: "http2" },
       webHost: { enabled: false },
     },
     git: { available: false },

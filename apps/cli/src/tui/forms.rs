@@ -725,7 +725,6 @@ impl TuiShell {
         self.model_picker_active = false;
         self.language_picker_active = false;
         self.approval_picker_active = false;
-        self.network_picker_active = false;
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;
@@ -743,7 +742,6 @@ impl TuiShell {
         self.model_picker_active = false;
         self.language_picker_active = false;
         self.approval_picker_active = false;
-        self.network_picker_active = false;
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;
@@ -756,7 +754,6 @@ impl TuiShell {
         self.model_picker_active = false;
         self.language_picker_active = false;
         self.approval_picker_active = false;
-        self.network_picker_active = false;
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;
@@ -780,7 +777,6 @@ impl TuiShell {
         self.model_picker_active = false;
         self.language_picker_active = false;
         self.approval_picker_active = false;
-        self.network_picker_active = false;
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;
@@ -849,7 +845,6 @@ impl TuiShell {
         self.model_picker_active = false;
         self.language_picker_active = false;
         self.approval_picker_active = false;
-        self.network_picker_active = false;
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;
@@ -862,7 +857,6 @@ impl TuiShell {
         self.model_picker_active = false;
         self.language_picker_active = false;
         self.approval_picker_active = false;
-        self.network_picker_active = false;
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;
@@ -875,7 +869,6 @@ impl TuiShell {
         self.model_picker_active = false;
         self.language_picker_active = false;
         self.approval_picker_active = false;
-        self.network_picker_active = false;
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;
@@ -888,7 +881,6 @@ impl TuiShell {
         self.model_picker_active = false;
         self.language_picker_active = false;
         self.approval_picker_active = false;
-        self.network_picker_active = false;
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;

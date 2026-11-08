@@ -50,7 +50,6 @@ export type SettingsFormState = {
   prAttributionEnabled: boolean;
   providerToolsEnabled: boolean;
   webFetchEnabled: boolean;
-  llmHttpVersion: "http1.1" | "http2";
 };
 
 export type SettingsViewProps = {

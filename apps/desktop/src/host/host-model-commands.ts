@@ -71,9 +71,6 @@ import {
   loadHostMetadata,
   normalizeDreamConfig,
   normalizeAgentsConfig,
-  normalizeNetworksConfig,
-  applyLlmClientVersionFromApp,
-  applyLlmHttpVersionFromConfig,
   normalizeModelCapabilities,
   normalizeWebHostConfig,
   saveApiKeyForProvider,
@@ -509,14 +506,6 @@ export async function updateConfigCommand(
           ...request.agents.webFetch,
         },
       });
-    }
-    if (request.networks?.llmHttpVersion !== undefined) {
-      state.config.networks = normalizeNetworksConfig({
-        ...state.config.networks,
-        llmHttpVersion: request.networks.llmHttpVersion,
-      });
-      applyLlmHttpVersionFromConfig(state.config);
-      applyLlmClientVersionFromApp();
     }
     await saveConfig(state.config);
     if (request.apiKey?.trim() && activeEntry) {

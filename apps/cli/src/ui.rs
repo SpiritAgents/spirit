@@ -22,7 +22,7 @@ mod subagent;
 mod text;
 mod theme;
 
-pub(crate) use pickers::{approval_level_label, llm_http_version_label, tui_mode_label};
+pub(crate) use pickers::{approval_level_label, tui_mode_label};
 
 use conversation::*;
 use forms::*;
@@ -244,7 +244,6 @@ pub fn draw_ui(
     let show_model_picker = app.model_picker_active;
     let show_language_picker = app.language_picker_active;
     let show_approval_picker = app.approval_picker_active;
-    let show_network_picker = app.network_picker_active;
     let show_tui_picker = app.tui_picker_active;
     let show_chat_picker = app.chat_picker_active;
     let show_subagent_picker = app.subagent_picker_active;
@@ -257,14 +256,12 @@ pub fn draw_ui(
         || show_chat_picker
         || show_subagent_picker
         || show_approval_picker
-        || show_network_picker
         || show_tui_picker
         || show_image_picker;
 
     let show_picker = show_model_picker
         || show_language_picker
         || show_approval_picker
-        || show_network_picker
         || show_tui_picker
         || show_chat_picker
         || show_subagent_picker
@@ -420,7 +417,6 @@ pub fn draw_ui(
             show_model_picker,
             show_language_picker,
             show_approval_picker,
-            show_network_picker,
             show_tui_picker,
             show_chat_picker,
             show_subagent_picker,
@@ -484,7 +480,6 @@ struct InlineSurfaceFlags {
     show_model_picker: bool,
     show_language_picker: bool,
     show_approval_picker: bool,
-    show_network_picker: bool,
     show_tui_picker: bool,
     show_chat_picker: bool,
     show_subagent_picker: bool,
@@ -500,7 +495,6 @@ fn inline_surface_flags(app: &TuiViewModel) -> InlineSurfaceFlags {
     let show_model_picker = app.model_picker_active;
     let show_language_picker = app.language_picker_active;
     let show_approval_picker = app.approval_picker_active;
-    let show_network_picker = app.network_picker_active;
     let show_tui_picker = app.tui_picker_active;
     let show_chat_picker = app.chat_picker_active;
     let show_subagent_picker = app.subagent_picker_active;
@@ -514,14 +508,12 @@ fn inline_surface_flags(app: &TuiViewModel) -> InlineSurfaceFlags {
         || show_chat_picker
         || show_subagent_picker
         || show_approval_picker
-        || show_network_picker
         || show_tui_picker
         || show_image_picker;
 
     let show_picker = show_model_picker
         || show_language_picker
         || show_approval_picker
-        || show_network_picker
         || show_tui_picker
         || show_chat_picker
         || show_subagent_picker
@@ -536,7 +528,6 @@ fn inline_surface_flags(app: &TuiViewModel) -> InlineSurfaceFlags {
         show_model_picker,
         show_language_picker,
         show_approval_picker,
-        show_network_picker,
         show_tui_picker,
         show_chat_picker,
         show_subagent_picker,
@@ -756,7 +747,6 @@ fn draw_inline_ui(
             show_model_picker: flags.show_model_picker,
             show_language_picker: flags.show_language_picker,
             show_approval_picker: flags.show_approval_picker,
-            show_network_picker: flags.show_network_picker,
             show_tui_picker: flags.show_tui_picker,
             show_chat_picker: flags.show_chat_picker,
             show_subagent_picker: flags.show_subagent_picker,
@@ -799,7 +789,6 @@ struct AuxOverlayFlags {
     show_model_picker: bool,
     show_language_picker: bool,
     show_approval_picker: bool,
-    show_network_picker: bool,
     show_tui_picker: bool,
     show_chat_picker: bool,
     show_subagent_picker: bool,
@@ -893,9 +882,6 @@ fn draw_aux_overlay(
         draw_inline_picker(frame, overlay, picker_lines);
     } else if flags.show_approval_picker {
         let picker_lines = build_approval_picker_lines(app, 5);
-        draw_inline_picker(frame, overlay, picker_lines);
-    } else if flags.show_network_picker {
-        let picker_lines = build_network_picker_lines(app, 5);
         draw_inline_picker(frame, overlay, picker_lines);
     } else if flags.show_tui_picker {
         let picker_lines = build_tui_picker_lines(app, 5);

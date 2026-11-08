@@ -5,32 +5,13 @@ import { test } from "vitest";
 import {
   buildSpiritUserAgent,
   configureLlmClientVersion,
-  configureLlmHttpVersion,
   FLEX_SERVICE_TIER_WAIT_MS,
   getLlmClientVersion,
   getLlmDispatcherConstructionsForTests,
   getLlmFetch,
-  getLlmHttpVersion,
   mergeLlmFetchInit,
-  normalizeLlmHttpVersion,
   setLlmFetchTransportOverrideForTests,
 } from "./llm-fetch.js";
-
-test("normalizeLlmHttpVersion accepts common aliases and defaults to http2", () => {
-  assert.equal(normalizeLlmHttpVersion("http1.1"), "http1.1");
-  assert.equal(normalizeLlmHttpVersion("HTTP/1.1"), "http1.1");
-  assert.equal(normalizeLlmHttpVersion("http2"), "http2");
-  assert.equal(normalizeLlmHttpVersion("h2"), "http2");
-  assert.equal(normalizeLlmHttpVersion("unknown"), "http2");
-  assert.equal(normalizeLlmHttpVersion(undefined), "http2");
-});
-
-test("configureLlmHttpVersion updates getLlmHttpVersion", () => {
-  configureLlmHttpVersion("http1.1");
-  assert.equal(getLlmHttpVersion(), "http1.1");
-  configureLlmHttpVersion("http2");
-  assert.equal(getLlmHttpVersion(), "http2");
-});
 
 test("buildSpiritUserAgent formats product and version", () => {
   assert.equal(buildSpiritUserAgent("1.2.3"), `${encodeURIComponent(product.name)}/1.2.3`);
@@ -128,8 +109,7 @@ test("flex dispatcher is constructed with the extended wait window", async () =>
   assert.equal(flex.options.headersTimeout, FLEX_SERVICE_TIER_WAIT_MS);
   assert.equal(flex.options.bodyTimeout, FLEX_SERVICE_TIER_WAIT_MS);
   assert.equal(FLEX_SERVICE_TIER_WAIT_MS, 1_800_000);
-  // Same connection semantics as the standard dispatcher.
-  assert.equal(flex.options.allowH2, getLlmHttpVersion() === "http2");
+  assert.equal("allowH2" in flex.options, false);
   assert.equal(flex.options.pipelining, 0);
 });
 
@@ -158,6 +138,7 @@ test("default and explicitly non-flex fetches keep the standard dispatcher", asy
   assert.ok(standard);
   assert.equal(standard.options.headersTimeout, undefined);
   assert.equal(standard.options.bodyTimeout, undefined);
+  assert.equal("allowH2" in standard.options, false);
   assert.ok(
     getLlmDispatcherConstructionsForTests().filter((entry) => entry.kind === "standard").length >=
       standardBefore,

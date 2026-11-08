@@ -3,11 +3,7 @@ import { createServer, type Server as HttpServer } from "node:http";
 import type { Socket } from "node:net";
 import { PRODUCT_BUILD_ID } from "@spiritagent/product";
 
-import {
-  configureLlmClientVersion,
-  configureLlmHttpVersion,
-  normalizeLlmHttpVersion,
-} from "@spiritagent/agent-core";
+import { configureLlmClientVersion } from "@spiritagent/agent-core";
 
 import { loadOrCreateToken, readCurrentToken, tokenEquals } from "./auth-token.js";
 import {
@@ -81,7 +77,6 @@ import {
   SESSION_TITLE_UPDATED,
   SESSION_EXTENSION_UI_REQUESTED,
   SERVER_SET_LLM_CLIENT_VERSION,
-  SERVER_SET_LLM_HTTP_VERSION,
   WORKSPACE_TRUST_REQUESTED,
   errorResponse,
   isJsonRpcRequest,
@@ -148,7 +143,6 @@ const SESSION_METHODS = new Set([
   SESSION_SET_TODO_SESSION_KEY,
 ]);
 
-const SERVER_METHODS = new Set([SERVER_SET_LLM_HTTP_VERSION, SERVER_SET_LLM_CLIENT_VERSION]);
 import {
   acceptUpgrade,
   isWebSocketUpgrade,
@@ -915,15 +909,10 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
           return;
         }
         default:
-          if (SERVER_METHODS.has(parsed.method)) {
-            if (parsed.method === SERVER_SET_LLM_HTTP_VERSION) {
-              const params = (parsed.params ?? {}) as Record<string, unknown>;
-              configureLlmHttpVersion(normalizeLlmHttpVersion(params["llmHttpVersion"]));
-            } else if (parsed.method === SERVER_SET_LLM_CLIENT_VERSION) {
-              const params = (parsed.params ?? {}) as Record<string, unknown>;
-              if (typeof params["clientVersion"] === "string") {
-                configureLlmClientVersion(params["clientVersion"]);
-              }
+          if (parsed.method === SERVER_SET_LLM_CLIENT_VERSION) {
+            const params = (parsed.params ?? {}) as Record<string, unknown>;
+            if (typeof params["clientVersion"] === "string") {
+              configureLlmClientVersion(params["clientVersion"]);
             }
             conn.send(JSON.stringify(successResponse(parsed.id, null)));
             return;

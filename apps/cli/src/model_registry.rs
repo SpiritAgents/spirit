@@ -606,24 +606,6 @@ impl ModelProfile {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NetworksConfig {
-    #[serde(rename = "llmHttpVersion", default = "default_llm_http_version")]
-    pub llm_http_version: String,
-}
-
-fn default_llm_http_version() -> String {
-    "http2".to_string()
-}
-
-impl Default for NetworksConfig {
-    fn default() -> Self {
-        Self {
-            llm_http_version: default_llm_http_version(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AgentsAttributionToggleConfig {
     #[serde(default)]
@@ -757,8 +739,6 @@ pub struct AppConfig {
     #[serde(default = "default_tui_mode")]
     pub tui: String,
     #[serde(default)]
-    pub networks: NetworksConfig,
-    #[serde(default)]
     pub agents: AgentsConfig,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub permission: Option<PermissionConfig>,
@@ -785,7 +765,6 @@ impl Default for AppConfig {
             secondary_language_model: None,
             ui_locale: None,
             tui: default_tui_mode(),
-            networks: NetworksConfig::default(),
             agents: AgentsConfig::default(),
             permission: None,
             extra: Map::new(),
@@ -1314,8 +1293,8 @@ fn serialize_config(cfg: &AppConfig) -> Result<String> {
 
 fn normalize_config(cfg: &mut AppConfig) {
     cfg.schema_version = SPIRIT_CONFIG_SCHEMA_VERSION;
-    cfg.networks.llm_http_version =
-        crate::ports::normalize_llm_http_version(&cfg.networks.llm_http_version);
+    // Do not round-trip the removed LLM HTTP version setting through the catch-all map.
+    cfg.extra.remove("networks");
     cfg.tui = crate::ports::normalize_tui_mode(&cfg.tui);
 
     if cfg.providers.is_empty() || cfg.providers.iter().all(|entry| entry.models.is_empty()) {

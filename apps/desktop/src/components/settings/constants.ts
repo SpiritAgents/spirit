@@ -22,8 +22,3 @@ export const themeSelectOptions: Array<{ value: ThemePreference; labelKey: strin
   { value: "light", labelKey: "settings.themeLight" },
   { value: "dark", labelKey: "settings.themeDark" },
 ];
-
-export const llmHttpVersionSelectOptions = [
-  { value: "http1.1" as const, labelKey: "settings.llmHttpVersionHttp11" },
-  { value: "http2" as const, labelKey: "settings.llmHttpVersionHttp2" },
-];

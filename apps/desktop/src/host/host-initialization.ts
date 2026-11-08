@@ -6,7 +6,6 @@ import type { PlanSnapshot } from "../types.js";
 import {
   discoverWorkspaceRoot,
   applyLlmClientVersionFromApp,
-  applyLlmHttpVersionFromConfig,
   loadConfig,
   loadHostMetadata,
   mergeRecentWorkspaceRoots,
@@ -90,7 +89,6 @@ export async function ensureInitializedCommand(
     : undefined;
 
   const loadedConfig = await loadConfig();
-  applyLlmHttpVersionFromConfig(loadedConfig);
   applyLlmClientVersionFromApp();
   await ensureBuiltInSkills(spiritDataDir());
   await ensurePersonalMarketplace(spiritDataDir());

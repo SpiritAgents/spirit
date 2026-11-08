@@ -803,7 +803,6 @@ fn process_event_batch(
                 if shell.is_model_list_overlay_active()
                     || shell.is_language_picker_active()
                     || shell.is_approval_picker_active()
-                    || shell.is_network_picker_active()
                     || shell.is_tui_picker_active()
                     || shell.is_chat_picker_active()
                     || shell.is_rewind_picker_active()
@@ -841,7 +840,6 @@ fn process_event_batch(
                 if !shell.is_model_list_overlay_active()
                     && !shell.is_language_picker_active()
                     && !shell.is_approval_picker_active()
-                    && !shell.is_network_picker_active()
                     && !shell.is_tui_picker_active()
                     && !shell.is_chat_picker_active()
                     && !shell.is_rewind_picker_active()
@@ -864,7 +862,6 @@ fn process_event_batch(
                 if !shell.is_model_list_overlay_active()
                     && !shell.is_language_picker_active()
                     && !shell.is_approval_picker_active()
-                    && !shell.is_network_picker_active()
                     && !shell.is_tui_picker_active()
                     && !shell.is_chat_picker_active()
                     && !shell.is_rewind_picker_active()
@@ -958,20 +955,6 @@ fn process_key_event(
             KeyCode::Up => shell.select_prev_approval_level(),
             KeyCode::Down => shell.select_next_approval_level(),
             KeyCode::Enter => shell.confirm_approval_picker(),
-            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                shell.request_quit();
-            }
-            _ => {}
-        }
-        return;
-    }
-
-    if shell.is_network_picker_active() {
-        match key.code {
-            KeyCode::Esc => shell.cancel_network_picker(),
-            KeyCode::Up => shell.select_prev_network_version(),
-            KeyCode::Down => shell.select_next_network_version(),
-            KeyCode::Enter => shell.confirm_network_picker(),
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 shell.request_quit();
             }
@@ -1590,7 +1573,6 @@ fn paste_target(shell: &TuiShell) -> Option<PasteTarget> {
     if shell.is_model_list_overlay_active()
         || shell.is_language_picker_active()
         || shell.is_approval_picker_active()
-        || shell.is_network_picker_active()
         || shell.is_tui_picker_active()
         || shell.is_chat_picker_active()
         || shell.is_rewind_picker_active()

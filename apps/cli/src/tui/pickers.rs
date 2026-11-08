@@ -4,19 +4,10 @@ use crate::model_registry::ModelRef;
 
 pub(crate) const APPROVAL_LEVEL_OPTIONS: [&str; 3] =
     ["default", "auto-approval", "bypass-approval"];
-pub(crate) const LLM_HTTP_VERSION_OPTIONS: [&str; 2] = ["http1.1", "http2"];
 pub(crate) const TUI_MODE_OPTIONS: [&str; 2] = [
     crate::ports::TUI_MODE_INLINE,
     crate::ports::TUI_MODE_FULLSCREEN,
 ];
-
-pub(crate) fn llm_http_version_picker_index(current: &str) -> usize {
-    if crate::ports::normalize_llm_http_version(current) == "http1.1" {
-        0
-    } else {
-        1
-    }
-}
 
 pub(crate) fn tui_mode_picker_index(current: &str) -> usize {
     if crate::ports::normalize_tui_mode(current) == crate::ports::TUI_MODE_FULLSCREEN {
@@ -47,10 +38,6 @@ impl TuiShell {
         self.approval_picker_active = false;
     }
 
-    pub fn cancel_network_picker(&mut self) {
-        self.network_picker_active = false;
-    }
-
     pub fn cancel_tui_picker(&mut self) {
         self.tui_picker_active = false;
     }
@@ -74,11 +61,6 @@ impl TuiShell {
     pub fn select_next_approval_level(&mut self) {
         self.approval_picker_index =
             (self.approval_picker_index + 1) % APPROVAL_LEVEL_OPTIONS.len();
-    }
-
-    pub fn select_next_network_version(&mut self) {
-        self.network_picker_index =
-            (self.network_picker_index + 1) % LLM_HTTP_VERSION_OPTIONS.len();
     }
 
     pub fn select_next_tui_mode(&mut self) {
@@ -114,14 +96,6 @@ impl TuiShell {
             self.approval_picker_index = APPROVAL_LEVEL_OPTIONS.len() - 1;
         } else {
             self.approval_picker_index -= 1;
-        }
-    }
-
-    pub fn select_prev_network_version(&mut self) {
-        if self.network_picker_index == 0 {
-            self.network_picker_index = LLM_HTTP_VERSION_OPTIONS.len() - 1;
-        } else {
-            self.network_picker_index -= 1;
         }
     }
 
@@ -209,19 +183,6 @@ impl TuiShell {
             Err(err) => self.push_agent_message(t!("tui.approval.failed", err = err).into_owned()),
         }
         self.approval_picker_active = false;
-    }
-
-    pub fn confirm_network_picker(&mut self) {
-        let Some(selected) = LLM_HTTP_VERSION_OPTIONS
-            .get(self.network_picker_index)
-            .copied()
-        else {
-            self.network_picker_active = false;
-            return;
-        };
-
-        self.persist_llm_http_version(selected);
-        self.network_picker_active = false;
     }
 
     pub fn confirm_tui_picker(&mut self) {
@@ -387,7 +348,6 @@ impl TuiShell {
         self.model_picker_active = false;
         self.language_picker_active = false;
         self.approval_picker_active = false;
-        self.network_picker_active = false;
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;
@@ -437,34 +397,6 @@ impl TuiShell {
         self.approval_picker_index = approval_level_picker_index(self.runtime.approval_level());
         self.reset_primary_picker_overlay();
         self.approval_picker_active = true;
-    }
-
-    pub(super) fn open_network_picker(&mut self) {
-        self.network_picker_index =
-            llm_http_version_picker_index(&self.runtime.config().networks.llm_http_version);
-        self.reset_primary_picker_overlay();
-        self.network_picker_active = true;
-    }
-
-    pub(super) fn persist_llm_http_version(&mut self, version: &str) {
-        let normalized = crate::ports::normalize_llm_http_version(version);
-        let mut config = self.runtime.config().clone();
-        config.networks.llm_http_version = normalized.clone();
-        if let Err(err) = self.config_store.save(&config) {
-            self.push_agent_message(t!("tui.networks.save_failed", err = err).into_owned());
-            return;
-        }
-        self.runtime.store_config(config);
-        match self.runtime.set_llm_http_version(&normalized) {
-            Ok(()) => self.push_agent_message(
-                t!(
-                    "tui.networks.changed",
-                    level = crate::ui::llm_http_version_label(&normalized)
-                )
-                .into_owned(),
-            ),
-            Err(err) => self.push_agent_message(t!("tui.networks.failed", err = err).into_owned()),
-        }
     }
 
     pub(super) fn open_tui_picker(&mut self) {

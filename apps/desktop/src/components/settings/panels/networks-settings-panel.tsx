@@ -2,18 +2,10 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import i18n from "@/lib/i18n";
-import { llmHttpVersionSelectOptions } from "@/components/settings/constants";
 import { SettingsRow } from "@/components/settings/settings-row";
 import type { SettingsViewProps } from "@/components/settings/types";
 import { Button } from "@/components/ui/button";
 import { DesktopFormInput } from "@/components/ui/desktop-form-field";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import type { DesktopSnapshot } from "@/types";
@@ -60,35 +52,6 @@ export function NetworksSettingsPanel({
 
   return (
     <div className="space-y-6">
-      <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
-        <SettingsRow
-          label={t("settings.llmHttpVersion")}
-          description={t("settings.llmHttpVersionDescription")}
-          htmlFor="settings-llm-http-version-select"
-        >
-          <Select
-            value={settings.llmHttpVersion}
-            onValueChange={(value) =>
-              void onSavePatch({ llmHttpVersion: value as "http1.1" | "http2" })
-            }
-          >
-            <SelectTrigger
-              id="settings-llm-http-version-select"
-              className="w-full sm:min-w-[12rem]"
-            >
-              <SelectValue placeholder={t("settings.llmHttpVersion")} />
-            </SelectTrigger>
-            <SelectContent>
-              {llmHttpVersionSelectOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {t(opt.labelKey)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </SettingsRow>
-      </div>
-
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">{t("settings.remoteControlSection")}</p>
         <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
