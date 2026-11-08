@@ -1979,6 +1979,27 @@ export interface DesktopWebHostDeviceSnapshot {
   status: "online" | "offline";
 }
 
+export interface CreateWebHostDeviceRequest {
+  name?: string;
+  origin: string;
+}
+
+export interface RenameWebHostDeviceRequest {
+  deviceId: string;
+  name: string;
+}
+
+export interface RevokeWebHostDeviceRequest {
+  deviceId: string;
+}
+
+export interface DesktopWebHostDeviceEnrollment {
+  device: DesktopWebHostDeviceSnapshot;
+  token: string;
+  url: string;
+  qrCodeSvg: string;
+}
+
 export interface DesktopWebHostConfigSnapshot {
   enabled: boolean;
   host: string;

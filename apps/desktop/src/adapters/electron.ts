@@ -30,6 +30,15 @@ export async function createElectronHostApi(): Promise<HostApi> {
     updateConfig(request) {
       return bridge.updateConfig(request);
     },
+    createWebHostDevice(request) {
+      return bridge.createWebHostDevice(request);
+    },
+    renameWebHostDevice(request) {
+      return bridge.renameWebHostDevice(request);
+    },
+    revokeWebHostDevice(request) {
+      return bridge.revokeWebHostDevice(request);
+    },
     addModel(request) {
       return bridge.addModel(request);
     },

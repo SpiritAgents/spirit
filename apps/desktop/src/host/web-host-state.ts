@@ -15,6 +15,7 @@ let runtimeStatus: DesktopWebHostStatusSnapshot = {
 };
 
 const activeDeviceConnections = new Map<string, Set<() => void>>();
+const revokedDeviceIds = new Set<string>();
 
 export function setDesktopWebHostRuntimeStatus(status: DesktopWebHostStatusSnapshot): void {
   runtimeStatus = { ...status };
@@ -28,6 +29,10 @@ export function registerDesktopWebHostDeviceConnection(
   deviceId: string,
   close: () => void,
 ): () => void {
+  if (revokedDeviceIds.has(deviceId)) {
+    close();
+    return () => {};
+  }
   const connections = activeDeviceConnections.get(deviceId) ?? new Set<() => void>();
   connections.add(close);
   activeDeviceConnections.set(deviceId, connections);
@@ -44,6 +49,11 @@ export function registerDesktopWebHostDeviceConnection(
 }
 
 export function closeDesktopWebHostDeviceConnections(deviceId: string): void {
+  revokedDeviceIds.add(deviceId);
+  closeDeviceConnections(deviceId);
+}
+
+function closeDeviceConnections(deviceId: string): void {
   const connections = activeDeviceConnections.get(deviceId);
   if (!connections) {
     return;
@@ -56,7 +66,7 @@ export function closeDesktopWebHostDeviceConnections(deviceId: string): void {
 
 export function closeAllDesktopWebHostDeviceConnections(): void {
   for (const deviceId of activeDeviceConnections.keys()) {
-    closeDesktopWebHostDeviceConnections(deviceId);
+    closeDeviceConnections(deviceId);
   }
 }
 

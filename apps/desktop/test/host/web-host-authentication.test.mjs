@@ -206,4 +206,10 @@ test("tracks concurrent streams and closes only the selected device connections"
   unregisterFirst();
   closeDesktopWebHostDeviceConnections(deviceB.id);
   assert.equal(secondCloseCount, 1);
+
+  registerDesktopWebHostDeviceConnection(deviceB.id, () => {
+    secondCloseCount += 1;
+  });
+  assert.equal(secondCloseCount, 2);
+  assert.equal(isDesktopWebHostDeviceOnline(deviceB.id), false);
 });

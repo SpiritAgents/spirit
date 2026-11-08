@@ -392,11 +392,18 @@ async function invokeMainDesktopHostCommand(
   payload?: unknown,
 ) {
   const result = await invokeDesktopHostCommand(command, payload);
-  if (isDesktopSnapshot(result) && (command === "bootstrap" || command === "updateConfig")) {
+  const shouldSyncWebHost =
+    command === "createWebHostDevice" ||
+    command === "renameWebHostDevice" ||
+    command === "revokeWebHostDevice" ||
+    ((command === "bootstrap" || command === "updateConfig") && isDesktopSnapshot(result));
+  if (shouldSyncWebHost) {
     const config = await loadConfig();
     await syncDesktopWebHostWithConfig(config.webHost);
-    // Toggling the tray must take effect immediately; it does not go through the session-list trailing-edge coalescing.
-    void syncStatusTray();
+    if (command === "bootstrap" || command === "updateConfig") {
+      // Toggling the tray must take effect immediately; it does not go through the session-list trailing-edge coalescing.
+      void syncStatusTray();
+    }
   }
   return result;
 }
@@ -407,8 +414,12 @@ async function handleDesktopWebHostCommandResult(
   result: unknown,
 ): Promise<void> {
   if (
-    (command !== "updateConfig" && command !== "recordWebHostDeviceConnection") ||
-    !isDesktopSnapshot(result)
+    (command !== "updateConfig" &&
+      command !== "recordWebHostDeviceConnection" &&
+      command !== "createWebHostDevice" &&
+      command !== "renameWebHostDevice" &&
+      command !== "revokeWebHostDevice") ||
+    (command !== "createWebHostDevice" && !isDesktopSnapshot(result))
   ) {
     return;
   }

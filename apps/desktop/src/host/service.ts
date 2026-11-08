@@ -239,6 +239,9 @@ import {
   rememberWorkspaceRootCommand,
   forgetWorkspaceRootCommand,
   recordWebHostDeviceConnectionCommand,
+  createWebHostDeviceCommand,
+  renameWebHostDeviceCommand,
+  revokeWebHostDeviceCommand,
   statHostTextFileCommand,
   writeHostTextFileCommand,
   writeWorkspaceTextFileCommand,
@@ -1673,6 +1676,24 @@ export class DesktopHostService {
       deviceId,
       metadata,
     );
+  }
+
+  async createWebHostDevice(
+    request: import("../types.js").CreateWebHostDeviceRequest,
+  ): Promise<import("../types.js").DesktopWebHostDeviceEnrollment> {
+    return createWebHostDeviceCommand(this.workspaceGitCommandContext(), request);
+  }
+
+  async renameWebHostDevice(
+    request: import("../types.js").RenameWebHostDeviceRequest,
+  ): Promise<DesktopSnapshot> {
+    return renameWebHostDeviceCommand(this.workspaceGitCommandContext(), request);
+  }
+
+  async revokeWebHostDevice(
+    request: import("../types.js").RevokeWebHostDeviceRequest,
+  ): Promise<DesktopSnapshot> {
+    return revokeWebHostDeviceCommand(this.workspaceGitCommandContext(), request);
   }
 
   async previewModels(request: PreviewModelsRequest): Promise<PreviewModelsResponse> {

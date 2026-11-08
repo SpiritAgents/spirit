@@ -143,6 +143,15 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   updateConfig(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "updateConfig", { request });
   },
+  createWebHostDevice(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "createWebHostDevice", { request });
+  },
+  renameWebHostDevice(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "renameWebHostDevice", { request });
+  },
+  revokeWebHostDevice(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "revokeWebHostDevice", { request });
+  },
   addModel(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "addModel", { request });
   },

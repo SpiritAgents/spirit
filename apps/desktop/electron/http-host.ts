@@ -1,4 +1,4 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 import { product } from "@spiritagent/product";
 import { readFile, stat } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
@@ -7,6 +7,7 @@ import path from "node:path";
 
 import type { HostCommandName } from "../src/host/contracts.js";
 import type { DesktopWebHostDeviceRecord } from "../src/host/storage.js";
+import { hashDesktopWebDeviceToken } from "../src/host/web-host-devices.js";
 import {
   closeAllDesktopWebHostDeviceConnections,
   registerDesktopWebHostDeviceConnection,
@@ -30,6 +31,11 @@ export type DesktopHostCommandResultHandler = (
 ) => void | Promise<void>;
 
 export type DesktopHostUpdateSubscriber = (listener: (snapshot: unknown) => void) => () => void;
+
+export {
+  createDesktopWebDeviceToken,
+  hashDesktopWebDeviceToken,
+} from "../src/host/web-host-devices.js";
 
 export interface DesktopHttpHostState {
   host: string;
@@ -248,14 +254,6 @@ export function resolveDesktopWebHostFromEnv(): { host: string; port: number } {
   return { host, port };
 }
 
-export function createDesktopWebDeviceToken(): string {
-  return randomBytes(32).toString("base64url");
-}
-
-export function hashDesktopWebDeviceToken(token: string): string {
-  return createHash("sha256").update(token, "utf8").digest("hex");
-}
-
 async function handleApiRequest({
   request,
   response,
@@ -322,11 +320,11 @@ async function handleApiRequest({
         unsubscribe();
         resolve();
       };
+      response.once("close", close);
+      request.once("aborted", close);
       unregisterConnection = registerDesktopWebHostDeviceConnection(device.id, () => {
         response.end();
       });
-      response.once("close", close);
-      request.once("aborted", close);
     });
     return;
   }

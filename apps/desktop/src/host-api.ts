@@ -104,6 +104,10 @@ import type {
   SubmitGitChipRequest,
   SubmitSkillSlashRequest,
   UpdateConfigRequest,
+  CreateWebHostDeviceRequest,
+  RenameWebHostDeviceRequest,
+  RevokeWebHostDeviceRequest,
+  DesktopWebHostDeviceEnrollment,
   ApprovalLevel,
   LocalFileComposerRoute,
   WorkLocationKind,
@@ -119,6 +123,11 @@ export interface HostApi {
   forgetWorkspace?(request: ForgetWorkspaceRequest): Promise<DesktopSnapshot>;
   commitChanges(request: CommitChangesRequest): Promise<DesktopSnapshot>;
   updateConfig(request: UpdateConfigRequest): Promise<DesktopSnapshot>;
+  createWebHostDevice?(
+    request: CreateWebHostDeviceRequest,
+  ): Promise<DesktopWebHostDeviceEnrollment>;
+  renameWebHostDevice?(request: RenameWebHostDeviceRequest): Promise<DesktopSnapshot>;
+  revokeWebHostDevice?(request: RevokeWebHostDeviceRequest): Promise<DesktopSnapshot>;
   addModel(request: AddModelRequest): Promise<DesktopSnapshot>;
   addProviderModels(request: AddProviderModelsRequest): Promise<DesktopSnapshot>;
   previewModels(request: PreviewModelsRequest): Promise<PreviewModelsResponse>;

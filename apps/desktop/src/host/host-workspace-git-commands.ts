@@ -1,4 +1,5 @@
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 
 import {
   createHostDreamStore,
@@ -17,6 +18,10 @@ import type {
   CheckoutGitBranchRequest,
   CommitChangesRequest,
   DesktopDreamOverviewItem,
+  CreateWebHostDeviceRequest,
+  RenameWebHostDeviceRequest,
+  RevokeWebHostDeviceRequest,
+  DesktopWebHostDeviceEnrollment,
   DesktopGitSnapshot,
   DesktopSnapshot,
   GitHistorySnapshot,
@@ -73,6 +78,13 @@ import {
   spiritDataDir,
   type DesktopConfigFile,
 } from "./storage.js";
+import {
+  buildDesktopWebDeviceUrl,
+  createDesktopWebDeviceQrCodeSvg,
+  createDesktopWebDeviceToken,
+  hashDesktopWebDeviceToken,
+} from "./web-host-devices.js";
+import { closeDesktopWebHostDeviceConnections } from "./web-host-state.js";
 import type { EphemeralSessionRecord } from "./sessions.js";
 
 interface HostWorkspaceGitState {
@@ -211,6 +223,83 @@ export async function recordWebHostDeviceConnectionCommand(
       ),
     });
     await saveConfig(state.config);
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function createWebHostDeviceCommand(
+  ctx: HostWorkspaceGitCommandContext,
+  request: CreateWebHostDeviceRequest,
+): Promise<DesktopWebHostDeviceEnrollment> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const state = ctx.requireState();
+    const id = randomUUID();
+    const token = createDesktopWebDeviceToken();
+    const url = buildDesktopWebDeviceUrl(request.origin, token);
+    const qrCodeSvg = await createDesktopWebDeviceQrCodeSvg(url);
+    const name = request.name?.trim() || `Device ${id.slice(0, 8)}`;
+    const device = {
+      id,
+      tokenHash: hashDesktopWebDeviceToken(token),
+      name,
+      createdAt: new Date().toISOString(),
+    };
+    state.config.webHost = normalizeWebHostConfig({
+      ...state.config.webHost,
+      devices: [...state.config.webHost.devices, device],
+    });
+    await saveConfig(state.config);
+    const snapshot = ctx.buildSnapshot();
+    const snapshotDevice = snapshot.webHost.devices.find((candidate) => candidate.id === id);
+    if (!snapshotDevice) {
+      throw new Error("Created device is missing from the snapshot.");
+    }
+    return { device: snapshotDevice, token, url, qrCodeSvg };
+  });
+}
+
+export async function renameWebHostDeviceCommand(
+  ctx: HostWorkspaceGitCommandContext,
+  request: RenameWebHostDeviceRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const state = ctx.requireState();
+    const name = request.name.trim();
+    if (!name) {
+      throw new Error("Device name is required.");
+    }
+    if (!state.config.webHost.devices.some((device) => device.id === request.deviceId)) {
+      throw new Error("Unknown Remote Control device.");
+    }
+    state.config.webHost = normalizeWebHostConfig({
+      ...state.config.webHost,
+      devices: state.config.webHost.devices.map((device) =>
+        device.id === request.deviceId ? { ...device, name } : device,
+      ),
+    });
+    await saveConfig(state.config);
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function revokeWebHostDeviceCommand(
+  ctx: HostWorkspaceGitCommandContext,
+  request: RevokeWebHostDeviceRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const state = ctx.requireState();
+    if (!state.config.webHost.devices.some((device) => device.id === request.deviceId)) {
+      throw new Error("Unknown Remote Control device.");
+    }
+    state.config.webHost = normalizeWebHostConfig({
+      ...state.config.webHost,
+      devices: state.config.webHost.devices.filter((device) => device.id !== request.deviceId),
+    });
+    await saveConfig(state.config);
+    closeDesktopWebHostDeviceConnections(request.deviceId);
     return ctx.buildSnapshot();
   });
 }
