@@ -845,6 +845,9 @@ importers:
       '@spiritagent/product':
         specifier: workspace:*
         version: link:../product
+      '@spiritagent/remote-control':
+        specifier: workspace:*
+        version: link:../remote-control
     devDependencies:
       '@types/node':
         specifier: 26.6.6

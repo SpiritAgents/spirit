@@ -274,6 +274,9 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       }
       attached.clear();
     }
+    if (state?.clientId?.trim()) {
+      void hostService.cancelRemoteControlOwner(state.clientId.trim());
+    }
     clientStates.delete(conn);
     log(`[spirit-server] client disconnected (${connections.size} remaining)`);
     if (connections.size > 0) {
@@ -373,7 +376,10 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     log,
   });
 
-  const hostService = new HostService(dataDir, sessionManager);
+  const hostService = new HostService(dataDir, sessionManager, (method, params) =>
+    broadcast(method, params),
+  );
+  await hostService.initializeRemoteControl();
 
   /** Params readers with strict-but-minimal validation at the RPC boundary. */
   const readSessionId = (params: Record<string, unknown>): string => {

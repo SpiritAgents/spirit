@@ -34,7 +34,8 @@
   "dependencies": {
     "@spiritagent/agent-core": "workspace:*",
     "@spiritagent/host-internal": "workspace:*",
-    "@spiritagent/product": "workspace:*"
+    "@spiritagent/product": "workspace:*",
+    "@spiritagent/remote-control": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "26.6.6",

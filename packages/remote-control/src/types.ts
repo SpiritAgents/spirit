@@ -25,7 +25,7 @@ export interface RemoteControlPendingPairing {
   ownerClientId: string;
   createdAt: string;
   name?: string;
-  request?: RemoteControlRequestMetadata;
+  request?: RemoteControlRequestMetadata | undefined;
 }
 
 export interface RemoteControlConfig {
@@ -34,7 +34,7 @@ export interface RemoteControlConfig {
   port: number;
   hasCompletedPairing: boolean;
   devices: RemoteControlDeviceRecord[];
-  pendingPairing?: RemoteControlPendingPairing;
+  pendingPairing?: RemoteControlPendingPairing | undefined;
 }
 
 export interface RemoteControlState extends Omit<
@@ -42,7 +42,7 @@ export interface RemoteControlState extends Omit<
   "devices" | "pendingPairing"
 > {
   devices: RemoteControlDeviceSnapshot[];
-  pendingPairing?: Omit<RemoteControlPendingPairing, "tokenHash">;
+  pendingPairing?: Omit<RemoteControlPendingPairing, "tokenHash"> | undefined;
 }
 
 export interface RemoteControlEnrollment {
