@@ -134,6 +134,84 @@ pub(crate) fn new_mcp_add_form() -> BottomFormView {
     form
 }
 
+pub(crate) fn new_remote_pair_form(enrollment: &Value) -> BottomFormView {
+    let pairing_id = enrollment["pairingId"].as_str().unwrap_or("").to_string();
+    let qr = enrollment["qrCodeTerminal"]
+        .as_str()
+        .unwrap_or("")
+        .to_string();
+    let url = enrollment["url"].as_str().unwrap_or("").to_string();
+    BottomFormView {
+        kind: BottomFormKind::RemotePair {
+            pairing_id,
+            awaiting_approval: false,
+        },
+        title: t!("form.remote.title").into_owned(),
+        fields: vec![
+            BottomFormFieldView {
+                label: String::new(),
+                help: String::new(),
+                editor: BottomFormFieldEditorView::Section { text: qr },
+            },
+            BottomFormFieldView {
+                label: t!("form.remote.url").into_owned(),
+                help: String::new(),
+                editor: BottomFormFieldEditorView::Text {
+                    value: url,
+                    placeholder: String::new(),
+                    cursor: 0,
+                    mask: false,
+                    disabled: true,
+                },
+            },
+            BottomFormFieldView {
+                label: String::new(),
+                help: String::new(),
+                editor: BottomFormFieldEditorView::Section {
+                    text: t!("form.remote.waiting").into_owned(),
+                },
+            },
+            BottomFormFieldView {
+                label: t!("form.remote.action").into_owned(),
+                help: String::new(),
+                editor: BottomFormFieldEditorView::Choice {
+                    options: vec![t!("form.remote.cancel").into_owned()],
+                    selected: 0,
+                },
+            },
+        ],
+        selected_field: 3,
+        scroll_offset: 0,
+        footer_hint: t!("form.remote.footer").into_owned(),
+    }
+}
+
+pub(crate) fn remote_pair_form_apply_request(form: &mut BottomFormView, request: &Value) {
+    let BottomFormKind::RemotePair {
+        awaiting_approval, ..
+    } = &mut form.kind
+    else {
+        return;
+    };
+    *awaiting_approval = true;
+    let user_agent = request["userAgent"].as_str().unwrap_or("unknown");
+    let ip = request["ip"].as_str().unwrap_or("unknown");
+    if form.fields.len() >= 3 {
+        form.fields[2].editor = BottomFormFieldEditorView::Section {
+            text: t!("form.remote.request", ua = user_agent, ip = ip).into_owned(),
+        };
+    }
+    if form.fields.len() >= 4 {
+        form.fields[3].editor = BottomFormFieldEditorView::Choice {
+            options: vec![
+                t!("form.remote.deny").into_owned(),
+                t!("form.remote.allow").into_owned(),
+            ],
+            selected: 0,
+        };
+    }
+}
+
 pub(crate) fn new_hook_add_form(workspace_scope_available: bool) -> BottomFormView {
     let scope_options = if workspace_scope_available {
         vec![
@@ -2108,6 +2186,7 @@ fn normalize_inserted_text(form: &BottomFormView, text: &str) -> String {
         | BottomFormKind::Rules
         | BottomFormKind::Skills
         | BottomFormKind::Extensions => text.replace("\r\n", " ").replace(['\r', '\n'], " "),
+        BottomFormKind::RemotePair { .. } => text.replace("\r\n", " ").replace(['\r', '\n'], " "),
     }
 }
 
@@ -2266,6 +2345,39 @@ enum McpAddTransportKind {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn remote_pair_form_switches_from_waiting_to_approval_choices() {
+        let enrollment = serde_json::json!({
+            "pairingId": "pending-test",
+            "qrCodeTerminal": "fake-qr",
+            "url": "http://127.0.0.1:7788/?token=fake-token",
+        });
+        let mut form = super::new_remote_pair_form(&enrollment);
+        assert!(matches!(
+            form.kind,
+            crate::view::BottomFormKind::RemotePair {
+                awaiting_approval: false,
+                ..
+            }
+        ));
+        super::remote_pair_form_apply_request(
+            &mut form,
+            &serde_json::json!({ "userAgent": "Example Agent", "ip": "127.0.0.1" }),
+        );
+        assert!(matches!(
+            form.kind,
+            crate::view::BottomFormKind::RemotePair {
+                awaiting_approval: true,
+                ..
+            }
+        ));
+        let last = form.fields.last().expect("action field");
+        let crate::view::BottomFormFieldEditorView::Choice { options, .. } = &last.editor else {
+            panic!("expected choice field");
+        };
+        assert_eq!(options.len(), 2);
+    }
+
     use super::{
         HOOK_ADD_FIELD_COMMAND, HOOK_ADD_FIELD_FAIL_CLOSED, HOOK_ADD_FIELD_TIMEOUT,
         MetadataFieldKind, activate, hook_add_form_enter_toggles_checkbox, insert_text,

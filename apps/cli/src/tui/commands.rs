@@ -682,6 +682,113 @@ impl TuiShell {
         }
     }
 
+    pub(crate) fn handle_remote_slash(&mut self, args: &[&str]) {
+        if args.first() == Some(&"pair") {
+            let name = args.get(1).map(|value| (*value).to_string());
+            if let Err(err) = self.start_remote_pair(name) {
+                self.push_agent_message(err.to_string());
+            }
+            return;
+        }
+
+        let result = (|| -> Result<serde_json::Value> {
+            let action = args.first().copied().unwrap_or("status");
+            let method = match action {
+                "enable" => "remote.enable",
+                "disable" => "remote.disable",
+                "status" | "list" => "remote.getState",
+                "config" => "remote.configure",
+                "rename" => "remote.renameDevice",
+                "revoke" => "remote.revokeDevice",
+                _ => {
+                    return Err(anyhow!(
+                        "usage: /remote enable|disable|status|config|pair|list|rename|revoke"
+                    ));
+                }
+            };
+            let params = match action {
+                "enable" | "config" => Self::remote_config_params(&args[1..]),
+                "rename" => serde_json::json!({
+                    "deviceId": args.get(1).copied().unwrap_or(""),
+                    "name": args.get(2..).unwrap_or(&[]).join(" "),
+                }),
+                "revoke" => serde_json::json!({ "deviceId": args.get(1).copied().unwrap_or("") }),
+                _ => serde_json::json!({}),
+            };
+            self.runtime.call_remote_control(method, params)
+        })();
+        match result {
+            Ok(state) => self.push_agent_message(Self::remote_state_text(&state)),
+            Err(err) => self.push_agent_message(err.to_string()),
+        }
+    }
+
+    fn start_remote_pair(&mut self, name: Option<String>) -> Result<()> {
+        let state = self
+            .runtime
+            .call_remote_control("remote.getState", serde_json::json!({}))?;
+        let origin = format!(
+            "http://{}:{}",
+            state["host"].as_str().unwrap_or("127.0.0.1"),
+            state["port"].as_u64().unwrap_or(7788)
+        );
+        let mut params = serde_json::json!({
+            "ownerClientId": format!("cli-{}", std::process::id()),
+            "origin": origin,
+            "output": "terminal",
+        });
+        if let Some(name) = name {
+            params["name"] = serde_json::json!(name);
+        }
+        let enrollment = self.runtime.call_remote_control("remote.pair", params)?;
+        self.forms.active = Some(crate::shell::bottom_form::new_remote_pair_form(&enrollment));
+        Ok(())
+    }
+
+    fn remote_config_params(args: &[&str]) -> serde_json::Value {
+        let mut params = serde_json::json!({});
+        match args {
+            ["host", value] => params["host"] = serde_json::json!(value),
+            ["port", value] => {
+                params["port"] = serde_json::json!(value.parse::<u16>().unwrap_or(0))
+            }
+            [host] => params["host"] = serde_json::json!(host),
+            [host, port] => {
+                params["host"] = serde_json::json!(host);
+                params["port"] = serde_json::json!(port.parse::<u16>().unwrap_or(0));
+            }
+            _ => {}
+        }
+        params
+    }
+
+    fn remote_state_text(state: &serde_json::Value) -> String {
+        let mut lines = vec![format!(
+            "Remote Control: {} ({}:{})",
+            if state["enabled"].as_bool() == Some(true) {
+                "enabled"
+            } else {
+                "disabled"
+            },
+            state["host"].as_str().unwrap_or("127.0.0.1"),
+            state["port"].as_u64().unwrap_or(7788),
+        )];
+        let devices = state["devices"].as_array().cloned().unwrap_or_default();
+        lines.push(format!("Devices: {}", devices.len()));
+        for device in devices {
+            lines.push(format!(
+                "- {} | {} | created {} | last {} | IP {} | UA {}",
+                device["id"].as_str().unwrap_or("unknown"),
+                device["name"].as_str().unwrap_or("Unnamed Device"),
+                device["createdAt"].as_str().unwrap_or("unknown"),
+                device["lastConnectedAt"].as_str().unwrap_or("never"),
+                device["lastIp"].as_str().unwrap_or("unknown"),
+                device["lastUserAgent"].as_str().unwrap_or("unknown"),
+            ));
+        }
+        lines.join("\n")
+    }
+
     pub(crate) fn handle_language_slash(&mut self, args: &[&str]) {
         match args {
             [] => self.open_language_picker(),
