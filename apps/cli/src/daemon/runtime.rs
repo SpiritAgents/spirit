@@ -52,6 +52,7 @@ pub(crate) struct DaemonRuntime {
     pub(crate) config: AppConfig,
     pub(crate) secret_store: Arc<dyn SecretStore>,
     pub(crate) workspace_root: PathBuf,
+    remote_control_confirmation: Option<Value>,
     pub(crate) sync: RuntimeSyncState,
     pub(crate) rewind: rewind::StoredDesktopRewindMetadata,
     pub(crate) plan_metadata: PlanMetadata,
@@ -159,6 +160,7 @@ impl DaemonRuntime {
             config,
             secret_store,
             workspace_root,
+            remote_control_confirmation: None,
             sync: RuntimeSyncState::new(),
             rewind: rewind::create_desktop_rewind_metadata(),
             plan_metadata: bootstrap_plan_metadata(),
@@ -375,6 +377,7 @@ impl DaemonRuntime {
         if self.daemon_failed {
             return Err(anyhow!("daemon connection is already in a failed state."));
         }
+
         let mut params = params.unwrap_or(Value::Null);
         if method.starts_with("session.") {
             let session_id = self
@@ -397,6 +400,10 @@ impl DaemonRuntime {
             }
             anyhow!("runtime-error: {}", message)
         })
+    }
+
+    pub(crate) fn take_remote_control_confirmation(&mut self) -> Option<Value> {
+        self.remote_control_confirmation.take()
     }
 
     pub(crate) fn handle_daemon_error(&mut self, err: anyhow::Error) {
@@ -477,6 +484,9 @@ impl DaemonRuntime {
         }
 
         match method {
+            "remote.confirmationRequested" => {
+                self.remote_control_confirmation = Some(params);
+            }
             "runtime.event" if for_this_session => {
                 let event_value = params.get("event").cloned().unwrap_or(Value::Null);
                 match serde_json::from_value::<BridgeRuntimeEvent>(event_value) {

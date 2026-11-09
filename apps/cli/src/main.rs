@@ -105,6 +105,10 @@ enum Commands {
         #[command(subcommand)]
         action: HookAction,
     },
+    Remote {
+        #[command(subcommand)]
+        action: RemoteAction,
+    },
     Permission {
         #[command(subcommand)]
         action: PermissionAction,
@@ -277,6 +281,38 @@ enum PermissionAction {
 }
 
 #[derive(Subcommand)]
+enum RemoteAction {
+    Enable {
+        #[arg(long)]
+        host: Option<String>,
+        #[arg(long)]
+        port: Option<u16>,
+    },
+    Disable,
+    Status,
+    Config {
+        #[arg(long)]
+        host: Option<String>,
+        #[arg(long)]
+        port: Option<u16>,
+    },
+    Pair {
+        #[arg(long)]
+        name: Option<String>,
+        #[arg(long)]
+        origin: Option<String>,
+    },
+    List,
+    Rename {
+        device_id: String,
+        name: String,
+    },
+    Revoke {
+        device_id: String,
+    },
+}
+
+#[derive(Subcommand)]
 enum ExtensionAction {
     List,
     Import {
@@ -367,6 +403,9 @@ fn main() -> Result<()> {
         Some(Commands::Config { action }) => handle_config_cli(into_config_command(action))?,
         Some(Commands::Mcp { action }) => handle_mcp_cli(into_mcp_command(action))?,
         Some(Commands::Hook { action }) => handle_hooks_cli(into_hook_command(action))?,
+        Some(Commands::Remote { action }) => {
+            spirit::remote::handle_remote_cli(into_remote_command(action))?
+        }
         Some(Commands::Permission { action }) => {
             handle_permissions_cli(into_permission_command(action))?
         }
@@ -376,6 +415,21 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn into_remote_command(action: RemoteAction) -> spirit::RemoteCommand {
+    match action {
+        RemoteAction::Enable { host, port } => spirit::RemoteCommand::Enable { host, port },
+        RemoteAction::Disable => spirit::RemoteCommand::Disable,
+        RemoteAction::Status => spirit::RemoteCommand::Status,
+        RemoteAction::Config { host, port } => spirit::RemoteCommand::Config { host, port },
+        RemoteAction::Pair { name, origin } => spirit::RemoteCommand::Pair { name, origin },
+        RemoteAction::List => spirit::RemoteCommand::List,
+        RemoteAction::Rename { device_id, name } => {
+            spirit::RemoteCommand::Rename { device_id, name }
+        }
+        RemoteAction::Revoke { device_id } => spirit::RemoteCommand::Revoke { device_id },
+    }
 }
 
 fn into_model_command(action: ModelAction) -> ModelCommand {
@@ -716,6 +770,7 @@ fn run_app(
         }
         shell.sync_inline_scrollback(terminal)?;
         let completed = terminal.draw(|frame| {
+            shell.sync_remote_control_confirmation();
             let app = shell.view_model();
             let feedback = ui::draw_ui(frame, &app, shell.ui_runtime_state_mut());
             if let Some(bottom) = feedback.inline_content_bottom {
@@ -1726,6 +1781,41 @@ fn shift_pressed_fallback() -> bool {
 mod tests {
     use super::*;
     use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
+
+    #[test]
+    fn remote_management_subcommands_parse() {
+        let cli = Cli::try_parse_from([
+            "spirit",
+            "remote",
+            "enable",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "7788",
+        ])
+        .expect("parse remote enable");
+        match cli.command {
+            Some(Commands::Remote {
+                action: RemoteAction::Enable { host, port },
+            }) => {
+                assert_eq!(host.as_deref(), Some("127.0.0.1"));
+                assert_eq!(port, Some(7788));
+            }
+            _ => panic!("unexpected command"),
+        }
+
+        let pair = Cli::try_parse_from(["spirit", "remote", "pair", "--name", "Test Device"])
+            .expect("parse remote pair");
+        match pair.command {
+            Some(Commands::Remote {
+                action: RemoteAction::Pair { name, origin },
+            }) => {
+                assert_eq!(name.as_deref(), Some("Test Device"));
+                assert_eq!(origin, None);
+            }
+            _ => panic!("unexpected command"),
+        }
+    }
 
     #[test]
     fn prompt_trailing_absorbs_lookalike_flags() {

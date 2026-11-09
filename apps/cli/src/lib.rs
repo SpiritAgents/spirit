@@ -36,6 +36,7 @@ pub mod product;
 pub mod provider_presets;
 #[cfg(feature = "tui")]
 pub mod relative_time;
+pub mod remote;
 pub mod rewind;
 pub mod rules;
 pub mod runtime_handle;
@@ -64,9 +65,9 @@ rust_i18n::i18n!("locales", fallback = "en");
 
 pub use cli::{
     ConfigCommand, ExtensionCommand, ExtensionMarketplaceCommand, HookCommand, McpCommand,
-    ModelAddCommand, ModelCommand, PermissionCommand, handle_config_cli, handle_extension_cli,
-    handle_extension_marketplace_cli, handle_hooks_cli, handle_mcp_cli, handle_model_cli,
-    handle_permissions_cli,
+    ModelAddCommand, ModelCommand, PermissionCommand, RemoteCommand, handle_config_cli,
+    handle_extension_cli, handle_extension_marketplace_cli, handle_hooks_cli, handle_mcp_cli,
+    handle_model_cli, handle_permissions_cli,
 };
 pub use cli_bootstrap::{
     GlobalCliOptions, bootstrap_config, print_skills_stub, resolve_session_tui_mode,
