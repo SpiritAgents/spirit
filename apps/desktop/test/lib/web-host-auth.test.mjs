@@ -98,3 +98,44 @@ test("an empty query token clears a stale credential before bootstrap", async ()
   const [, init] = fetchMock.mock.calls[0];
   assert.equal(init.headers.Authorization, undefined);
 });
+
+test("waits for pairing approval without clearing the device token", async () => {
+  vi.useFakeTimers();
+  window.localStorage.setItem(storageKey, "pending-fake-token");
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(jsonResponse({ code: "DEVICE_APPROVAL_REQUIRED" }, 403))
+    .mockResolvedValueOnce(jsonResponse({}));
+  vi.stubGlobal("fetch", fetchMock);
+
+  const bootstrap = createWebHostApi().bootstrap();
+  await vi.advanceTimersByTimeAsync(0);
+  assert.equal(fetchMock.mock.calls.length, 1);
+  await vi.advanceTimersByTimeAsync(1000);
+  await bootstrap;
+  assert.equal(fetchMock.mock.calls.length, 2);
+  assert.equal(window.localStorage.getItem(storageKey), "pending-fake-token");
+  vi.useRealTimers();
+});
+
+test("keeps waiting through approval-required before stopping on a rotated token", async () => {
+  vi.useFakeTimers();
+  window.localStorage.setItem(storageKey, "pending-fake-token");
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(jsonResponse({ code: "DEVICE_APPROVAL_REQUIRED" }, 403))
+    .mockResolvedValueOnce(jsonResponse({ code: "TOKEN_REQUIRED", error: "Unauthorized" }, 401));
+  vi.stubGlobal("fetch", fetchMock);
+  const onError = vi.fn();
+  const api = createWebHostApi();
+
+  const unsubscribe = api.subscribeDreamUpdates(() => {}, onError);
+  await vi.advanceTimersByTimeAsync(0);
+  assert.equal(fetchMock.mock.calls.length, 1);
+  await vi.advanceTimersByTimeAsync(1000);
+  await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+  assert.equal(fetchMock.mock.calls.length, 2);
+  assert.equal(window.localStorage.getItem(storageKey), null);
+  unsubscribe();
+  vi.useRealTimers();
+});

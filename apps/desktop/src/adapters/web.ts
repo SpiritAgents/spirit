@@ -64,6 +64,7 @@ import type {
 
 const DEFAULT_HOST_URL = import.meta.env.VITE_SPIRIT_HOST_URL?.toString().trim() || "";
 const WEB_HOST_TOKEN_STORAGE_KEY = "spirit-web-host-token";
+const DEVICE_APPROVAL_RETRY_MS = 1_000;
 
 /** Remote web client viewing session; HTTP submit/poll always scope to this path. */
 let webViewingSessionPath = "";
@@ -123,7 +124,7 @@ export function createWebHostApi(): HostApi {
     kind: "web",
     bootstrap(request?: BootstrapRequest) {
       const shouldIsolate = !request?.workspaceRoot;
-      return post<DesktopSnapshot>(
+      return postWithApprovalRetry<DesktopSnapshot>(
         baseUrl,
         "/api/bootstrap",
         withWebClientHost({
@@ -677,6 +678,17 @@ async function post<T>(baseUrl: string, path: string, body?: unknown): Promise<T
   return (await response.json()) as T;
 }
 
+async function postWithApprovalRetry<T>(baseUrl: string, path: string, body?: unknown): Promise<T> {
+  for (;;) {
+    try {
+      return await post<T>(baseUrl, path, body);
+    } catch (error) {
+      if (!isResponseErrorWithCode(error, "DEVICE_APPROVAL_REQUIRED")) throw error;
+      await new Promise((resolve) => setTimeout(resolve, DEVICE_APPROVAL_RETRY_MS));
+    }
+  }
+}
+
 function authHeaders(): Record<string, string> {
   const token = readWebHostToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -782,7 +794,14 @@ async function consumeSnapshotStream(
         onError?.(error);
         return;
       }
-      console.error("[web-host] update stream failed", error);
+      if (isResponseErrorWithCode(error, "DEVICE_APPROVAL_REQUIRED")) {
+        retryDelayMs = DEVICE_APPROVAL_RETRY_MS;
+      } else {
+        retryDelayMs = Math.min(retryDelayMs * 2, 5_000);
+      }
+      if (!isResponseErrorWithCode(error, "DEVICE_APPROVAL_REQUIRED")) {
+        console.error("[web-host] update stream failed", error);
+      }
     }
     await new Promise<void>((resolve) => {
       const timer = setTimeout(resolve, retryDelayMs);
@@ -795,7 +814,6 @@ async function consumeSnapshotStream(
         { once: true },
       );
     });
-    retryDelayMs = Math.min(retryDelayMs * 2, 5_000);
   }
 }
 
@@ -826,5 +844,14 @@ function isResponseErrorWithStatus(error: unknown, status: number): boolean {
     error !== null &&
     "status" in error &&
     (error as { status?: unknown }).status === status
+  );
+}
+
+function isResponseErrorWithCode(error: unknown, code: string): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === code
   );
 }
