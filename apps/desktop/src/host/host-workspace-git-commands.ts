@@ -138,7 +138,7 @@ export async function rememberWorkspaceRootCommand(
       ...state.config,
       recentWorkspaces: mergeRecentWorkspaceRoots(state.config.recentWorkspaces, workspaceRoot),
     };
-    await saveConfig(state.config);
+    await saveConfig(state.config, { preserveWebHost: false });
     return ctx.buildSnapshot();
   });
 }
@@ -162,7 +162,7 @@ export async function forgetWorkspaceRootCommand(
       ...state.config,
       recentWorkspaces: removeRecentWorkspaceRoot(state.config.recentWorkspaces, workspaceRoot),
     };
-    await saveConfig(state.config);
+    await saveConfig(state.config, { preserveWebHost: false });
     return ctx.buildSnapshot();
   });
 }
@@ -222,7 +222,7 @@ export async function recordWebHostDeviceConnectionCommand(
           : candidate,
       ),
     });
-    await saveConfig(state.config);
+    await saveConfig(state.config, { preserveWebHost: false });
     return ctx.buildSnapshot();
   });
 }
@@ -249,7 +249,7 @@ export async function createWebHostDeviceCommand(
       ...state.config.webHost,
       devices: [...state.config.webHost.devices, device],
     });
-    await saveConfig(state.config);
+    await saveConfig(state.config, { preserveWebHost: false });
     const snapshot = ctx.buildSnapshot();
     const snapshotDevice = snapshot.webHost.devices.find((candidate) => candidate.id === id);
     if (!snapshotDevice) {

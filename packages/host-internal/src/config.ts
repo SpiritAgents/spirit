@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
+import { rename, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { withSpiritConfigWriteLock } from "./credentials/config-write-lock.js";
 
 import type { JsonObject } from "@spiritagent/agent-core";
 import type { FileUploadConfig } from "@spiritagent/agent-core/file-upload";
@@ -1282,11 +1283,21 @@ export async function saveSpiritConfig(
   spiritDataDir: string,
   config: SpiritConfigFile,
 ): Promise<void> {
-  const filePath = join(spiritDataDir, CONFIG_FILE_NAME);
-  await mkdir(spiritDataDir, { recursive: true });
-  const payload: SpiritConfigFile = {
-    ...config,
-    schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
-  };
-  await writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  await withSpiritConfigWriteLock(spiritDataDir, async () => {
+    const latest = loadSpiritConfig(spiritDataDir);
+    const filePath = join(spiritDataDir, CONFIG_FILE_NAME);
+    const payload: SpiritConfigFile = {
+      ...config,
+      ...(latest && "webHost" in latest ? { webHost: latest["webHost"] } : {}),
+      schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
+    };
+    const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+    try {
+      await writeFile(tmpPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+      await rename(tmpPath, filePath);
+    } catch (error) {
+      await unlink(tmpPath).catch(() => {});
+      throw error;
+    }
+  });
 }

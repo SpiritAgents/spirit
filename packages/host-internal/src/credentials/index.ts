@@ -35,6 +35,7 @@ export {
   saveSpiritConfig,
   SpiritConfigSchemaError,
 } from "./spirit-config.js";
+export { withSpiritConfigWriteLock } from "./config-write-lock.js";
 export { setKeyringStoreForTests, type KeyringStore } from "./keyring-store.js";
 export type {
   PermissionConfig,

@@ -504,7 +504,7 @@ export async function updateConfigCommand(
         },
       });
     }
-    await saveConfig(state.config);
+    await saveConfig(state.config, { preserveWebHost: false });
     if (request.apiKey?.trim() && activeEntry) {
       await saveApiKeyForProvider(activeEntry.provider.id, request.apiKey);
     }

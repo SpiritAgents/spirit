@@ -41,6 +41,7 @@ import {
   readSessionStorageKey,
   resolveDefaultSpiritDataDir,
   resolveSpiritDataDir,
+  withSpiritConfigWriteLock,
 } from "@spiritagent/host-internal";
 
 import { resolveDesktopAgentMode, type DesktopAgentMode } from "@spiritagent/ui/composer";
@@ -435,10 +436,30 @@ export async function loadConfig(): Promise<DesktopConfigFile> {
   return normalizeConfig(raw as Partial<DesktopConfigFile>);
 }
 
-export async function saveConfig(config: DesktopConfigFile): Promise<void> {
+export async function saveConfig(
+  config: DesktopConfigFile,
+  options: { preserveWebHost?: boolean } = {},
+): Promise<void> {
   const filePath = configFilePath();
-  await mkdir(path.dirname(filePath), { recursive: true });
-  await writeFile(filePath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+  const dataDir = path.dirname(filePath);
+  await withSpiritConfigWriteLock(dataDir, async () => {
+    const latest =
+      options.preserveWebHost === false
+        ? undefined
+        : ((await readFile(filePath, "utf8").catch(() => undefined)) as string | undefined);
+    const latestWebHost = latest
+      ? (JSON.parse(latest) as Partial<DesktopConfigFile>).webHost
+      : undefined;
+    const payload = latestWebHost ? { ...config, webHost: latestWebHost } : config;
+    const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+    try {
+      await writeFile(tmpPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+      await rename(tmpPath, filePath);
+    } catch (error) {
+      await unlink(tmpPath).catch(() => {});
+      throw error;
+    }
+  });
 }
 
 /**

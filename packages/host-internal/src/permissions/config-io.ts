@@ -13,6 +13,7 @@ import { dirname } from "node:path";
 
 import { emptyModelRef, SPIRIT_CONFIG_SCHEMA_VERSION } from "../config.js";
 import { configFilePath, loadSpiritConfig } from "../credentials/spirit-config.js";
+import { withSpiritConfigWriteLock } from "../credentials/config-write-lock.js";
 import type { SpiritConfigFile } from "../config.js";
 import type {
   PermissionConfig,
@@ -185,41 +186,43 @@ export async function savePermissionRule(
   pattern: string,
   action: PermissionRuleAction,
 ): Promise<void> {
-  const existing = loadSpiritConfig(spiritDataDir);
-  const config: SpiritConfigFile = existing ?? {
-    schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
-    providers: [],
-    activeModel: emptyModelRef(),
-  };
+  return withSpiritConfigWriteLock(spiritDataDir, async () => {
+    const existing = loadSpiritConfig(spiritDataDir);
+    const config: SpiritConfigFile = existing ?? {
+      schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
+      providers: [],
+      activeModel: emptyModelRef(),
+    };
 
-  // Invalid pre-existing `permission` / domain data is replaced rather than
-  // merged; load-time validation would drop it anyway.
-  const rawPermission: unknown = config["permission"];
-  const permission: Record<string, unknown> = isPlainRecord(rawPermission)
-    ? { ...rawPermission }
-    : {};
-  const rawDomainRules: unknown = permission[domain];
-  const domainRules: Record<string, unknown> = isPlainRecord(rawDomainRules)
-    ? { ...rawDomainRules }
-    : {};
-  domainRules[pattern] = action;
-  permission[domain] = domainRules;
+    // Invalid pre-existing `permission` / domain data is replaced rather than
+    // merged; load-time validation would drop it anyway.
+    const rawPermission: unknown = config["permission"];
+    const permission: Record<string, unknown> = isPlainRecord(rawPermission)
+      ? { ...rawPermission }
+      : {};
+    const rawDomainRules: unknown = permission[domain];
+    const domainRules: Record<string, unknown> = isPlainRecord(rawDomainRules)
+      ? { ...rawDomainRules }
+      : {};
+    domainRules[pattern] = action;
+    permission[domain] = domainRules;
 
-  const next: SpiritConfigFile = {
-    ...config,
-    permission: permission as unknown as PermissionConfig,
-  };
+    const next: SpiritConfigFile = {
+      ...config,
+      permission: permission as unknown as PermissionConfig,
+    };
 
-  const filePath = configFilePath(spiritDataDir);
-  await mkdir(dirname(filePath), { recursive: true });
-  const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
-  try {
-    await writeFile(tmpPath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
-    await rename(tmpPath, filePath);
-  } catch (error) {
-    await unlink(tmpPath).catch(() => {});
-    throw error;
-  }
+    const filePath = configFilePath(spiritDataDir);
+    await mkdir(dirname(filePath), { recursive: true });
+    const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+    try {
+      await writeFile(tmpPath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+      await rename(tmpPath, filePath);
+    } catch (error) {
+      await unlink(tmpPath).catch(() => {});
+      throw error;
+    }
+  });
 }
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
