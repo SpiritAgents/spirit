@@ -13,6 +13,11 @@ import {
 } from "../lib/translucency.js";
 import { deleteKeyringPassword, getKeyringPassword, setKeyringPassword } from "./keyring-secret.js";
 import { configureLlmClientVersion } from "@spiritagent/agent-core";
+import {
+  normalizeRemoteControlConfig,
+  type RemoteControlConfig,
+  type RemoteControlDeviceRecord,
+} from "@spiritagent/remote-control";
 import { normalizeModelReasoningEffort } from "@spiritagent/agent-core/reasoning-effort";
 import {
   assertSpiritConfigSchemaVersion,
@@ -173,22 +178,8 @@ export function resolveDesktopHomeDirectory(): string {
   return path.resolve(homedir());
 }
 
-export interface DesktopWebHostConfigFile {
-  enabled: boolean;
-  host: string;
-  port: number;
-  devices: DesktopWebHostDeviceRecord[];
-}
-
-export interface DesktopWebHostDeviceRecord {
-  id: string;
-  tokenHash: string;
-  name: string;
-  createdAt: string;
-  lastConnectedAt?: string;
-  lastUserAgent?: string;
-  lastIp?: string;
-}
+export type DesktopWebHostConfigFile = RemoteControlConfig;
+export type DesktopWebHostDeviceRecord = RemoteControlDeviceRecord;
 
 /** Matches the keyring naming in `apps/cli/src/model_registry.rs` and host-internal. */
 const KEYRING_SERVICE = "Spirit";
@@ -808,12 +799,7 @@ function normalizePinnedAtUnixMs(value: unknown): number | undefined {
 }
 
 export function defaultWebHostConfig(): DesktopWebHostConfigFile {
-  return {
-    enabled: false,
-    host: DEFAULT_DESKTOP_WEB_HOST,
-    port: DEFAULT_DESKTOP_WEB_PORT,
-    devices: [],
-  };
+  return normalizeRemoteControlConfig(undefined);
 }
 
 export function defaultDreamConfig(): DesktopDreamConfigFile {
@@ -1107,59 +1093,7 @@ export function normalizeDreamConfig(
 export function normalizeWebHostConfig(
   raw?: Partial<DesktopWebHostConfigFile>,
 ): DesktopWebHostConfigFile {
-  const defaultConfig = defaultWebHostConfig();
-  const host =
-    typeof raw?.host === "string" && raw.host.trim() ? raw.host.trim() : defaultConfig.host;
-  const port = normalizePort(raw?.port, defaultConfig.port);
-  const devices = Array.isArray(raw?.devices)
-    ? raw.devices
-        .map((device) => normalizeWebHostDeviceRecord(device))
-        .filter((device) => device !== undefined)
-    : [];
-
-  return {
-    enabled: raw?.enabled === true,
-    host,
-    port,
-    devices,
-  };
-}
-
-function normalizeWebHostDeviceRecord(
-  value: DesktopWebHostDeviceRecord,
-): DesktopWebHostDeviceRecord | undefined {
-  if (typeof value !== "object" || value === null) {
-    return undefined;
-  }
-  const id = typeof value.id === "string" ? value.id.trim() : "";
-  const tokenHash = typeof value.tokenHash === "string" ? value.tokenHash.trim() : "";
-  const createdAt = typeof value.createdAt === "string" ? value.createdAt.trim() : "";
-  if (!id || !/^[a-f0-9]{64}$/.test(tokenHash) || !createdAt) {
-    return undefined;
-  }
-  const name = typeof value.name === "string" ? value.name.trim() : "";
-  return {
-    id,
-    tokenHash,
-    name: name || `Device ${id.slice(0, 8)}`,
-    createdAt,
-    ...(typeof value.lastConnectedAt === "string" && value.lastConnectedAt.trim()
-      ? { lastConnectedAt: value.lastConnectedAt.trim() }
-      : {}),
-    ...(typeof value.lastUserAgent === "string" && value.lastUserAgent.trim()
-      ? { lastUserAgent: value.lastUserAgent.trim() }
-      : {}),
-    ...(typeof value.lastIp === "string" && value.lastIp.trim()
-      ? { lastIp: value.lastIp.trim() }
-      : {}),
-  };
-}
-
-function normalizePort(value: unknown, fallback: number): number {
-  if (typeof value !== "number" || !Number.isInteger(value)) {
-    return fallback;
-  }
-  return value >= 1 && value <= 65535 ? value : fallback;
+  return normalizeRemoteControlConfig(raw);
 }
 
 function normalizeWorkspaceKey(value: string): string {

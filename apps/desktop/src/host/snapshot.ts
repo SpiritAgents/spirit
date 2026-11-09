@@ -143,7 +143,7 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
       agentMode: input.config.agentMode ?? "agent",
       modelCatalogHints: buildModelCatalogHints(input.config),
     },
-    webHost: buildWebHostSnapshot(input.config.webHost),
+    remoteControl: buildWebHostSnapshot(input.config.webHost),
     rules: {
       discovered: input.metadata.rules.discovered,
       enabled: input.metadata.rules.enabled,

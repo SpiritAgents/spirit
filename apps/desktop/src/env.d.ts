@@ -73,15 +73,6 @@ declare global {
     forgetWorkspace(request: ForgetWorkspaceRequest): Promise<DesktopSnapshot>;
     commitChanges(request: CommitChangesRequest): Promise<DesktopSnapshot>;
     updateConfig(request: UpdateConfigRequest): Promise<DesktopSnapshot>;
-    createWebHostDevice(
-      request: import("./types").CreateWebHostDeviceRequest,
-    ): Promise<import("./types").DesktopWebHostDeviceEnrollment>;
-    renameWebHostDevice(
-      request: import("./types").RenameWebHostDeviceRequest,
-    ): Promise<DesktopSnapshot>;
-    revokeWebHostDevice(
-      request: import("./types").RevokeWebHostDeviceRequest,
-    ): Promise<DesktopSnapshot>;
     addModel(request: AddModelRequest): Promise<DesktopSnapshot>;
     addProviderModels(request: AddProviderModelsRequest): Promise<DesktopSnapshot>;
     previewModels(request: PreviewModelsRequest): Promise<PreviewModelsResponse>;

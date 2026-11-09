@@ -72,7 +72,6 @@ import {
   normalizeDreamConfig,
   normalizeAgentsConfig,
   normalizeModelCapabilities,
-  normalizeWebHostConfig,
   saveApiKeyForProvider,
   saveConfig,
   loadConfig,
@@ -81,6 +80,7 @@ import {
   type DesktopWorkspaceBinding,
   type HostMetadataSummary,
 } from "./storage.js";
+import { callDesktopRemoteControl } from "./remote-control-client.js";
 import {
   hasBedrockIamCredentials,
   hasBedrockRuntimeCredentials,
@@ -437,11 +437,24 @@ export async function updateConfigCommand(
       state.config.agentMode = request.planMode ? "plan" : "agent";
     }
     if (request.webHost !== undefined) {
-      const nextWebHost = normalizeWebHostConfig({
-        ...state.config.webHost,
-        ...request.webHost,
-      });
-      state.config.webHost = nextWebHost;
+      const current = state.config.webHost;
+      const next = request.webHost;
+      if (
+        (next.host !== undefined && next.host !== current.host) ||
+        (next.port !== undefined && next.port !== current.port)
+      ) {
+        await callDesktopRemoteControl(spiritDataDir(), "remote.configure", {
+          ...(next.host !== undefined ? { host: next.host } : {}),
+          ...(next.port !== undefined ? { port: next.port } : {}),
+        });
+      }
+      if (next.enabled !== undefined && next.enabled !== current.enabled) {
+        await callDesktopRemoteControl(
+          spiritDataDir(),
+          next.enabled ? "remote.enable" : "remote.disable",
+        );
+      }
+      state.config.webHost = (await loadConfig()).webHost;
     }
     if (request.dreams !== undefined) {
       const nextDreamConfig = {
@@ -504,7 +517,7 @@ export async function updateConfigCommand(
         },
       });
     }
-    await saveConfig(state.config, { preserveWebHost: false });
+    await saveConfig(state.config);
     if (request.apiKey?.trim() && activeEntry) {
       await saveApiKeyForProvider(activeEntry.provider.id, request.apiKey);
     }

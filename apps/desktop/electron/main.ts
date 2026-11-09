@@ -152,6 +152,7 @@ import {
   setDesktopGitHubFetchImplementation,
   setDesktopExtensionHostAdapter,
   shutdownDesktopHostService,
+  publishDesktopSnapshot,
   subscribeDesktopAutomationsUpdates,
   subscribeDesktopDreamUpdates,
   subscribeDesktopSessionListUpdates,
@@ -171,6 +172,11 @@ import {
   resolveJumpListSessionPath,
 } from "../src/lib/windows-launch-argv.js";
 import { setDesktopWebHostRuntimeStatus } from "../src/host/web-host-state.js";
+import { requestDesktopRemoteControlAccess } from "../src/host/remote-control-client.js";
+import {
+  callDesktopRemoteControl,
+  subscribeDesktopRemoteControl,
+} from "../src/host/remote-control-client.js";
 import { diffLiveSnapshots } from "../src/lib/live-update.js";
 import {
   type ApplicationMenuSection,
@@ -213,6 +219,8 @@ const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
 
 let desktopWebHost: DesktopHttpHost | undefined;
 let desktopWebHostConfig: DesktopWebHostConfigFile | undefined;
+let unsubscribeDesktopRemoteControl: (() => void) | undefined;
+let remoteHostLeaseTimer: ReturnType<typeof setInterval> | undefined;
 let quittingAfterDesktopWebHostStop = false;
 let unsubscribeDesktopDreamUpdates: (() => void) | undefined;
 let unsubscribeDesktopAutomationsUpdates: (() => void) | undefined;
@@ -278,7 +286,8 @@ function getDesktopWebHost(config: DesktopWebHostConfigFile): DesktopHttpHost {
       onHostCommandResult: handleDesktopWebHostCommandResult,
       subscribeHostUpdates: subscribeDesktopDreamUpdates,
       auth: {
-        getDevices: () => desktopWebHostConfig?.devices ?? [],
+        requestAccess: (token, metadata) =>
+          requestDesktopRemoteControlAccess(spiritDataDir(), token, metadata),
       },
       static: {
         root: rendererDistPath(),
@@ -321,6 +330,45 @@ async function stopDesktopWebHostIfRunning(): Promise<void> {
     return;
   }
   await desktopWebHost.stop();
+  await callDesktopRemoteControl(spiritDataDir(), "remote.unregisterHost");
+}
+
+async function startDesktopRemoteControlSync(): Promise<void> {
+  await syncInitialDesktopWebHost();
+  unsubscribeDesktopRemoteControl = await subscribeDesktopRemoteControl(spiritDataDir(), {
+    onUpdated: () => {
+      void (async () => {
+        const config = await loadConfig();
+        await syncDesktopWebHostWithConfig(config.webHost);
+        publishDesktopSnapshot();
+      })();
+    },
+    onConfirmationRequested: () => {
+      void (async () => {
+        const config = await loadConfig();
+        await syncDesktopWebHostWithConfig(config.webHost);
+        publishDesktopSnapshot();
+      })();
+    },
+  });
+  if (desktopWebHost?.isRunning()) {
+    const state = desktopWebHost.getState();
+    await callDesktopRemoteControl(spiritDataDir(), "remote.registerHost", {
+      pid: process.pid,
+      host: state.host,
+      port: state.port,
+    });
+  }
+  remoteHostLeaseTimer = setInterval(() => {
+    if (!desktopWebHost?.isRunning()) return;
+    const state = desktopWebHost.getState();
+    void callDesktopRemoteControl(spiritDataDir(), "remote.registerHost", {
+      pid: process.pid,
+      host: state.host,
+      port: state.port,
+    });
+  }, 10_000);
+  remoteHostLeaseTimer.unref();
 }
 
 function handleWindowsLaunchArgv(argv: readonly string[]): boolean {
@@ -393,10 +441,7 @@ async function invokeMainDesktopHostCommand(
 ) {
   const result = await invokeDesktopHostCommand(command, payload);
   const shouldSyncWebHost =
-    command === "createWebHostDevice" ||
-    command === "renameWebHostDevice" ||
-    command === "revokeWebHostDevice" ||
-    ((command === "bootstrap" || command === "updateConfig") && isDesktopSnapshot(result));
+    (command === "bootstrap" || command === "updateConfig") && isDesktopSnapshot(result);
   if (shouldSyncWebHost) {
     const config = await loadConfig();
     await syncDesktopWebHostWithConfig(config.webHost);
@@ -413,14 +458,7 @@ async function handleDesktopWebHostCommandResult(
   _payload: unknown,
   result: unknown,
 ): Promise<void> {
-  if (
-    (command !== "updateConfig" &&
-      command !== "recordWebHostDeviceConnection" &&
-      command !== "createWebHostDevice" &&
-      command !== "renameWebHostDevice" &&
-      command !== "revokeWebHostDevice") ||
-    (command !== "createWebHostDevice" && !isDesktopSnapshot(result))
-  ) {
+  if (command !== "updateConfig" || !isDesktopSnapshot(result)) {
     return;
   }
   const config = await loadConfig();
@@ -483,6 +521,11 @@ async function syncDesktopWebHostWithConfig(config: DesktopWebHostConfigFile): P
       port: state.port,
       ...(state.url ? { url: state.url } : {}),
     });
+    await callDesktopRemoteControl(spiritDataDir(), "remote.registerHost", {
+      pid: process.pid,
+      host: state.host,
+      port: state.port,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[spirit-desktop] start desktop web host failed", error);
@@ -499,7 +542,7 @@ function isDesktopSnapshot(value: unknown): value is DesktopSnapshot {
   return (
     typeof value === "object" &&
     value !== null &&
-    "webHost" in value &&
+    "remoteControl" in value &&
     "config" in value &&
     "conversation" in value
   );
@@ -1775,7 +1818,7 @@ if (gotSpiritSingleInstanceLock) {
       },
     );
 
-    await syncInitialDesktopWebHost();
+    await startDesktopRemoteControlSync();
     await createMainWindow();
     refreshWindowsJumpList();
     const openSessionFromQuickMenu = async (sessionPath: string) => {
@@ -1846,6 +1889,10 @@ app.on("before-quit", (event) => {
   unsubscribeDesktopSessionListUpdates = undefined;
   unsubscribeDesktopTasksUpdates?.();
   unsubscribeDesktopTasksUpdates = undefined;
+  unsubscribeDesktopRemoteControl?.();
+  unsubscribeDesktopRemoteControl = undefined;
+  if (remoteHostLeaseTimer) clearInterval(remoteHostLeaseTimer);
+  remoteHostLeaseTimer = undefined;
   if (quittingAfterDesktopWebHostStop && desktopHostShutdownComplete) {
     return;
   }

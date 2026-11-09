@@ -3,9 +3,9 @@ import { test } from "vitest";
 
 import {
   createDesktopHttpRequestHandler,
-  hashDesktopWebDeviceToken,
   isAllowedRequestHostHeader,
 } from "../../dist-electron/electron/http-host.js";
+import { hashRemoteControlToken } from "@spiritagent/remote-control";
 import {
   closeDesktopWebHostDeviceConnections,
   isDesktopWebHostDeviceOnline,
@@ -53,14 +53,14 @@ function makeResponse() {
 function makeDevice(id, token) {
   return {
     id,
-    tokenHash: hashDesktopWebDeviceToken(token),
+    tokenHash: hashRemoteControlToken(token),
     name: `Device ${id}`,
     createdAt: "2026-01-02T03:04:05.000Z",
   };
 }
 
 function makeHandler(devices) {
-  const state = { devices, commands: [] };
+  const state = { devices, commands: [], access: [], pendingToken: undefined };
   const handler = createDesktopHttpRequestHandler({
     host: "127.0.0.1",
     invokeHostCommand: async (command, payload) => {
@@ -68,7 +68,16 @@ function makeHandler(devices) {
       return {};
     },
     auth: {
-      getDevices: () => state.devices,
+      requestAccess: async (token, metadata) => {
+        state.access.push({ token, metadata });
+        if (state.pendingToken === token) {
+          return { code: "DEVICE_APPROVAL_REQUIRED", pairingId: "pending-device" };
+        }
+        const device = state.devices.find(
+          (candidate) => candidate.tokenHash === hashRemoteControlToken(token),
+        );
+        return device ? { code: "OK", device } : { code: "TOKEN_REQUIRED" };
+      },
     },
   });
   return { handler, state };
@@ -145,14 +154,27 @@ test("records connection metadata against the same device identity", async () =>
     body: {},
   });
   assert.equal(response.statusCode, 200);
-  assert.equal(state.commands[0].command, "recordWebHostDeviceConnection");
-  assert.deepEqual(state.commands[0].payload, {
-    deviceId: deviceA.id,
+  assert.deepEqual(state.access[0].metadata, {
     userAgent: "Example Agent",
     ip: "127.0.0.1",
+    recordConnection: true,
   });
-  assert.equal(state.commands[1].command, "bootstrap");
+  assert.equal(state.commands[0].command, "bootstrap");
   assert.equal(state.devices.length, 1);
+});
+
+test("returns approval-required without running business commands for a pending token", async () => {
+  const { handler, state } = makeHandler([]);
+  state.pendingToken = "pending-fake-token";
+  const response = await request(handler, {
+    method: "POST",
+    url: "/api/bootstrap",
+    token: "pending-fake-token",
+    body: {},
+  });
+  assert.equal(response.statusCode, 403);
+  assert.equal(JSON.parse(response.body).code, "DEVICE_APPROVAL_REQUIRED");
+  assert.equal(state.commands.length, 0);
 });
 
 test("API requests retain Host header validation before token authentication", async () => {

@@ -9,13 +9,6 @@ export interface HostCommandDelegate {
   forgetWorkspace(request: CommandPayloads["forgetWorkspace"]["request"]): Promise<unknown>;
   commitChanges(request: CommandPayloads["commitChanges"]["request"]): Promise<unknown>;
   updateConfig(request: CommandPayloads["updateConfig"]["request"]): Promise<unknown>;
-  recordWebHostDeviceConnection(
-    deviceId: string,
-    metadata: { userAgent?: string; ip?: string },
-  ): Promise<unknown>;
-  createWebHostDevice(request: CommandPayloads["createWebHostDevice"]["request"]): Promise<unknown>;
-  renameWebHostDevice(request: CommandPayloads["renameWebHostDevice"]["request"]): Promise<unknown>;
-  revokeWebHostDevice(request: CommandPayloads["revokeWebHostDevice"]["request"]): Promise<unknown>;
   addModel(request: CommandPayloads["addModel"]["request"]): Promise<unknown>;
   addProviderModels(request: CommandPayloads["addProviderModels"]["request"]): Promise<unknown>;
   previewModels(request: CommandPayloads["previewModels"]["request"]): Promise<unknown>;
@@ -252,14 +245,6 @@ const hostCommandDispatch = {
   forgetWorkspace: (host, payload) => host.forgetWorkspace(payload.request),
   commitChanges: (host, payload) => host.commitChanges(payload.request),
   updateConfig: (host, payload) => host.updateConfig(payload.request),
-  recordWebHostDeviceConnection: (host, payload) =>
-    host.recordWebHostDeviceConnection(payload.deviceId, {
-      ...(payload.userAgent ? { userAgent: payload.userAgent } : {}),
-      ...(payload.ip ? { ip: payload.ip } : {}),
-    }),
-  createWebHostDevice: (host, payload) => host.createWebHostDevice(payload.request),
-  renameWebHostDevice: (host, payload) => host.renameWebHostDevice(payload.request),
-  revokeWebHostDevice: (host, payload) => host.revokeWebHostDevice(payload.request),
   addModel: (host, payload) => host.addModel(payload.request),
   addProviderModels: (host, payload) => host.addProviderModels(payload.request),
   previewModels: (host, payload) => host.previewModels(payload.request),

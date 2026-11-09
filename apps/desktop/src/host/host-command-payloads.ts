@@ -104,10 +104,6 @@ export type CommandPayloads = {
   getGitHubPullRequestChecks: { request: GetGitHubPullRequestDetailRequest };
   mergeGitHubPullRequest: { request: MergeGitHubPullRequestRequest };
   markGitHubPullRequestReady: { request: GetGitHubPullRequestDetailRequest };
-  recordWebHostDeviceConnection: { deviceId: string; userAgent?: string; ip?: string };
-  createWebHostDevice: { request: import("../types.js").CreateWebHostDeviceRequest };
-  renameWebHostDevice: { request: import("../types.js").RenameWebHostDeviceRequest };
-  revokeWebHostDevice: { request: import("../types.js").RevokeWebHostDeviceRequest };
   addModel: { request: AddModelRequest };
   addProviderModels: { request: AddProviderModelsRequest };
   previewModels: { request: PreviewModelsRequest };

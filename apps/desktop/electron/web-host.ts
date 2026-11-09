@@ -5,6 +5,7 @@ import {
   invokeDesktopHostCommand,
   shutdownDesktopHostService,
   subscribeDesktopDreamUpdates,
+  publishDesktopSnapshot,
 } from "../src/host/service.js";
 import {
   loadConfig,
@@ -12,6 +13,12 @@ import {
   setSpiritDataDirOverride,
 } from "../src/host/storage.js";
 import { setDesktopWebHostRuntimeStatus } from "../src/host/web-host-state.js";
+import { requestDesktopRemoteControlAccess } from "../src/host/remote-control-client.js";
+import { spiritDataDir } from "../src/host/storage.js";
+import {
+  callDesktopRemoteControl,
+  subscribeDesktopRemoteControl,
+} from "../src/host/remote-control-client.js";
 import { createDesktopHttpHost, resolveDesktopWebHostFromEnv } from "./http-host.js";
 import { resolveRendererDistPath } from "./renderer-dist.js";
 
@@ -27,7 +34,8 @@ const webHost = createDesktopHttpHost({
   invokeHostCommand: invokeDesktopHostCommand,
   subscribeHostUpdates: subscribeDesktopDreamUpdates,
   auth: {
-    getDevices: async () => (await loadConfig()).webHost.devices,
+    requestAccess: (token, metadata) =>
+      requestDesktopRemoteControlAccess(spiritDataDir(), token, metadata),
   },
   static: {
     root: resolveRendererDistPath(__dirname),
@@ -43,9 +51,49 @@ setDesktopWebHostRuntimeStatus({
   ...(state.url ? { url: state.url } : {}),
 });
 
+await callDesktopRemoteControl(spiritDataDir(), "remote.registerHost", {
+  pid: process.pid,
+  host: state.host,
+  port: state.port,
+});
+const leaseTimer = setInterval(() => {
+  if (!webHost.isRunning()) return;
+  const current = webHost.getState();
+  void callDesktopRemoteControl(spiritDataDir(), "remote.registerHost", {
+    pid: process.pid,
+    host: current.host,
+    port: current.port,
+  });
+}, 10_000);
+leaseTimer.unref();
+
+await subscribeDesktopRemoteControl(spiritDataDir(), {
+  onUpdated: () => {
+    void (async () => {
+      const config = await loadConfig();
+      if (config.webHost.enabled && !webHost.isRunning()) {
+        await webHost.start();
+        const current = webHost.getState();
+        await callDesktopRemoteControl(spiritDataDir(), "remote.registerHost", {
+          pid: process.pid,
+          host: current.host,
+          port: current.port,
+        });
+      } else if (!config.webHost.enabled && webHost.isRunning()) {
+        await webHost.stop();
+        await callDesktopRemoteControl(spiritDataDir(), "remote.unregisterHost");
+      }
+      publishDesktopSnapshot();
+    })();
+  },
+  onConfirmationRequested: () => publishDesktopSnapshot(),
+});
+
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
+    clearInterval(leaseTimer);
     void Promise.all([webHost.stop(), shutdownDesktopHostService()]).finally(() => {
+      void callDesktopRemoteControl(spiritDataDir(), "remote.unregisterHost");
       setDesktopWebHostRuntimeStatus({
         state: "stopped",
         host,

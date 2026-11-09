@@ -10,6 +10,7 @@ import type {
   ThinkingSwitchDeclaration,
 } from "@spiritagent/host-internal/config";
 import type { ModelReasoningEffort } from "@spiritagent/agent-core/reasoning-effort";
+import type { RemoteControlPendingPairing } from "@spiritagent/remote-control";
 import type {
   EffortSemantics,
   ModelEffort,
@@ -1184,7 +1185,7 @@ export interface DesktopSnapshot {
   runtimeReady: boolean;
   runtimeError?: string;
   config: DesktopConfigSnapshot;
-  webHost: DesktopWebHostSnapshot;
+  remoteControl: DesktopWebHostSnapshot;
   rules: DiscoverySummary;
   skills: DiscoverySummary;
   /** All Rules in the fixed slots (including ones not yet created), for the settings page list. */
@@ -1966,6 +1967,7 @@ export interface DesktopWebHostSnapshot {
   status: DesktopWebHostStatusSnapshot;
   policy: DesktopWebHostPolicySnapshot;
   devices: DesktopWebHostDeviceSnapshot[];
+  pendingPairing?: Omit<RemoteControlPendingPairing, "tokenHash"> | undefined;
 }
 
 export interface DesktopWebHostDeviceSnapshot {
@@ -1978,33 +1980,11 @@ export interface DesktopWebHostDeviceSnapshot {
   status: "online" | "offline";
 }
 
-export interface CreateWebHostDeviceRequest {
-  name?: string;
-  origin: string;
-}
-
-export interface RenameWebHostDeviceRequest {
-  deviceId: string;
-  name: string;
-}
-
-export interface RevokeWebHostDeviceRequest {
-  deviceId: string;
-}
-
-export interface DesktopWebHostDeviceEnrollment {
-  device: DesktopWebHostDeviceSnapshot;
-  token: string;
-  url: string;
-  qrCodeSvg: string;
-}
-
 export interface DesktopWebHostConfigSnapshot {
   enabled: boolean;
   host: string;
   port: number;
-  paired: boolean;
-  authMode: "pairing";
+  hasCompletedPairing: boolean;
 }
 
 export interface DesktopWebHostStatusSnapshot {

@@ -12,7 +12,7 @@ import type { DesktopSnapshot } from "@/types";
 import { DESKTOP_LIST_ITEM_PRIMARY_CLASS } from "@/lib/desktop-typography";
 import { cn } from "@/lib/utils";
 
-function webHostStatusLabel(state: DesktopSnapshot["webHost"]["status"]["state"]): string {
+function webHostStatusLabel(state: DesktopSnapshot["remoteControl"]["status"]["state"]): string {
   switch (state) {
     case "running":
       return i18n.t("settings.webHostRunning");
@@ -34,7 +34,7 @@ export function NetworksSettingsPanel({
   onResetWebHostPairing,
 }: Pick<SettingsViewProps, "settings" | "snapshot" | "onSavePatch" | "onResetWebHostPairing">) {
   const { t } = useTranslation();
-  const webHost = snapshot?.webHost;
+  const webHost = snapshot?.remoteControl;
   const webHostUrl =
     webHost?.status.url ?? `http://${settings.webHostHost}:${settings.webHostPort}`;
   const webHostStatus = webHostStatusLabel(webHost?.status.state ?? "disabled");
@@ -136,14 +136,18 @@ export function NetworksSettingsPanel({
               ) : null}
               <p>
                 {t("settings.pairing")}
-                {webHost?.config.paired ? t("settings.pairingDone") : t("settings.pairingPending")}
+                {webHost?.config.hasCompletedPairing
+                  ? t("settings.pairingDone")
+                  : t("settings.pairingPending")}
               </p>
               {webHost?.status.pairingCode ? (
                 <p data-spirit-selectable="text" className="font-mono text-foreground">
                   {webHost.status.pairingCode}
                 </p>
               ) : null}
-              {settings.webHostEnabled && webHost?.config.paired && onResetWebHostPairing ? (
+              {settings.webHostEnabled &&
+              webHost?.config.hasCompletedPairing &&
+              onResetWebHostPairing ? (
                 <div className="mt-3 flex justify-end">
                   <Button
                     type="button"

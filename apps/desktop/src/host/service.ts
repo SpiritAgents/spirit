@@ -238,10 +238,6 @@ import {
   refreshGitSnapshotCommand,
   rememberWorkspaceRootCommand,
   forgetWorkspaceRootCommand,
-  recordWebHostDeviceConnectionCommand,
-  createWebHostDeviceCommand,
-  renameWebHostDeviceCommand,
-  revokeWebHostDeviceCommand,
   statHostTextFileCommand,
   writeHostTextFileCommand,
   writeWorkspaceTextFileCommand,
@@ -1628,6 +1624,10 @@ export class DesktopHostService {
     };
   }
 
+  publishSnapshot(): void {
+    this.emitLiveSnapshotUpdate();
+  }
+
   subscribeAutomationsUpdates(listener: (snapshot: DesktopSnapshot) => void): () => void {
     this.automationUpdateListeners.add(listener);
     this.startAutomationSchedulerMonitorIfNeeded();
@@ -1665,35 +1665,6 @@ export class DesktopHostService {
 
   async updateConfig(request: UpdateConfigRequest): Promise<DesktopSnapshot> {
     return updateConfigCommand(this.modelCommandContext(), request);
-  }
-
-  async recordWebHostDeviceConnection(
-    deviceId: string,
-    metadata: { userAgent?: string; ip?: string },
-  ): Promise<DesktopSnapshot | null> {
-    return recordWebHostDeviceConnectionCommand(
-      this.workspaceGitCommandContext(),
-      deviceId,
-      metadata,
-    );
-  }
-
-  async createWebHostDevice(
-    request: import("../types.js").CreateWebHostDeviceRequest,
-  ): Promise<import("../types.js").DesktopWebHostDeviceEnrollment> {
-    return createWebHostDeviceCommand(this.workspaceGitCommandContext(), request);
-  }
-
-  async renameWebHostDevice(
-    request: import("../types.js").RenameWebHostDeviceRequest,
-  ): Promise<DesktopSnapshot> {
-    return renameWebHostDeviceCommand(this.workspaceGitCommandContext(), request);
-  }
-
-  async revokeWebHostDevice(
-    request: import("../types.js").RevokeWebHostDeviceRequest,
-  ): Promise<DesktopSnapshot> {
-    return revokeWebHostDeviceCommand(this.workspaceGitCommandContext(), request);
   }
 
   async previewModels(request: PreviewModelsRequest): Promise<PreviewModelsResponse> {
@@ -5320,6 +5291,10 @@ export async function invokeDesktopHostCommand(
   payload?: unknown,
 ): Promise<unknown> {
   return desktopHostService.invoke(command, payload);
+}
+
+export function publishDesktopSnapshot(): void {
+  desktopHostService.publishSnapshot();
 }
 
 export async function resolveDesktopExtensionViewFile(

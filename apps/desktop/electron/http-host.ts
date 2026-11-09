@@ -1,4 +1,3 @@
-import { timingSafeEqual } from "node:crypto";
 import { product } from "@spiritagent/product";
 import { readFile, stat } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
@@ -6,8 +5,7 @@ import { isIP } from "node:net";
 import path from "node:path";
 
 import type { HostCommandName } from "../src/host/contracts.js";
-import type { DesktopWebHostDeviceRecord } from "../src/host/storage.js";
-import { hashDesktopWebDeviceToken } from "../src/host/web-host-devices.js";
+import type { RemoteControlAccessResult } from "@spiritagent/remote-control";
 import {
   closeAllDesktopWebHostDeviceConnections,
   registerDesktopWebHostDeviceConnection,
@@ -32,11 +30,6 @@ export type DesktopHostCommandResultHandler = (
 
 export type DesktopHostUpdateSubscriber = (listener: (snapshot: unknown) => void) => () => void;
 
-export {
-  createDesktopWebDeviceToken,
-  hashDesktopWebDeviceToken,
-} from "../src/host/web-host-devices.js";
-
 export interface DesktopHttpHostState {
   host: string;
   port: number;
@@ -46,9 +39,10 @@ export interface DesktopHttpHostState {
 }
 
 export interface DesktopHttpAuthOptions {
-  getDevices():
-    | readonly DesktopWebHostDeviceRecord[]
-    | Promise<readonly DesktopWebHostDeviceRecord[]>;
+  requestAccess(
+    token: string,
+    metadata: { userAgent?: string; ip?: string; recordConnection?: boolean },
+  ): Promise<RemoteControlAccessResult>;
 }
 
 export interface DesktopHttpStaticOptions {
@@ -269,28 +263,19 @@ async function handleApiRequest({
   auth: DesktopHttpAuthOptions;
   subscribeHostUpdates?: DesktopHostUpdateSubscriber;
 }): Promise<void> {
-  const device = await authorizeDeviceRequest(request, auth);
-  if (!device) {
-    writeJson(request, response, 401, {
-      code: "TOKEN_REQUIRED",
-      error: "A valid device token is required.",
-    });
+  const access = await authorizeDeviceRequest(request, auth);
+  if (access.code !== "OK") {
+    writeJson(
+      request,
+      response,
+      access.code === "DEVICE_APPROVAL_REQUIRED" ? 403 : 401,
+      access.code === "DEVICE_APPROVAL_REQUIRED"
+        ? { code: access.code, pairingId: access.pairingId }
+        : { code: access.code, error: "A valid device token is required." },
+    );
     return;
   }
-
-  if (pathname === "/api/bootstrap" || pathname === "/api/events") {
-    const recorded = await runHostCommand("recordWebHostDeviceConnection", {
-      deviceId: device.id,
-      ...desktopWebRequestAuditMetadata(request),
-    });
-    if (!recorded) {
-      writeJson(request, response, 401, {
-        code: "TOKEN_REQUIRED",
-        error: "A valid device token is required.",
-      });
-      return;
-    }
-  }
+  const device = access.device;
 
   if (request.method === "GET" && pathname === "/api/events") {
     if (!subscribeHostUpdates) {
@@ -1622,14 +1607,16 @@ function isPathUnderRoot(root: string, filePath: string): boolean {
 async function authorizeDeviceRequest(
   request: IncomingMessage,
   auth: DesktopHttpAuthOptions,
-): Promise<DesktopWebHostDeviceRecord | undefined> {
+): Promise<RemoteControlAccessResult> {
   const token = authorizationBearerToken(request);
   if (!token) {
-    return undefined;
+    return { code: "TOKEN_REQUIRED" };
   }
-  const tokenHash = hashDesktopWebDeviceToken(token);
-  const devices = await auth.getDevices();
-  return devices.find((device) => safeTokenHashEquals(tokenHash, device.tokenHash));
+  const { pathname } = new URL(request.url ?? "/", "http://localhost");
+  return auth.requestAccess(token, {
+    ...desktopWebRequestAuditMetadata(request),
+    recordConnection: pathname === "/api/bootstrap" || pathname === "/api/events",
+  });
 }
 
 function authorizationBearerToken(request: IncomingMessage): string | undefined {
@@ -1640,12 +1627,6 @@ function authorizationBearerToken(request: IncomingMessage): string | undefined 
   const value = Array.isArray(header) ? header[0] : header;
   const match = /^Bearer\s+(.+)$/iu.exec(value.trim());
   return match?.[1]?.trim() || undefined;
-}
-
-function safeTokenHashEquals(left: string, right: string): boolean {
-  const leftBuffer = Buffer.from(left, "hex");
-  const rightBuffer = Buffer.from(right, "hex");
-  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
 function desktopWebRequestAuditMetadata(request: IncomingMessage): {

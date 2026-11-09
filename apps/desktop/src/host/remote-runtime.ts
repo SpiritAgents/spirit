@@ -162,7 +162,7 @@ const EMPTY_SNAPSHOT: BridgeRuntimeSnapshot = {
 
 let sharedClientPromise: Promise<ServerRpcClient> | undefined;
 
-async function sharedDesktopServerClient(dataDir: string): Promise<ServerRpcClient> {
+export async function sharedDesktopServerClient(dataDir: string): Promise<ServerRpcClient> {
   if (!sharedClientPromise) {
     const connecting = connectOrSpawnServer({
       dataDir,

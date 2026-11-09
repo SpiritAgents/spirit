@@ -19,6 +19,7 @@ test("normalizes multiple device records and discards the legacy shared credenti
     enabled: true,
     host: "127.0.0.1",
     port: 7788,
+    hasCompletedPairing: true,
     authTokenHash: "f".repeat(64),
     devices: [
       device("device-a", "a", {
@@ -38,6 +39,7 @@ test("normalizes multiple device records and discards the legacy shared credenti
 
 test("rejects malformed device records without accepting plaintext token fields", () => {
   const config = normalizeWebHostConfig({
+    hasCompletedPairing: true,
     devices: [
       device("valid-device", "a", { token: "not-a-real-credential" }),
       device("missing-hash", ""),
@@ -52,12 +54,13 @@ test("rejects malformed device records without accepting plaintext token fields"
 
 test("projects device metadata without token hashes or enrollment secrets", () => {
   const config = normalizeWebHostConfig({
+    hasCompletedPairing: true,
     devices: [device("device-a", "a"), device("device-b", "b")],
   });
   const snapshot = buildWebHostSnapshot(config);
 
   assert.equal(snapshot.devices.length, 2);
-  assert.equal(snapshot.config.paired, true);
+  assert.equal(snapshot.config.hasCompletedPairing, true);
   for (const projected of snapshot.devices) {
     assert.equal(projected.status, "offline");
     assert.equal("tokenHash" in projected, false);

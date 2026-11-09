@@ -221,8 +221,7 @@ export function buildWebHostSnapshot(config: DesktopWebHostConfigFile): DesktopW
       enabled: config.enabled,
       host: config.host,
       port: config.port,
-      paired: config.devices.length > 0,
-      authMode: "pairing",
+      hasCompletedPairing: config.hasCompletedPairing,
     },
     status,
     policy: DESKTOP_WEB_HOST_POLICY,
@@ -235,6 +234,7 @@ export function buildWebHostSnapshot(config: DesktopWebHostConfigFile): DesktopW
       ...(device.lastIp ? { lastIp: device.lastIp } : {}),
       status: isDesktopWebHostDeviceOnline(device.id) ? "online" : "offline",
     })),
+    ...(config.pendingPairing ? { pendingPairing: config.pendingPairing } : {}),
   };
 }
 
