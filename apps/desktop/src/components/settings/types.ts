@@ -2,6 +2,7 @@ import type { SettingsSidebarTab } from "@/components/session-sidebar";
 import type { DesktopAgentMode } from "@spiritagent/ui/composer";
 import type { FontPreference } from "@/lib/font";
 import type { TranslucencyPreference } from "@/lib/translucency";
+import type { RemoteControlEnrollment, RemoteControlState } from "@spiritagent/remote-control";
 import type {
   AddModelRequest,
   AddMcpServerRequest,
@@ -74,7 +75,14 @@ export type SettingsViewProps = {
   extensionsBusy: boolean;
   isElectronShell: boolean;
   onSavePatch: (patch: Partial<SettingsFormState>) => Promise<void>;
-  onPairRemoteControl?: () => void;
+  onPairRemoteControl?: (request: {
+    name?: string;
+    origin: string;
+    output?: "svg" | "terminal";
+  }) => Promise<RemoteControlEnrollment>;
+  onApproveRemoteControlPairing?: (pairingId: string) => Promise<RemoteControlState>;
+  onRejectRemoteControlPairing?: (pairingId: string) => Promise<RemoteControlEnrollment>;
+  onCancelRemoteControlPairing?: (pairingId: string) => Promise<void>;
   onRevokeRemoteControlDevice?: (deviceId: string) => Promise<void>;
   onAddModel: (request: AddModelRequest) => Promise<void>;
   onAddProviderModels: (request: AddProviderModelsRequest) => Promise<void>;

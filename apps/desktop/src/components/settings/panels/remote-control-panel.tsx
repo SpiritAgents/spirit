@@ -16,16 +16,28 @@ import {
 import { cn } from "@/lib/utils";
 import { inferRemoteControlClientKind } from "@spiritagent/remote-control/presentation";
 import { formatRemoteControlDeviceName } from "@/lib/remote-control-device-presentation";
+import { RemoteControlPairingDialogs } from "@/components/settings/panels/remote-control-pairing-dialogs";
+import type { RemoteControlEnrollment } from "@spiritagent/remote-control";
 
 export function RemoteControlPanel({
   settings,
   snapshot,
   onSavePatch,
   onPairRemoteControl,
+  onApproveRemoteControlPairing,
+  onRejectRemoteControlPairing,
+  onCancelRemoteControlPairing,
   onRevokeRemoteControlDevice,
 }: Pick<
   SettingsViewProps,
-  "settings" | "snapshot" | "onSavePatch" | "onPairRemoteControl" | "onRevokeRemoteControlDevice"
+  | "settings"
+  | "snapshot"
+  | "onSavePatch"
+  | "onPairRemoteControl"
+  | "onApproveRemoteControlPairing"
+  | "onRejectRemoteControlPairing"
+  | "onCancelRemoteControlPairing"
+  | "onRevokeRemoteControlDevice"
 >) {
   const { t, i18n } = useTranslation();
   const remoteControl = snapshot?.remoteControl;
@@ -33,6 +45,53 @@ export function RemoteControlPanel({
   const [hostDraft, setHostDraft] = useState(settings.webHostHost);
   const [portDraft, setPortDraft] = useState(String(settings.webHostPort));
   const [revokingId, setRevokingId] = useState<string>();
+  const [pairingStage, setPairingStage] = useState<"intro" | "qr" | null>(null);
+  const [enrollment, setEnrollment] = useState<RemoteControlEnrollment | null>(null);
+  const [pairingBusy, setPairingBusy] = useState(false);
+
+  const beginPairing = async () => {
+    if (!onPairRemoteControl) return;
+    setPairingBusy(true);
+    try {
+      const origin =
+        remoteControl?.status.url ?? `http://${settings.webHostHost}:${settings.webHostPort}`;
+      const next = await onPairRemoteControl({ origin, output: "svg" });
+      setEnrollment(next);
+      setPairingStage("qr");
+    } catch {
+      // The runtime exposes the pairing error without changing the dialog state.
+    } finally {
+      setPairingBusy(false);
+    }
+  };
+
+  const cancelPairing = (pairingId: string) => {
+    void onCancelRemoteControlPairing?.(pairingId).finally(() => {
+      setPairingStage(null);
+      setEnrollment(null);
+    });
+  };
+
+  const rejectPairing = (pairingId: string) => {
+    if (!onRejectRemoteControlPairing) return;
+    setPairingBusy(true);
+    void onRejectRemoteControlPairing(pairingId)
+      .then(setEnrollment)
+      .catch(() => {})
+      .finally(() => setPairingBusy(false));
+  };
+
+  const approvePairing = (pairingId: string) => {
+    if (!onApproveRemoteControlPairing) return;
+    setPairingBusy(true);
+    void onApproveRemoteControlPairing(pairingId)
+      .then(() => {
+        setPairingStage(null);
+        setEnrollment(null);
+      })
+      .catch(() => {})
+      .finally(() => setPairingBusy(false));
+  };
 
   useEffect(() => setHostDraft(settings.webHostHost), [settings.webHostHost]);
   useEffect(() => setPortDraft(String(settings.webHostPort)), [settings.webHostPort]);
@@ -44,8 +103,14 @@ export function RemoteControlPanel({
         <Button
           type="button"
           size="sm"
-          disabled={!onPairRemoteControl}
-          onClick={() => onPairRemoteControl?.()}
+          disabled={!onPairRemoteControl || pairingBusy}
+          onClick={() => {
+            if (snapshot?.remoteControl.config.hasCompletedPairing) {
+              void beginPairing();
+            } else {
+              setPairingStage("intro");
+            }
+          }}
         >
           {t("app.pair")}
         </Button>
@@ -163,6 +228,17 @@ export function RemoteControlPanel({
           )}
         </div>
       </section>
+      <RemoteControlPairingDialogs
+        stage={pairingStage}
+        enrollment={enrollment}
+        pending={remoteControl?.pendingPairing}
+        busy={pairingBusy}
+        onDismissIntro={() => setPairingStage(null)}
+        onContinue={() => void beginPairing()}
+        onCancel={cancelPairing}
+        onApprove={approvePairing}
+        onReject={rejectPairing}
+      />
     </div>
   );
 }

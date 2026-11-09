@@ -642,6 +642,16 @@ export default function App() {
                                     }
                                     isElectronShell={isElectronShell}
                                     onSavePatch={runtime.saveSettingsPatch}
+                                    onPairRemoteControl={runtime.pairRemoteControl}
+                                    onApproveRemoteControlPairing={
+                                      runtime.approveRemoteControlPairing
+                                    }
+                                    onRejectRemoteControlPairing={
+                                      runtime.rejectRemoteControlPairing
+                                    }
+                                    onCancelRemoteControlPairing={
+                                      runtime.cancelRemoteControlPairing
+                                    }
                                     onRevokeRemoteControlDevice={runtime.revokeRemoteControlDevice}
                                     onAddModel={runtime.addModel}
                                     onAddProviderModels={runtime.addProviderModels}

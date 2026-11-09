@@ -50,6 +50,9 @@ export function SettingsView({
   isElectronShell,
   onSavePatch,
   onPairRemoteControl,
+  onApproveRemoteControlPairing,
+  onRejectRemoteControlPairing,
+  onCancelRemoteControlPairing,
   onRevokeRemoteControlDevice,
   onAddModel,
   onAddProviderModels,
@@ -235,6 +238,9 @@ export function SettingsView({
                 snapshot={snapshot}
                 onSavePatch={onSavePatch}
                 onPairRemoteControl={onPairRemoteControl}
+                onApproveRemoteControlPairing={onApproveRemoteControlPairing}
+                onRejectRemoteControlPairing={onRejectRemoteControlPairing}
+                onCancelRemoteControlPairing={onCancelRemoteControlPairing}
                 onRevokeRemoteControlDevice={onRevokeRemoteControlDevice}
               />
             ) : tab === "integrations" ? (

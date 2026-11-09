@@ -2628,6 +2628,60 @@ export function useDesktopRuntime() {
     [api],
   );
 
+  const pairRemoteControl = useCallback(
+    async (request: { name?: string; origin: string; output?: "svg" | "terminal" }) => {
+      if (!api?.pairRemoteControl) throw new Error("Remote Control pairing is unavailable.");
+      setBusyAction("remoteControl");
+      try {
+        return await api.pairRemoteControl(request);
+      } catch (error) {
+        setRuntimeError(describeError(error));
+        throw error;
+      } finally {
+        setBusyAction("");
+      }
+    },
+    [api],
+  );
+
+  const approveRemoteControlPairing = useCallback(
+    async (pairingId: string) => {
+      if (!api?.approveRemoteControlPairing) throw new Error("Remote Control is unavailable.");
+      try {
+        return await api.approveRemoteControlPairing(pairingId);
+      } catch (error) {
+        setRuntimeError(describeError(error));
+        throw error;
+      }
+    },
+    [api],
+  );
+
+  const rejectRemoteControlPairing = useCallback(
+    async (pairingId: string) => {
+      if (!api?.rejectRemoteControlPairing) throw new Error("Remote Control is unavailable.");
+      try {
+        return await api.rejectRemoteControlPairing(pairingId);
+      } catch (error) {
+        setRuntimeError(describeError(error));
+        throw error;
+      }
+    },
+    [api],
+  );
+
+  const cancelRemoteControlPairing = useCallback(
+    async (pairingId: string) => {
+      if (!api?.cancelRemoteControlPairing) return;
+      try {
+        await api.cancelRemoteControlPairing(pairingId);
+      } catch (error) {
+        setRuntimeError(describeError(error));
+      }
+    },
+    [api],
+  );
+
   const sendMessage = useCallback(
     async (request: SubmitUserTurnRequest = { text: composer }) => {
       if (!api) {
@@ -4247,6 +4301,10 @@ export function useDesktopRuntime() {
     removeQueuedUserTurn,
     saveSettingsPatch,
     revokeRemoteControlDevice,
+    pairRemoteControl,
+    approveRemoteControlPairing,
+    rejectRemoteControlPairing,
+    cancelRemoteControlPairing,
     sendMessage,
     submitStartImplementing,
     skipQuestions,
