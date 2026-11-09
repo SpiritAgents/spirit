@@ -1,5 +1,6 @@
 import type { HostApi } from "../host-api";
 import type { AbortConversationRequest } from "../types";
+import type { RemoteControlEnrollment, RemoteControlState } from "@spiritagent/remote-control";
 import type {
   MarketplaceInstallCommandResult,
   MarketplaceSourceCommandResult,
@@ -29,6 +30,27 @@ export async function createElectronHostApi(): Promise<HostApi> {
     },
     updateConfig(request) {
       return bridge.updateConfig(request);
+    },
+    pairRemoteControl(request) {
+      return bridge.remoteControlInvoke<RemoteControlEnrollment>("remote.pair", {
+        ...request,
+        output: request.output ?? "svg",
+      });
+    },
+    approveRemoteControlPairing(pairingId) {
+      return bridge.remoteControlInvoke<RemoteControlState>("remote.approvePairing", { pairingId });
+    },
+    rejectRemoteControlPairing(pairingId) {
+      return bridge.remoteControlInvoke<RemoteControlEnrollment>("remote.rejectPairing", {
+        pairingId,
+        output: "svg",
+      });
+    },
+    async cancelRemoteControlPairing(pairingId) {
+      await bridge.remoteControlInvoke("remote.cancelPairing", { pairingId });
+    },
+    revokeRemoteControlDevice(deviceId) {
+      return bridge.remoteControlInvoke<RemoteControlState>("remote.revokeDevice", { deviceId });
     },
     addModel(request) {
       return bridge.addModel(request);

@@ -156,6 +156,7 @@ type BusyAction =
   | "extensions"
   | "extensionsImport"
   | "git"
+  | "remoteControl"
   | "automation";
 
 const DREAM_IDLE_POLL_INTERVAL_MS = 30_000;
@@ -2609,12 +2610,23 @@ export function useDesktopRuntime() {
     [api, applySnapshot, snapshot],
   );
 
-  const resetWebHostPairing = useCallback(async () => {
-    if (!api) {
-      return;
-    }
-    setRuntimeError(i18n.t("error.hostNotSupportWebPair"));
-  }, [api]);
+  const revokeRemoteControlDevice = useCallback(
+    async (deviceId: string) => {
+      if (!api?.revokeRemoteControlDevice) {
+        return;
+      }
+      setBusyAction("remoteControl");
+      try {
+        await api.revokeRemoteControlDevice(deviceId);
+        setRuntimeError("");
+      } catch (error) {
+        setRuntimeError(describeError(error));
+      } finally {
+        setBusyAction("");
+      }
+    },
+    [api],
+  );
 
   const sendMessage = useCallback(
     async (request: SubmitUserTurnRequest = { text: composer }) => {
@@ -4234,7 +4246,7 @@ export function useDesktopRuntime() {
     sendQueuedUserTurnNow,
     removeQueuedUserTurn,
     saveSettingsPatch,
-    resetWebHostPairing,
+    revokeRemoteControlDevice,
     sendMessage,
     submitStartImplementing,
     skipQuestions,

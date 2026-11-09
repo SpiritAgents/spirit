@@ -143,6 +143,9 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   updateConfig(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "updateConfig", { request });
   },
+  remoteControlInvoke(method: string, params: unknown) {
+    return ipcRenderer.invoke("desktop:remote-control", method, params);
+  },
   addModel(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "addModel", { request });
   },

@@ -111,6 +111,7 @@ import type {
 
 import { createElectronHostApi } from "./adapters/electron";
 import { createWebHostApi } from "./adapters/web";
+import type { RemoteControlEnrollment, RemoteControlState } from "@spiritagent/remote-control";
 
 export interface HostApi {
   kind: "electron" | "web";
@@ -119,6 +120,15 @@ export interface HostApi {
   forgetWorkspace?(request: ForgetWorkspaceRequest): Promise<DesktopSnapshot>;
   commitChanges(request: CommitChangesRequest): Promise<DesktopSnapshot>;
   updateConfig(request: UpdateConfigRequest): Promise<DesktopSnapshot>;
+  pairRemoteControl?(request: {
+    name?: string;
+    origin: string;
+    output?: "svg" | "terminal";
+  }): Promise<RemoteControlEnrollment>;
+  approveRemoteControlPairing?(pairingId: string): Promise<RemoteControlState>;
+  rejectRemoteControlPairing?(pairingId: string): Promise<RemoteControlEnrollment>;
+  cancelRemoteControlPairing?(pairingId: string): Promise<void>;
+  revokeRemoteControlDevice?(deviceId: string): Promise<RemoteControlState>;
   addModel(request: AddModelRequest): Promise<DesktopSnapshot>;
   addProviderModels(request: AddProviderModelsRequest): Promise<DesktopSnapshot>;
   previewModels(request: PreviewModelsRequest): Promise<PreviewModelsResponse>;

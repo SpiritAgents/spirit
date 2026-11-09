@@ -12,7 +12,7 @@ import { ExtensionConfigurationPanel } from "@/components/settings/panels/extens
 import { HooksSettingsPanel } from "@/components/settings/panels/hooks-settings-panel";
 import { IntegrationsSettingsPanel } from "@/components/settings/panels/integrations-settings-panel";
 import { McpsSettingsPanel } from "@/components/settings/panels/mcps-settings-panel";
-import { NetworksSettingsPanel } from "@/components/settings/panels/networks-settings-panel";
+import { RemoteControlPanel } from "@/components/settings/panels/remote-control-panel";
 import { RulesSettingsPanel } from "@/components/settings/panels/rules-settings-panel";
 import { SkillsSettingsPanel } from "@/components/settings/panels/skills-settings-panel";
 import { ModelsSettingsPanel } from "@/components/settings/models/models-settings-panel";
@@ -49,7 +49,8 @@ export function SettingsView({
   extensionsBusy,
   isElectronShell,
   onSavePatch,
-  onResetWebHostPairing,
+  onPairRemoteControl,
+  onRevokeRemoteControlDevice,
   onAddModel,
   onAddProviderModels,
   onPreviewModels,
@@ -229,11 +230,12 @@ export function SettingsView({
                 onSavePatch={onSavePatch}
               />
             ) : tab === "networks" ? (
-              <NetworksSettingsPanel
+              <RemoteControlPanel
                 settings={settings}
                 snapshot={snapshot}
                 onSavePatch={onSavePatch}
-                onResetWebHostPairing={onResetWebHostPairing}
+                onPairRemoteControl={onPairRemoteControl}
+                onRevokeRemoteControlDevice={onRevokeRemoteControlDevice}
               />
             ) : tab === "integrations" ? (
               <IntegrationsSettingsPanel

@@ -183,6 +183,7 @@ export class RemoteControlManager {
       id: randomUUID(),
       tokenHash: pending.tokenHash,
       name: pending.name?.trim() || remoteControlDeviceLabel(pending.request.userAgent),
+      ...(pending.name?.trim() ? { customName: true } : {}),
       createdAt: now,
       lastConnectedAt: now,
       ...(pending.request.userAgent ? { lastUserAgent: pending.request.userAgent } : {}),
@@ -342,6 +343,7 @@ function projectState(config: RemoteControlConfig): RemoteControlState {
     devices: config.devices.map((device) => ({
       id: device.id,
       name: device.name,
+      ...(device.customName ? { customName: true } : {}),
       createdAt: device.createdAt,
       ...(device.lastConnectedAt ? { lastConnectedAt: device.lastConnectedAt } : {}),
       ...(device.lastUserAgent ? { lastUserAgent: device.lastUserAgent } : {}),

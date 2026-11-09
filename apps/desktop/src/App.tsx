@@ -642,7 +642,7 @@ export default function App() {
                                     }
                                     isElectronShell={isElectronShell}
                                     onSavePatch={runtime.saveSettingsPatch}
-                                    onResetWebHostPairing={runtime.resetWebHostPairing}
+                                    onRevokeRemoteControlDevice={runtime.revokeRemoteControlDevice}
                                     onAddModel={runtime.addModel}
                                     onAddProviderModels={runtime.addProviderModels}
                                     onPreviewModels={runtime.previewModels}

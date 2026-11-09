@@ -1256,6 +1256,13 @@ if (gotSpiritSingleInstanceLock) {
         invokeMainDesktopHostCommand(command, payload),
     );
 
+    ipcMain.handle("desktop:remote-control", (_event, method: string, params: unknown) =>
+      callDesktopRemoteControl(spiritDataDir(), method, {
+        ...(params as Record<string, unknown>),
+        ownerClientId: `desktop-${process.pid}`,
+      }),
+    );
+
     ipcMain.handle("desktop:export-session", async () => {
       const result = (await invokeMainDesktopHostCommand("exportSession")) as {
         snapshot: DesktopSnapshot;

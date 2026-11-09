@@ -1257,7 +1257,7 @@ const settingsConnectTabs: Array<{
 }> = [
   {
     id: "networks",
-    labelKey: "settings.networks",
+    labelKey: "settings.remoteControl",
     icon: Network,
   },
   {

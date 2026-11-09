@@ -1973,6 +1973,7 @@ export interface DesktopWebHostSnapshot {
 export interface DesktopWebHostDeviceSnapshot {
   id: string;
   name: string;
+  customName?: boolean;
   createdAt: string;
   lastConnectedAt?: string;
   lastUserAgent?: string;
@@ -2001,4 +2002,10 @@ export interface DesktopWebHostPolicySnapshot {
   cors: "same-origin";
   allowHttpLan: true;
   allowRemoteControl: true;
+}
+
+export interface PairRemoteControlRequest {
+  name?: string;
+  origin: string;
+  output?: "svg" | "terminal";
 }

@@ -74,7 +74,8 @@ export type SettingsViewProps = {
   extensionsBusy: boolean;
   isElectronShell: boolean;
   onSavePatch: (patch: Partial<SettingsFormState>) => Promise<void>;
-  onResetWebHostPairing?: () => Promise<void>;
+  onPairRemoteControl?: () => void;
+  onRevokeRemoteControlDevice?: (deviceId: string) => Promise<void>;
   onAddModel: (request: AddModelRequest) => Promise<void>;
   onAddProviderModels: (request: AddProviderModelsRequest) => Promise<void>;
   onPreviewModels: (request: PreviewModelsRequest) => Promise<PreviewModelsResponse>;

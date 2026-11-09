@@ -83,6 +83,7 @@ function normalizeDevice(value: unknown): RemoteControlDeviceRecord | undefined 
     id,
     tokenHash,
     name: name || `Device ${id.slice(0, 8)}`,
+    ...(record["customName"] === true ? { customName: true } : {}),
     createdAt,
     ...(typeof record["lastConnectedAt"] === "string" && record["lastConnectedAt"].trim()
       ? { lastConnectedAt: record["lastConnectedAt"].trim() }

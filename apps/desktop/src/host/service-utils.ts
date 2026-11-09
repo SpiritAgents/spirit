@@ -228,6 +228,7 @@ export function buildWebHostSnapshot(config: DesktopWebHostConfigFile): DesktopW
     devices: config.devices.map((device) => ({
       id: device.id,
       name: device.name,
+      ...(device.customName ? { customName: true } : {}),
       createdAt: device.createdAt,
       ...(device.lastConnectedAt ? { lastConnectedAt: device.lastConnectedAt } : {}),
       ...(device.lastUserAgent ? { lastUserAgent: device.lastUserAgent } : {}),

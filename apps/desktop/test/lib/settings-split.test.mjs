@@ -20,7 +20,7 @@ const PANEL_FILES = [
   ["HooksSettingsPanel", "panels/hooks-settings-panel.tsx"],
   ["IntegrationsSettingsPanel", "panels/integrations-settings-panel.tsx"],
   ["McpsSettingsPanel", "panels/mcps-settings-panel.tsx"],
-  ["NetworksSettingsPanel", "panels/networks-settings-panel.tsx"],
+  ["RemoteControlPanel", "panels/remote-control-panel.tsx"],
   ["RulesSettingsPanel", "panels/rules-settings-panel.tsx"],
   ["SkillsSettingsPanel", "panels/skills-settings-panel.tsx"],
   ["ModelsSettingsPanel", "models/models-settings-panel.tsx"],

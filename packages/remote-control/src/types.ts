@@ -2,6 +2,7 @@ export interface RemoteControlDeviceRecord {
   id: string;
   tokenHash: string;
   name: string;
+  customName?: boolean;
   createdAt: string;
   lastConnectedAt?: string;
   lastUserAgent?: string;
