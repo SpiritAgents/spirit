@@ -1,4 +1,4 @@
-import type { CodeCompletionResult } from "@spiritagent/agent-core";
+import type { CodeCompletionResult } from "./core/types.js";
 
 import { CodeCompletionEditJournal } from "./edit-journal.js";
 import type { LlmCodeCompletionDependencies } from "./llm-source.js";

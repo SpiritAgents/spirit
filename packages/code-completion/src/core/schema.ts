@@ -1,4 +1,4 @@
-import type { JsonObject } from "../ports.js";
+import type { JsonObject } from "@spiritagent/agent-core";
 
 export const CODE_COMPLETION_JSON_SCHEMA: JsonObject = {
   type: "object",

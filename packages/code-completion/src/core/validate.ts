@@ -1,7 +1,10 @@
-import { isJsonObject } from "../tool-agent.js";
-import type { JsonValue } from "../ports.js";
+import type { JsonObject, JsonValue } from "@spiritagent/agent-core";
 
 import type { CodeCompletionOperation, CodeCompletionResult } from "./types.js";
+
+function isJsonObject(value: JsonValue | undefined): value is JsonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 function isPositiveInt(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 1;

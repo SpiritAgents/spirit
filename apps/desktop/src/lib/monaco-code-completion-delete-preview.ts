@@ -1,6 +1,6 @@
 import * as monaco from "monaco-editor";
 
-import type { InlineDeleteDiffPreviewSpec } from "@spiritagent/agent-core/code-completion-delete-diff";
+import type { InlineDeleteDiffPreviewSpec } from "@spiritagent/code-completion/delete-diff-preview";
 
 const WIDGET_ID = "spirit.codeCompletion.deletePreview";
 

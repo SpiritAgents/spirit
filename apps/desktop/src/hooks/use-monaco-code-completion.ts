@@ -3,11 +3,11 @@ import { useEffect, useRef } from "react";
 import {
   codeCompletionOperationToInlineItemAtCursor,
   type CodeCompletionOperation,
-} from "@spiritagent/agent-core/code-completion-to-monaco";
+} from "@spiritagent/code-completion/monaco";
 import {
   codeCompletionOperationToDeleteDiffPreviewAtCursor,
   type InlineDeleteDiffPreviewSpec,
-} from "@spiritagent/agent-core/code-completion-delete-diff";
+} from "@spiritagent/code-completion/delete-diff-preview";
 import * as monaco from "monaco-editor";
 
 import { useHostApi } from "@/hooks/useHostApi";

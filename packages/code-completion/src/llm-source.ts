@@ -1,11 +1,10 @@
+import { type JsonSchemaTransport, type LlmTransportConfig } from "@spiritagent/agent-core";
 import {
   CODE_COMPLETION_JSON_SCHEMA,
   CODE_COMPLETION_SCHEMA_NAME,
-  type CodeCompletionResult,
-  type JsonSchemaTransport,
-  type LlmTransportConfig,
   validateCodeCompletionOutput,
-} from "@spiritagent/agent-core";
+  type CodeCompletionResult,
+} from "./core/index.js";
 
 import type { FormattedRecentEdits } from "./edit-journal.js";
 import { buildCodeCompletionSystemSections, buildCodeCompletionUserPrompt } from "./prompts.js";

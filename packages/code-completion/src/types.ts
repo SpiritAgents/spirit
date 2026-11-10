@@ -1,4 +1,4 @@
-import type { CodeCompletionResult } from "@spiritagent/agent-core";
+import type { CodeCompletionResult } from "./core/types.js";
 
 import type { FormattedRecentEdits } from "./edit-journal.js";
 

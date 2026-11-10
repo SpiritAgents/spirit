@@ -1,7 +1,7 @@
 import { createJsonSchemaTransport } from "@spiritagent/agent-core";
 import { applyCodeCompletionTransportProfile } from "@spiritagent/agent-core";
 import { CodeCompletionService, tryResolveTransportConfig } from "@spiritagent/host-internal";
-import type { CodeCompletionResult } from "@spiritagent/agent-core";
+import type { CodeCompletionResult } from "@spiritagent/code-completion";
 
 import { resolveSecondaryLanguageModelProfile } from "./secondary-language-model.js";
 import type { DesktopConfigFile } from "./storage.js";

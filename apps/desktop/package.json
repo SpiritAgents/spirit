@@ -64,6 +64,7 @@
     "@spiritagent/agent-core": "workspace:*",
     "@spiritagent/api": "workspace:*",
     "@spiritagent/brand": "workspace:*",
+    "@spiritagent/code-completion": "workspace:*",
     "@spiritagent/config": "workspace:*",
     "@spiritagent/github": "workspace:*",
     "@spiritagent/host-internal": "workspace:*",
