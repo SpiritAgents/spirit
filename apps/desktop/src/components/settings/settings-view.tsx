@@ -128,6 +128,7 @@ export function SettingsView({
             tab !== "skills" &&
             tab !== "rules" &&
             tab !== "mcps" &&
+            tab !== "networks" &&
             tab !== "hooks" &&
             tab !== "agents" &&
             tab !== "tab" &&

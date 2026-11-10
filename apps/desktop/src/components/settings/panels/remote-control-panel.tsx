@@ -193,9 +193,9 @@ export function RemoteControlPanel({
                   key={device.id}
                   className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
                     <Icon
-                      className="mt-0.5 size-4 shrink-0 text-foreground"
+                      className="size-4 shrink-0 text-foreground"
                       aria-hidden
                       strokeWidth={1.75}
                     />
@@ -208,9 +208,9 @@ export function RemoteControlPanel({
                   </div>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
-                    className="shrink-0 text-muted-foreground"
+                    className="shrink-0"
                     disabled={revokingId === device.id || !onRevokeRemoteControlDevice}
                     onClick={() => {
                       if (!onRevokeRemoteControlDevice) return;

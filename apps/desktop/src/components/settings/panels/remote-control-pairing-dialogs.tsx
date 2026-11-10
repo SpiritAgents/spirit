@@ -1,4 +1,7 @@
-import { Check, Copy, Handshake, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import { Check } from "@spiritagent/icons/check";
+import { Compose } from "@spiritagent/icons/compose";
+import { Copy } from "@spiritagent/icons/copy";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -60,24 +63,29 @@ export function RemoteControlPairingDialogs({
   return (
     <>
       <Dialog open={stage === "intro"} onOpenChange={(open) => !open && onDismissIntro()}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("settings.pairIntroducingTitle")}</DialogTitle>
-          </DialogHeader>
-          <div className="mx-auto grid max-w-xs gap-6 py-3">
-            <IntroducingItem
-              icon={<Handshake className="size-5 shrink-0" strokeWidth={1.75} aria-hidden />}
-              title={t("settings.pairFeatureTitle")}
-              description={t("settings.pairFeatureDescription")}
-            />
-            <IntroducingItem
-              icon={<ShieldCheck className="size-5 shrink-0" strokeWidth={1.75} aria-hidden />}
-              title={t("settings.pairSecurityTitle")}
-              description={t("settings.pairSecurityDescription")}
-            />
+        <DialogContent className="sm:max-w-2xl" showCloseButton={false}>
+          <div className="mx-auto w-full max-w-xl space-y-6">
+            <DialogHeader className="pt-4">
+              <DialogTitle>{t("settings.pairIntroducingTitle")}</DialogTitle>
+            </DialogHeader>
+            <div className="grid w-full gap-6 py-3">
+              <IntroducingItem
+                icon={<Compose className="size-5 shrink-0" strokeWidth={1.75} aria-hidden />}
+                title={t("settings.pairFeatureTitle")}
+                description={t("settings.pairFeatureDescription")}
+              />
+              <IntroducingItem
+                icon={<ShieldCheck className="size-5 shrink-0" strokeWidth={1.75} aria-hidden />}
+                title={t("settings.pairSecurityTitle")}
+                description={t("settings.pairSecurityDescription")}
+              />
+            </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="border-t-0 bg-transparent">
             <DialogFooterActions>
+              <Button type="button" variant="outline" onClick={onDismissIntro} disabled={busy}>
+                {t("common.cancel")}
+              </Button>
               <Button type="button" onClick={onContinue} disabled={busy}>
                 {t("app.continue")}
               </Button>
@@ -90,15 +98,15 @@ export function RemoteControlPairingDialogs({
         open={stage === "qr" && enrollment !== null}
         modal={!confirmationOpen}
         onOpenChange={(open) => {
-          if (!open && enrollment) onCancel(enrollment.pairingId);
+          if (!open && !confirmationOpen && enrollment) onCancel(enrollment.pairingId);
         }}
       >
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="sm:max-w-sm pb-23">
           <DialogHeader>
             <DialogTitle>{t("settings.pairDialogTitle")}</DialogTitle>
           </DialogHeader>
           {enrollment?.qrCodeSvg ? (
-            <div className="flex justify-center py-2">
+            <div className="mx-auto flex w-full max-w-56 justify-center pt-16 pb-2">
               <img
                 className="size-56 max-w-full rounded-md bg-white p-2"
                 src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(enrollment.qrCodeSvg)}`}
@@ -107,30 +115,32 @@ export function RemoteControlPairingDialogs({
             </div>
           ) : null}
           {enrollment ? (
-            <div className="flex min-w-0 items-center gap-2">
-              <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+            <div className="group relative -mt-2 mx-auto w-full min-w-0 max-w-56">
+              <p className="w-full truncate text-sm text-muted-foreground group-hover:pr-7 group-focus-within:pr-7">
                 {enrollment.url}
               </p>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0 text-muted-foreground"
-                aria-label={copied ? t("settings.copied") : t("settings.copyEnrollmentUrl")}
-                onClick={() => {
-                  void navigator.clipboard.writeText(enrollment.url).then(() => {
-                    setCopied(true);
-                    if (copyTimer.current) clearTimeout(copyTimer.current);
-                    copyTimer.current = setTimeout(() => setCopied(false), 1500);
-                  });
-                }}
-              >
-                {copied ? (
-                  <Check className="size-3.5" strokeWidth={1.75} aria-hidden />
-                ) : (
-                  <Copy className="size-3.5" strokeWidth={1.75} aria-hidden />
-                )}
-              </Button>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center bg-popover opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="shrink-0 text-muted-foreground"
+                  aria-label={copied ? t("settings.copied") : t("settings.copyEnrollmentUrl")}
+                  onClick={() => {
+                    void navigator.clipboard.writeText(enrollment.url).then(() => {
+                      setCopied(true);
+                      if (copyTimer.current) clearTimeout(copyTimer.current);
+                      copyTimer.current = setTimeout(() => setCopied(false), 1500);
+                    });
+                  }}
+                >
+                  {copied ? (
+                    <Check className="size-3.5" strokeWidth={1.75} aria-hidden />
+                  ) : (
+                    <Copy className="size-3.5" strokeWidth={1.75} aria-hidden />
+                  )}
+                </Button>
+              </div>
             </div>
           ) : null}
         </DialogContent>

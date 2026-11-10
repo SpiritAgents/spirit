@@ -28,13 +28,14 @@ const pending = {
 
 test("introducing stays informational until Continue", () => {
   const onContinue = vi.fn();
+  const onDismissIntro = vi.fn();
   render(
     <RemoteControlPairingDialogs
       stage="intro"
       enrollment={null}
       pending={undefined}
       busy={false}
-      onDismissIntro={() => {}}
+      onDismissIntro={onDismissIntro}
       onContinue={onContinue}
       onCancel={() => {}}
       onApprove={() => {}}
@@ -44,12 +45,34 @@ test("introducing stays informational until Continue", () => {
   expect(screen.getByText("Pair Spirit Remote Control")).toBeTruthy();
   expect(screen.getByText("Collaborate Anywhere")).toBeTruthy();
   expect(screen.getByText("Control Access")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(onDismissIntro).toHaveBeenCalledTimes(1);
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   expect(onContinue).toHaveBeenCalledTimes(1);
 });
 
+test("shows an overlay while waiting for a pairing request", () => {
+  render(
+    <RemoteControlPairingDialogs
+      stage="qr"
+      enrollment={enrollment}
+      pending={undefined}
+      busy={false}
+      onDismissIntro={() => {}}
+      onContinue={() => {}}
+      onCancel={() => {}}
+      onApprove={() => {}}
+      onReject={() => {}}
+    />,
+  );
+
+  expect(document.querySelectorAll('[data-slot="dialog-overlay"]')).toHaveLength(1);
+});
+
 test("shows a separate approval dialog over the QR pairing dialog", () => {
   const onReject = vi.fn();
+  const onCancel = vi.fn();
   render(
     <RemoteControlPairingDialogs
       stage="qr"
@@ -58,13 +81,15 @@ test("shows a separate approval dialog over the QR pairing dialog", () => {
       busy={false}
       onDismissIntro={() => {}}
       onContinue={() => {}}
-      onCancel={() => {}}
+      onCancel={onCancel}
       onApprove={() => {}}
       onReject={onReject}
     />,
   );
   expect(screen.getByText("Scan the QR Code or Enter the URL to Pair This Device")).toBeTruthy();
   expect(screen.getByText("Allow Edge on Mac to control your Spirit?")).toBeTruthy();
+  expect(document.querySelectorAll('[data-slot="dialog-overlay"]')).toHaveLength(1);
+  expect(onCancel).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Deny" }));
   expect(onReject).toHaveBeenCalledWith("pending-1");
 });

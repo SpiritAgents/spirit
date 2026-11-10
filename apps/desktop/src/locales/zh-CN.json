@@ -502,7 +502,7 @@
     "deleteModelConfirmDescription": "配置与单独保存的密钥将一并移除。",
     "deleteProviderGroupConfirmTitle": "删除“{{provider}}”下的全部模型？",
     "deleteProviderGroupConfirmDescription": "配置与密钥将一并移除。",
-    "pairIntroducingTitle": "Pair Spirit Remote Control",
+    "pairIntroducingTitle": "配对 Spirit 远程控制",
     "pairFeatureTitle": "随时随地协作",
     "pairFeatureDescription": "在更多设备上使用你的 Spirit，访问所有工作区与对话并进一步协作。",
     "pairSecurityTitle": "全面控制访问权限",

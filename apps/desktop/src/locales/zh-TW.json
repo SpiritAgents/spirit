@@ -491,7 +491,7 @@
     "deleteModelConfirmDescription": "設定與獨立儲存的金鑰將一併移除。",
     "deleteProviderGroupConfirmTitle": "刪除「{{provider}}」下的所有模型？",
     "deleteProviderGroupConfirmDescription": "設定與金鑰將一併移除。",
-    "pairIntroducingTitle": "Pair Spirit Remote Control",
+    "pairIntroducingTitle": "配對 Spirit 遠端控制",
     "pairFeatureTitle": "隨時隨地協作",
     "pairFeatureDescription": "在更多裝置上使用你的 Spirit，存取所有工作區與對話並進一步協作。",
     "pairSecurityTitle": "全面控制存取權限",
