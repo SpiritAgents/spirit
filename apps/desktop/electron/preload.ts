@@ -359,15 +359,6 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
       ipcRenderer.removeListener("desktop:automations-updated", onAutomationsUpdate);
     };
   },
-  sessionListSubscribe(callback: () => void) {
-    const onSessionListUpdate = () => {
-      callback();
-    };
-    ipcRenderer.on("desktop:session-list-updated", onSessionListUpdate);
-    return () => {
-      ipcRenderer.removeListener("desktop:session-list-updated", onSessionListUpdate);
-    };
-  },
   replyPendingApproval(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "replyPendingApproval", { request });
   },

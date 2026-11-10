@@ -39,6 +39,7 @@ function isSettingsInstructionScope<T extends { source: { scope: string } }>(
 }
 
 export interface BuildDesktopSnapshotInput {
+  sessionListRevision: number;
   workspaceRoot: string;
   config: DesktopConfigFile;
   git: DesktopGitSnapshot;
@@ -92,6 +93,7 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
   const agents = normalizeAgentsConfig(input.config.agents);
 
   return {
+    sessionListRevision: input.sessionListRevision,
     workspaceRoot: input.workspaceRoot,
     userHomeDirectory: resolveDesktopHomeDirectory(),
     workspaceBinding: normalizeWorkspaceBinding(input.config.workspaceBinding),

@@ -1240,11 +1240,6 @@ if (gotSpiritSingleInstanceLock) {
     });
 
     unsubscribeDesktopSessionListUpdates = subscribeDesktopSessionListUpdates(() => {
-      for (const window of BrowserWindow.getAllWindows()) {
-        if (!window.isDestroyed()) {
-          window.webContents.send("desktop:session-list-updated");
-        }
-      }
       refreshWindowsJumpList();
       refreshStatusTray();
       refreshMacOSDockMenu();

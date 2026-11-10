@@ -5,6 +5,7 @@ import { buildDesktopSnapshot } from "../../dist-electron/src/host/snapshot.js";
 
 test("buildDesktopSnapshot maps rulesList from metadata entries", () => {
   const snapshot = buildDesktopSnapshot({
+    sessionListRevision: 7,
     workspaceRoot: "C:/workspace/demo",
     config: {
       models: [],
@@ -85,4 +86,5 @@ test("buildDesktopSnapshot maps rulesList from metadata entries", () => {
   assert.equal(snapshot.rulesList[0]?.rootKind, "workspaceSpirit");
   assert.equal(snapshot.rulesList[0]?.previewExcerpt, "# Rules\nhello");
   assert.equal(snapshot.rulesList[1]?.exists, false);
+  assert.equal(snapshot.sessionListRevision, 7);
 });

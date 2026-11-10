@@ -46,6 +46,7 @@ import {
   commitDoodleNavigation,
 } from "@/lib/doodle";
 import { resolveWorkspaceGroupingRoot } from "@/lib/workspace-grouping";
+import { patchActiveSessionSnapshotInList } from "@/lib/session-list-active-snapshot";
 import {
   normalizePaneSessionPathKey,
   resolvePaneDesktopSnapshot,
@@ -340,30 +341,6 @@ function shouldRefreshDreamSessions(prev: DesktopSnapshot, next: DesktopSnapshot
   );
 }
 
-/**
- * Keep sidebar session title in sync with snapshot without waiting for listSessions IPC.
- * Match by file path only: `isActive` in the cached list can lag behind session switches.
- */
-function patchActiveSessionDisplayNameInList(
-  list: SessionListItem[],
-  filePath: string | undefined,
-  displayName: string | undefined,
-): SessionListItem[] | null {
-  if (!filePath || displayName === undefined) {
-    return null;
-  }
-
-  let changed = false;
-  const next = list.map((session) => {
-    if (session.path !== filePath || session.displayName === displayName) {
-      return session;
-    }
-    changed = true;
-    return { ...session, displayName };
-  });
-  return changed ? next : null;
-}
-
 function isRemoteWebHostClient(apiKind: string | null | undefined): boolean {
   if (apiKind === "web") {
     return true;
@@ -451,6 +428,7 @@ export function useDesktopRuntime() {
     ReadonlySet<string>
   >(() => new Set());
   const sessionsBusySnapshotRef = useRef<Map<string, boolean>>(new Map());
+  const sessionListRevisionRef = useRef<number | undefined>(undefined);
   const [questionDrafts, setQuestionDrafts] = useState<Record<string, QuestionDraft>>({});
   const [composerLocalFileAttachments, setComposerLocalFileAttachments] = useState<
     ComposerLocalFileAttachmentView[]
@@ -774,11 +752,7 @@ export function useDesktopRuntime() {
       appliedConversationRevisionRef.current = effectiveNext.conversation.revision ?? revision;
       setSnapshot(applySessionPathAliasesToSnapshot(effectiveNext));
       setSessions((current) => {
-        const patched = patchActiveSessionDisplayNameInList(
-          current,
-          effectiveNext.activeSession?.filePath,
-          effectiveNext.activeSession?.displayName,
-        );
+        const patched = patchActiveSessionSnapshotInList(current, effectiveNext);
         return patched ?? current;
       });
       setRuntimeError(effectiveNext.runtimeError ?? "");
@@ -1434,6 +1408,15 @@ export function useDesktopRuntime() {
     }
   }, [api, hostReady, refreshSessions]);
 
+  useEffect(() => {
+    const revision = snapshot?.sessionListRevision;
+    if (revision === undefined || sessionListRevisionRef.current === revision) {
+      return;
+    }
+    sessionListRevisionRef.current = revision;
+    void refreshSessions();
+  }, [refreshSessions, snapshot?.sessionListRevision]);
+
   const pendingQuestions = snapshot?.conversation.pendingQuestions ?? null;
 
   useEffect(() => {
@@ -1640,16 +1623,6 @@ export function useDesktopRuntime() {
       unsubscribe();
     };
   }, [api, snapshot?.workspaceRoot]);
-
-  useEffect(() => {
-    if (!api?.subscribeSessionListUpdates) {
-      return;
-    }
-
-    return api.subscribeSessionListUpdates(() => {
-      void refreshSessions();
-    });
-  }, [api, refreshSessions]);
 
   useEffect(() => {
     if (!api || !snapshot || snapshot.conversation.isBusy || !snapshot.dreams.settings.enabled) {

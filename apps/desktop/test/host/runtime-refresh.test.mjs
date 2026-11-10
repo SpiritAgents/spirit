@@ -137,6 +137,23 @@ async function withHostService(run) {
   }
 }
 
+test("session list notifications advance and publish one shared revision", async () => {
+  await withHostService(async ({ service }) => {
+    const requestEmit = vi.fn();
+    service["requestThrottledLiveSnapshotEmit"] = requestEmit;
+    const listener = vi.fn();
+    service.subscribeSessionListUpdates(listener);
+
+    assert.equal(service["sessionListRevision"], 0);
+    service["notifySessionListUpdated"]();
+    service["notifySessionListUpdated"]();
+
+    assert.equal(service["sessionListRevision"], 2);
+    assert.equal(requestEmit.mock.calls.length, 2);
+    assert.equal(listener.mock.calls.length, 2);
+  });
+});
+
 test("remote control snapshots refresh the shared config before publishing", async () => {
   await withHostService(async ({ service, config }) => {
     config.webHost.hasCompletedPairing = true;

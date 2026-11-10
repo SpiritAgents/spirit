@@ -1169,6 +1169,8 @@ export interface WriteHostTextFileRequest {
 }
 
 export interface DesktopSnapshot {
+  /** Monotonic host revision for sidebar session metadata and activity. */
+  sessionListRevision: number;
   workspaceRoot: string;
   /** User home directory; used by the sidebar to separate "no workspace" sessions from project workspace sessions. */
   userHomeDirectory: string;

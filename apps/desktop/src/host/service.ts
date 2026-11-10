@@ -676,6 +676,7 @@ export class DesktopHostService {
   private debugLiveSnapshotEmitCount = 0;
   private debugLiveSnapshotEmitWindowStartedAtMs = 0;
   private lastSessionListNotifyAtMs = 0;
+  private sessionListRevision = 0;
   private dreamCollectorStatus: DesktopDreamCollectorSnapshot =
     emptyDreamCollectorSnapshot("disabled");
   private dreamCollectorRunning = false;
@@ -3817,6 +3818,8 @@ export class DesktopHostService {
   }
 
   private notifySessionListUpdated(): void {
+    this.sessionListRevision += 1;
+    this.requestThrottledLiveSnapshotEmit();
     if (this.sessionListUpdateListeners.size === 0) {
       return;
     }
@@ -4180,6 +4183,7 @@ export class DesktopHostService {
     });
 
     return buildDesktopSnapshot({
+      sessionListRevision: this.sessionListRevision,
       workspaceRoot: state.workspaceRoot,
       config: state.config,
       git: this.buildClientGitSnapshot(),

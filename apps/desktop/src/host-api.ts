@@ -241,7 +241,6 @@ export interface HostApi {
     onError?: (error: unknown) => void,
   ): () => void;
   subscribeAutomationsUpdates?(callback: (snapshot: DesktopSnapshot) => void): () => void;
-  subscribeSessionListUpdates?(callback: () => void): () => void;
   listTaskMenuItems(): Promise<DesktopTaskMenuItem[]>;
   resolveTaskForRun(key: string): Promise<DesktopResolveTaskForRunResult>;
   resolveTaskByLabel(label: string): Promise<DesktopResolveTaskForRunResult>;
