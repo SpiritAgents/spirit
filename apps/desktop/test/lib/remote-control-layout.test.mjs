@@ -32,10 +32,16 @@ test("pairing intro uses a wide shared content boundary and a single settings he
   assert.match(settingsView, /tab !== "networks"/);
 
   const zhCN = JSON.parse(
-    await readFile(new URL("../../src/locales/zh-CN.json", import.meta.url), "utf8"),
+    await readFile(
+      new URL("../../../../packages/i18n/src/locales/zh-CN.json", import.meta.url),
+      "utf8",
+    ),
   );
   const zhTW = JSON.parse(
-    await readFile(new URL("../../src/locales/zh-TW.json", import.meta.url), "utf8"),
+    await readFile(
+      new URL("../../../../packages/i18n/src/locales/zh-TW.json", import.meta.url),
+      "utf8",
+    ),
   );
   assert.equal(zhCN.settings.pairIntroducingTitle, "配对 Spirit 远程控制");
   assert.equal(zhTW.settings.pairIntroducingTitle, "配對 Spirit 遠端控制");

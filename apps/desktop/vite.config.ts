@@ -25,7 +25,7 @@ export function renderProductHtml(html: string): string {
  */
 function workspaceSourceAliases() {
   const aliases: { find: RegExp; replacement: string }[] = [];
-  for (const pkgName of ["ui", "icons", "api", "agent-core", "host-internal"]) {
+  for (const pkgName of ["ui", "icons", "api", "i18n", "agent-core", "host-internal"]) {
     const pkgRoot = path.resolve(__dirname, "../../packages", pkgName);
     const pkgJson = JSON.parse(fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8"));
     for (const [subpath, target] of Object.entries(pkgJson.exports ?? {})) {

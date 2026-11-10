@@ -2,16 +2,7 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { product } from "@spiritagent/product";
 
-import de from "../locales/de.json";
-import en from "../locales/en.json";
-import es from "../locales/es.json";
-import fr from "../locales/fr.json";
-import ja from "../locales/ja.json";
-import ko from "../locales/ko.json";
-import ptBR from "../locales/pt-BR.json";
-import ru from "../locales/ru.json";
-import zhCN from "../locales/zh-CN.json";
-import zhTW from "../locales/zh-TW.json";
+import { resources } from "@spiritagent/i18n/resources";
 import {
   FALLBACK_LANGUAGE,
   isLanguagePreference,
@@ -19,7 +10,7 @@ import {
   SYSTEM_LANGUAGE,
   type LanguagePreference,
   type ValidLanguage,
-} from "./ui-locale";
+} from "@spiritagent/i18n/ui-locale";
 import { flushDesktopRendererStorage } from "./desktop-renderer-storage";
 
 export {
@@ -32,8 +23,8 @@ export {
   isLanguagePreference,
   isValidLanguage,
   resolveUiLocalePreference,
-} from "./ui-locale";
-export type { LanguagePreference, ValidLanguage } from "./ui-locale";
+} from "@spiritagent/i18n/ui-locale";
+export type { LanguagePreference, ValidLanguage } from "@spiritagent/i18n/ui-locale";
 
 export const LANGUAGE_STORAGE_KEY = "spirit-desktop-language" as const;
 
@@ -81,18 +72,7 @@ export async function changeLanguage(lang: string): Promise<void> {
 }
 
 i18n.use(initReactI18next).init({
-  resources: {
-    "zh-CN": { translation: zhCN },
-    en: { translation: en },
-    "zh-TW": { translation: zhTW },
-    ja: { translation: ja },
-    ko: { translation: ko },
-    de: { translation: de },
-    fr: { translation: fr },
-    es: { translation: es },
-    "pt-BR": { translation: ptBR },
-    ru: { translation: ru },
-  },
+  resources,
   lng: getStoredLanguage(),
   fallbackLng: FALLBACK_LANGUAGE,
   interpolation: {

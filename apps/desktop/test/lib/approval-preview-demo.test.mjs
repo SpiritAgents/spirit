@@ -12,7 +12,9 @@ import {
 } from "../../src/lib/approval-preview-demo.ts";
 import { buildApprovalPromptView } from "../../src/lib/approval-prompt.ts";
 
-const en = JSON.parse(readFileSync(new URL("../../src/locales/en.json", import.meta.url), "utf8"));
+const en = JSON.parse(
+  readFileSync(new URL("../../../../packages/i18n/src/locales/en.json", import.meta.url), "utf8"),
+);
 
 /** Resolves dotted keys against en.json and interpolates {{var}} like i18next. */
 function t(key, options = {}) {

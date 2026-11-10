@@ -1,4 +1,4 @@
-import en from "../locales/en.json";
+import { resources } from "@spiritagent/i18n/resources";
 import {
   LANGUAGE_PREFERENCE_OPTIONS,
   LOCALE_LABEL_KEYS,
@@ -6,6 +6,8 @@ import {
 } from "@/lib/ui-locale";
 import { STATIC_SLASH_COMMANDS, type SkillSlashSuggestion } from "@spiritagent/ui/composer";
 import type { ThemePreference } from "@/lib/theme";
+
+const en = resources.en.translation;
 
 export type ActionPaletteTranslate = (key: string) => string;
 

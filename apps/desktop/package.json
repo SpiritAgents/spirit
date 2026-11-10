@@ -66,6 +66,7 @@
     "@spiritagent/brand": "workspace:*",
     "@spiritagent/config": "workspace:*",
     "@spiritagent/host-internal": "workspace:*",
+    "@spiritagent/i18n": "workspace:*",
     "@spiritagent/icons": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "@spiritagent/remote-control": "workspace:*",
