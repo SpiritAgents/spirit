@@ -116,13 +116,8 @@ fn pair_interactive(
         params["name"] = json!(name);
     }
     let mut enrollment = call(runtime, "remote.pair", params)?;
+    print_enrollment(&enrollment);
     loop {
-        if let Some(qr) = enrollment["qrCodeTerminal"].as_str() {
-            println!("{qr}");
-        }
-        if let Some(url) = enrollment["url"].as_str() {
-            println!("Pairing URL: {url}");
-        }
         let state = call(runtime, "remote.getState", json!({}))?;
         let pending = &state["pendingPairing"];
         if pending["id"].as_str() != enrollment["pairingId"].as_str() {
@@ -158,8 +153,18 @@ fn pair_interactive(
                     "output": "terminal",
                 }),
             )?;
+            print_enrollment(&enrollment);
             continue;
         }
         std::thread::sleep(Duration::from_millis(500));
+    }
+}
+
+fn print_enrollment(enrollment: &Value) {
+    if let Some(qr) = enrollment["qrCodeTerminal"].as_str() {
+        println!("{qr}");
+    }
+    if let Some(url) = enrollment["url"].as_str() {
+        println!("Pairing URL: {url}");
     }
 }
