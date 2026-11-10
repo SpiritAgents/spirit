@@ -12,14 +12,13 @@ import type {
   DesktopMcpServerListItem,
   DesktopExtensionSkillSlashItem,
   WorkspaceContentInvalidation,
-  DesktopModelCatalogHint,
   DesktopSnapshot,
   McpStatusSnapshot,
 } from "@spiritagent/api/types";
 import type { ProviderEntry } from "@spiritagent/host-internal";
 import { listProviderPresets } from "@spiritagent/agent-core/provider-presets";
 
-import { readModelCatalogCacheSync } from "@spiritagent/sessions/host/model-catalog-cache";
+import { buildModelCatalogHints } from "@spiritagent/sessions/host/model-config";
 import { flattenProviders } from "@spiritagent/sessions/host/model-config-access";
 import {
   normalizeAgentsConfig,
@@ -226,33 +225,4 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
   };
 }
 
-/** buildSnapshot / context usage are called at high frequency; the catalog cache file only changes after writeModelCatalogCache, so memoize in memory by the provider key set. */
-let modelCatalogHintsMemo: { key: string; hints: DesktopModelCatalogHint[] } | undefined;
-
-export function invalidateModelCatalogHintsMemo(): void {
-  modelCatalogHintsMemo = undefined;
-}
-
-export function buildModelCatalogHints(config: DesktopConfigFile): DesktopModelCatalogHint[] {
-  const memoKey = config.providers
-    .map((provider) => `${provider.id}::${provider.apiBase}`)
-    .join("\n");
-  if (modelCatalogHintsMemo?.key === memoKey) {
-    return modelCatalogHintsMemo.hints;
-  }
-  const hints: DesktopModelCatalogHint[] = [];
-  for (const provider of config.providers) {
-    const hit = readModelCatalogCacheSync(provider.apiBase, provider.id);
-    if (hit && hit.modelIds.length > 0) {
-      hints.push({
-        providerId: provider.id,
-        apiBase: hit.apiBase,
-        modelIds: hit.modelIds,
-        ...(hit.modelCatalog ? { modelCatalog: hit.modelCatalog } : {}),
-        fetchedAtUnixMs: hit.fetchedAtUnixMs,
-      });
-    }
-  }
-  modelCatalogHintsMemo = { key: memoKey, hints };
-  return hints;
-}
+export { buildModelCatalogHints };

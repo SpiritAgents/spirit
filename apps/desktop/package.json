@@ -69,6 +69,7 @@
     "@spiritagent/extensions": "workspace:*",
     "@spiritagent/github": "workspace:*",
     "@spiritagent/host-internal": "workspace:*",
+    "@spiritagent/http": "workspace:*",
     "@spiritagent/i18n": "workspace:*",
     "@spiritagent/icons": "workspace:*",
     "@spiritagent/lsp": "workspace:*",

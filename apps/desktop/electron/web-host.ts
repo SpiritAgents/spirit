@@ -19,7 +19,7 @@ import {
   callDesktopRemoteControl,
   subscribeDesktopRemoteControl,
 } from "@spiritagent/sessions/host/remote-control-client";
-import { createDesktopHttpHost, resolveDesktopWebHostFromEnv } from "./http-host.js";
+import { createDesktopHttpHost, resolveDesktopWebHostFromEnv } from "@spiritagent/http/http-host";
 import { resolveRendererDistPath } from "./renderer-dist.js";
 
 const __filename = fileURLToPath(import.meta.url);

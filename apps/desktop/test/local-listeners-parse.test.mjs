@@ -12,7 +12,7 @@ import {
   parseWindowsPowerShellListeners,
   parseUnixNetstat,
   probeHttpUrl,
-} from "../electron/local-listeners.ts";
+} from "../../../packages/http/dist/local-listeners.js";
 
 test("isLocalhostReachableAddress accepts localhost bindings", () => {
   assert.equal(isLocalhostReachableAddress("127.0.0.1"), true);

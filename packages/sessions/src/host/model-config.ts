@@ -31,15 +31,16 @@ import {
 import type {
   AddProviderModelsRequest,
   DesktopModelCapability,
+  DesktopModelCatalogHint,
   DesktopTransportKind,
   PreviewModelCatalogEntry,
 } from "../types.js";
 import {
   isModelCatalogCacheFresh,
   readModelCatalogCache,
+  readModelCatalogCacheSync,
   writeModelCatalogCache,
 } from "./model-catalog-cache.js";
-import { invalidateModelCatalogHintsMemo } from "./snapshot.js";
 import {
   catalogParserNameForProvider,
   previewCatalogMapForTransport,
@@ -51,9 +52,39 @@ import {
   type DirectMediaTool,
 } from "../lib/composer-direct-media.js";
 import { getKeyringPassword } from "./keyring-secret.js";
-import { defaultCustomModelCapabilities } from "./storage.js";
+import { defaultCustomModelCapabilities, type DesktopConfigFile } from "./storage.js";
 
 export { resolveComposerDirectMediaTool, type DirectMediaTool };
+
+let modelCatalogHintsMemo: { key: string; hints: DesktopModelCatalogHint[] } | undefined;
+
+export function invalidateModelCatalogHintsMemo(): void {
+  modelCatalogHintsMemo = undefined;
+}
+
+export function buildModelCatalogHints(config: DesktopConfigFile): DesktopModelCatalogHint[] {
+  const memoKey = config.providers
+    .map((provider) => `${provider.id}::${provider.apiBase}`)
+    .join("\n");
+  if (modelCatalogHintsMemo?.key === memoKey) {
+    return modelCatalogHintsMemo.hints;
+  }
+  const hints: DesktopModelCatalogHint[] = [];
+  for (const provider of config.providers) {
+    const hit = readModelCatalogCacheSync(provider.apiBase, provider.id);
+    if (hit && hit.modelIds.length > 0) {
+      hints.push({
+        providerId: provider.id,
+        apiBase: hit.apiBase,
+        modelIds: hit.modelIds,
+        ...(hit.modelCatalog ? { modelCatalog: hit.modelCatalog } : {}),
+        fetchedAtUnixMs: hit.fetchedAtUnixMs,
+      });
+    }
+  }
+  modelCatalogHintsMemo = { key: memoKey, hints };
+  return hints;
+}
 
 /** Keyring service for internal provider credential accounts (`Spirit`, shared with CLI). */
 const KEYRING_SERVICE = "Spirit";

@@ -4,13 +4,13 @@ import { test } from "vitest";
 import {
   createDesktopHttpRequestHandler,
   isAllowedRequestHostHeader,
-} from "../../dist-electron/electron/http-host.js";
+} from "../../../../packages/http/dist/http-host.js";
 import { hashRemoteControlToken } from "@spiritagent/remote-control";
 import {
   closeDesktopWebHostDeviceConnections,
   isDesktopWebHostDeviceOnline,
   registerDesktopWebHostDeviceConnection,
-} from "../../../../packages/sessions/dist/host/web-host-state.js";
+} from "../../../../packages/http/dist/web-host-state.js";
 
 function makeRequest({ method, url, host = "127.0.0.1:7788", body, token, userAgent, ip }) {
   const chunks = body === undefined ? [] : [Buffer.from(JSON.stringify(body), "utf8")];

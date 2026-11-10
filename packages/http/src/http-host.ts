@@ -4,15 +4,15 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { isIP } from "node:net";
 import path from "node:path";
 
-import type { HostCommandName } from "@spiritagent/sessions/host/contracts";
+import type { HostCommandName } from "@spiritagent/api/commands";
 import type { RemoteControlAccessResult } from "@spiritagent/remote-control";
 import {
   closeAllDesktopWebHostDeviceConnections,
   registerDesktopWebHostDeviceConnection,
-} from "@spiritagent/sessions/host/web-host-state";
+} from "./web-host-state.js";
 
-import i18nHost from "../src/lib/i18n-host.js";
-import { parseChipNavigateMeta } from "../src/lib/composer-chip-navigate-meta.js";
+import i18nHost from "@spiritagent/i18n/host";
+import { parseChipNavigateMeta } from "@spiritagent/sessions/lib/composer-chip-navigate-meta";
 
 export const DEFAULT_DESKTOP_WEB_HOST = "127.0.0.1";
 export const DEFAULT_DESKTOP_WEB_PORT = 7788;

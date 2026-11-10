@@ -68,7 +68,7 @@ import {
   getCachedLocalListeningEndpoints,
   getScanningPromise,
   startLocalListenersScan,
-} from "./local-listeners.js";
+} from "@spiritagent/http/local-listeners";
 import {
   bindBrowserGuestDevtools,
   closeBrowserGuestDevtools,
@@ -195,7 +195,7 @@ import {
   createDesktopHttpHost,
   resolveDesktopWebHostFromEnv,
   type DesktopHttpHost,
-} from "./http-host.js";
+} from "@spiritagent/http/http-host";
 import {
   beginGitHubDeviceLoginInElectron,
   clearPendingGitHubDeviceAuth,
