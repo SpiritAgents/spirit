@@ -5,3 +5,4 @@ export * from "./prompts.js";
 export * from "./llm-source.js";
 export * from "./service.js";
 export * from "./core/index.js";
+export * from "./commands.js";

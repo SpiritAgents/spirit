@@ -28,5 +28,6 @@ export { githubFetch, setGitHubFetchImplementation } from "./github-fetch.js";
 export * from "./automation-repositories.js";
 export * from "./automation-events.js";
 export * from "./automation-poller.js";
+export * from "./commands.js";
 export * from "./auth-storage.js";
 export * from "./oauth-bridge.js";

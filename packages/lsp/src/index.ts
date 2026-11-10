@@ -12,3 +12,4 @@ export * from "./resolve-server.js";
 export * from "./service.js";
 export * from "./write-append.js";
 export * from "./workspace-cache.js";
+export * from "./snapshot.js";

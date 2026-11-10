@@ -1,19 +1,21 @@
 import {
   automationTimeScheduleFromTrigger,
+  createHostAutomationStore,
+  shouldFireNow,
+  type AutomationRunTriggerContext,
+  type HostAutomationDefinition,
+  type HostAutomationRun,
+} from "@spiritagent/automations";
+import {
   baselineGitHubAutomationWatermark,
   computeGitHubPollMatchesForRepoGroup,
-  createHostAutomationStore,
   fetchGitHubAutomationRepoItems,
   githubTriggerNeedsBaseline,
   groupGitHubAutomationsByRepo,
   mergeGitHubPollWatermarkUpdates,
   resolveGitHubPollWatermark,
-  shouldFireNow,
-  type AutomationRunTriggerContext,
   type GitHubAutomationPollMatch,
-  type HostAutomationDefinition,
-  type HostAutomationRun,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/github";
 
 import { cloneDesktopConfig } from "@spiritagent/sessions/host/service-utils";
 import { modelExistsInProvider } from "@spiritagent/host-internal";

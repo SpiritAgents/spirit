@@ -57,7 +57,7 @@ import {
   requestFromGetDiagnosticsFunctionCall,
   executeGetDiagnostics,
 } from "@spiritagent/agent-core";
-import { LspService, appendLspDiagnosticsAfterWriteIfNeeded } from "@spiritagent/host-internal/lsp";
+import { LspService, appendLspDiagnosticsAfterWriteIfNeeded } from "@spiritagent/lsp";
 import {
   CREATE_AUTOMATION_CONTRIBUTED_TOOL,
   CREATE_AUTOMATION_TOOL_NAME,

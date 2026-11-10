@@ -21,7 +21,7 @@
     "isolatedModules": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "incremental": true,
+    "incremental": false,
     "tsBuildInfoFile": "./.tsbuildinfo"
   },
   "include": [

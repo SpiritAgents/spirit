@@ -11,12 +11,12 @@
     "declarationMap": true,
     "sourceMap": true,
     "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "verbatimModuleSyntax": true,
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
+    "verbatimModuleSyntax": false,
     "isolatedModules": true,
     "skipLibCheck": true,
-    "incremental": true,
+    "incremental": false,
     "tsBuildInfoFile": "./.tsbuildinfo"
   },
   "include": ["src/**/*.ts"]

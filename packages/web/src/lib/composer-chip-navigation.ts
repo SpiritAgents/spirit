@@ -1,4 +1,4 @@
-import { parseGitHubPullRequestUrl } from "@spiritagent/host-internal/github-pull-request-url";
+import { parseGitHubPullRequestUrl } from "@spiritagent/github/pull-request-url";
 
 import type { ComposerChipNavigateMeta } from "./composer-chip-navigate-meta.js";
 import { looksLikeAbsolutePath } from "./file-picker-path.js";

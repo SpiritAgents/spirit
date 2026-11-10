@@ -245,3 +245,86 @@ export interface GitHubPullRequestTabCounts {
   open: number;
   closed: number;
 }
+import type { WorkLocationKind } from "@spiritagent/host-internal/work-location";
+
+export interface DesktopGitSnapshot {
+  revision: number;
+  isRepository: boolean;
+  hasChanges: boolean;
+  workingTreeLineDelta?: { added: number; removed: number };
+  branch?: string;
+  branches: string[];
+  upstreamRemote?: string;
+  upstreamBranch?: string;
+  aheadCount: number;
+  behindCount: number;
+  pushRemote?: string;
+  needsPush: boolean;
+  selectedBranch?: string;
+  workLocation?: WorkLocationKind;
+  isWorktreeSession?: boolean;
+  primaryRepoRoot?: string;
+  worktreeName?: string;
+  worktreeBranch?: string;
+  defaultBranch?: string;
+}
+
+export interface ListGitHubPullRequestsRequest {
+  owner: string;
+  repo: string;
+  state: "open" | "closed";
+  page?: number;
+  query?: string;
+}
+
+export interface GetGitHubPullRequestTabCountsRequest {
+  owner: string;
+  repo: string;
+}
+
+export interface GetGitHubPullRequestDetailRequest {
+  owner: string;
+  repo: string;
+  number: number;
+  checksAfter?: string;
+  nodeId?: string;
+  conversationTimelinePage?: number;
+  conversationReviewCommentsPage?: number;
+  conversationCommitsPage?: number;
+  conversationKnownCommits?: GitHubPullRequestCommit[];
+  conversationPreviousNextTimelinePage?: number;
+  conversationPreviousNextReviewCommentsPage?: number;
+  conversationPreviousNextCommitsPage?: number;
+}
+
+export interface MergeGitHubPullRequestRequest extends GetGitHubPullRequestDetailRequest {
+  mergeMethod: GitHubPullRequestMergeMethod;
+}
+
+export interface DesktopGitHubAutomationRepositoryItem {
+  owner: string;
+  repo: string;
+  fullName: string;
+  htmlUrl: string;
+  private: boolean;
+  updatedAt: string;
+}
+
+export interface ListGitHubAutomationRepositoriesRequest {
+  page?: number;
+}
+
+export interface SearchGitHubAutomationRepositoriesRequest {
+  query: string;
+  page?: number;
+}
+
+export interface GitHubAutomationRepositoriesSnapshot {
+  items: DesktopGitHubAutomationRepositoryItem[];
+  hasNextPage: boolean;
+}
+
+export interface SearchGitHubAutomationRepositoriesSnapshot {
+  items: DesktopGitHubAutomationRepositoryItem[];
+  totalCount: number;
+}

@@ -22,7 +22,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },
@@ -37,6 +37,7 @@
     "@spiritagent/host-internal": "workspace:*",
     "@spiritagent/http": "workspace:*",
     "@spiritagent/i18n": "workspace:*",
+    "@spiritagent/lsp": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "@spiritagent/remote-control": "workspace:*",
     "@spiritagent/server": "workspace:*",

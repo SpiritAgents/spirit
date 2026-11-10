@@ -40,10 +40,7 @@ import type { WorkspaceFileReferenceSuggestionsResult as HostWorkspaceFileRefere
 import type { ApprovalLevel } from "@spiritagent/host-internal/approval-level";
 import type { WorkLocationKind } from "@spiritagent/host-internal/work-location";
 import type { LocalFileComposerRoute } from "@spiritagent/host-internal/local-file-composer-route";
-import type {
-  GitHubPullRequestCommit,
-  GitHubPullRequestMergeMethod,
-} from "@spiritagent/host-internal/github/types";
+import type { DesktopGitSnapshot } from "@spiritagent/github/types";
 import type {
   WorkspaceCapabilityTrustDecision,
   WorkspaceCapabilityTrustRequest,
@@ -1413,33 +1410,13 @@ export type DesktopResolveTaskForRunResult =
   | { status: "notFound" }
   | { status: "unsupported" };
 
-export interface DesktopGitHubAutomationRepositoryItem {
-  owner: string;
-  repo: string;
-  fullName: string;
-  htmlUrl: string;
-  private: boolean;
-  updatedAt: string;
-}
-
-export interface ListGitHubAutomationRepositoriesRequest {
-  page?: number;
-}
-
-export interface SearchGitHubAutomationRepositoriesRequest {
-  query: string;
-  page?: number;
-}
-
-export interface GitHubAutomationRepositoriesSnapshot {
-  items: DesktopGitHubAutomationRepositoryItem[];
-  hasNextPage: boolean;
-}
-
-export interface SearchGitHubAutomationRepositoriesSnapshot {
-  items: DesktopGitHubAutomationRepositoryItem[];
-  totalCount: number;
-}
+export type {
+  DesktopGitHubAutomationRepositoryItem,
+  ListGitHubAutomationRepositoriesRequest,
+  SearchGitHubAutomationRepositoriesRequest,
+  GitHubAutomationRepositoriesSnapshot,
+  SearchGitHubAutomationRepositoriesSnapshot,
+} from "@spiritagent/github/types";
 
 export type DesktopAutomationRunStatus = "running" | "blocked" | "completed" | "failed";
 
@@ -1507,35 +1484,7 @@ export interface WorkspaceContentInvalidation {
   reason: WorkspaceContentInvalidationReason;
 }
 
-export interface DesktopGitSnapshot {
-  /** Bumped on each successful workspace git summary refresh (poll or user git op). */
-  revision: number;
-  isRepository: boolean;
-  hasChanges: boolean;
-  workingTreeLineDelta?: { added: number; removed: number };
-  branch?: string;
-  branches: string[];
-  upstreamRemote?: string;
-  upstreamBranch?: string;
-  aheadCount: number;
-  behindCount: number;
-  pushRemote?: string;
-  needsPush: boolean;
-  /** User-selected branch for the next send; defaults to `branch` when unset. */
-  selectedBranch?: string;
-  /** Session work-location preference; populated on client snapshots. */
-  workLocation?: WorkLocationKind;
-  /** True when the active workspace path is a linked Git worktree. */
-  isWorktreeSession?: boolean;
-  /** Primary repository root for the active worktree session. */
-  primaryRepoRoot?: string;
-  /** Directory name under `{repoRoot}.worktrees/`. */
-  worktreeName?: string;
-  /** Current spirit/ branch checked out in the worktree. */
-  worktreeBranch?: string;
-  /** Default branch on the primary repository (for merge UI). */
-  defaultBranch?: string;
-}
+export type { DesktopGitSnapshot } from "@spiritagent/github/types";
 
 export interface GitWorkingTreeChange {
   path: string;
@@ -1624,44 +1573,19 @@ export type {
   GitHubPullRequestTabCounts,
   GitHubPullRequestTaskListProgress,
   GitHubRepositoryRef,
-} from "@spiritagent/host-internal/github/types";
+} from "@spiritagent/github/types";
 
-export interface ListGitHubPullRequestsRequest {
-  owner: string;
-  repo: string;
-  state: "open" | "closed";
-  page?: number;
-  query?: string;
-}
-
-export interface GetGitHubPullRequestTabCountsRequest {
-  owner: string;
-  repo: string;
-}
-
-export interface GetGitHubPullRequestDetailRequest {
-  owner: string;
-  repo: string;
-  number: number;
-  checksAfter?: string;
-  nodeId?: string;
-  conversationTimelinePage?: number;
-  conversationReviewCommentsPage?: number;
-  conversationCommitsPage?: number;
-  conversationKnownCommits?: GitHubPullRequestCommit[];
-  conversationPreviousNextTimelinePage?: number;
-  conversationPreviousNextReviewCommentsPage?: number;
-  conversationPreviousNextCommitsPage?: number;
-}
-
-export interface MergeGitHubPullRequestRequest extends GetGitHubPullRequestDetailRequest {
-  mergeMethod: GitHubPullRequestMergeMethod;
-}
+export type {
+  ListGitHubPullRequestsRequest,
+  GetGitHubPullRequestTabCountsRequest,
+  GetGitHubPullRequestDetailRequest,
+  MergeGitHubPullRequestRequest,
+} from "@spiritagent/github/types";
 
 export type {
   GitHubPullRequestMergeMethod,
   GitHubPullRequestMergeResult,
-} from "@spiritagent/host-internal/github/types";
+} from "@spiritagent/github/types";
 
 export interface ModelProfileSnapshot {
   /** Provider entry id (`providers[].id` in config.json). */

@@ -709,6 +709,9 @@ importers:
       '@spiritagent/extensions':
         specifier: workspace:*
         version: link:../extensions
+      '@spiritagent/github':
+        specifier: workspace:*
+        version: link:../github
       '@spiritagent/host-internal':
         specifier: workspace:*
         version: link:../host-internal
@@ -737,9 +740,6 @@ importers:
       '@spiritagent/config':
         specifier: workspace:*
         version: link:../config
-      '@spiritagent/github':
-        specifier: workspace:*
-        version: link:../github
     devDependencies:
       '@types/node':
         specifier: 26.6.6
@@ -762,6 +762,15 @@ importers:
       '@spiritagent/agent-core':
         specifier: workspace:*
         version: link:../agent-core
+      '@spiritagent/api':
+        specifier: workspace:*
+        version: link:../api
+      '@spiritagent/host-internal':
+        specifier: workspace:*
+        version: link:../host-internal
+      '@spiritagent/sessions':
+        specifier: workspace:*
+        version: link:../sessions
     devDependencies:
       '@types/node':
         specifier: 26.6.6
@@ -878,6 +887,9 @@ importers:
       '@spiritagent/config':
         specifier: workspace:*
         version: link:../config
+      '@spiritagent/host-internal':
+        specifier: workspace:*
+        version: link:../host-internal
     devDependencies:
       '@types/node':
         specifier: 26.6.6
@@ -906,21 +918,12 @@ importers:
       '@spiritagent/automations':
         specifier: workspace:*
         version: link:../automations
-      '@spiritagent/code-completion':
-        specifier: workspace:*
-        version: link:../code-completion
       '@spiritagent/config':
         specifier: workspace:*
         version: link:../config
       '@spiritagent/extension-toolkit':
         specifier: workspace:*
         version: link:../extension-toolkit
-      '@spiritagent/github':
-        specifier: workspace:*
-        version: link:../github
-      '@spiritagent/lsp':
-        specifier: workspace:*
-        version: link:../lsp
       '@spiritagent/product':
         specifier: workspace:*
         version: link:../product
@@ -1041,6 +1044,9 @@ importers:
       '@spiritagent/agent-core':
         specifier: workspace:*
         version: link:../agent-core
+      '@spiritagent/api':
+        specifier: workspace:*
+        version: link:../api
       vscode-languageserver-protocol:
         specifier: 3.18.2
         version: 3.18.2
@@ -1103,6 +1109,9 @@ importers:
       '@spiritagent/host-internal':
         specifier: workspace:*
         version: link:../host-internal
+      '@spiritagent/lsp':
+        specifier: workspace:*
+        version: link:../lsp
       '@spiritagent/product':
         specifier: workspace:*
         version: link:../product
@@ -1128,9 +1137,6 @@ importers:
       '@spiritagent/api':
         specifier: workspace:*
         version: link:../api
-      '@spiritagent/code-completion':
-        specifier: workspace:*
-        version: link:../code-completion
       '@spiritagent/config':
         specifier: workspace:*
         version: link:../config
@@ -1146,6 +1152,9 @@ importers:
       '@spiritagent/i18n':
         specifier: workspace:*
         version: link:../i18n
+      '@spiritagent/lsp':
+        specifier: workspace:*
+        version: link:../lsp
       '@spiritagent/product':
         specifier: workspace:*
         version: link:../product
@@ -1277,6 +1286,9 @@ importers:
       '@spiritagent/extensions':
         specifier: workspace:*
         version: link:../extensions
+      '@spiritagent/github':
+        specifier: workspace:*
+        version: link:../github
       '@spiritagent/host-internal':
         specifier: workspace:*
         version: link:../host-internal
@@ -1286,6 +1298,9 @@ importers:
       '@spiritagent/icons':
         specifier: workspace:*
         version: link:../icons
+      '@spiritagent/lsp':
+        specifier: workspace:*
+        version: link:../lsp
       '@spiritagent/product':
         specifier: workspace:*
         version: link:../product
@@ -1479,6 +1494,9 @@ importers:
       '@spiritagent/i18n':
         specifier: workspace:*
         version: link:../i18n
+      '@spiritagent/lsp':
+        specifier: workspace:*
+        version: link:../lsp
       '@spiritagent/product':
         specifier: workspace:*
         version: link:../product

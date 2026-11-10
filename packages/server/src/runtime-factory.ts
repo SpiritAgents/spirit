@@ -62,10 +62,9 @@ import {
   type LocalHostToolService,
   type LspHostBindings,
 } from "@spiritagent/agent-core/host-bridge";
+import { LspService, appendLspDiagnosticsAfterWriteIfNeeded } from "@spiritagent/lsp";
 import {
-  LspService,
   NodeHostToolService,
-  appendLspDiagnosticsAfterWriteIfNeeded,
   createHostMcpService,
   createHookRunner,
   createNoopMcpAdapter,

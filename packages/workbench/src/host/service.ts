@@ -52,7 +52,6 @@ import {
   normalizeApprovalLevel,
   normalizeWorkLocationKind,
   gitBranchLabelForBasicInfo,
-  setGitHubFetchImplementation,
   applyWorkspaceTasksTrustDecision,
   canonicalizeWorkspaceRoot,
   type WorkLocationKind,
@@ -183,6 +182,7 @@ import type {
   WriteHostTextFileRequest,
   WriteWorkspaceTextFileRequest,
 } from "@spiritagent/api/types";
+import { setGitHubFetchImplementation } from "@spiritagent/github";
 import type { DesktopToolRequest, HostCommandName } from "@spiritagent/sessions/host/contracts";
 import { createHostInvokeDispatch } from "./host-invoke-dispatch.js";
 import {
@@ -563,7 +563,7 @@ import {
   ensureLspServiceReady,
   lspUserConfigFromEnabled,
   sharedLspServiceForWorkspace,
-} from "@spiritagent/host-internal/lsp";
+} from "@spiritagent/lsp";
 import {
   buildDesktopLspSnapshot,
   defaultDesktopLspSnapshot,
@@ -764,7 +764,7 @@ export class DesktopHostService {
   private readonly mcpServiceByWorkspaceRoot = new Map<string, McpService>();
   private readonly lspServiceByWorkspaceRoot = new Map<
     string,
-    import("@spiritagent/host-internal/lsp").LspService
+    import("@spiritagent/lsp").LspService
   >();
   private lspSnapshot = defaultDesktopLspSnapshot();
   private visiblePaneSessionPaths: string[] = [];
