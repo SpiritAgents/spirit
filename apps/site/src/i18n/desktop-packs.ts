@@ -1,13 +1,13 @@
-import desktopDe from "../../../desktop/src/locales/de.json";
-import desktopEn from "../../../desktop/src/locales/en.json";
-import desktopEs from "../../../desktop/src/locales/es.json";
-import desktopFr from "../../../desktop/src/locales/fr.json";
-import desktopJa from "../../../desktop/src/locales/ja.json";
-import desktopKo from "../../../desktop/src/locales/ko.json";
-import desktopPtBR from "../../../desktop/src/locales/pt-BR.json";
-import desktopRu from "../../../desktop/src/locales/ru.json";
-import desktopZhCN from "../../../desktop/src/locales/zh-CN.json";
-import desktopZhTW from "../../../desktop/src/locales/zh-TW.json";
+import desktopDe from "../../../../packages/i18n/src/locales/de.json";
+import desktopEn from "../../../../packages/i18n/src/locales/en.json";
+import desktopEs from "../../../../packages/i18n/src/locales/es.json";
+import desktopFr from "../../../../packages/i18n/src/locales/fr.json";
+import desktopJa from "../../../../packages/i18n/src/locales/ja.json";
+import desktopKo from "../../../../packages/i18n/src/locales/ko.json";
+import desktopPtBR from "../../../../packages/i18n/src/locales/pt-BR.json";
+import desktopRu from "../../../../packages/i18n/src/locales/ru.json";
+import desktopZhCN from "../../../../packages/i18n/src/locales/zh-CN.json";
+import desktopZhTW from "../../../../packages/i18n/src/locales/zh-TW.json";
 
 const DESKTOP_PACKS = {
   "en-US": desktopEn,

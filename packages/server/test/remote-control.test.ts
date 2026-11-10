@@ -20,7 +20,7 @@ test("remote RPC exposes pairing without leaking secrets into notifications", as
       host: "127.0.0.1",
       port: 7788,
     });
-    await host.handle("remote.enable");
+    await host.handle("remote.enable", {});
     const enrollment = (await host.handle("remote.pair", {
       ownerClientId: "desktop-test",
       origin: "http://127.0.0.1:7788",
@@ -31,7 +31,7 @@ test("remote RPC exposes pairing without leaking secrets into notifications", as
       userAgent: "Example Browser",
     })) as { code: string };
     assert.equal(access.code, "DEVICE_APPROVAL_REQUIRED");
-    const state = (await host.handle("remote.getState")) as {
+    const state = (await host.handle("remote.getState", {})) as {
       pendingPairing: Record<string, unknown>;
     };
     assert.equal(state.pendingPairing.ownerClientId, "desktop-test");

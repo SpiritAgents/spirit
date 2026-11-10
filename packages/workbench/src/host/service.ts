@@ -1665,7 +1665,7 @@ export class DesktopHostService {
   }
 
   async refreshRemoteControlConfig(): Promise<void> {
-    if (!this.initialized) return;
+    if (!this.state) return;
     const config = await loadConfig();
     const state = this.requireState();
     state.config.webHost = config.webHost;

@@ -46,9 +46,9 @@ test("requires approval before a pending token becomes an active device", async 
     assert.equal(approved.hasCompletedPairing, true);
     const access = await manager.requestAccess(enrollment.token, { recordConnection: true });
     assert.equal(access.code, "OK");
-    const renamed = await manager.renameDevice(approved.devices[0].id, "My Device");
-    assert.equal(renamed.devices[0].name, "My Device");
-    assert.equal(renamed.devices[0].customName, true);
+    const renamed = await manager.renameDevice(approved.devices[0]!.id, "My Device");
+    assert.equal(renamed.devices[0]!.name, "My Device");
+    assert.equal(renamed.devices[0]!.customName, true);
   } finally {
     await rm(dataDir, { recursive: true, force: true });
   }

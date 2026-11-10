@@ -52,6 +52,7 @@ try {
       "scripts/product/generate-content.test.mjs",
       "scripts/product/acceptance.test.mjs",
       "scripts/product/source-audit.test.mjs",
+      "scripts/product/workbench-boundaries.test.mjs",
       "scripts/release/product-release.test.mjs",
     ],
     { cwd: root, env, stdio: "inherit" },
