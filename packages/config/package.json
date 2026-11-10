@@ -24,6 +24,10 @@
       "types": "./dist/write-lock.d.ts",
       "default": "./dist/write-lock.js"
     },
+    "./keyring-secret": {
+      "types": "./dist/keyring-secret.d.ts",
+      "default": "./dist/keyring-secret.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -32,6 +36,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@napi-rs/keyring": "1.3.0",
     "@spiritagent/agent-core": "workspace:*"
   },
   "devDependencies": {

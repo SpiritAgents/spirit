@@ -1,6 +1,6 @@
 import { githubApiHeaders, githubFetch, readGitHubJson } from "./github-api.js";
 import { GITHUB_API_BASE_URL } from "./oauth-config.js";
-import type { HostAutomationGitHubEvent } from "../automations.js";
+import type { HostAutomationGitHubEvent } from "./automation-types.js";
 
 export interface GitHubAutomationIssueItem {
   number: number;

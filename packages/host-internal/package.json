@@ -155,6 +155,7 @@
     "@spiritagent/agent-core": "workspace:*",
     "@spiritagent/config": "workspace:*",
     "@spiritagent/extension-toolkit": "workspace:*",
+    "@spiritagent/github": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "@vscode/ripgrep": "1.18.0",
     "fast-glob": "3.3.3",

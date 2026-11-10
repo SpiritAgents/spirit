@@ -240,6 +240,9 @@ importers:
       '@spiritagent/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@spiritagent/github':
+        specifier: workspace:*
+        version: link:../../packages/github
       '@spiritagent/host-internal':
         specifier: workspace:*
         version: link:../../packages/host-internal
@@ -704,6 +707,9 @@ importers:
 
   packages/config:
     dependencies:
+      '@napi-rs/keyring':
+        specifier: 1.3.0
+        version: 1.3.0
       '@spiritagent/agent-core':
         specifier: workspace:*
         version: link:../agent-core
@@ -765,6 +771,25 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@26.6.6)(happy-dom@20.11.1)(jsdom@30.0.1(@noble/hashes@2.2.0))(vite@8.2.0(@types/node@26.6.6)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.7)(yaml@2.9.0))
 
+  packages/github:
+    dependencies:
+      '@spiritagent/agent-core':
+        specifier: workspace:*
+        version: link:../agent-core
+      '@spiritagent/config':
+        specifier: workspace:*
+        version: link:../config
+    devDependencies:
+      '@types/node':
+        specifier: 26.6.6
+        version: 26.6.6
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@26.6.6)(happy-dom@20.11.1)(jsdom@30.0.1(@noble/hashes@2.2.0))(vite@8.2.0(@types/node@26.6.6)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.7)(yaml@2.9.0))
+
   packages/host-internal:
     dependencies:
       '@aws-sdk/client-bedrock':
@@ -785,6 +810,9 @@ importers:
       '@spiritagent/extension-toolkit':
         specifier: workspace:*
         version: link:../extension-toolkit
+      '@spiritagent/github':
+        specifier: workspace:*
+        version: link:../github
       '@spiritagent/product':
         specifier: workspace:*
         version: link:../product

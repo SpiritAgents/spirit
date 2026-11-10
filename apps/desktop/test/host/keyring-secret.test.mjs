@@ -63,7 +63,7 @@ test("shardKeyringAccount keeps base account stable", () => {
 test("setKeyringPassword writes sharded secrets before primary marker", () => {
   const sourcePath = join(
     dirname(fileURLToPath(import.meta.url)),
-    "../../src/host/keyring-secret.ts",
+    "../../../../packages/config/src/keyring-secret.ts",
   );
   const source = readFileSync(sourcePath, "utf8");
   const shardWriteIndex = source.indexOf("shardKeyringAccount(account, index)");

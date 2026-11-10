@@ -1,4 +1,4 @@
-import type { HostAutomationDefinition, HostAutomationTrigger } from "../automations.js";
+import type { HostAutomationDefinition, HostAutomationTrigger } from "./automation-types.js";
 import {
   fetchRepositoryMaxIssueNumber,
   filterNewGitHubAutomationEvents,
