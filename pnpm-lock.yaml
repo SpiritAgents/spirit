@@ -252,6 +252,9 @@ importers:
       '@spiritagent/icons':
         specifier: workspace:*
         version: link:../../packages/icons
+      '@spiritagent/lsp':
+        specifier: workspace:*
+        version: link:../../packages/lsp
       '@spiritagent/product':
         specifier: workspace:*
         version: link:../../packages/product
@@ -813,6 +816,9 @@ importers:
       '@spiritagent/github':
         specifier: workspace:*
         version: link:../github
+      '@spiritagent/lsp':
+        specifier: workspace:*
+        version: link:../lsp
       '@spiritagent/product':
         specifier: workspace:*
         version: link:../product
@@ -899,6 +905,25 @@ importers:
       typescript:
         specifier: 7.0.2
         version: 7.0.2
+
+  packages/lsp:
+    dependencies:
+      '@spiritagent/agent-core':
+        specifier: workspace:*
+        version: link:../agent-core
+      vscode-languageserver-protocol:
+        specifier: 3.18.2
+        version: 3.18.2
+    devDependencies:
+      '@types/node':
+        specifier: 26.6.6
+        version: 26.6.6
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@26.6.6)(happy-dom@20.11.1)(jsdom@30.0.1(@noble/hashes@2.2.0))(vite@8.2.0(@types/node@26.6.6)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.7)(yaml@2.9.0))
 
   packages/product:
     devDependencies:

@@ -2,8 +2,7 @@ import { rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { LspService } from "../lsp/service.js";
-import { resolvePyrightOnPath } from "../lsp/resolve-server.js";
+import { LspService, resolvePyrightOnPath } from "@spiritagent/lsp";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.resolve(here, "../../../..");
