@@ -1,7 +1,7 @@
 // Must be the first import: self-installs uncaught-error reporting so that even
 // errors thrown by the import side effects below reach the main-process crash log.
 import "./lib/renderer-error-reporting";
-import { StrictMode } from "react";
+import { StrictMode, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 
 import "./lib/i18n";
@@ -11,6 +11,13 @@ import { installScrollHoverKeepalive } from "@spiritagent/ui/scroll-hover-keepal
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WorkspaceToolsChromeProvider } from "@/contexts/workspace-tools-chrome-context";
+import {
+  ModelPickerLabelsProvider,
+  ModelPickerRuntimeProvider,
+} from "@spiritagent/ui/model-picker";
+import { desktopModelPickerRuntime } from "@/lib/model-picker-runtime";
+import { desktopModelPickerLabels } from "@/lib/ui-labels";
+import { useTranslation } from "react-i18next";
 import { ThemeProvider } from "./hooks/useTheme";
 import {
   applyClickablePointerCursorToDocument,
@@ -48,17 +55,28 @@ if (!rootElement) {
   throw new Error("Desktop root element #app was not found.");
 }
 
-createRoot(rootElement).render(
-  <StrictMode>
-    <ThemeProvider>
-      <UiPortalProvider getContainer={getUiLayoutPortalContainer}>
-        <Toaster position="bottom-right" />
-        <TooltipProvider delayDuration={300} getPortalContainer={getUiLayoutPortalContainer}>
-          <WorkspaceToolsChromeProvider>
-            <App />
-          </WorkspaceToolsChromeProvider>
-        </TooltipProvider>
-      </UiPortalProvider>
-    </ThemeProvider>
-  </StrictMode>,
-);
+function WorkbenchRoot() {
+  const { t } = useTranslation();
+  const modelPickerLabels = useMemo(() => desktopModelPickerLabels(t), [t]);
+
+  return (
+    <StrictMode>
+      <ThemeProvider>
+        <ModelPickerRuntimeProvider value={desktopModelPickerRuntime}>
+          <ModelPickerLabelsProvider value={modelPickerLabels}>
+            <UiPortalProvider getContainer={getUiLayoutPortalContainer}>
+              <Toaster position="bottom-right" />
+              <TooltipProvider delayDuration={300} getPortalContainer={getUiLayoutPortalContainer}>
+                <WorkspaceToolsChromeProvider>
+                  <App />
+                </WorkspaceToolsChromeProvider>
+              </TooltipProvider>
+            </UiPortalProvider>
+          </ModelPickerLabelsProvider>
+        </ModelPickerRuntimeProvider>
+      </ThemeProvider>
+    </StrictMode>
+  );
+}
+
+createRoot(rootElement).render(<WorkbenchRoot />);
