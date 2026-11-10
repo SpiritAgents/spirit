@@ -16,7 +16,7 @@
     "verbatimModuleSyntax": false,
     "isolatedModules": true,
     "skipLibCheck": true,
-    "incremental": true,
+    "incremental": false,
     "tsBuildInfoFile": "./.tsbuildinfo"
   },
   "include": ["src/**/*.ts"]
