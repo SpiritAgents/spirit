@@ -50,15 +50,7 @@ export class RemoteControlManager {
   }
 
   async enable(): Promise<RemoteControlState> {
-    const previous = await this.read();
-    await this.update((current) => ({ ...current, enabled: true }));
-    const deadline = Date.now() + 5_000;
-    while (Date.now() < deadline) {
-      if (await this.hostAvailable()) return this.getState();
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
-    await this.update((current) => ({ ...current, enabled: previous.enabled }));
-    throw new Error("Remote Control requires a running Workbench Host.");
+    return this.update((current) => ({ ...current, enabled: true }));
   }
 
   async disable(): Promise<RemoteControlState> {

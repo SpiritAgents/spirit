@@ -75,17 +75,13 @@ test("rejection rotates enrollment and startup removes stale pending state", asy
   }
 });
 
-test(
-  "enable rolls back when no Workbench Host lease is available",
-  { timeout: 10_000 },
-  async () => {
-    const dataDir = await mkdtemp(join(tmpdir(), "remote-control-no-host-"));
-    const manager = new RemoteControlManager({ dataDir });
-    try {
-      await assert.rejects(manager.enable(), /Workbench Host/);
-      assert.equal((await manager.getState()).enabled, false);
-    } finally {
-      await rm(dataDir, { recursive: true, force: true });
-    }
-  },
-);
+test("enable persists desired state before a Workbench Host attaches", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "remote-control-no-host-"));
+  const manager = new RemoteControlManager({ dataDir });
+  try {
+    await manager.enable();
+    assert.equal((await manager.getState()).enabled, true);
+  } finally {
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});

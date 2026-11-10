@@ -3,6 +3,8 @@ import { copyFile, lstat, mkdir, readFile, realpath, stat, writeFile } from "nod
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawn, type ChildProcess } from "node:child_process";
+import { createRequire } from "node:module";
 
 import {
   BrowserWindow,
@@ -179,7 +181,6 @@ import {
   resolveJumpListSessionPath,
 } from "../src/lib/windows-launch-argv.js";
 import { setDesktopWebHostRuntimeStatus } from "@spiritagent/sessions/host/web-host-state";
-import { requestDesktopRemoteControlAccess } from "@spiritagent/sessions/host/remote-control-client";
 import {
   callDesktopRemoteControl,
   subscribeDesktopRemoteControl,
@@ -191,11 +192,7 @@ import {
   rememberEditCommandState,
   setDesktopApplicationMenu,
 } from "./application-menu.js";
-import {
-  createDesktopHttpHost,
-  resolveDesktopWebHostFromEnv,
-  type DesktopHttpHost,
-} from "@spiritagent/http/http-host";
+import { resolveDesktopWebHostFromEnv } from "@spiritagent/http/http-host";
 import {
   beginGitHubDeviceLoginInElectron,
   clearPendingGitHubDeviceAuth,
@@ -224,10 +221,9 @@ installMainStderrCapture();
 
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
 
-let desktopWebHost: DesktopHttpHost | undefined;
 let desktopWebHostConfig: DesktopWebHostConfigFile | undefined;
+let desktopWorkbenchChild: ChildProcess | undefined;
 let unsubscribeDesktopRemoteControl: (() => void) | undefined;
-let remoteHostLeaseTimer: ReturnType<typeof setInterval> | undefined;
 let quittingAfterDesktopWebHostStop = false;
 let unsubscribeDesktopDreamUpdates: (() => void) | undefined;
 let unsubscribeDesktopAutomationsUpdates: (() => void) | undefined;
@@ -284,27 +280,6 @@ function shouldStartDesktopWebHostFromEnv(): boolean {
   return process.env.SPIRIT_DESKTOP_WEB_HOST === "1";
 }
 
-function getDesktopWebHost(config: DesktopWebHostConfigFile): DesktopHttpHost {
-  if (!desktopWebHost) {
-    desktopWebHost = createDesktopHttpHost({
-      host: config.host,
-      port: config.port,
-      invokeHostCommand: invokeDesktopHostCommand,
-      onHostCommandResult: handleDesktopWebHostCommandResult,
-      subscribeHostUpdates: subscribeDesktopDreamUpdates,
-      auth: {
-        requestAccess: (token, metadata) =>
-          requestDesktopRemoteControlAccess(spiritDataDir(), token, metadata),
-      },
-      static: {
-        root: rendererDistPath(),
-        spaFallback: true,
-      },
-    });
-  }
-  return desktopWebHost;
-}
-
 function rendererDistPath(): string {
   return resolveRendererDistPath(__dirname);
 }
@@ -332,16 +307,6 @@ async function syncInitialDesktopWebHost(): Promise<void> {
   await syncDesktopWebHostWithConfig(config.webHost);
 }
 
-async function stopDesktopWebHostIfRunning(): Promise<void> {
-  if (!desktopWebHost?.isRunning()) {
-    return;
-  }
-  await desktopWebHost.stop();
-  await callDesktopRemoteControl(spiritDataDir(), "remote.unregisterHost", {
-    instanceId: `desktop-`,
-  });
-}
-
 async function startDesktopRemoteControlSync(): Promise<void> {
   await syncInitialDesktopWebHost();
   unsubscribeDesktopRemoteControl = await subscribeDesktopRemoteControl(spiritDataDir(), {
@@ -360,26 +325,6 @@ async function startDesktopRemoteControlSync(): Promise<void> {
       })();
     },
   });
-  if (desktopWebHost?.isRunning()) {
-    const state = desktopWebHost.getState();
-    await callDesktopRemoteControl(spiritDataDir(), "remote.registerHost", {
-      instanceId: `desktop-`,
-      pid: process.pid,
-      host: state.host,
-      port: state.port,
-    });
-  }
-  remoteHostLeaseTimer = setInterval(() => {
-    if (!desktopWebHost?.isRunning()) return;
-    const state = desktopWebHost.getState();
-    void callDesktopRemoteControl(spiritDataDir(), "remote.registerHost", {
-      instanceId: `desktop-`,
-      pid: process.pid,
-      host: state.host,
-      port: state.port,
-    });
-  }, 10_000);
-  remoteHostLeaseTimer.unref();
 }
 
 function handleWindowsLaunchArgv(argv: readonly string[]): boolean {
@@ -464,58 +409,17 @@ async function invokeMainDesktopHostCommand(
   return result;
 }
 
-async function handleDesktopWebHostCommandResult(
-  command: Parameters<typeof invokeDesktopHostCommand>[0],
-  _payload: unknown,
-  result: unknown,
-): Promise<void> {
-  if (command !== "updateConfig" || !isDesktopSnapshot(result)) {
-    return;
-  }
-  const config = await loadConfig();
-  await syncDesktopWebHostWithConfig(config.webHost);
-}
-
 async function syncDesktopWebHostWithConfig(config: DesktopWebHostConfigFile): Promise<void> {
-  const previousConfig = desktopWebHostConfig;
-  const changedEndpoint =
-    previousConfig?.host !== config.host || previousConfig?.port !== config.port;
+  const wasEnabled = desktopWebHostConfig?.enabled === true;
   desktopWebHostConfig = config;
 
   if (!config.enabled) {
-    await stopDesktopWebHostIfRunning();
     setDesktopWebHostRuntimeStatus({
       state: "disabled",
       host: config.host,
       port: config.port,
     });
     return;
-  }
-
-  if (desktopWebHost?.isRunning() && !changedEndpoint) {
-    const state = desktopWebHost.getState();
-    setDesktopWebHostRuntimeStatus(
-      state.running
-        ? {
-            state: "running",
-            host: config.host,
-            port: config.port,
-            url: state.url,
-          }
-        : {
-            state: "stopped",
-            host: config.host,
-            port: config.port,
-          },
-    );
-    return;
-  }
-
-  if (desktopWebHost?.isRunning()) {
-    await desktopWebHost.stop();
-  }
-  if (changedEndpoint) {
-    desktopWebHost = undefined;
   }
 
   setDesktopWebHostRuntimeStatus({
@@ -525,20 +429,17 @@ async function syncDesktopWebHostWithConfig(config: DesktopWebHostConfigFile): P
   });
 
   try {
-    const state = await getDesktopWebHost(config).start();
+    await ensureDesktopWorkbenchProcess(config);
     setDesktopWebHostRuntimeStatus({
       state: "running",
-      host: state.host,
-      port: state.port,
-      ...(state.url ? { url: state.url } : {}),
-    });
-    await callDesktopRemoteControl(spiritDataDir(), "remote.registerHost", {
-      instanceId: `desktop-`,
-      pid: process.pid,
-      host: state.host,
-      port: state.port,
+      host: config.host,
+      port: config.port,
+      url: `http://${config.host}:${config.port}`,
     });
   } catch (error) {
+    if (!wasEnabled) {
+      await callDesktopRemoteControl(spiritDataDir(), "remote.disable").catch(() => undefined);
+    }
     const message = error instanceof Error ? error.message : String(error);
     console.error("[spirit-desktop] start desktop web host failed", error);
     setDesktopWebHostRuntimeStatus({
@@ -548,6 +449,47 @@ async function syncDesktopWebHostWithConfig(config: DesktopWebHostConfigFile): P
       error: message,
     });
   }
+}
+
+async function ensureDesktopWorkbenchProcess(config: DesktopWebHostConfigFile): Promise<void> {
+  const available = await callDesktopRemoteControl<{ hostAvailable?: boolean }>(
+    spiritDataDir(),
+    "remote.getState",
+  );
+  if (available.hostAvailable) return;
+
+  if (!desktopWorkbenchChild) {
+    const require = createRequire(import.meta.url);
+    const entry = require.resolve("@spiritagent/workbench/entry");
+    const child = spawn(process.execPath, [entry, "serve"], {
+      detached: true,
+      stdio: "ignore",
+      env: {
+        ...process.env,
+        ELECTRON_RUN_AS_NODE: "1",
+        SPIRIT_DATA_DIR: spiritDataDir(),
+        SPIRIT_SERVER_DATA_DIR: spiritDataDir(),
+        SPIRIT_WEB_HOST: config.host,
+        SPIRIT_WEB_PORT: String(config.port),
+      },
+    });
+    desktopWorkbenchChild = child;
+    child.once("exit", () => {
+      if (desktopWorkbenchChild === child) desktopWorkbenchChild = undefined;
+    });
+    child.unref();
+  }
+
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
+    const current = await callDesktopRemoteControl<{ hostAvailable?: boolean }>(
+      spiritDataDir(),
+      "remote.getState",
+    );
+    if (current.hostAvailable) return;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error("Workbench Host startup timed out.");
 }
 
 function isDesktopSnapshot(value: unknown): value is DesktopSnapshot {
@@ -1905,8 +1847,6 @@ app.on("before-quit", (event) => {
   unsubscribeDesktopTasksUpdates = undefined;
   unsubscribeDesktopRemoteControl?.();
   unsubscribeDesktopRemoteControl = undefined;
-  if (remoteHostLeaseTimer) clearInterval(remoteHostLeaseTimer);
-  remoteHostLeaseTimer = undefined;
   if (quittingAfterDesktopWebHostStop && desktopHostShutdownComplete) {
     return;
   }
@@ -1916,7 +1856,7 @@ app.on("before-quit", (event) => {
   desktopHostShutdownPromise ??= shutdownDesktopHostService().finally(() => {
     desktopHostShutdownComplete = true;
   });
-  void Promise.all([stopDesktopWebHostIfRunning(), desktopHostShutdownPromise]).finally(() => {
+  void Promise.resolve(desktopHostShutdownPromise).finally(() => {
     app.quit();
   });
 });
