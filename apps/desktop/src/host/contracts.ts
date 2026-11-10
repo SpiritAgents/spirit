@@ -1,149 +1,14 @@
 import type { ChatArchive } from "@spiritagent/agent-core";
-import type { HostToolRequest, ApprovalLevel } from "@spiritagent/host-internal";
+import type { ApprovalLevel } from "@spiritagent/host-internal";
+import type { ConversationContextUsageSnapshot } from "../types.js";
 import type { PersistedDesktopTimelineTurnSnapshot } from "./chat-schema.js";
 import type { StoredDesktopRewindMetadata } from "./rewind.js";
 
-import type {
-  CommitChangesRequest,
-  AskQuestionsQuestionSpec,
-  ConversationContextUsageSnapshot,
-} from "../types.js";
-
-export type HostCommandName =
-  | "bootstrap"
-  | "rememberWorkspaceRoot"
-  | "forgetWorkspace"
-  | "commitChanges"
-  | "updateConfig"
-  | "addModel"
-  | "addProviderModels"
-  | "previewModels"
-  | "removeModel"
-  | "removeProviderModels"
-  | "removeProviderGroup"
-  | "addMcpServer"
-  | "deleteMcpServer"
-  | "saveHookEntry"
-  | "deleteHookEntry"
-  | "inspectMcpServer"
-  | "importExtension"
-  | "installBuiltInExtension"
-  | "addMarketplaceSource"
-  | "removeMarketplaceSource"
-  | "installMarketplaceExtension"
-  | "updateExtension"
-  | "deleteExtension"
-  | "setExtensionEnabled"
-  | "runExtension"
-  | "updateExtensionSettings"
-  | "updateExtensionSecret"
-  | "createRule"
-  | "createSkill"
-  | "deleteRule"
-  | "deleteSkill"
-  | "submitSkillSlash"
-  | "submitGitChip"
-  | "submitStartImplementing"
-  | "exportSession"
-  | "compactHistory"
-  | "submitUserTurn"
-  | "setLoopEnabled"
-  | "setApprovalLevel"
-  | "setPendingGitBranch"
-  | "setWorkLocation"
-  | "checkoutGitBranch"
-  | "mergeWorktreeToMain"
-  | "pushGitBranch"
-  | "refreshGitSnapshot"
-  | "readGitWorkingTree"
-  | "readGitHistory"
-  | "readGitCommitMessage"
-  | "getGitHubAuthStatus"
-  | "beginGitHubDeviceLogin"
-  | "completeGitHubDeviceLogin"
-  | "cancelGitHubDeviceLogin"
-  | "disconnectGitHub"
-  | "getGitHubPullRequestForCurrentBranch"
-  | "listGitHubPullRequests"
-  | "listGitHubAutomationRepositories"
-  | "searchGitHubAutomationRepositories"
-  | "getGitHubPullRequestTabCounts"
-  | "getGitHubPullRequestDetail"
-  | "getGitHubPullRequestConversation"
-  | "getGitHubPullRequestFiles"
-  | "getGitHubPullRequestCommits"
-  | "getGitHubPullRequestChecks"
-  | "mergeGitHubPullRequest"
-  | "markGitHubPullRequestReady"
-  | "abortConversation"
-  | "abortShell"
-  | "moveToBackground"
-  | "continueAssistantCompletion"
-  | "poll"
-  | "listDreamsOverview"
-  | "listAutomations"
-  | "getAutomation"
-  | "createAutomation"
-  | "updateAutomation"
-  | "deleteAutomation"
-  | "setAutomationEnabled"
-  | "listTaskMenuItems"
-  | "resolveTaskForRun"
-  | "resolveTaskByLabel"
-  | "consumeFolderOpenTaskTriggers"
-  | "replyPendingApproval"
-  | "replyPendingQuestions"
-  | "replyWorkspaceCapabilityTrust"
-  | "resolveExtensionUi"
-  | "resetSession"
-  | "listSessions"
-  | "openSession"
-  | "beginSplitPaneSession"
-  | "beginSideChatPaneSession"
-  | "forkSessionIntoSideChat"
-  | "setVisiblePaneSessions"
-  | "syncSplitPaneSessions"
-  | "focusPaneSession"
-  | "closeSplitPaneSession"
-  | "switchPaneWorkspace"
-  | "switchPaneModel"
-  | "setPanePendingGitBranch"
-  | "setPaneWorkLocation"
-  | "checkoutPaneGitBranch"
-  | "deleteSession"
-  | "renameSession"
-  | "setSessionPinned"
-  | "listWorkspaceFileReferenceSuggestions"
-  | "requestCodeCompletion"
-  | "abortCodeCompletion"
-  | "recordCodeCompletionFileState"
-  | "resetCodeCompletionJournal"
-  | "primeWorkspaceFileReferenceIndex"
-  | "getWorkspaceFileReferenceIndex"
-  | "listWorkspaceExplorerChildren"
-  | "readWorkspaceTextFile"
-  | "searchWorkspaceContent"
-  | "writeWorkspaceTextFile"
-  | "revealWorkspaceEntry"
-  | "openPathInDefaultApp"
-  | "renameWorkspaceEntry"
-  | "createWorkspaceEntry"
-  | "moveWorkspaceEntry"
-  | "trashWorkspaceEntry"
-  | "forceDeleteWorkspaceEntry"
-  | "readHostTextFile"
-  | "writeHostTextFile"
-  | "statHostTextFile"
-  | "classifyLocalFileComposerRoute"
-  | "rewindAndSubmitMessage"
-  | "forkSession"
-  | "reorderQueuedUserTurn"
-  | "sendQueuedUserTurnNow"
-  | "removeQueuedUserTurn"
-  | "setSubagentViewerTarget";
-
-/** Host tool request aligned with `ToolRequest` in `apps/cli/src/tool_runtime.rs`. */
-export type DesktopToolRequest = HostToolRequest<AskQuestionsQuestionSpec>;
+export type {
+  DesktopHostCommitRequest,
+  DesktopToolRequest,
+  HostCommandName,
+} from "@spiritagent/api/commands";
 
 export type SessionTitleSource = "seed" | "llm" | "manual";
 
@@ -172,5 +37,3 @@ export interface StoredDesktopSession {
   automationId?: string;
   automationRunId?: string;
 }
-
-export type DesktopHostCommitRequest = CommitChangesRequest;

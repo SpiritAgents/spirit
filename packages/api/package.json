@@ -1,0 +1,60 @@
+{
+  "name": "@spiritagent/api",
+  "version": "1.0.0-alpha.0",
+  "private": true,
+  "description": "Shared Workbench protocol contracts",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "default": "./dist/types.js"
+    },
+    "./host-api": {
+      "types": "./dist/host-api.d.ts",
+      "default": "./dist/host-api.js"
+    },
+    "./commands": {
+      "types": "./dist/contracts.d.ts",
+      "default": "./dist/contracts.js"
+    },
+    "./command-payloads": {
+      "types": "./dist/host-command-payloads.d.ts",
+      "default": "./dist/host-command-payloads.js"
+    },
+    "./automations": {
+      "types": "./dist/lib/automation-trigger.d.ts",
+      "default": "./dist/lib/automation-trigger.js"
+    },
+    "./remote-control": {
+      "types": "./dist/remote-control.d.ts",
+      "default": "./dist/remote-control.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/host-internal": "workspace:*",
+    "@spiritagent/remote-control": "workspace:*",
+    "@spiritagent/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "typescript": "7.0.2",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": "26.13.0"
+  }
+}
