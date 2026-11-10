@@ -135,6 +135,11 @@ body {
   -webkit-app-region: no-drag;
 }
 
+:root {
+  /* Shared with the sidebar's content spacing. */
+  --spirit-chrome-controls-padding: 0.625rem;
+}
+
 /* The Windows custom-drawn title bar sits outside the scale root (inside desktop-chrome-root); the native titleBarOverlay is unaffected */
 /* macOS hiddenInset: transparent drag band along the top edge; section backgrounds extend to the window top, content uses padding to avoid the traffic lights */
 html.spirit-desktop-darwin {
@@ -286,6 +291,25 @@ html.spirit-desktop-darwin [data-spirit-surface="workspace-tool-tabs"] a {
   -webkit-app-region: no-drag;
 }
 
+/* Browser chrome has no native traffic lights, but keeps the same comfortable top content row. */
+html:not(.spirit-desktop-native) [data-spirit-surface="layout-chrome"],
+html:not(.spirit-desktop-native) [data-spirit-surface="workspace-tool-tabs"] {
+  box-sizing: border-box;
+  padding-top: var(--spirit-chrome-controls-padding);
+  align-items: flex-start;
+}
+
+html:not(.spirit-desktop-native) [data-spirit-surface="layout-chrome"] {
+  height: calc(1.75rem + var(--spirit-chrome-controls-padding));
+}
+
+html:not(.spirit-desktop-native) [data-spirit-surface="workspace-tool-tabs"] {
+  height: calc(
+    1.75rem + var(--spirit-chrome-controls-padding) + var(--spirit-chrome-controls-padding)
+  );
+  padding-bottom: var(--spirit-chrome-controls-padding);
+}
+
 /* After Split, only pane top bars disable window dragging to avoid conflicts with HTML5 pane reordering; sidebar/right-tools top edges can still drag the window */
 html.spirit-desktop-darwin.spirit-desktop-darwin-conversation-split
   [data-spirit-surface="layout-chrome"] {
@@ -296,6 +320,12 @@ html.spirit-desktop-darwin.spirit-desktop-darwin-conversation-split
 html.spirit-desktop-darwin
   [data-spirit-surface="layout-chrome"][data-session-sidebar-open="false"][data-macos-leading-inset="true"] {
   padding-left: var(--spirit-macos-traffic-lights-inset-left);
+}
+
+/* Fullscreen hides the traffic lights, but collapsed chrome still needs content padding. */
+html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen
+  [data-spirit-surface="layout-chrome"][data-session-sidebar-open="false"] {
+  padding-left: var(--spirit-chrome-controls-padding);
 }
 
 /* With the sidebar open, match the title-row left padding to the traffic-light top inset */
@@ -317,6 +347,7 @@ html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen {
   --spirit-macos-titlebar-chrome-top: 0px;
   --spirit-macos-titlebar-control-pad: 0px;
   --spirit-macos-titlebar-inset: 0px;
+  --spirit-macos-titlebar-chrome-pad-top: var(--spirit-chrome-controls-padding);
   --spirit-macos-traffic-lights-inset-left: 0px;
   --spirit-macos-sidebar-toggle-inset-left: 0.375rem;
 }
@@ -327,13 +358,18 @@ html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen #session-sidebar-pan
 
 /*
  * Fullscreen zeros --spirit-macos-titlebar-inset so the sidebar loses the traffic-light
- * safe area. layout-chrome and the tools tab row reuse that token as height, which would
- * collapse those rows to 0 and let conversation-stage cover the overflowing buttons.
+ * safe area. Keep the controls' own content padding and reserve its height separately so
+ * fullscreen and browser chrome align with the sidebar instead of hugging the window edge.
  */
-html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen [data-spirit-surface="layout-chrome"],
+html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen [data-spirit-surface="layout-chrome"] {
+  height: calc(1.75rem + var(--spirit-chrome-controls-padding));
+}
+
 html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen
   [data-spirit-surface="workspace-tool-tabs"] {
-  height: 2rem;
+  height: calc(
+    1.75rem + var(--spirit-chrome-controls-padding) + var(--spirit-chrome-controls-padding)
+  );
 }
 
 /*
