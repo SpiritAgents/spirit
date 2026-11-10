@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { mapPendingToolApproval } from "../../dist-electron/src/host/snapshot-mappers.js";
-import { buildPaneSessionSlice } from "../../dist-electron/src/host/pane-snapshot.js";
-import { createEmptySessionBundle } from "../../dist-electron/src/host/session-bundle.js";
+import { mapPendingToolApproval } from "../../../../packages/sessions/dist/host/snapshot-mappers.js";
+import { buildPaneSessionSlice } from "../../../../packages/sessions/dist/host/pane-snapshot.js";
+import { createEmptySessionBundle } from "../../../../packages/sessions/dist/host/session-bundle.js";
 
 test("mapPendingToolApproval forwards subagentSessionId when present", () => {
   const mapped = mapPendingToolApproval({

@@ -8,8 +8,8 @@ import {
   createRuleFile,
   deleteRuleFile,
   resolveRuleFilePath,
-} from "../../dist-electron/src/host/rules.js";
-import { desktopInstructionPaths } from "../../dist-electron/src/host/skills.js";
+} from "../../../../packages/sessions/dist/host/rules.js";
+import { desktopInstructionPaths } from "../../../../packages/sessions/dist/host/skills.js";
 
 test("createRuleFile writes template and rejects duplicates", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-rules-create-"));

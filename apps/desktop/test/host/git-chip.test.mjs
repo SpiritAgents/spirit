@@ -8,7 +8,7 @@ import {
   GIT_CHIP_PROMPT_COMMIT,
   GIT_CHIP_PROMPT_MERGE,
   GIT_CHIP_PROMPT_PUSH,
-} from "../../src/host/git-chip-prompts.ts";
+} from "../../../../packages/sessions/dist/host/git-chip-prompts.js";
 
 function buildGitChipDisplayText(action, extraNote) {
   const label = i18n.t(GIT_CHIP_DISPLAY_I18N_KEYS[action]);

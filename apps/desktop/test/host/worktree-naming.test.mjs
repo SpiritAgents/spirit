@@ -4,7 +4,7 @@ import { test } from "vitest";
 import {
   normalizeGeneratedWorktreeNames,
   parseGeneratedWorktreeNamingResponse,
-} from "../../dist-electron/src/host/service-utils.js";
+} from "../../../../packages/sessions/dist/host/service-utils.js";
 
 test("parseGeneratedWorktreeNamingResponse accepts valid JSON", () => {
   const parsed = parseGeneratedWorktreeNamingResponse(

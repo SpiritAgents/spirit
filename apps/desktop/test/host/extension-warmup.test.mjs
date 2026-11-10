@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { ExtensionWarmupCoordinator } from "../../dist-electron/src/host/extension-warmup.js";
+import { ExtensionWarmupCoordinator } from "../../../../packages/sessions/dist/host/extension-warmup.js";
 
 function delay(ms) {
   return new Promise((resolve) => {

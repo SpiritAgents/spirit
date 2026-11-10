@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import { RemoteDesktopRuntime } from "../../dist-electron/src/host/remote-runtime.js";
+import { RemoteDesktopRuntime } from "../../../../packages/sessions/dist/host/remote-runtime.js";
 
 test("Desktop implementation approval uses the daemon action and normal turn bookkeeping", async () => {
   const calls = [];

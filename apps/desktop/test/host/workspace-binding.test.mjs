@@ -4,11 +4,11 @@ import { test } from "vitest";
 import {
   normalizeWorkspaceBinding,
   resolveDesktopHomeDirectory,
-} from "../../dist-electron/src/host/storage.js";
+} from "../../../../packages/sessions/dist/host/storage.js";
 import {
   buildAvailableWorkspaces,
   resolveWorkspaceBindingForRequestedRoot,
-} from "../../dist-electron/src/host/service-utils.js";
+} from "../../../../packages/sessions/dist/host/service-utils.js";
 
 test("normalizeWorkspaceBinding treats only none as none", () => {
   assert.equal(normalizeWorkspaceBinding("none"), "none");

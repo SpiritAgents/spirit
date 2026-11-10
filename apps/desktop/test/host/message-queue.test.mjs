@@ -10,9 +10,9 @@ import {
   projectQueuedUserTurnSnapshots,
   removeQueuedUserTurn,
   shiftNextQueuedUserTurn,
-} from "../../dist-electron/src/host/message-queue.js";
-import { createEmptySessionBundle } from "../../dist-electron/src/host/session-bundle.js";
-import { cloneQueuedUserTurns } from "../../dist-electron/src/host/sessions.js";
+} from "../../../../packages/sessions/dist/host/message-queue.js";
+import { createEmptySessionBundle } from "../../../../packages/sessions/dist/host/session-bundle.js";
+import { cloneQueuedUserTurns } from "../../../../packages/sessions/dist/host/sessions.js";
 
 function createBundle(overrides = {}) {
   const bundle = createEmptySessionBundle("/tmp/workspace");

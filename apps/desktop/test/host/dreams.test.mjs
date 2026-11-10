@@ -10,9 +10,9 @@ import { createHostDreamStore } from "@spiritagent/host-internal";
 import {
   buildDreamCollectorPlanMetadata,
   buildDreamContextText,
-} from "../../dist-electron/src/host/dreams.js";
-import { spiritDataDir } from "../../dist-electron/src/host/storage.js";
-import { DesktopToolExecutor } from "../../dist-electron/src/host/tool-executor.js";
+} from "../../../../packages/sessions/dist/host/dreams.js";
+import { spiritDataDir } from "../../../../packages/sessions/dist/host/storage.js";
+import { DesktopToolExecutor } from "../../../../packages/sessions/dist/host/tool-executor.js";
 
 function functionToolNames(definitions) {
   return Array.isArray(definitions)

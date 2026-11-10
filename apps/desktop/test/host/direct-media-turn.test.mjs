@@ -2,15 +2,15 @@ import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { DesktopAssistantMessageStateMachine } from "../../dist-electron/src/host/assistant-message-state.js";
-import { DesktopMessageTimeline } from "../../dist-electron/src/host/message-timeline.js";
-import { DesktopRuntimeEventOrchestrator } from "../../dist-electron/src/host/runtime-event-orchestrator.js";
+import { DesktopAssistantMessageStateMachine } from "../../../../packages/sessions/dist/host/assistant-message-state.js";
+import { DesktopMessageTimeline } from "../../../../packages/sessions/dist/host/message-timeline.js";
+import { DesktopRuntimeEventOrchestrator } from "../../../../packages/sessions/dist/host/runtime-event-orchestrator.js";
 import {
   executeDirectMediaTurn,
   isSessionBundleBusy,
   startComposerDirectMediaTurn,
   shouldUseComposerDirectMediaTurn,
-} from "../../dist-electron/src/host/direct-media-turn.js";
+} from "../../../../packages/sessions/dist/host/direct-media-turn.js";
 
 const openAiProviderId = "openai";
 

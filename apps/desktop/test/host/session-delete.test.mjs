@@ -4,9 +4,12 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import { SessionRegistry } from "../../dist-electron/src/host/session-registry.js";
-import { removeEphemeralSessionRecord } from "../../dist-electron/src/host/sessions.js";
-import { chatsDirPath, deleteStoredSession } from "../../dist-electron/src/host/storage.js";
+import { SessionRegistry } from "../../../../packages/sessions/dist/host/session-registry.js";
+import { removeEphemeralSessionRecord } from "../../../../packages/sessions/dist/host/sessions.js";
+import {
+  chatsDirPath,
+  deleteStoredSession,
+} from "../../../../packages/sessions/dist/host/storage.js";
 
 test("SessionRegistry.removeBySessionPath evicts a loaded non-active bundle", () => {
   const registry = new SessionRegistry();

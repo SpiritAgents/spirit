@@ -6,14 +6,17 @@ import { test, vi } from "vitest";
 
 import { SPIRIT_CONFIG_SCHEMA_VERSION } from "@spiritagent/host-internal";
 
-import { updateConfigCommand } from "../../dist-electron/src/host/host-model-commands.js";
-import { loadConfig, setSpiritDataDirOverride } from "../../dist-electron/src/host/storage.js";
+import { updateConfigCommand } from "../../../../packages/sessions/dist/host/host-model-commands.js";
+import {
+  loadConfig,
+  setSpiritDataDirOverride,
+} from "../../../../packages/sessions/dist/host/storage.js";
 import {
   readModelCatalogCache,
   writeModelCatalogCache,
-} from "../../dist-electron/src/host/model-catalog-cache.js";
-import { createEmptySessionBundle } from "../../dist-electron/src/host/session-bundle.js";
-import { attachRemoteDesktopRuntime } from "../../dist-electron/src/host/remote-runtime.js";
+} from "../../../../packages/sessions/dist/host/model-catalog-cache.js";
+import { createEmptySessionBundle } from "../../../../packages/sessions/dist/host/session-bundle.js";
+import { attachRemoteDesktopRuntime } from "../../../../packages/sessions/dist/host/remote-runtime.js";
 
 // ---------------------------------------------------------------------------
 // Model catalog cache: entry round-trip and sparse entries
@@ -758,7 +761,7 @@ async function withHostService(run) {
   // before the service module is imported, hence the dynamic import here.
   const spiritDataDir = await mkdtemp(path.join(tmpdir(), "spirit-service-tier-host-"));
   setSpiritDataDirOverride(spiritDataDir);
-  const { DesktopHostService } = await import("../../dist-electron/src/host/service.js");
+  const { DesktopHostService } = await import("../../../../packages/sessions/dist/host/service.js");
   const service = new DesktopHostService();
   service["state"] = {
     workspaceRoot: "/tmp/spirit-service-tier-ws",

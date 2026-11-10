@@ -13,11 +13,11 @@ import {
   requestCodeCompletionCommand,
   resetCodeCompletionJournalCommand,
   resolveCodeCompletionTransportConfig,
-} from "../../dist-electron/src/host/code-completion-commands.js";
+} from "../../../../packages/sessions/dist/host/code-completion-commands.js";
 import {
   defaultAgentsConfig,
   setSpiritDataDirOverride,
-} from "../../dist-electron/src/host/storage.js";
+} from "../../../../packages/sessions/dist/host/storage.js";
 
 const workspaceRoot = "/tmp/code-completion-test";
 

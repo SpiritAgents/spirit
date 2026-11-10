@@ -5,11 +5,11 @@ const remote = vi.hoisted(() => ({
   clients: [],
 }));
 
-vi.mock("../../dist-electron/src/host/remote-runtime.js", () => ({
+vi.mock("../../../../packages/sessions/dist/host/remote-runtime.js", () => ({
   sharedDesktopServerClient: async () => remote.clients.at(-1),
 }));
 
-import { subscribeDesktopRemoteControl } from "../../dist-electron/src/host/remote-control-client.js";
+import { subscribeDesktopRemoteControl } from "../../../../packages/sessions/dist/host/remote-control-client.js";
 
 function createClient() {
   const notifications = new Set();

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { DesktopMessageTimeline } from "../../dist-electron/src/host/message-timeline.js";
-import { buildVisibleMessageSnapshots } from "../../dist-electron/src/host/message-snapshots.js";
-import { createDesktopRewindMetadata } from "../../dist-electron/src/host/rewind.js";
+import { DesktopMessageTimeline } from "../../../../packages/sessions/dist/host/message-timeline.js";
+import { buildVisibleMessageSnapshots } from "../../../../packages/sessions/dist/host/message-snapshots.js";
+import { createDesktopRewindMetadata } from "../../../../packages/sessions/dist/host/rewind.js";
 
 function createTimeline() {
   let nextMessageId = 1;

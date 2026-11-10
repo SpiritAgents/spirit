@@ -7,10 +7,10 @@ import { test } from "vitest";
 import {
   readModelCatalogCache,
   writeModelCatalogCache,
-} from "../../dist-electron/src/host/model-catalog-cache.js";
-import { previewModelCatalogForTransport } from "../../dist-electron/src/host/model-catalog-metadata.js";
-import { loadPreviewModelsForTransport } from "../../dist-electron/src/host/model-config.js";
-import { setSpiritDataDirOverride } from "../../dist-electron/src/host/storage.js";
+} from "../../../../packages/sessions/dist/host/model-catalog-cache.js";
+import { previewModelCatalogForTransport } from "../../../../packages/sessions/dist/host/model-catalog-metadata.js";
+import { loadPreviewModelsForTransport } from "../../../../packages/sessions/dist/host/model-config.js";
+import { setSpiritDataDirOverride } from "../../../../packages/sessions/dist/host/storage.js";
 
 const listedEntry = {
   id: "example/multimodal-chat",

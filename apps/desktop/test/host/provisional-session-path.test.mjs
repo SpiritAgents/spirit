@@ -8,7 +8,7 @@ import {
   parseSideChatPaneIdFromSessionPath,
   provisionalNewSessionPath,
   sideChatPaneSessionPath,
-} from "../../dist-electron/src/host/storage.js";
+} from "../../../../packages/sessions/dist/host/storage.js";
 
 test("sideChatPaneSessionPath normalizes pane id", () => {
   const sessionPath = sideChatPaneSessionPath("pane/a");

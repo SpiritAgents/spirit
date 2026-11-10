@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { test } from "vitest";
 
-import { openSessionCommand } from "../../dist-electron/src/host/session-activation.js";
-import { splitPaneSessionPath } from "../../dist-electron/src/host/storage.js";
+import { openSessionCommand } from "../../../../packages/sessions/dist/host/session-activation.js";
+import { splitPaneSessionPath } from "../../../../packages/sessions/dist/host/storage.js";
 
 function createOpenSessionContext(overrides = {}) {
   const splitPath = splitPaneSessionPath("pane-a");

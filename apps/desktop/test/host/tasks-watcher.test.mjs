@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import { TasksWatcher } from "../../dist-electron/src/host/tasks-watcher.js";
+import { TasksWatcher } from "../../../../packages/sessions/dist/host/tasks-watcher.js";
 
 const EMIT_TIMEOUT_MS = 5000;
 const SETTLE_MS = 700;

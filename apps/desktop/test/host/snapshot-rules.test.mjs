@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { buildDesktopSnapshot } from "../../dist-electron/src/host/snapshot.js";
+import { buildDesktopSnapshot } from "../../../../packages/sessions/dist/host/snapshot.js";
 
 test("buildDesktopSnapshot maps rulesList from metadata entries", () => {
   const snapshot = buildDesktopSnapshot({

@@ -4,7 +4,7 @@ import { test } from "vitest";
 import {
   parseProviderToolSpiritUiPreview,
   providerToolInputJsonFromRequest,
-} from "../../dist-electron/src/host/provider-tool-preview.js";
+} from "../../../../packages/sessions/dist/host/provider-tool-preview.js";
 
 test("parseProviderToolSpiritUiPreview reads the declared label and suppressExpand", () => {
   const ui = parseProviderToolSpiritUiPreview(

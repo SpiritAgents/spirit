@@ -11,8 +11,8 @@ import {
   loadConfig,
   normalizeAgentsConfig,
   setSpiritDataDirOverride,
-} from "../../dist-electron/src/host/storage.js";
-import { DesktopToolExecutor } from "../../dist-electron/src/host/tool-executor.js";
+} from "../../../../packages/sessions/dist/host/storage.js";
+import { DesktopToolExecutor } from "../../../../packages/sessions/dist/host/tool-executor.js";
 
 function functionToolNames(definitions) {
   return Array.isArray(definitions)

@@ -13,9 +13,12 @@ import {
 import {
   addProviderModelsCommand,
   previewModelsCommand,
-} from "../../dist-electron/src/host/host-model-commands.js";
-import { writeModelCatalogCache } from "../../dist-electron/src/host/model-catalog-cache.js";
-import { loadConfig, setSpiritDataDirOverride } from "../../dist-electron/src/host/storage.js";
+} from "../../../../packages/sessions/dist/host/host-model-commands.js";
+import { writeModelCatalogCache } from "../../../../packages/sessions/dist/host/model-catalog-cache.js";
+import {
+  loadConfig,
+  setSpiritDataDirOverride,
+} from "../../../../packages/sessions/dist/host/storage.js";
 
 const VERTEX_PROJECT = "my-gcp-project";
 const VERTEX_LOCATION = "us-central1";

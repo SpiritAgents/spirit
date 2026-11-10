@@ -6,7 +6,7 @@ import {
   previewModelCatalogForTransport,
   usesAnthropicModelCatalogMetadata,
   usesProviderListedModelCatalogMetadata,
-} from "../../dist-electron/src/host/model-catalog-metadata.js";
+} from "../../../../packages/sessions/dist/host/model-catalog-metadata.js";
 
 const GPT5_EFFORTS = ["minimal", "low", "medium", "high"];
 const OPENAI_FLEX_FAST_TIERS = ["auto", "default", "flex", "fast"];

@@ -3,8 +3,8 @@ import { test } from "vitest";
 import {
   RemoteDesktopRuntime,
   resolveRemoteUserSessionTarget,
-} from "../../dist-electron/src/host/remote-runtime.js";
-import { replyPendingApprovalCommand } from "../../dist-electron/src/host/session-turn-orchestrator.js";
+} from "../../../../packages/sessions/dist/host/remote-runtime.js";
+import { replyPendingApprovalCommand } from "../../../../packages/sessions/dist/host/session-turn-orchestrator.js";
 
 test("remote replies preserve the displayed input identity rather than the latest snapshot", async () => {
   const calls = [];

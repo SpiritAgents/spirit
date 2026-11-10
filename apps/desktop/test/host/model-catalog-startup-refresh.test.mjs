@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { providerSupportsModelCatalogListing } from "../../dist-electron/src/host/model-catalog-metadata.js";
+import { providerSupportsModelCatalogListing } from "../../../../packages/sessions/dist/host/model-catalog-metadata.js";
 import {
   applyCatalogEntryToStoredModel,
   catalogEntryToModelEntry,
@@ -10,7 +10,7 @@ import {
   modelCatalogScopeKey,
   removeDelistedModelsFromCatalog,
   syncExistingModelsFromCatalog,
-} from "../../dist-electron/src/host/model-catalog-startup-refresh.js";
+} from "../../../../packages/sessions/dist/host/model-catalog-startup-refresh.js";
 
 const gatewayProviderId = "vercel-ai-gateway";
 const openAiProviderId = "openai";

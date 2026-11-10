@@ -6,7 +6,7 @@ import {
   isSplitProvisionalSessionPath,
   parseSplitPaneIdFromSessionPath,
   splitPaneSessionPath,
-} from "../../dist-electron/src/host/storage.js";
+} from "../../../../packages/sessions/dist/host/storage.js";
 
 test("splitPaneSessionPath is stable for the same pane id", () => {
   assert.equal(splitPaneSessionPath("pane-a"), splitPaneSessionPath("pane-a"));

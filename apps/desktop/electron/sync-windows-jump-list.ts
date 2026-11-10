@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { app } from "electron";
 
-import { invokeDesktopHostCommand } from "../src/host/service.js";
+import { invokeDesktopHostCommand } from "@spiritagent/sessions/host/service";
 import i18nHost from "../src/lib/i18n-host.js";
 import { buildWindowsJumpListCategories } from "../src/lib/windows-jump-list-build.js";
 import type { SessionListItem } from "../src/types.js";

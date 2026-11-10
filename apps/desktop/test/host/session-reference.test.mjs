@@ -12,12 +12,12 @@ import {
   sessionReferenceContextText,
 } from "@spiritagent/ui/composer";
 
-import { hydrateSessionReferenceWiresInUserText } from "../../dist-electron/src/host/hydrate-session-reference-wires.js";
+import { hydrateSessionReferenceWiresInUserText } from "../../../../packages/sessions/dist/host/hydrate-session-reference-wires.js";
 import {
   listStoredSessions,
   saveStoredSession,
   setSpiritDataDirOverride,
-} from "../../dist-electron/src/host/storage.js";
+} from "../../../../packages/sessions/dist/host/storage.js";
 import { sessionCandidatesFromListItems } from "../../src/lib/composer-at-reference-demo.ts";
 import { buildV2StoredSession } from "./chat-schema-fixture.mjs";
 

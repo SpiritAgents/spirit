@@ -6,19 +6,19 @@ import {
   shutdownDesktopHostService,
   subscribeDesktopDreamUpdates,
   refreshDesktopRemoteControlConfig,
-} from "../src/host/service.js";
+} from "@spiritagent/sessions/host/service";
 import {
   loadConfig,
   resolveConfiguredSpiritDataDir,
   setSpiritDataDirOverride,
-} from "../src/host/storage.js";
-import { setDesktopWebHostRuntimeStatus } from "../src/host/web-host-state.js";
-import { requestDesktopRemoteControlAccess } from "../src/host/remote-control-client.js";
-import { spiritDataDir } from "../src/host/storage.js";
+} from "@spiritagent/sessions/host/storage";
+import { setDesktopWebHostRuntimeStatus } from "@spiritagent/sessions/host/web-host-state";
+import { requestDesktopRemoteControlAccess } from "@spiritagent/sessions/host/remote-control-client";
+import { spiritDataDir } from "@spiritagent/sessions/host/storage";
 import {
   callDesktopRemoteControl,
   subscribeDesktopRemoteControl,
-} from "../src/host/remote-control-client.js";
+} from "@spiritagent/sessions/host/remote-control-client";
 import { createDesktopHttpHost, resolveDesktopWebHostFromEnv } from "./http-host.js";
 import { resolveRendererDistPath } from "./renderer-dist.js";
 

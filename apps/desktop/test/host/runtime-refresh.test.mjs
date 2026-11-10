@@ -2,21 +2,21 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { afterEach, test, vi } from "vitest";
 
-import { createEmptySessionBundle } from "../../dist-electron/src/host/session-bundle.js";
+import { createEmptySessionBundle } from "../../../../packages/sessions/dist/host/session-bundle.js";
 import {
   loadConfig,
   provisionalNewSessionPath,
   saveConfig,
   spiritDataDir,
-} from "../../dist-electron/src/host/storage.js";
-import { closeSharedDesktopServerClient } from "../../dist-electron/src/host/remote-runtime.js";
-import { DesktopHostService } from "../../dist-electron/src/host/service.js";
+} from "../../../../packages/sessions/dist/host/storage.js";
+import { closeSharedDesktopServerClient } from "../../../../packages/sessions/dist/host/remote-runtime.js";
+import { DesktopHostService } from "../../../../packages/sessions/dist/host/service.js";
 import {
   ChatSessionSchemaError,
   hydrateTimelineSnapshotFromPersistence,
   timelinePersistedSnapshotToMessages,
   validateTimelineSnapshotV2,
-} from "../../dist-electron/src/host/chat-schema.js";
+} from "../../../../packages/sessions/dist/host/chat-schema.js";
 
 const daemon = vi.hoisted(() => ({
   calls: [],

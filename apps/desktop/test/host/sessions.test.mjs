@@ -1,16 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { normalizeTimelineSnapshotForPersistence } from "../../dist-electron/src/host/chat-schema.js";
-import { DesktopMessageTimeline } from "../../dist-electron/src/host/message-timeline.js";
+import { normalizeTimelineSnapshotForPersistence } from "../../../../packages/sessions/dist/host/chat-schema.js";
+import { DesktopMessageTimeline } from "../../../../packages/sessions/dist/host/message-timeline.js";
 import {
   buildArchiveMessagesFromConversation,
   buildStoredDesktopSession,
   restoreStoredSessionState,
   sessionListActivityFromBundle,
-} from "../../dist-electron/src/host/sessions.js";
-import { createDesktopRewindMetadata } from "../../dist-electron/src/host/rewind.js";
-import { sessionBundleFromRestored } from "../../dist-electron/src/host/session-bundle.js";
+} from "../../../../packages/sessions/dist/host/sessions.js";
+import { createDesktopRewindMetadata } from "../../../../packages/sessions/dist/host/rewind.js";
+import { sessionBundleFromRestored } from "../../../../packages/sessions/dist/host/session-bundle.js";
 import { buildV2StoredSession, buildV2TimelineFromUserMessage } from "./chat-schema-fixture.mjs";
 
 test("restoreStoredSessionState hydrates messages from v2 timeline", () => {

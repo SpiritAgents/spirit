@@ -13,7 +13,7 @@ import {
   loadConfig,
   saveConfig,
   setSpiritDataDirOverride,
-} from "../../dist-electron/src/host/storage.js";
+} from "../../../../packages/sessions/dist/host/storage.js";
 
 test("assertSpiritConfigSchemaVersion rejects the legacy schemaVersion 2", () => {
   assert.throws(() => assertSpiritConfigSchemaVersion({ schemaVersion: 2 }), ConfigSchemaError);

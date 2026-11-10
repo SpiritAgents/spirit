@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { normalizeWebHostConfig } from "../../dist-electron/src/host/storage.js";
-import { buildWebHostSnapshot } from "../../dist-electron/src/host/service-utils.js";
+import { normalizeWebHostConfig } from "../../../../packages/sessions/dist/host/storage.js";
+import { buildWebHostSnapshot } from "../../../../packages/sessions/dist/host/service-utils.js";
 
 function device(id, hashCharacter, metadata = {}) {
   return {

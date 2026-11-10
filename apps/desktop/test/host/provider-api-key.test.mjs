@@ -7,7 +7,7 @@ import {
   filterNewProviderModelIds,
   modelExistsInProviderScope,
   resolveActiveModelAfterRemoval,
-} from "../../dist-electron/src/host/provider-api-key.js";
+} from "../../../../packages/sessions/dist/host/provider-api-key.js";
 
 const openAiProviderId = "openai";
 const anthropicProviderId = "anthropic";

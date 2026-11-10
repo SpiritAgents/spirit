@@ -1,18 +1,18 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { DesktopAssistantMessageStateMachine } from "../../dist-electron/src/host/assistant-message-state.js";
-import { DesktopConversationSnapshotView } from "../../dist-electron/src/host/conversation-snapshot.js";
-import { DesktopMessageTimeline } from "../../dist-electron/src/host/message-timeline.js";
-import { buildVisibleMessageSnapshots } from "../../dist-electron/src/host/message-snapshots.js";
-import { createDesktopRewindMetadata } from "../../dist-electron/src/host/rewind.js";
+import { DesktopAssistantMessageStateMachine } from "../../../../packages/sessions/dist/host/assistant-message-state.js";
+import { DesktopConversationSnapshotView } from "../../../../packages/sessions/dist/host/conversation-snapshot.js";
+import { DesktopMessageTimeline } from "../../../../packages/sessions/dist/host/message-timeline.js";
+import { buildVisibleMessageSnapshots } from "../../../../packages/sessions/dist/host/message-snapshots.js";
+import { createDesktopRewindMetadata } from "../../../../packages/sessions/dist/host/rewind.js";
 import {
   DesktopRuntimeEventOrchestrator,
   splitRuntimeEventsForIncrementalFinishTaskPreview,
   splitRuntimeEventsForIncrementalResponsesBuiltInToolPreview,
   runtimeEventsIncludeAppliedResponsesBuiltInToolStreamingUpdate,
   runtimeEventsIncludeAppliedHostToolStreamingUpdate,
-} from "../../dist-electron/src/host/runtime-event-orchestrator.js";
+} from "../../../../packages/sessions/dist/host/runtime-event-orchestrator.js";
 import { shouldShowAssistantThinkingCollapsible } from "../../dist-electron/src/lib/conversation-thinking-ui.js";
 import i18n from "../../dist-electron/src/lib/i18n-host.js";
 

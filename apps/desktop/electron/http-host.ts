@@ -4,12 +4,12 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { isIP } from "node:net";
 import path from "node:path";
 
-import type { HostCommandName } from "../src/host/contracts.js";
+import type { HostCommandName } from "@spiritagent/sessions/host/contracts";
 import type { RemoteControlAccessResult } from "@spiritagent/remote-control";
 import {
   closeAllDesktopWebHostDeviceConnections,
   registerDesktopWebHostDeviceConnection,
-} from "../src/host/web-host-state.js";
+} from "@spiritagent/sessions/host/web-host-state";
 
 import i18nHost from "../src/lib/i18n-host.js";
 import { parseChipNavigateMeta } from "../src/lib/composer-chip-navigate-meta.js";

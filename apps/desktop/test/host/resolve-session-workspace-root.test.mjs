@@ -8,7 +8,7 @@ import { test } from "vitest";
 
 import { addGitWorktree, buildWorktreeRootPath } from "@spiritagent/host-internal";
 
-import { resolveStoredSessionWorkspaceRoot } from "../../dist-electron/src/host/resolve-session-workspace-root.js";
+import { resolveStoredSessionWorkspaceRoot } from "../../../../packages/sessions/dist/host/resolve-session-workspace-root.js";
 
 const execFileAsync = promisify(execFile);
 

@@ -5,7 +5,7 @@ import {
   normalizeSecondaryLanguageModel,
   resolveSecondaryLanguageModelName,
   resolveSecondaryLanguageModelProfile,
-} from "../../dist-electron/src/host/secondary-language-model.js";
+} from "../../../../packages/sessions/dist/host/secondary-language-model.js";
 
 const openAiProviderId = "openai";
 const exampleProviderId = "example";

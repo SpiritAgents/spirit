@@ -10,7 +10,7 @@ import {
   failDanglingAutomationRuns,
   groupGitHubPollMatchesByAutomation,
   runGitHubMatchesAndCollectConsumed,
-} from "../../dist-electron/src/host/automation-scheduler-service.js";
+} from "../../../../packages/sessions/dist/host/automation-scheduler-service.js";
 
 test("groupGitHubPollMatchesByAutomation groups matches by automation id", () => {
   const definitionA = {

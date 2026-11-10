@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { test } from "vitest";
 
-import { resolveEnabledExtensionViewFile } from "../../src/host/extensions.ts";
+import { resolveEnabledExtensionViewFile } from "../../../../packages/sessions/dist/host/extensions.js";
 
 function managerWith(item) {
   return { list: async () => [item] };

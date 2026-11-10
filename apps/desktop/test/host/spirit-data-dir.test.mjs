@@ -8,7 +8,7 @@ import { product } from "@spiritagent/product";
 import {
   resolveConfiguredSpiritDataDir,
   resolveDefaultSpiritDataDir,
-} from "../../dist-electron/src/host/storage.js";
+} from "../../../../packages/sessions/dist/host/storage.js";
 
 async function withEnv(vars, run) {
   const previous = new Map();

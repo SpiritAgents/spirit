@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { buildMcpServerConfigFromRequest } from "../../dist-electron/src/host/mcp-config.js";
+import { buildMcpServerConfigFromRequest } from "../../../../packages/sessions/dist/host/mcp-config.js";
 
 function stdioRequest(endpoint) {
   return {

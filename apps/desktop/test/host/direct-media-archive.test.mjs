@@ -2,7 +2,7 @@ import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { appendDirectMediaTurnToArchive } from "../../dist-electron/src/host/direct-media-turn.js";
+import { appendDirectMediaTurnToArchive } from "../../../../packages/sessions/dist/host/direct-media-turn.js";
 
 test("appendDirectMediaTurnToArchive appends user, assistant tool_calls, and tool rows", () => {
   const bundle = {

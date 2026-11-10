@@ -10,14 +10,14 @@ import {
   computeWorkspaceTasksContentHash,
   persistPermanentWorkspaceCapabilityTrust,
 } from "@spiritagent/host-internal";
-import { setSpiritDataDirOverride } from "../../dist-electron/src/host/storage.js";
+import { setSpiritDataDirOverride } from "../../../../packages/sessions/dist/host/storage.js";
 
 async function withService(run) {
   const workspaceRoot = await mkdtemp(path.join(tmpdir(), "spirit-tasks-fopen-ws-"));
   const spiritDataDir = await mkdtemp(path.join(tmpdir(), "spirit-tasks-fopen-data-"));
   setSpiritDataDirOverride(spiritDataDir);
   clearWorkspaceCapabilityTrustSessionForTests();
-  const { DesktopHostService } = await import("../../dist-electron/src/host/service.js");
+  const { DesktopHostService } = await import("../../../../packages/sessions/dist/host/service.js");
   const service = new DesktopHostService();
   service["state"] = { workspaceRoot };
   try {

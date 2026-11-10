@@ -12,7 +12,7 @@ import {
   parseShardedKeyringPrimary,
   shardKeyringAccount,
   splitKeyringPassword,
-} from "../../dist-electron/src/host/keyring-secret.js";
+} from "../../../../packages/sessions/dist/host/keyring-secret.js";
 
 function utf16LeByteLength(value) {
   return Buffer.byteLength(value, "utf16le");

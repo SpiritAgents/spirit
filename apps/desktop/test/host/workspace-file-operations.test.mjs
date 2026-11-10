@@ -12,7 +12,7 @@ import {
   renameWorkspaceEntry,
   trashWorkspaceEntry,
   validateEntryName,
-} from "../../dist-electron/src/host/workspace-file-operations.js";
+} from "../../../../packages/sessions/dist/host/workspace-file-operations.js";
 
 test("validateEntryName rejects empty and path separators", () => {
   assert.throws(() => validateEntryName(""), /Invalid file name|无效文件名/u);

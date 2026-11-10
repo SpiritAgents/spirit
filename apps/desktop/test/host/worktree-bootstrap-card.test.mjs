@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { isSessionBundleBusy } from "../../dist-electron/src/host/direct-media-turn.js";
+import { isSessionBundleBusy } from "../../../../packages/sessions/dist/host/direct-media-turn.js";
 import {
   buildWorktreeBootstrapToolSnapshot,
   isWorktreeBootstrapInFlight,
   worktreeBootstrapToolCallId,
   WORKTREE_BOOTSTRAP_TOOL_NAME,
-} from "../../dist-electron/src/host/worktree-bootstrap-card.js";
+} from "../../../../packages/sessions/dist/host/worktree-bootstrap-card.js";
 import { toolCallPhaseShowsShimmer } from "../../dist-electron/src/lib/tool-call-shimmer.js";
 import i18n from "../../dist-electron/src/lib/i18n-host.js";
 

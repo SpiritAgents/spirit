@@ -5,8 +5,8 @@ import { setTimeout as delay } from "node:timers/promises";
 import {
   SessionPump,
   sessionBundleNeedsPumpTick,
-} from "../../dist-electron/src/host/session-pump.js";
-import { pumpSessionsCommand } from "../../dist-electron/src/host/session-turn-orchestrator.js";
+} from "../../../../packages/sessions/dist/host/session-pump.js";
+import { pumpSessionsCommand } from "../../../../packages/sessions/dist/host/session-turn-orchestrator.js";
 
 function createFakeRuntime({ pollsUntilIdle, chunkPerPoll = false }) {
   const runtime = {

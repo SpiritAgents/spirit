@@ -6,7 +6,7 @@ import path from "node:path";
 import { test } from "vitest";
 import { promisify } from "node:util";
 
-import { commitWorkspaceChanges } from "../../dist-electron/src/host/git.js";
+import { commitWorkspaceChanges } from "../../../../packages/sessions/dist/host/git.js";
 
 const execFileAsync = promisify(execFile);
 

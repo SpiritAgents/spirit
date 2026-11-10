@@ -7,8 +7,8 @@ import { test } from "vitest";
 import {
   readModelCatalogCache,
   writeModelCatalogCache,
-} from "../../dist-electron/src/host/model-catalog-cache.js";
-import { setSpiritDataDirOverride } from "../../dist-electron/src/host/storage.js";
+} from "../../../../packages/sessions/dist/host/model-catalog-cache.js";
+import { setSpiritDataDirOverride } from "../../../../packages/sessions/dist/host/storage.js";
 
 test("Cerebras rich catalog metadata survives cache refresh round-trips", async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "spirit-cerebras-catalog-"));

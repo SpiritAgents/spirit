@@ -4,7 +4,7 @@ import { test } from "vitest";
 import {
   needsHostWorkspaceRootSync,
   resolveEffectiveWorkspaceRoot,
-} from "../../dist-electron/src/host/workspace-root-sync.js";
+} from "../../../../packages/sessions/dist/host/workspace-root-sync.js";
 
 test("resolveEffectiveWorkspaceRoot prefers bundle workspaceRoot", () => {
   assert.equal(

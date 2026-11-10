@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { SubagentConversationProjection } from "../../dist-electron/src/host/subagent-conversation-projection.js";
+import { SubagentConversationProjection } from "../../../../packages/sessions/dist/host/subagent-conversation-projection.js";
 import {
   isWorktreeSubagentSession,
   WORKTREE_BOOTSTRAP_TOOL_NAME,
-} from "../../dist-electron/src/host/worktree-bootstrap-card.js";
+} from "../../../../packages/sessions/dist/host/worktree-bootstrap-card.js";
 
 function buildSubagentSession(overrides = {}) {
   return {

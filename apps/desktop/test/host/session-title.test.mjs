@@ -6,13 +6,13 @@ import {
   normalizeGeneratedSessionTitle,
   SESSION_TITLE_MAX_LENGTH,
 } from "@spiritagent/host-internal";
-import { DesktopMessageTimeline } from "../../dist-electron/src/host/message-timeline.js";
+import { DesktopMessageTimeline } from "../../../../packages/sessions/dist/host/message-timeline.js";
 import {
   countUserMessages,
   prepareSessionTitleForFirstUserTurn,
-} from "../../dist-electron/src/host/session-title-first-turn.js";
-import { applyGeneratedSessionTitle } from "../../dist-electron/src/host/session-title-service.js";
-import { createEmptySessionBundle } from "../../dist-electron/src/host/session-bundle.js";
+} from "../../../../packages/sessions/dist/host/session-title-first-turn.js";
+import { applyGeneratedSessionTitle } from "../../../../packages/sessions/dist/host/session-title-service.js";
+import { createEmptySessionBundle } from "../../../../packages/sessions/dist/host/session-bundle.js";
 
 test("buildSessionTitlePrompt includes user message and language rule", () => {
   const prompt = buildSessionTitlePrompt("Help me build a Desktop session title feature");

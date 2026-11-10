@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { resolveComposerDirectMediaTool } from "../../dist-electron/src/host/model-config.js";
+import { resolveComposerDirectMediaTool } from "../../../../packages/sessions/dist/host/model-config.js";
 
 const openAiProviderId = "openai";
 const volcengineProviderId = "volcengine";

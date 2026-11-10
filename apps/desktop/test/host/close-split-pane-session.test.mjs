@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { test } from "vitest";
 
-import { closeSplitPaneSessionCommand } from "../../dist-electron/src/host/session-split.js";
-import { SessionRegistry } from "../../dist-electron/src/host/session-registry.js";
-import { restoreStoredSessionState } from "../../dist-electron/src/host/sessions.js";
-import { splitPaneSessionPath } from "../../dist-electron/src/host/storage.js";
+import { closeSplitPaneSessionCommand } from "../../../../packages/sessions/dist/host/session-split.js";
+import { SessionRegistry } from "../../../../packages/sessions/dist/host/session-registry.js";
+import { restoreStoredSessionState } from "../../../../packages/sessions/dist/host/sessions.js";
+import { splitPaneSessionPath } from "../../../../packages/sessions/dist/host/storage.js";
 import { buildV2StoredSession } from "./chat-schema-fixture.mjs";
 
 function createCloseSplitPaneContext(registry, visiblePaths) {

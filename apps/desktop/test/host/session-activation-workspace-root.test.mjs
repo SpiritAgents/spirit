@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { finishSessionActivationCommand } from "../../dist-electron/src/host/session-activation.js";
+import { finishSessionActivationCommand } from "../../../../packages/sessions/dist/host/session-activation.js";
 
 function createMinimalBundle(overrides = {}) {
   return {

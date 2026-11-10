@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { resolveSubagentViewerMessages } from "../../dist-electron/src/host/subagent-viewer.js";
-import { WORKTREE_BOOTSTRAP_TOOL_NAME } from "../../dist-electron/src/host/worktree-bootstrap-card.js";
+import { resolveSubagentViewerMessages } from "../../../../packages/sessions/dist/host/subagent-viewer.js";
+import { WORKTREE_BOOTSTRAP_TOOL_NAME } from "../../../../packages/sessions/dist/host/worktree-bootstrap-card.js";
 
 test("resolveSubagentViewerMessages keeps projected process rows when history has final body", () => {
   const projected = [

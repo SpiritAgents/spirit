@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { DesktopMessageTimeline } from "../../dist-electron/src/host/message-timeline.js";
+import { DesktopMessageTimeline } from "../../../../packages/sessions/dist/host/message-timeline.js";
 import {
   advancePendingWorktreeBootstrapCommand,
   cancelPendingWorktreeBootstrapOnBundle,
   shouldAdvanceWorktreeBootstrap,
   startWorktreeBootstrapTurnCommand,
-} from "../../dist-electron/src/host/worktree-bootstrap-orchestrator.js";
-import { WORKTREE_BOOTSTRAP_TOOL_NAME } from "../../dist-electron/src/host/worktree-bootstrap-card.js";
+} from "../../../../packages/sessions/dist/host/worktree-bootstrap-orchestrator.js";
+import { WORKTREE_BOOTSTRAP_TOOL_NAME } from "../../../../packages/sessions/dist/host/worktree-bootstrap-card.js";
 
 function createTimelineHarness() {
   let nextMessageId = 1;

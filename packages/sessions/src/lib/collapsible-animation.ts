@@ -1,0 +1,5 @@
+export {
+  COLLAPSIBLE_CLOSE_ANIMATION_MS,
+  COLLAPSIBLE_CLOSE_UNMOUNT_DELAY_MS,
+  COLLAPSIBLE_OPEN_ANIMATION_MS,
+} from "@spiritagent/ui/collapsible-animation";

@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { Menu, Tray, app, nativeImage, type MenuItemConstructorOptions } from "electron";
 
-import { invokeDesktopHostCommand } from "../src/host/service.js";
-import { loadConfig } from "../src/host/storage.js";
+import { invokeDesktopHostCommand } from "@spiritagent/sessions/host/service";
+import { loadConfig } from "@spiritagent/sessions/host/storage";
 import i18nHost from "../src/lib/i18n-host.js";
 import type { SessionListItem } from "../src/types.js";
 

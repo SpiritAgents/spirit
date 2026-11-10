@@ -5,8 +5,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import { loadPreviewModelsForTransport } from "../../dist-electron/src/host/model-config.js";
-import { setSpiritDataDirOverride } from "../../dist-electron/src/host/storage.js";
+import { loadPreviewModelsForTransport } from "../../../../packages/sessions/dist/host/model-config.js";
+import { setSpiritDataDirOverride } from "../../../../packages/sessions/dist/host/storage.js";
 
 async function startCatalogServer(data) {
   const requests = [];

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { WorkspaceTasksTrustPromptQueue } from "../../dist-electron/src/host/tasks-trust-prompt.js";
+import { WorkspaceTasksTrustPromptQueue } from "../../../../packages/sessions/dist/host/tasks-trust-prompt.js";
 
 function createHarness() {
   const harness = {

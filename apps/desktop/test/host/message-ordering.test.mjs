@@ -14,7 +14,7 @@ import {
   toolCallSummaryForPhase,
   toolCallSummaryForStreamingPreview,
   toolCallSummaryCopyForResponsesBuiltInTool,
-} from "../../dist-electron/src/host/message-ordering.js";
+} from "../../../../packages/sessions/dist/host/message-ordering.js";
 import { phaseToVerbContext } from "../../src/lib/tool-verb-context.ts";
 import i18n from "../../dist-electron/src/lib/i18n-host.js";
 

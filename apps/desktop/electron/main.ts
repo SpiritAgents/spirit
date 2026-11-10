@@ -157,7 +157,7 @@ import {
   subscribeDesktopDreamUpdates,
   subscribeDesktopSessionListUpdates,
   subscribeDesktopTasksUpdates,
-} from "../src/host/service.js";
+} from "@spiritagent/sessions/host/service";
 import {
   chatsDirPath,
   configFilePath,
@@ -166,17 +166,17 @@ import {
   setSpiritDataDirOverride,
   spiritDataDir,
   type DesktopWebHostConfigFile,
-} from "../src/host/storage.js";
+} from "@spiritagent/sessions/host/storage";
 import {
   parseWindowsLaunchArgv,
   resolveJumpListSessionPath,
 } from "../src/lib/windows-launch-argv.js";
-import { setDesktopWebHostRuntimeStatus } from "../src/host/web-host-state.js";
-import { requestDesktopRemoteControlAccess } from "../src/host/remote-control-client.js";
+import { setDesktopWebHostRuntimeStatus } from "@spiritagent/sessions/host/web-host-state";
+import { requestDesktopRemoteControlAccess } from "@spiritagent/sessions/host/remote-control-client";
 import {
   callDesktopRemoteControl,
   subscribeDesktopRemoteControl,
-} from "../src/host/remote-control-client.js";
+} from "@spiritagent/sessions/host/remote-control-client";
 import { diffLiveSnapshots } from "../src/lib/live-update.js";
 import {
   type ApplicationMenuSection,
@@ -195,7 +195,7 @@ import {
   completeGitHubDeviceLoginInElectron,
 } from "./github-oauth-flow.js";
 import { resolveRendererDistPath } from "./renderer-dist.js";
-import { registerGitHubDeviceLoginRunners } from "../src/host/github-oauth-bridge.js";
+import { registerGitHubDeviceLoginRunners } from "@spiritagent/sessions/host/github-oauth-bridge";
 import { listSystemFonts } from "./system-fonts.js";
 import { syncWindowsImmersiveDarkMode } from "./win-dwm.js";
 import { PRODUCT_DISPLAY_NAME } from "./product-display-name.js";

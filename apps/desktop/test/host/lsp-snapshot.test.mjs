@@ -3,8 +3,8 @@ import { test } from "vitest";
 
 import { LspService } from "@spiritagent/host-internal/lsp";
 
-import { buildDesktopLspSnapshot } from "../../dist-electron/src/host/lsp-snapshot.js";
-import { DesktopToolExecutor } from "../../dist-electron/src/host/tool-executor.js";
+import { buildDesktopLspSnapshot } from "../../../../packages/sessions/dist/host/lsp-snapshot.js";
+import { DesktopToolExecutor } from "../../../../packages/sessions/dist/host/tool-executor.js";
 
 function functionToolNames(definitions) {
   return Array.isArray(definitions)

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { applyGitRevision } from "../../dist-electron/src/host/git.js";
+import { applyGitRevision } from "../../../../packages/sessions/dist/host/git.js";
 
 test("applyGitRevision increments from previous revision", () => {
   const snapshot = applyGitRevision(

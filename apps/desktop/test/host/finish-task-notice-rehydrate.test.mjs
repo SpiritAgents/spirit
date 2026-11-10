@@ -4,12 +4,12 @@ import { test } from "vitest";
 import {
   rehydrateFinishTaskNoticesInConversation,
   rehydrateFinishTaskNoticesInTimeline,
-} from "../../dist-electron/src/host/finish-task-notice-rehydrate.js";
-import { DesktopMessageTimeline } from "../../dist-electron/src/host/message-timeline.js";
+} from "../../../../packages/sessions/dist/host/finish-task-notice-rehydrate.js";
+import { DesktopMessageTimeline } from "../../../../packages/sessions/dist/host/message-timeline.js";
 import {
   buildArchiveAssistantAuxFromConversation,
   restoreMessagesFromArchive,
-} from "../../dist-electron/src/host/sessions.js";
+} from "../../../../packages/sessions/dist/host/sessions.js";
 import { buildV2StoredSession } from "./chat-schema-fixture.mjs";
 
 test("buildArchiveAssistantAuxFromConversation persists finishTaskNotice", () => {

@@ -1,0 +1,262 @@
+import type { PullRequestChipStatus } from "@spiritagent/ui/composer";
+
+export type WorkspaceToolTabKind = "files" | "terminal" | "git" | "browser" | "pr" | "task";
+
+export const BROWSER_NEW_TAB_SENTINEL = "__spirit_browser_new_tab__";
+
+export type WorkspaceToolTab = {
+  id: string;
+  kind: WorkspaceToolTabKind;
+  /** Only used when kind === "browser"; the sentinel represents the built-in new tab page */
+  browserUrl?: string;
+  /** Current title reported by each child Tab component (file name / page title / terminal title); only the icon is shown when empty */
+  tabTitle?: string;
+  /** Only used when kind === "files"; indicates the currently open file has unsaved edits */
+  tabDirty?: boolean;
+  /** Only used when kind === "files"; workspace-relative path of the currently open file (for reuse across tabs) */
+  filesWorkspacePath?: string;
+  /** Only used when kind === "pr"; the status of the current PR detail page, used to switch the tab icon */
+  prStatus?: PullRequestChipStatus;
+  /** Only used when kind === "task"; the resolved task key this tab belongs to */
+  taskKey?: string;
+  /** Only used when kind === "task"; the task label owns the title, so OSC/process title updates must not replace it */
+  pinnedTitle?: boolean;
+};
+
+const KIND_BASE_LABEL_KEY: Record<WorkspaceToolTabKind, string> = {
+  files: "workspace.files",
+  terminal: "workspace.terminal",
+  git: "workspace.gitTab",
+  browser: "workspace.browser",
+  pr: "workspace.prTab",
+  task: "workspace.taskTab",
+};
+
+function newTabId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `tab-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+export function isBrowserNewTabUrl(url: string | undefined): boolean {
+  return url === BROWSER_NEW_TAB_SENTINEL || url === undefined || url === "";
+}
+
+export function createWorkspaceToolTab(kind: WorkspaceToolTabKind): WorkspaceToolTab {
+  const tab: WorkspaceToolTab = { id: newTabId(), kind };
+  if (kind === "browser") {
+    tab.browserUrl = BROWSER_NEW_TAB_SENTINEL;
+  }
+  return tab;
+}
+
+export type WorkspaceToolTabsDefaultsOptions = {
+  /** The Electron desktop app includes a browser tab by default; the Web host only has Files / Terminal / Git. */
+  includeBrowser?: boolean;
+};
+
+/** Default workspace tabs: Files, Terminal, Git; Electron may additionally include Browser. */
+export function createDefaultWorkspaceToolTabs(
+  options: WorkspaceToolTabsDefaultsOptions = {},
+): WorkspaceToolTab[] {
+  const kinds: WorkspaceToolTabKind[] = ["files", "terminal", "git"];
+  if (options.includeBrowser) {
+    kinds.push("browser");
+  }
+  return kinds.map((kind) => createWorkspaceToolTab(kind));
+}
+
+export function createInitialWorkspaceToolsState(includeBrowser = false): {
+  tabs: WorkspaceToolTab[];
+  activeTabId: string;
+} {
+  const tabs = createDefaultWorkspaceToolTabs({ includeBrowser });
+  return { tabs, activeTabId: defaultActiveWorkspaceToolTabId(tabs) };
+}
+
+export function defaultActiveWorkspaceToolTabId(tabs: WorkspaceToolTab[]): string {
+  const files = tabs.find((t) => t.kind === "files");
+  return files?.id ?? tabs[0]?.id ?? "";
+}
+
+export function workspaceToolTabLabel(
+  kind: WorkspaceToolTabKind,
+  tabs: readonly WorkspaceToolTab[],
+  tabId: string,
+  translate: (key: string) => string,
+): string {
+  const index = tabs.filter((t) => t.kind === kind).findIndex((t) => t.id === tabId);
+  const base = translate(KIND_BASE_LABEL_KEY[kind]);
+  if (index <= 0) {
+    return base;
+  }
+  return `${base} ${index + 1}`;
+}
+
+/** Chip display name: prefers the OSC terminal title, otherwise the i18n default Terminal (numbered when multiple tabs). */
+export function workspaceTerminalChipDisplayName(
+  tab: WorkspaceToolTab,
+  tabs: readonly WorkspaceToolTab[],
+  translate: (key: string) => string,
+): string {
+  const titled = tab.tabTitle?.trim();
+  if (titled) {
+    return titled;
+  }
+  const index = tabs
+    .filter((item) => item.kind === "terminal")
+    .findIndex((item) => item.id === tab.id);
+  const base = translate("workspace.terminalChipDefaultName");
+  if (index <= 0) {
+    return base;
+  }
+  return `${base} ${index + 1}`;
+}
+
+export function focusFirstTabOfKind(
+  tabs: readonly WorkspaceToolTab[],
+  kind: WorkspaceToolTabKind,
+): string | null {
+  return tabs.find((t) => t.kind === kind)?.id ?? null;
+}
+
+export function findWorkspaceToolTab(
+  tabs: readonly WorkspaceToolTab[],
+  tabId: string,
+): WorkspaceToolTab | undefined {
+  return tabs.find((t) => t.id === tabId);
+}
+
+export function addWorkspaceToolTab(
+  tabs: readonly WorkspaceToolTab[],
+  kind: WorkspaceToolTabKind,
+  tabTitle?: string,
+): { tabs: WorkspaceToolTab[]; activeId: string } {
+  const tab = createWorkspaceToolTab(kind);
+  if (tabTitle) {
+    tab.tabTitle = tabTitle;
+  }
+  return { tabs: [...tabs, tab], activeId: tab.id };
+}
+
+/** Task tabs are created only by the task coordinator, never from the manual "+" menu. */
+export function addWorkspaceTaskTab(
+  tabs: readonly WorkspaceToolTab[],
+  input: { taskKey: string; label: string; pinnedTitle?: boolean },
+): { tabs: WorkspaceToolTab[]; activeId: string } {
+  const tab = createWorkspaceToolTab("task");
+  tab.taskKey = input.taskKey;
+  tab.tabTitle = input.label;
+  if (input.pinnedTitle === true) {
+    tab.pinnedTitle = true;
+  }
+  return { tabs: [...tabs, tab], activeId: tab.id };
+}
+
+/** Opens a URL: prefers reusing an untitled empty browser tab, otherwise creates a new one. */
+export function openBrowserUrlInWorkspaceTabs(
+  tabs: readonly WorkspaceToolTab[],
+  url: string,
+): { tabs: WorkspaceToolTab[]; activeId: string } {
+  const vacant = tabs.find((tab) => tab.kind === "browser" && !tab.tabTitle?.trim());
+  if (vacant) {
+    return {
+      tabs: tabs.map((tab) => (tab.id === vacant.id ? { ...tab, browserUrl: url } : tab)),
+      activeId: vacant.id,
+    };
+  }
+  return addWorkspaceBrowserTabWithUrl(tabs, url);
+}
+
+/** Creates a browser sub-tab with the target URL directly (avoiding landing on the new-tab sentinel first and updating a second time). */
+export function addWorkspaceBrowserTabWithUrl(
+  tabs: readonly WorkspaceToolTab[],
+  url: string,
+): { tabs: WorkspaceToolTab[]; activeId: string } {
+  const tab = createWorkspaceToolTab("browser");
+  tab.browserUrl = url;
+  return { tabs: [...tabs, tab], activeId: tab.id };
+}
+
+/** Adds or removes the browser tab according to host capabilities, and fixes activeId. */
+export function normalizeWorkspaceToolTabsForHost(
+  tabs: readonly WorkspaceToolTab[],
+  activeId: string,
+  includeBrowser: boolean,
+  includePr = false,
+): { tabs: WorkspaceToolTab[]; activeId: string } {
+  let nextTabs = [...tabs];
+
+  if (!includePr) {
+    nextTabs = nextTabs.filter((tab) => tab.kind !== "pr");
+  }
+
+  if (includeBrowser) {
+    if (!nextTabs.some((tab) => tab.kind === "browser")) {
+      nextTabs = [...nextTabs, createWorkspaceToolTab("browser")];
+    }
+  } else {
+    const withoutBrowser = nextTabs.filter((tab) => tab.kind !== "browser");
+    nextTabs =
+      withoutBrowser.length > 0
+        ? withoutBrowser
+        : createDefaultWorkspaceToolTabs({ includeBrowser: false });
+  }
+
+  const activeStillValid = nextTabs.some((tab) => tab.id === activeId);
+  return {
+    tabs: nextTabs,
+    activeId: activeStillValid ? activeId : defaultActiveWorkspaceToolTabId(nextTabs),
+  };
+}
+
+function shouldEnsureTabKindAfterClose(
+  kind: WorkspaceToolTabKind,
+  options: WorkspaceToolTabsDefaultsOptions,
+): boolean {
+  if (kind === "browser") {
+    return options.includeBrowser === true;
+  }
+  if (kind === "pr") {
+    return false;
+  }
+  return kind === "files" || kind === "terminal" || kind === "git";
+}
+
+export function closeWorkspaceToolTab(
+  tabs: readonly WorkspaceToolTab[],
+  activeId: string,
+  closeId: string,
+  options: WorkspaceToolTabsDefaultsOptions = {},
+): { tabs: WorkspaceToolTab[]; activeId: string } {
+  const closeIndex = tabs.findIndex((t) => t.id === closeId);
+  if (closeIndex < 0) {
+    return { tabs: [...tabs], activeId };
+  }
+
+  const closingTab = tabs[closeIndex]!;
+  let nextTabs = tabs.filter((t) => t.id !== closeId);
+
+  const kindExhausted = !nextTabs.some((t) => t.kind === closingTab.kind);
+  let recreatedTab: WorkspaceToolTab | undefined;
+  if (kindExhausted && shouldEnsureTabKindAfterClose(closingTab.kind, options)) {
+    recreatedTab = createWorkspaceToolTab(closingTab.kind);
+    nextTabs = [...nextTabs, recreatedTab];
+  }
+
+  if (nextTabs.length === 0) {
+    return { tabs: nextTabs, activeId: "" };
+  }
+
+  if (activeId !== closeId) {
+    return { tabs: nextTabs, activeId };
+  }
+
+  if (recreatedTab) {
+    return { tabs: nextTabs, activeId: recreatedTab.id };
+  }
+
+  const nextActiveId = closeIndex > 0 ? nextTabs[closeIndex - 1]!.id : nextTabs[0]!.id;
+  return { tabs: nextTabs, activeId: nextActiveId };
+}

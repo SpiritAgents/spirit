@@ -4,8 +4,8 @@ import { test } from "vitest";
 import {
   CHAT_SCHEMA_VERSION,
   normalizeTimelineSnapshotForPersistence,
-} from "../../dist-electron/src/host/chat-schema.js";
-import { DesktopMessageTimeline } from "../../dist-electron/src/host/message-timeline.js";
+} from "../../../../packages/sessions/dist/host/chat-schema.js";
+import { DesktopMessageTimeline } from "../../../../packages/sessions/dist/host/message-timeline.js";
 
 export function buildV2TimelineFromUserMessage(content) {
   let nextMessageId = 1;

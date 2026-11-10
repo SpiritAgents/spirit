@@ -4,16 +4,16 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import { DesktopMessageTimeline } from "../../dist-electron/src/host/message-timeline.js";
-import { setSessionPinnedCommand } from "../../dist-electron/src/host/session-pin.js";
-import { persistDesktopSessionBundle } from "../../dist-electron/src/host/session-persistence.js";
-import { SessionRegistry } from "../../dist-electron/src/host/session-registry.js";
+import { DesktopMessageTimeline } from "../../../../packages/sessions/dist/host/message-timeline.js";
+import { setSessionPinnedCommand } from "../../../../packages/sessions/dist/host/session-pin.js";
+import { persistDesktopSessionBundle } from "../../../../packages/sessions/dist/host/session-persistence.js";
+import { SessionRegistry } from "../../../../packages/sessions/dist/host/session-registry.js";
 import {
   chatsDirPath,
   listStoredSessions,
   loadStoredSession,
   saveStoredSession,
-} from "../../dist-electron/src/host/storage.js";
+} from "../../../../packages/sessions/dist/host/storage.js";
 import { buildV2StoredSession } from "./chat-schema-fixture.mjs";
 
 function createPinContext(registry, notifications) {

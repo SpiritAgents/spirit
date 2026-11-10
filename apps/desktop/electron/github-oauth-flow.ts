@@ -7,7 +7,7 @@ import {
   type GitHubDeviceAuthChallenge,
 } from "@spiritagent/host-internal";
 
-import { saveGitHubOAuthCredentials } from "../src/host/github-auth-storage.js";
+import { saveGitHubOAuthCredentials } from "@spiritagent/sessions/host/github-auth-storage";
 
 interface PendingDeviceAuth {
   deviceCode: string;

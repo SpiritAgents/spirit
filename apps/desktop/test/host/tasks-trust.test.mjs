@@ -13,8 +13,8 @@ import {
   createTaskRunResolver,
   evaluateAndFilterTaskFiles,
   listTaskMenuItemsCommand,
-} from "../../dist-electron/src/host/host-tasks-commands.js";
-import { setSpiritDataDirOverride } from "../../dist-electron/src/host/storage.js";
+} from "../../../../packages/sessions/dist/host/host-tasks-commands.js";
+import { setSpiritDataDirOverride } from "../../../../packages/sessions/dist/host/storage.js";
 
 async function withDirs(run) {
   const workspaceRoot = await mkdtemp(path.join(tmpdir(), "spirit-tasks-trust-ws-"));

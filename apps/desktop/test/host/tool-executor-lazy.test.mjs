@@ -3,7 +3,7 @@ import { test } from "vitest";
 
 import { McpService } from "@spiritagent/agent-core";
 
-import { DesktopToolExecutor } from "../../dist-electron/src/host/tool-executor.js";
+import { DesktopToolExecutor } from "../../../../packages/sessions/dist/host/tool-executor.js";
 
 function functionToolNames(definitions) {
   return Array.isArray(definitions)

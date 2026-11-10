@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { syncSubagentToolStreamingOutput } from "../../dist-electron/src/host/conversation-continuation.js";
-import { DesktopMessageTimeline } from "../../dist-electron/src/host/message-timeline.js";
+import { syncSubagentToolStreamingOutput } from "../../../../packages/sessions/dist/host/conversation-continuation.js";
+import { DesktopMessageTimeline } from "../../../../packages/sessions/dist/host/message-timeline.js";
 import { shouldShowAssistantThinkingCollapsible } from "../../dist-electron/src/lib/conversation-thinking-ui.js";
 
 function createHarness(tool, { includeParentTool = false } = {}) {

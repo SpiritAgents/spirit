@@ -8,7 +8,7 @@ import {
   readHostTextFile,
   statHostTextFile,
   writeHostTextFile,
-} from "../../dist-electron/src/host/host-text-file.js";
+} from "../../../../packages/sessions/dist/host/host-text-file.js";
 
 test("readHostTextFile reads an absolute path outside any workspace root", async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), "spirit-host-text-"));

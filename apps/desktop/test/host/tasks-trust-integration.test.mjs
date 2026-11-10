@@ -9,7 +9,7 @@ import {
   clearWorkspaceCapabilityTrustSessionForTests,
   loadWorkspaceCapabilityTrustStore,
 } from "@spiritagent/host-internal";
-import { setSpiritDataDirOverride } from "../../dist-electron/src/host/storage.js";
+import { setSpiritDataDirOverride } from "../../../../packages/sessions/dist/host/storage.js";
 
 // The trust integration drives a real DesktopHostService with a hand-set workspaceRoot;
 // the override must land before the service module is imported (its singleton captures
@@ -19,7 +19,7 @@ async function withService(run) {
   const spiritDataDir = await mkdtemp(path.join(tmpdir(), "spirit-tasks-chain-data-"));
   setSpiritDataDirOverride(spiritDataDir);
   clearWorkspaceCapabilityTrustSessionForTests();
-  const { DesktopHostService } = await import("../../dist-electron/src/host/service.js");
+  const { DesktopHostService } = await import("../../../../packages/sessions/dist/host/service.js");
   const service = new DesktopHostService();
   service["state"] = { workspaceRoot };
   try {
@@ -176,8 +176,9 @@ test("startup initialization evaluates tasks trust for the restored workspace", 
   await writeSpiritTasks(workspaceRoot, "make");
   try {
     const { ensureInitializedCommand } =
-      await import("../../dist-electron/src/host/host-initialization.js");
-    const { SessionRegistry } = await import("../../dist-electron/src/host/session-registry.js");
+      await import("../../../../packages/sessions/dist/host/host-initialization.js");
+    const { SessionRegistry } =
+      await import("../../../../packages/sessions/dist/host/session-registry.js");
     const evaluations = [];
     let state;
     const ctx = {

@@ -12,8 +12,8 @@ import {
   normalizeTimelineSnapshotForPersistence,
   timelinePersistedSnapshotToMessages,
   validateTimelineSnapshotV2,
-} from "../../dist-electron/src/host/chat-schema.js";
-import { loadStoredSession } from "../../dist-electron/src/host/storage.js";
+} from "../../../../packages/sessions/dist/host/chat-schema.js";
+import { loadStoredSession } from "../../../../packages/sessions/dist/host/storage.js";
 import { buildV2StoredSession } from "./chat-schema-fixture.mjs";
 
 function toolRow(toolCallId) {

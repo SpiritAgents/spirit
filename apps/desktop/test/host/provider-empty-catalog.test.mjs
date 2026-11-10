@@ -10,9 +10,12 @@ import { SPIRIT_CONFIG_SCHEMA_VERSION, setKeyringStoreForTests } from "@spiritag
 import {
   addProviderModelsCommand,
   removeProviderGroupCommand,
-} from "../../dist-electron/src/host/host-model-commands.js";
-import { fetchCatalogModels } from "../../dist-electron/src/host/model-config.js";
-import { loadConfig, setSpiritDataDirOverride } from "../../dist-electron/src/host/storage.js";
+} from "../../../../packages/sessions/dist/host/host-model-commands.js";
+import { fetchCatalogModels } from "../../../../packages/sessions/dist/host/model-config.js";
+import {
+  loadConfig,
+  setSpiritDataDirOverride,
+} from "../../../../packages/sessions/dist/host/storage.js";
 
 function existingOpenAiProvider() {
   return {
