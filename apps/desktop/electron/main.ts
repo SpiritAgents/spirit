@@ -19,6 +19,13 @@ import {
 import { detectPreviewableImageFile } from "@spiritagent/host-internal/image-file-support";
 import { configureElectronProductStorage } from "./product-storage.js";
 import { product } from "@spiritagent/product";
+import { setWorkspaceSystemOperations } from "@spiritagent/workspace/platform";
+
+setWorkspaceSystemOperations({
+  trashItem: (path) => shell.trashItem(path),
+  openPath: (path) => shell.openPath(path),
+  showItemInFolder: (path) => shell.showItemInFolder(path),
+});
 
 import {
   registerDesktopNotifications,

@@ -35,7 +35,8 @@
     "@spiritagent/product": "workspace:*",
     "@spiritagent/remote-control": "workspace:*",
     "@spiritagent/server": "workspace:*",
-    "@spiritagent/ui": "workspace:*"
+    "@spiritagent/ui": "workspace:*",
+    "@spiritagent/workspace": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "26.6.6",

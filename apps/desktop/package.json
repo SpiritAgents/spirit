@@ -77,6 +77,7 @@
     "@spiritagent/server": "workspace:*",
     "@spiritagent/sessions": "workspace:*",
     "@spiritagent/ui": "workspace:*",
+    "@spiritagent/workspace": "workspace:*",
     "@streamdown/code": "1.1.1",
     "@streamdown/math": "1.0.2",
     "@streamdown/mermaid": "1.0.2",
