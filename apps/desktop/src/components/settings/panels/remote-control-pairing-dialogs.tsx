@@ -115,11 +115,9 @@ export function RemoteControlPairingDialogs({
             </div>
           ) : null}
           {enrollment ? (
-            <div className="group relative -mt-2 mx-auto w-full min-w-0 max-w-56">
-              <p className="w-full truncate text-sm text-muted-foreground group-hover:pr-7 group-focus-within:pr-7">
-                {enrollment.url}
-              </p>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center bg-popover opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+            <div className="relative -mt-2 mx-auto w-full min-w-0 max-w-56">
+              <p className="w-full truncate pr-7 text-sm text-muted-foreground">{enrollment.url}</p>
+              <div className="absolute inset-y-0 right-0 flex items-center bg-popover">
                 <Button
                   type="button"
                   variant="ghost"

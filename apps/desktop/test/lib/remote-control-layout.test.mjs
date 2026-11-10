@@ -20,12 +20,10 @@ test("pairing intro uses a wide shared content boundary and a single settings he
   assert.match(dialogs, /@spiritagent\/icons\/check/);
   assert.match(dialogs, /mx-auto flex w-full max-w-56 justify-center pt-16 pb-2/);
   assert.match(dialogs, /sm:max-w-sm pb-23/);
-  assert.match(dialogs, /group relative -mt-2 mx-auto w-full min-w-0 max-w-56/);
-  assert.match(dialogs, /group-hover:pr-7 group-focus-within:pr-7/);
-  assert.match(dialogs, /bg-popover opacity-0/);
-  assert.doesNotMatch(dialogs, /transition-opacity duration-150/);
-  assert.match(dialogs, /group-hover:opacity-100/);
-  assert.match(dialogs, /group-focus-within:opacity-100/);
+  assert.match(dialogs, /relative -mt-2 mx-auto w-full min-w-0 max-w-56/);
+  assert.match(dialogs, /w-full truncate pr-7 text-sm text-muted-foreground/);
+  assert.match(dialogs, /absolute inset-y-0 right-0 flex items-center bg-popover/);
+  assert.doesNotMatch(dialogs, /group-hover|group-focus-within|opacity-0|pointer-events-none/);
 
   const settingsView = await readFile(
     new URL("../../src/components/settings/settings-view.tsx", import.meta.url),
