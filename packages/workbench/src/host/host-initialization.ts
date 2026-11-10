@@ -1,8 +1,8 @@
 import path from "node:path";
 
 import { resolveDesktopAgentMode } from "@spiritagent/ui/composer";
-import { clearCodeCompletionStateForWorkspace } from "./code-completion-commands.js";
-import type { PlanSnapshot } from "../types.js";
+import { clearCodeCompletionStateForWorkspace } from "@spiritagent/sessions/host/code-completion-commands";
+import type { PlanSnapshot } from "@spiritagent/api/types";
 import {
   discoverWorkspaceRoot,
   applyLlmClientVersionFromApp,
@@ -15,23 +15,26 @@ import {
   type DesktopConfigFile,
   type DesktopWorkspaceBinding,
   type HostMetadataSummary,
-} from "./storage.js";
-import { applyGitRevision, readWorkspaceGitSnapshot } from "./git.js";
-import type { SessionRegistry } from "./session-registry.js";
-import type { DesktopToolExecutor } from "./tool-executor.js";
+} from "@spiritagent/sessions/host/storage";
+import { applyGitRevision, readWorkspaceGitSnapshot } from "@spiritagent/sessions/host/git";
+import type { SessionRegistry } from "@spiritagent/sessions/host/session-registry";
+import type { DesktopToolExecutor } from "@spiritagent/sessions/host/tool-executor";
 import type {
   DesktopGitSnapshot,
   DesktopExtensionCssLayer,
   DesktopExtensionListItem,
   DesktopMarketplaceCatalogEntry,
   DesktopMarketplaceSource,
-} from "../types.js";
-import type { EphemeralSessionRecord } from "./sessions.js";
+} from "@spiritagent/api/types";
+import type { EphemeralSessionRecord } from "@spiritagent/sessions/host/sessions";
 import { ensureBuiltInSkills, ensurePersonalMarketplace } from "@spiritagent/extensions";
 import type { HostExtensionInstructionContributions } from "@spiritagent/extensions";
-import { resolveWorkspaceBindingForRequestedRoot, sameWorkspaceRoot } from "./service-utils.js";
-import { spiritDataDir } from "./storage.js";
-import type { ExtensionWarmupTrigger } from "./extension-warmup.js";
+import {
+  resolveWorkspaceBindingForRequestedRoot,
+  sameWorkspaceRoot,
+} from "@spiritagent/sessions/host/service-utils";
+import { spiritDataDir } from "@spiritagent/sessions/host/storage";
+import type { ExtensionWarmupTrigger } from "@spiritagent/sessions/host/extension-warmup";
 
 export interface InitializationState {
   workspaceRoot: string;

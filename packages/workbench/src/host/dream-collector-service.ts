@@ -1,6 +1,6 @@
-import i18n from "../lib/i18n-host.js";
-import type { DesktopDreamCollectorSnapshot, DesktopGitSnapshot } from "../types.js";
-import type { DesktopConfigFile, HostMetadataSummary } from "./storage.js";
+import i18n from "@spiritagent/i18n/host";
+import type { DesktopDreamCollectorSnapshot, DesktopGitSnapshot } from "@spiritagent/api/types";
+import type { DesktopConfigFile, HostMetadataSummary } from "@spiritagent/sessions/host/storage";
 import {
   buildDreamCollectorPlanMetadata,
   DREAM_COLLECTOR_BACKOFF_MS,
@@ -9,8 +9,8 @@ import {
   emptyDreamCollectorSnapshot,
   runDesktopDreamCollectorOnce,
 } from "./dreams.js";
-import { resolveSecondaryLanguageModelProfile } from "./secondary-language-model.js";
-import { cloneDesktopConfig } from "./service-utils.js";
+import { resolveSecondaryLanguageModelProfile } from "@spiritagent/sessions/host/secondary-language-model";
+import { cloneDesktopConfig } from "@spiritagent/sessions/host/service-utils";
 
 interface DreamCollectorState {
   workspaceRoot: string;

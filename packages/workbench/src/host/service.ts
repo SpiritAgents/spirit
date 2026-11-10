@@ -6,13 +6,13 @@ import {
   normalizeTimelineSnapshotForPersistence,
   timelinePersistedSnapshotToMessages,
   validateTimelineSnapshotV2,
-} from "./chat-schema.js";
+} from "@spiritagent/sessions/host/chat-schema";
 
 import {
   deleteFileBaselineTextForPath,
   lineDeltaForDeleteFilePath,
-} from "./delete-file-line-delta.js";
-import i18n from "../lib/i18n-host.js";
+} from "@spiritagent/sessions/host/delete-file-line-delta";
+import i18n from "@spiritagent/i18n/host";
 import { resolveDesktopAgentMode } from "@spiritagent/ui/composer";
 import {
   buildBasicInfoSystemMessage,
@@ -182,8 +182,8 @@ import type {
   WorkspaceReadTextFileResult,
   WriteHostTextFileRequest,
   WriteWorkspaceTextFileRequest,
-} from "../types.js";
-import type { DesktopToolRequest, HostCommandName } from "./contracts.js";
+} from "@spiritagent/api/types";
+import type { DesktopToolRequest, HostCommandName } from "@spiritagent/sessions/host/contracts";
 import { createHostInvokeDispatch } from "./host-invoke-dispatch.js";
 import {
   addModelCommand,
@@ -194,7 +194,7 @@ import {
   removeProviderModelsCommand,
   updateConfigCommand,
   type HostModelCommandContext,
-} from "./host-model-commands.js";
+} from "@spiritagent/sessions/host/host-model-commands";
 import {
   addMcpServerCommand,
   createRuleCommand,
@@ -218,8 +218,8 @@ import {
   updateExtensionSecretCommand,
   updateExtensionSettingsCommand,
   type HostExtensionCommandContext,
-} from "./host-extension-commands.js";
-import { submitGitChipCommand } from "./host-git-chip-commands.js";
+} from "@spiritagent/sessions/host/host-extension-commands";
+import { submitGitChipCommand } from "@spiritagent/sessions/host/host-git-chip-commands";
 import {
   checkoutGitBranchCommand,
   commitChangesCommand,
@@ -251,7 +251,7 @@ import {
   trashWorkspaceEntryCommand,
   forceDeleteWorkspaceEntryCommand,
   type HostWorkspaceGitCommandContext,
-} from "./host-workspace-git-commands.js";
+} from "@spiritagent/sessions/host/host-workspace-git-commands";
 import {
   beginGitHubDeviceLoginCommand,
   cancelGitHubDeviceLoginCommand,
@@ -270,7 +270,7 @@ import {
   getGitHubPullRequestTabCountsCommand,
   markGitHubPullRequestReadyCommand,
   mergeGitHubPullRequestCommand,
-} from "./host-github-commands.js";
+} from "@spiritagent/sessions/host/host-github-commands";
 import {
   abortConversationCommand,
   abortConversationInContext,
@@ -285,7 +285,7 @@ import {
   tickSessionCommand,
   type SessionTurnOrchestratorContext,
   type SubmitUserTurnAfterInitializedOptions,
-} from "./session-turn-orchestrator.js";
+} from "@spiritagent/sessions/host/session-turn-orchestrator";
 import {
   LIVE_SNAPSHOT_BUSY_HEARTBEAT_MS,
   LIVE_SNAPSHOT_EMIT_THROTTLE_MS,
@@ -293,32 +293,35 @@ import {
   SessionPump,
   pumpDebugEnabled,
   sessionBundleNeedsPumpTick,
-} from "./session-pump.js";
+} from "@spiritagent/sessions/host/session-pump";
 import {
   startWorktreeBootstrapTurnCommand,
   type WorktreeBootstrapHostContext,
-} from "./worktree-bootstrap-orchestrator.js";
-import { isSessionBundleBusy } from "./direct-media-turn.js";
+} from "@spiritagent/sessions/host/worktree-bootstrap-orchestrator";
+import { isSessionBundleBusy } from "@spiritagent/sessions/host/direct-media-turn";
 import {
   appendQueuedUserTurnSnapshots,
   canEnqueueUserTurn,
   enqueueUserTurnCommand,
   removeQueuedUserTurnCommand,
   reorderQueuedUserTurnCommand,
-} from "./message-queue.js";
+} from "@spiritagent/sessions/host/message-queue";
 import {
   openSessionBackgroundCommand,
   openSessionCommand,
   resetSessionBackgroundCommand,
   resetSessionCommand,
   type SessionActivationContext,
-} from "./session-activation.js";
-import { forkSessionCommand, type ForkSessionHostContext } from "./fork-session-host.js";
+} from "@spiritagent/sessions/host/session-activation";
+import {
+  forkSessionCommand,
+  type ForkSessionHostContext,
+} from "@spiritagent/sessions/host/fork-session-host";
 import {
   beginSideChatPaneSessionCommand,
   forkSessionIntoSideChatCommand,
   type SideChatSessionHostContext,
-} from "./side-chat-session-host.js";
+} from "@spiritagent/sessions/host/side-chat-session-host";
 import {
   beginSplitPaneSessionCommand,
   closeSplitPaneSessionCommand,
@@ -326,8 +329,8 @@ import {
   setVisiblePaneSessionsCommand,
   syncSplitPaneSessionsCommand,
   type SessionSplitHostContext,
-} from "./session-split.js";
-import { buildPaneSessionSlice } from "./pane-snapshot.js";
+} from "@spiritagent/sessions/host/session-split";
+import { buildPaneSessionSlice } from "@spiritagent/sessions/host/pane-snapshot";
 import {
   switchPaneWorkspaceCommand,
   setPanePendingGitBranchCommand,
@@ -337,20 +340,29 @@ import {
   ensureVisiblePaneScopedGitSnapshots,
   prefetchScopedGitBeforeGlobalWorkspaceChange,
   type PaneWorkspaceHostContext,
-} from "./host-pane-workspace.js";
+} from "@spiritagent/sessions/host/host-pane-workspace";
 import {
   withOptionalPaneSessionActivation,
   type PaneSessionScopeHostContext,
-} from "./host-pane-session-scope.js";
-import { resolvePendingApprovalSessionPath } from "../lib/pane-pending-turn-routing.js";
-import { switchPaneModelCommand, type PaneModelHostContext } from "./host-pane-model.js";
+} from "@spiritagent/sessions/host/host-pane-session-scope";
+import { resolvePendingApprovalSessionPath } from "@spiritagent/sessions/lib/pane-pending-turn-routing";
+import {
+  switchPaneModelCommand,
+  type PaneModelHostContext,
+} from "@spiritagent/sessions/host/host-pane-model";
 import {
   needsHostActiveModelSync,
   resolveEffectivePaneActiveModel,
   resolvePaneModelProjection,
-} from "./active-model-sync.js";
-import { findModelRefByName, resolveModelProfile } from "./model-config-access.js";
-import { deleteSessionCommand, type SessionDeleteContext } from "./session-delete.js";
+} from "@spiritagent/sessions/host/active-model-sync";
+import {
+  findModelRefByName,
+  resolveModelProfile,
+} from "@spiritagent/sessions/host/model-config-access";
+import {
+  deleteSessionCommand,
+  type SessionDeleteContext,
+} from "@spiritagent/sessions/host/session-delete";
 import {
   findProviderEntry,
   modelRefKey,
@@ -358,14 +370,20 @@ import {
   tryResolveTransportConfig,
 } from "@spiritagent/host-internal";
 import { findProviderPreset } from "@spiritagent/agent-core/provider-presets";
-import type { ModelRef } from "../types.js";
-import { renameSessionCommand, type SessionRenameContext } from "./session-rename.js";
-import { setSessionPinnedCommand, type SessionPinContext } from "./session-pin.js";
+import type { ModelRef } from "@spiritagent/api/types";
+import {
+  renameSessionCommand,
+  type SessionRenameContext,
+} from "@spiritagent/sessions/host/session-rename";
+import {
+  setSessionPinnedCommand,
+  type SessionPinContext,
+} from "@spiritagent/sessions/host/session-pin";
 import {
   finishSessionActivationCommand,
   isBundleRuntimeFresh,
   runtimeActivationSignature,
-} from "./runtime-lifecycle.js";
+} from "@spiritagent/sessions/host/runtime-lifecycle";
 import {
   startDreamCollectorIfNeeded as startDreamCollectorIfNeededFromService,
   startDreamCollectorMonitorIfNeeded as startDreamCollectorMonitorIfNeededFromService,
@@ -391,9 +409,9 @@ import {
   resolveTaskFiles,
   tasksDebugEnabled,
   type TaskRunResolver,
-} from "./host-tasks-commands.js";
-import { TasksWatcher } from "./tasks-watcher.js";
-import { WorkspaceTasksTrustPromptQueue } from "./tasks-trust-prompt.js";
+} from "@spiritagent/sessions/host/host-tasks-commands";
+import { TasksWatcher } from "@spiritagent/sessions/host/tasks-watcher";
+import { WorkspaceTasksTrustPromptQueue } from "@spiritagent/sessions/host/tasks-trust-prompt";
 import {
   clearAssistantContinuationMarkers as clearAssistantContinuationMarkersFromService,
   latestContinuableAssistantMessage as latestContinuableAssistantMessageFromService,
@@ -404,8 +422,8 @@ import {
   refreshArchiveFromRuntime as refreshArchiveFromRuntimeFromService,
   syncSubagentToolStreamingOutput as syncSubagentToolStreamingOutputFromService,
   type ConversationContinuationContext,
-} from "./conversation-continuation.js";
-import { syncLivePendingAuxSnapshot } from "./live-snapshot-sync.js";
+} from "@spiritagent/sessions/host/conversation-continuation";
+import { syncLivePendingAuxSnapshot } from "@spiritagent/sessions/host/live-snapshot-sync";
 import {
   buildConversationTodoSnapshot as buildConversationTodoSnapshotFromService,
   cancelTodoClearing as cancelTodoClearingFromService,
@@ -416,7 +434,7 @@ import {
   resolveTodoSessionKeyForBundle as resolveTodoSessionKeyForBundleFromService,
   scheduleTodoClearing as scheduleTodoClearingFromService,
   type SessionTodosHostContext,
-} from "./session-todos-host.js";
+} from "@spiritagent/sessions/host/session-todos-host";
 import {
   applyTodosAfterRewind as applyTodosAfterRewindFromService,
   bindFileChangesToToolMessage as bindFileChangesToToolMessageFromService,
@@ -425,7 +443,7 @@ import {
   recordRewindCheckpoint as recordRewindCheckpointFromService,
   restoreBeforeRewindCheckpoint as restoreBeforeRewindCheckpointFromService,
   type RewindHostContext,
-} from "./rewind-host.js";
+} from "@spiritagent/sessions/host/rewind-host";
 import { ensureInitializedCommand, type HostInitializationContext } from "./host-initialization.js";
 import {
   buildArchiveAssistantAuxFromConversation,
@@ -436,27 +454,27 @@ import {
   type EphemeralSessionRecord,
   nextMessageIdFromMessages,
   removeEphemeralSessionRecord,
-} from "./sessions.js";
-import { prepareSessionTitleForFirstUserTurn as resetSessionTitleForFirstUserTurn } from "./session-title-first-turn.js";
-import { applyGeneratedSessionTitle } from "./session-title-service.js";
-import { isForegroundProvisionalSessionPath } from "../lib/session-path-kind.js";
+} from "@spiritagent/sessions/host/sessions";
+import { prepareSessionTitleForFirstUserTurn as resetSessionTitleForFirstUserTurn } from "@spiritagent/sessions/host/session-title-first-turn";
+import { applyGeneratedSessionTitle } from "@spiritagent/sessions/host/session-title-service";
+import { isForegroundProvisionalSessionPath } from "@spiritagent/sessions/lib/session-path-kind";
 import {
   abortCodeCompletionCommand,
   recordCodeCompletionFileStateCommand,
   requestCodeCompletionCommand,
   resetCodeCompletionJournalCommand,
   type CodeCompletionCommandContext,
-} from "./code-completion-commands.js";
+} from "@spiritagent/sessions/host/code-completion-commands";
 import {
   buildContextUsagePercent,
   type ContextUsageModelProfile,
   resolveModelContextLength,
-} from "../lib/context-usage.js";
+} from "@spiritagent/sessions/lib/context-usage";
 import {
   applyConfiguredModelCatalogRefreshResults,
   fetchConfiguredModelCatalogsOnStartup,
   forceRefreshModelCatalogForProvider,
-} from "./model-catalog-startup-refresh.js";
+} from "@spiritagent/sessions/host/model-catalog-startup-refresh";
 import {
   defaultNewSessionPath,
   isProvisionalSessionPath,
@@ -476,10 +494,13 @@ import {
   type DesktopConfigFile,
   type DesktopWorkspaceBinding,
   type HostMetadataSummary,
-} from "./storage.js";
-import { DesktopToolExecutor } from "./tool-executor.js";
-import { buildDesktopRuntimeBasicInfo, type DesktopHostRuntime } from "./runtime.js";
-import { hydrateSessionReferenceWiresInUserText } from "./hydrate-session-reference-wires.js";
+} from "@spiritagent/sessions/host/storage";
+import { DesktopToolExecutor } from "@spiritagent/sessions/host/tool-executor";
+import {
+  buildDesktopRuntimeBasicInfo,
+  type DesktopHostRuntime,
+} from "@spiritagent/sessions/host/runtime";
+import { hydrateSessionReferenceWiresInUserText } from "@spiritagent/sessions/host/hydrate-session-reference-wires";
 import {
   abortRemoteDesktopShell,
   moveRemoteDesktopTaskToBackground,
@@ -501,12 +522,12 @@ import {
   runRemoteDesktopSessionEnd,
   runRemoteDesktopSessionStart,
   setRemoteDesktopApprovalLevel,
-} from "./remote-runtime.js";
-import { buildDesktopUiMarkdownPromptSection } from "./desktop-ui-markdown-prompt.js";
-import { buildActiveSkillPayload } from "./skills.js";
+} from "@spiritagent/sessions/host/remote-runtime";
+import { buildDesktopUiMarkdownPromptSection } from "@spiritagent/sessions/host/desktop-ui-markdown-prompt";
+import { buildActiveSkillPayload } from "@spiritagent/sessions/host/skills";
 import { buildDreamContextText, emptyDreamCollectorSnapshot } from "./dreams.js";
-import { resolveSecondaryLanguageModelProfile } from "./secondary-language-model.js";
-import { createTodoScope } from "./todos.js";
+import { resolveSecondaryLanguageModelProfile } from "@spiritagent/sessions/host/secondary-language-model";
+import { createTodoScope } from "@spiritagent/sessions/host/todos";
 import {
   buildDesktopExtensionListItems,
   buildDesktopExtensionToolDefinitions,
@@ -515,18 +536,27 @@ import {
   collectExtensionSystemPrompts,
   resolveEnabledExtensionViewFile,
   resolveEnabledExtensionViewOwner,
-} from "./extensions.js";
+} from "@spiritagent/sessions/host/extensions";
 import {
   getDesktopExtensionHostAdapter,
   requireDesktopExtensionHostAdapter,
   setDesktopExtensionHostAdapter,
   type DesktopExtensionHostAdapter,
-} from "./extension-host-adapter.js";
-import { ExtensionWarmupCoordinator, type ExtensionWarmupTrigger } from "./extension-warmup.js";
-import { emptyMcpStatusSnapshot, listDesktopMcpServersFromDisk } from "./mcp-config.js";
-import { listDesktopHookListItems } from "./hooks.js";
+} from "@spiritagent/sessions/host/extension-host-adapter";
+import {
+  ExtensionWarmupCoordinator,
+  type ExtensionWarmupTrigger,
+} from "@spiritagent/sessions/host/extension-warmup";
+import {
+  emptyMcpStatusSnapshot,
+  listDesktopMcpServersFromDisk,
+} from "@spiritagent/sessions/host/mcp-config";
+import { listDesktopHookListItems } from "@spiritagent/sessions/host/hooks";
 import type { SessionEndHookInput, SessionStartHookInput } from "@spiritagent/agent-core";
-import { disposeMcpServicesExcept, sharedMcpServiceForWorkspace } from "./service-mcp.js";
+import {
+  disposeMcpServicesExcept,
+  sharedMcpServiceForWorkspace,
+} from "@spiritagent/sessions/host/service-mcp";
 import {
   disposeAllLspServices,
   disposeLspServicesExcept,
@@ -534,54 +564,57 @@ import {
   lspUserConfigFromEnabled,
   sharedLspServiceForWorkspace,
 } from "@spiritagent/host-internal/lsp";
-import { buildDesktopLspSnapshot, defaultDesktopLspSnapshot } from "./lsp-snapshot.js";
+import {
+  buildDesktopLspSnapshot,
+  defaultDesktopLspSnapshot,
+} from "@spiritagent/sessions/host/lsp-snapshot";
 import {
   basicInfoHostFromClientHost,
   currentApiBase,
   mapPendingQuestions,
   sameDreamCollectorSnapshot,
   sameWorkspaceRoot,
-} from "./service-utils.js";
+} from "@spiritagent/sessions/host/service-utils";
 import {
   needsHostWorkspaceRootSync,
   resolveEffectiveWorkspaceRoot,
-} from "./workspace-root-sync.js";
-import { DesktopConversationSnapshotView } from "./conversation-snapshot.js";
+} from "@spiritagent/sessions/host/workspace-root-sync";
+import { DesktopConversationSnapshotView } from "@spiritagent/sessions/host/conversation-snapshot";
 import { buildDesktopSnapshot, buildModelCatalogHints } from "./snapshot.js";
 import {
   gitWorkingTreeFingerprint,
   nextWorkspaceContentInvalidation,
   toWorkspaceRelativePosixPath,
-} from "../lib/workspace-content-invalidation.js";
-import { applyToolCallSummaryCopy } from "./message-ordering.js";
+} from "@spiritagent/sessions/lib/workspace-content-invalidation";
+import { applyToolCallSummaryCopy } from "@spiritagent/sessions/host/message-ordering";
 import {
   mapPendingAuxState,
   mapPendingMcpResources,
   mapPendingToolApproval,
-} from "./snapshot-mappers.js";
-import { DesktopAssistantMessageStateMachine } from "./assistant-message-state.js";
-import { DesktopRuntimeEventOrchestrator } from "./runtime-event-orchestrator.js";
+} from "@spiritagent/sessions/host/snapshot-mappers";
+import { DesktopAssistantMessageStateMachine } from "@spiritagent/sessions/host/assistant-message-state";
+import { DesktopRuntimeEventOrchestrator } from "@spiritagent/sessions/host/runtime-event-orchestrator";
 import {
   DesktopMessageTimeline,
   type DesktopTimelineSegmentKind,
   type DesktopTimelineTurnSnapshot,
-} from "./message-timeline.js";
+} from "@spiritagent/sessions/host/message-timeline";
 import {
   createWorkspaceGitWorktree,
   applyGitRevision,
   readPrimaryRepoRoot,
   readWorkspaceGitSnapshot,
-} from "./git.js";
+} from "@spiritagent/sessions/host/git";
 import { generateWorktreeNamesFromModelTask } from "./ephemeral-llm-tasks.js";
-import { buildSubagentViewerSnapshot } from "./subagent-viewer.js";
-import { persistDesktopSessionBundle } from "./session-persistence.js";
-import { SessionRegistry } from "./session-registry.js";
-import type { SessionBundle } from "./session-bundle.js";
+import { buildSubagentViewerSnapshot } from "@spiritagent/sessions/host/subagent-viewer";
+import { persistDesktopSessionBundle } from "@spiritagent/sessions/host/session-persistence";
+import { SessionRegistry } from "@spiritagent/sessions/host/session-registry";
+import type { SessionBundle } from "@spiritagent/sessions/host/session-bundle";
 import {
   loadRewindCheckpointSnapshot,
   loadRewindFileChange,
   type DesktopRewindCheckpointSnapshot,
-} from "./rewind.js";
+} from "@spiritagent/sessions/host/rewind";
 
 export { setDesktopExtensionHostAdapter };
 
@@ -2371,7 +2404,7 @@ export class DesktopHostService {
     return this.buildSnapshot();
   }
 
-  async poll(request?: import("../types.js").PollRequest): Promise<DesktopSnapshot> {
+  async poll(request?: import("@spiritagent/api/types").PollRequest): Promise<DesktopSnapshot> {
     await pollCommand(this.sessionTurnContext());
     const sessionPath = request?.sessionPath?.trim();
     if (!sessionPath) {
@@ -2822,21 +2855,21 @@ export class DesktopHostService {
   }
 
   async getWorkspaceFileReferenceIndex(): Promise<
-    import("../types.js").WorkspaceFileReferenceIndexSnapshot
+    import("@spiritagent/api/types").WorkspaceFileReferenceIndexSnapshot
   > {
     return getWorkspaceFileReferenceIndexCommand(this.workspaceGitCommandContext());
   }
 
   async readWorkspaceTextFile(
     relativePath: string,
-    options?: import("../types.js").ReadWorkspaceTextFileOptions,
+    options?: import("@spiritagent/api/types").ReadWorkspaceTextFileOptions,
   ): Promise<WorkspaceReadTextFileResult> {
     return readWorkspaceTextFileCommand(this.workspaceGitCommandContext(), relativePath, options);
   }
 
   async searchWorkspaceContent(
-    request: import("../types.js").WorkspaceContentSearchRequest,
-  ): Promise<import("../types.js").WorkspaceContentSearchResult> {
+    request: import("@spiritagent/api/types").WorkspaceContentSearchRequest,
+  ): Promise<import("@spiritagent/api/types").WorkspaceContentSearchResult> {
     return searchWorkspaceContentCommand(this.workspaceGitCommandContext(), request);
   }
 

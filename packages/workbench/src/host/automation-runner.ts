@@ -20,8 +20,8 @@ import {
   disposeAutomationRuntime,
   type AutomationRuntimeHandle,
 } from "./automation-runtime.js";
-import { createDesktopRewindMetadata } from "./rewind.js";
-import { buildStoredDesktopSession } from "./sessions.js";
+import { createDesktopRewindMetadata } from "@spiritagent/sessions/host/rewind";
+import { buildStoredDesktopSession } from "@spiritagent/sessions/host/sessions";
 import { modelExistsInProvider, modelRefKey } from "@spiritagent/host-internal";
 import {
   chatsDirPath,
@@ -29,8 +29,8 @@ import {
   saveStoredSession,
   spiritDataDir,
   type DesktopConfigFile,
-} from "./storage.js";
-import type { DesktopHostRuntime } from "./runtime.js";
+} from "@spiritagent/sessions/host/storage";
+import type { DesktopHostRuntime } from "@spiritagent/sessions/host/runtime";
 
 export const AUTOMATION_SESSION_FILE_PREFIX = "chat-automation-";
 export const AUTOMATION_RUN_MAX_GUARD_ROUNDS = 200;

@@ -3,13 +3,13 @@ import path from "node:path";
 import { type ChatArchive } from "@spiritagent/agent-core";
 import { normalizeApprovalLevel, type HostAutomationDefinition } from "@spiritagent/host-internal";
 
-import type { DesktopHostRuntime } from "./runtime.js";
+import type { DesktopHostRuntime } from "@spiritagent/sessions/host/runtime";
 import {
   closeRemoteDesktopRuntime,
   createRemoteDesktopRuntime,
   replyRemoteWorkspaceCapabilityTrust,
-} from "./remote-runtime.js";
-import { spiritDataDir, type DesktopConfigFile } from "./storage.js";
+} from "@spiritagent/sessions/host/remote-runtime";
+import { spiritDataDir, type DesktopConfigFile } from "@spiritagent/sessions/host/storage";
 
 export interface CreateAutomationRuntimeInput {
   definition: HostAutomationDefinition;

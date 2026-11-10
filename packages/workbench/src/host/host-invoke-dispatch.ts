@@ -1,5 +1,5 @@
-import type { HostCommandName } from "./contracts.js";
-import type { CommandPayloads } from "./host-command-payloads.js";
+import type { HostCommandName } from "@spiritagent/sessions/host/contracts";
+import type { CommandPayloads } from "@spiritagent/sessions/host/host-command-payloads";
 
 export interface HostCommandDelegate {
   bootstrap(request?: CommandPayloads["bootstrap"]["request"]): Promise<unknown>;
@@ -71,7 +71,7 @@ export interface HostCommandDelegate {
   abortShell(toolCallId: string): Promise<unknown>;
   moveToBackground(toolCallId: string): Promise<unknown>;
   continueAssistantCompletion(messageId: number): Promise<unknown>;
-  poll(request?: import("../types.js").PollRequest): Promise<unknown>;
+  poll(request?: import("@spiritagent/api/types").PollRequest): Promise<unknown>;
   listDreamsOverview(): Promise<unknown>;
   listAutomations(): Promise<unknown>;
   getAutomation(automationId: string): Promise<unknown>;
@@ -100,7 +100,10 @@ export interface HostCommandDelegate {
   listSessions(): Promise<unknown>;
   openSession(
     path: string,
-    options?: { activate?: boolean; clientHost?: import("../types.js").DesktopClientHost },
+    options?: {
+      activate?: boolean;
+      clientHost?: import("@spiritagent/api/types").DesktopClientHost;
+    },
   ): Promise<unknown>;
   beginSplitPaneSession(
     request: CommandPayloads["beginSplitPaneSession"]["request"],
@@ -195,10 +198,10 @@ export interface HostCommandDelegate {
   ): Promise<unknown>;
   readWorkspaceTextFile(
     relativePath: string,
-    options?: import("../types.js").ReadWorkspaceTextFileOptions,
+    options?: import("@spiritagent/api/types").ReadWorkspaceTextFileOptions,
   ): Promise<unknown>;
   searchWorkspaceContent(
-    request: import("../types.js").WorkspaceContentSearchRequest,
+    request: import("@spiritagent/api/types").WorkspaceContentSearchRequest,
   ): Promise<unknown>;
   writeWorkspaceTextFile(
     request: CommandPayloads["writeWorkspaceTextFile"]["request"],

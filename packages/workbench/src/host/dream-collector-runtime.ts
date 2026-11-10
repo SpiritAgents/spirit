@@ -3,15 +3,15 @@ import { setImmediate as waitForImmediate } from "node:timers/promises";
 
 import type { HostDreamSourceSessionRef, ModelRef } from "@spiritagent/host-internal";
 
-import type { DesktopToolRequest } from "./contracts.js";
-import type { DesktopHostRuntime } from "./runtime.js";
+import type { DesktopToolRequest } from "@spiritagent/sessions/host/contracts";
+import type { DesktopHostRuntime } from "@spiritagent/sessions/host/runtime";
 import {
   closeRemoteDesktopRuntime,
   createRemoteDesktopRuntime,
   replyRemoteWorkspaceCapabilityTrust,
-} from "./remote-runtime.js";
+} from "@spiritagent/sessions/host/remote-runtime";
 import { buildEmptyAutomationArchive } from "./automation-runtime.js";
-import { spiritDataDir } from "./storage.js";
+import { spiritDataDir } from "@spiritagent/sessions/host/storage";
 
 export interface CreateDreamCollectorRuntimeInput {
   workspaceRoot: string;

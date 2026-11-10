@@ -164,7 +164,7 @@ import {
   subscribeDesktopDreamUpdates,
   subscribeDesktopSessionListUpdates,
   subscribeDesktopTasksUpdates,
-} from "@spiritagent/sessions/host/service";
+} from "@spiritagent/workbench/host/service";
 import {
   chatsDirPath,
   configFilePath,

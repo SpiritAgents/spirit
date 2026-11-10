@@ -6,7 +6,7 @@ import {
   shutdownDesktopHostService,
   subscribeDesktopDreamUpdates,
   refreshDesktopRemoteControlConfig,
-} from "@spiritagent/sessions/host/service";
+} from "@spiritagent/workbench/host/service";
 import {
   loadConfig,
   resolveConfiguredSpiritDataDir,

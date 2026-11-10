@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import i18n from "../lib/i18n-host.js";
+import i18n from "@spiritagent/i18n/host";
 import type { LlmPlanMetadata } from "@spiritagent/agent-core";
 import { llmMessageTextContent, normalizeStoredLlmMessage } from "@spiritagent/agent-core";
 import {
@@ -18,9 +18,9 @@ import type {
   DesktopDreamCollectorSnapshot,
   ModelRef,
   SessionListItem,
-} from "../types.js";
-import type { StoredDesktopSession } from "./contracts.js";
-import { resolveModelProfile } from "./model-config-access.js";
+} from "@spiritagent/api/types";
+import type { StoredDesktopSession } from "@spiritagent/sessions/host/contracts";
+import { resolveModelProfile } from "@spiritagent/sessions/host/model-config-access";
 import {
   chatsDirPath,
   listStoredSessions,
@@ -29,18 +29,18 @@ import {
   saveStoredSession,
   spiritDataDir,
   type DesktopConfigFile,
-} from "./storage.js";
+} from "@spiritagent/sessions/host/storage";
 import {
   createDreamCollectorRuntime,
   disposeDreamCollectorRuntime,
   resumeDreamCollectorTurn,
   submitDreamCollectorTurn,
 } from "./dream-collector-runtime.js";
-import { DesktopMessageTimeline } from "./message-timeline.js";
-import { createDesktopRewindMetadata } from "./rewind.js";
-import { buildStoredDesktopSession } from "./sessions.js";
-import { timelinePersistedSnapshotToMessages } from "./chat-schema.js";
-import { sameWorkspaceRoot } from "./service-utils.js";
+import { DesktopMessageTimeline } from "@spiritagent/sessions/host/message-timeline";
+import { createDesktopRewindMetadata } from "@spiritagent/sessions/host/rewind";
+import { buildStoredDesktopSession } from "@spiritagent/sessions/host/sessions";
+import { timelinePersistedSnapshotToMessages } from "@spiritagent/sessions/host/chat-schema";
+import { sameWorkspaceRoot } from "@spiritagent/sessions/host/service-utils";
 
 export const DREAM_DEBUG_SESSION_FILE_PREFIX = "dream-collector-";
 export const DREAM_COLLECTOR_TICK_INTERVAL_MS = 30_000;

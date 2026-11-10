@@ -15,22 +15,25 @@ import type {
   DesktopModelCatalogHint,
   DesktopSnapshot,
   McpStatusSnapshot,
-} from "../types.js";
+} from "@spiritagent/api/types";
 import type { ProviderEntry } from "@spiritagent/host-internal";
 import { listProviderPresets } from "@spiritagent/agent-core/provider-presets";
 
-import { readModelCatalogCacheSync } from "./model-catalog-cache.js";
-import { flattenProviders } from "./model-config-access.js";
+import { readModelCatalogCacheSync } from "@spiritagent/sessions/host/model-catalog-cache";
+import { flattenProviders } from "@spiritagent/sessions/host/model-config-access";
 import {
   normalizeAgentsConfig,
   normalizeWorkspaceBinding,
   type DesktopConfigFile,
   type HostMetadataSummary,
-} from "./storage.js";
-import { parseTranslucencyPreference } from "../lib/translucency.js";
-import { buildAvailableWorkspaces, buildWebHostSnapshot } from "./service-utils.js";
-import { resolveDesktopHomeDirectory } from "./storage.js";
-import type { DesktopLspSnapshot } from "../types.js";
+} from "@spiritagent/sessions/host/storage";
+import { parseTranslucencyPreference } from "@spiritagent/sessions/lib/translucency";
+import {
+  buildAvailableWorkspaces,
+  buildWebHostSnapshot,
+} from "@spiritagent/sessions/host/service-utils";
+import { resolveDesktopHomeDirectory } from "@spiritagent/sessions/host/storage";
+import type { DesktopLspSnapshot } from "@spiritagent/api/types";
 
 function isSettingsInstructionScope<T extends { source: { scope: string } }>(
   entry: T,

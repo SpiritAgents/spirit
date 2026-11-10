@@ -276,6 +276,9 @@ importers:
       '@spiritagent/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@spiritagent/workbench':
+        specifier: workspace:*
+        version: link:../../packages/workbench
       '@spiritagent/workspace':
         specifier: workspace:*
         version: link:../../packages/workspace
@@ -1189,6 +1192,64 @@ importers:
       typescript:
         specifier: 7.0.2
         version: 7.0.2
+
+  packages/workbench:
+    dependencies:
+      '@spiritagent/agent-core':
+        specifier: workspace:*
+        version: link:../agent-core
+      '@spiritagent/api':
+        specifier: workspace:*
+        version: link:../api
+      '@spiritagent/automations':
+        specifier: workspace:*
+        version: link:../automations
+      '@spiritagent/code-completion':
+        specifier: workspace:*
+        version: link:../code-completion
+      '@spiritagent/config':
+        specifier: workspace:*
+        version: link:../config
+      '@spiritagent/extensions':
+        specifier: workspace:*
+        version: link:../extensions
+      '@spiritagent/github':
+        specifier: workspace:*
+        version: link:../github
+      '@spiritagent/host-internal':
+        specifier: workspace:*
+        version: link:../host-internal
+      '@spiritagent/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@spiritagent/product':
+        specifier: workspace:*
+        version: link:../product
+      '@spiritagent/remote-control':
+        specifier: workspace:*
+        version: link:../remote-control
+      '@spiritagent/server':
+        specifier: workspace:*
+        version: link:../server
+      '@spiritagent/sessions':
+        specifier: workspace:*
+        version: link:../sessions
+      '@spiritagent/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@spiritagent/workspace':
+        specifier: workspace:*
+        version: link:../workspace
+    devDependencies:
+      '@types/node':
+        specifier: 26.6.6
+        version: 26.6.6
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@26.6.6)(happy-dom@20.11.1)(jsdom@30.0.1(@noble/hashes@2.2.0))(vite@8.2.0(@types/node@26.6.6)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.7)(yaml@2.9.0))
 
   packages/workspace:
     dependencies:

@@ -7,8 +7,8 @@ import {
   type HostAutomationUpdateInput,
 } from "@spiritagent/host-internal";
 
-import type { DesktopAutomationDetail, DesktopAutomationListItem } from "../types.js";
-import { spiritDataDir } from "./storage.js";
+import type { DesktopAutomationDetail, DesktopAutomationListItem } from "@spiritagent/api/types";
+import { spiritDataDir } from "@spiritagent/sessions/host/storage";
 
 export async function listAutomationsCommand(): Promise<DesktopAutomationListItem[]> {
   const store = createHostAutomationStore(spiritDataDir());

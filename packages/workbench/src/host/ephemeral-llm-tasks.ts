@@ -5,12 +5,12 @@ import {
 } from "@spiritagent/agent-core";
 import { generateWorktreeNamesFromTask, resolveTransportConfig } from "@spiritagent/host-internal";
 
-import i18n from "../lib/i18n-host.js";
-import type { ModelRef } from "../types.js";
-import { spiritDataDir, type HostMetadataSummary } from "./storage.js";
+import i18n from "@spiritagent/i18n/host";
+import type { ModelRef } from "@spiritagent/api/types";
+import { spiritDataDir, type HostMetadataSummary } from "@spiritagent/sessions/host/storage";
 import { buildDreamContextText } from "./dreams.js";
-import type { DesktopToolExecutor } from "./tool-executor.js";
-import type { GeneratedWorktreeNames } from "./worktree-naming.js";
+import type { DesktopToolExecutor } from "@spiritagent/sessions/host/tool-executor";
+import type { GeneratedWorktreeNames } from "@spiritagent/workspace/worktree-naming";
 
 interface BackgroundLlmTaskContext {
   workspaceRoot: string;

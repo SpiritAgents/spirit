@@ -1,7 +1,7 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
 
-import { buildDreamCollectorRemoteCreateInput } from "../../../../packages/sessions/dist/host/dream-collector-runtime.js";
+import { buildDreamCollectorRemoteCreateInput } from "../../../../packages/workbench/dist/host/dream-collector-runtime.js";
 
 test("buildDreamCollectorRemoteCreateInput shapes daemon session.create payload", () => {
   const input = buildDreamCollectorRemoteCreateInput({

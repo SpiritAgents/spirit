@@ -15,10 +15,10 @@ import {
   type HostAutomationRun,
 } from "@spiritagent/host-internal";
 
-import { cloneDesktopConfig } from "./service-utils.js";
+import { cloneDesktopConfig } from "@spiritagent/sessions/host/service-utils";
 import { modelExistsInProvider } from "@spiritagent/host-internal";
-import { loadGitHubAccessToken } from "./github-auth-storage.js";
-import { spiritDataDir, type DesktopConfigFile } from "./storage.js";
+import { loadGitHubAccessToken } from "@spiritagent/github/auth-storage";
+import { spiritDataDir, type DesktopConfigFile } from "@spiritagent/sessions/host/storage";
 import { runDesktopAutomationOnce } from "./automation-runner.js";
 
 export const AUTOMATION_SCHEDULER_MONITOR_INTERVAL_MS = 60_000;

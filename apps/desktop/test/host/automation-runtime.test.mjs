@@ -5,7 +5,7 @@ import path from "node:path";
 import {
   buildAutomationRemoteRuntimeCreateInput,
   buildEmptyAutomationArchive,
-} from "../../../../packages/sessions/dist/host/automation-runtime.js";
+} from "../../../../packages/workbench/dist/host/automation-runtime.js";
 
 const sampleDefinition = {
   id: "automation-test-id",

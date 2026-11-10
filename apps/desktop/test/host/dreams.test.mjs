@@ -10,7 +10,7 @@ import { createHostDreamStore } from "@spiritagent/host-internal";
 import {
   buildDreamCollectorPlanMetadata,
   buildDreamContextText,
-} from "../../../../packages/sessions/dist/host/dreams.js";
+} from "../../../../packages/workbench/dist/host/dreams.js";
 import { spiritDataDir } from "../../../../packages/sessions/dist/host/storage.js";
 import { DesktopToolExecutor } from "../../../../packages/sessions/dist/host/tool-executor.js";
 

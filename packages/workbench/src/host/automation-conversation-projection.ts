@@ -2,27 +2,27 @@ import { setImmediate as waitForImmediate } from "node:timers/promises";
 
 import type { RuntimeEvent, RuntimeTurnResult } from "@spiritagent/agent-core";
 
-import type { ConversationMessageSnapshot } from "../types.js";
-import { DesktopAssistantMessageStateMachine } from "./assistant-message-state.js";
-import { DesktopConversationSnapshotView } from "./conversation-snapshot.js";
-import type { DesktopToolRequest } from "./contracts.js";
+import type { ConversationMessageSnapshot } from "@spiritagent/api/types";
+import { DesktopAssistantMessageStateMachine } from "@spiritagent/sessions/host/assistant-message-state";
+import { DesktopConversationSnapshotView } from "@spiritagent/sessions/host/conversation-snapshot";
+import type { DesktopToolRequest } from "@spiritagent/sessions/host/contracts";
 import {
   DesktopMessageTimeline,
   type DesktopTimelineSegmentKind,
   type DesktopTimelineTurnSnapshot,
-} from "./message-timeline.js";
+} from "@spiritagent/sessions/host/message-timeline";
 import {
   DesktopRuntimeEventOrchestrator,
   runtimeEventsIncludeAppliedResponsesBuiltInToolPreview,
   splitRuntimeEventsForIncrementalFinishTaskPreview,
   splitRuntimeEventsForIncrementalResponsesBuiltInToolPreview,
-} from "./runtime-event-orchestrator.js";
-import type { DesktopHostRuntime } from "./runtime.js";
+} from "@spiritagent/sessions/host/runtime-event-orchestrator";
+import type { DesktopHostRuntime } from "@spiritagent/sessions/host/runtime";
 import {
   buildArchiveAssistantAuxFromConversation,
   buildArchiveMessagesFromConversation,
   sanitizeConversationMessagesForPersistence,
-} from "./sessions.js";
+} from "@spiritagent/sessions/host/sessions";
 
 function nextMessageIdFromMessages(messages: ConversationMessageSnapshot[]): number {
   return Math.max(0, ...messages.map((message) => message.id)) + 1;
