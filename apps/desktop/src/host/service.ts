@@ -39,13 +39,6 @@ import {
 } from "@spiritagent/agent-core";
 import {
   extractActivePlanPathFromLlmHistory,
-  createHostExtensionManager,
-  collectEnabledExtensionInstructionContributions,
-  overlayExtensionRulesAndSkills,
-  ensureBuiltInExtensions,
-  listAllMarketplaceSources,
-  compareMarketplaceDisplayOrder,
-  readMarketplaceCatalogForSource,
   localFileAttachmentFromPath,
   workspaceFileReferenceAttachmentFromPath,
   classifyLocalFileComposerRoute as resolveLocalFileComposerRoute,
@@ -54,7 +47,6 @@ import {
   type HostDreamScope,
   type HostTodoRecord,
   type HostTodoScope,
-  type HostExtensionEvent,
   type HostRecordedFileChange,
   type ApprovalLevel,
   normalizeApprovalLevel,
@@ -62,15 +54,25 @@ import {
   gitBranchLabelForBasicInfo,
   setGitHubFetchImplementation,
   applyWorkspaceTasksTrustDecision,
-  computeWorkspaceTasksContentHash,
-  loadTaskFiles,
   canonicalizeWorkspaceRoot,
-  type LoadedTaskFile,
   type WorkLocationKind,
   type WorkspaceCapabilityTrustDecision,
   type WorkspaceCapabilityTrustRequest,
 } from "@spiritagent/host-internal";
-import type { HostExtensionInstructionContributions } from "@spiritagent/host-internal";
+import {
+  createHostExtensionManager,
+  collectEnabledExtensionInstructionContributions,
+  overlayExtensionRulesAndSkills,
+  ensureBuiltInExtensions,
+  listAllMarketplaceSources,
+  compareMarketplaceDisplayOrder,
+  readMarketplaceCatalogForSource,
+  type HostExtensionEvent,
+  computeWorkspaceTasksContentHash,
+  loadTaskFiles,
+  type LoadedTaskFile,
+  type HostExtensionInstructionContributions,
+} from "@spiritagent/extensions";
 
 import type {
   AddModelRequest,

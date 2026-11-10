@@ -4,7 +4,7 @@ import {
   workspaceTasksFilePath,
   userTasksFilePath,
   vscodeTasksFilePath,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/extensions";
 
 const TASKS_WATCH_DEBOUNCE_MS = 150;
 

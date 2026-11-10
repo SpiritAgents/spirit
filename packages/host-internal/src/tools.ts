@@ -53,11 +53,6 @@ import {
   type HostToolRequestMetadata,
 } from "./file-rewind.js";
 import {
-  type HostExtensionManager,
-  type HostExtensionToolApprovalMode,
-  type HostExtensionToolExecutionMode,
-} from "./extensions.js";
-import {
   CREATE_AUTOMATION_TOOL_NAME,
   type CreateAutomationApprovalLevel,
   deriveAutomationTitle,
@@ -455,9 +450,35 @@ export interface HostMcpAdapter {
 }
 
 export interface HostExtensionRuntimeBinding<THostApi> {
-  manager: HostExtensionManager;
+  manager: HostToolExtensionManager<THostApi>;
   getHost(): THostApi;
   logger?: Pick<Console, "error" | "log">;
+}
+
+type HostExtensionToolApprovalMode = "allowed" | "need-approval" | "need-questions";
+type HostExtensionToolExecutionMode = "foreground" | "background";
+
+export interface HostToolExtensionManager<THostApi> {
+  resolveTool(name: string): Promise<
+    | {
+        extensionId: string;
+        tool: {
+          name: string;
+          approvalMode?: HostExtensionToolApprovalMode;
+          executionMode?: HostExtensionToolExecutionMode;
+        };
+      }
+    | undefined
+  >;
+  invokeTool(request: {
+    extensionId: string;
+    toolName: string;
+    arguments: Record<string, unknown>;
+    host: THostApi;
+    logger?: Pick<Console, "error" | "log">;
+    toolCallId?: string;
+    questionsResult?: unknown;
+  }): Promise<string>;
 }
 
 import type { ApprovalLevel } from "./approval-level.js";

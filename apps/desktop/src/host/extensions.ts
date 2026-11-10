@@ -20,7 +20,7 @@ import {
   type HostInstalledExtension,
   type HostMarketplaceCatalogItem,
   type MarketplaceCatalogItem,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/extensions";
 
 import type {
   DesktopExtensionCssLayer,

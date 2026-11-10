@@ -5,7 +5,7 @@ import {
   hasSessionCapabilityAllow,
   hasSessionCapabilityDeny,
   type WorkspaceTaskTrustListEntry,
-} from "../hooks/trust.js";
+} from "@spiritagent/host-internal/hooks/trust";
 import { normalizeTaskFile, type LoadedTaskFile, type NormalizedTask } from "./schema.js";
 
 const WORKSPACE_CONTROLLED_KINDS = new Set<LoadedTaskFile["sourceKind"]>([

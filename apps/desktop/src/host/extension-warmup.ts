@@ -1,5 +1,5 @@
 import type { LlmExtensionSystemPrompt } from "@spiritagent/agent-core";
-import type { HostExtensionEvent } from "@spiritagent/host-internal";
+import type { HostExtensionEvent } from "@spiritagent/extensions";
 
 export type ExtensionWarmupTrigger =
   | { type: "startup"; workspaceRoot: string }

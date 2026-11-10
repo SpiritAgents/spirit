@@ -12,7 +12,7 @@ import {
   persistPermanentWorkspaceHooksTrust,
   saveWorkspaceCapabilityTrustStore,
   WORKSPACE_CAPABILITY_TRUST_VERSION,
-} from "../hooks/trust.js";
+} from "@spiritagent/host-internal/hooks/trust";
 import { loadTaskFiles, userTasksFilePath } from "./discovery.js";
 import type { LoadedTaskFile, TaskFileSourceKind } from "./schema.js";
 import { computeWorkspaceTasksContentHash, evaluateWorkspaceTasksTrustGate } from "./trust.js";

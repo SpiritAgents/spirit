@@ -57,7 +57,7 @@ dependencies in the credential-bearing publishing job.
 Site documentation and bundled resources keep a single source at their original
 `.mdx`, `.md`, or `.json` path. `pnpm product:content` renders Site content into
 `apps/site/.generated/product/docs` and bundled resources into
-`packages/host-internal/dist/resources/built-in`. These outputs are ignored by
+`packages/extensions/dist/resources/built-in`. These outputs are ignored by
 Git; Site compilation and host packaging consume only the rendered resources.
 The Site development command watches the documentation sources and regenerates
 changed content.

@@ -4,8 +4,8 @@ import type { McpService, McpExtraConfigProvider } from "@spiritagent/agent-core
 import {
   collectEnabledExtensionInstructionContributions,
   createHostExtensionManager,
-  createHostMcpService,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/extensions";
+import { createHostMcpService } from "@spiritagent/host-internal";
 
 /**
  * Per-workspace shared McpService cache (same pattern as Desktop's

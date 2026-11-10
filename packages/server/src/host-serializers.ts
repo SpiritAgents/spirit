@@ -5,7 +5,7 @@ import {
   type HostMarketplaceCatalogItem,
   type MarketplaceCatalogItem,
   type MarketplaceSourceRecord,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/extensions";
 
 /**
  * Serializers mirroring the legacy host-bridge shapes — CLI/Desktop clients

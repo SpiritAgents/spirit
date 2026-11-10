@@ -33,6 +33,7 @@
     "@agentclientprotocol/sdk": "0.25.1",
     "@inquirer/prompts": "7.10.1",
     "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/extensions": "workspace:*",
     "@spiritagent/host-internal": "workspace:*",
     "@spiritagent/product": "workspace:*"
   },

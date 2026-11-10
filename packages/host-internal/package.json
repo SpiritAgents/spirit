@@ -64,14 +64,6 @@
       "types": "./dist/reasoning-effort.d.ts",
       "default": "./dist/reasoning-effort.js"
     },
-    "./extensions": {
-      "types": "./dist/extensions.d.ts",
-      "default": "./dist/extensions.js"
-    },
-    "./marketplace": {
-      "types": "./dist/marketplace/index.d.ts",
-      "default": "./dist/marketplace/index.js"
-    },
     "./runtime": {
       "types": "./dist/runtime.d.ts",
       "default": "./dist/runtime.js"
@@ -123,21 +115,13 @@
     "./lsp": {
       "types": "./dist/lsp/index.d.ts",
       "default": "./dist/lsp/index.js"
-    },
-    "./tasks": {
-      "types": "./dist/tasks/public.d.ts",
-      "default": "./dist/tasks/public.js"
-    },
-    "./tasks-runtime": {
-      "types": "./dist/tasks-runtime/index.d.ts",
-      "default": "./dist/tasks-runtime/index.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "node ../../scripts/product/generate-content.mjs --scope built-in && tsc -p tsconfig.build.json && node scripts/assemble-built-in-extensions.mjs",
+    "build": "tsc -p tsconfig.build.json",
     "build:tsc": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:workspace-file-references": "vitest run src/workspace-file-references.test.ts",

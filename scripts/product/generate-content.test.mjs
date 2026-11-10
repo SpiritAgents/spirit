@@ -86,8 +86,8 @@ test("single-source resources render outside source directories without banners 
     "packages/host-internal/README.md": "# Host\n",
     "apps/site/content/docs/en-US/index.mdx": document,
     "apps/site/content/docs/en-US/meta.json": metadata,
-    "packages/host-internal/built-in/skills/example/SKILL.md": "# {{product.name}}\n",
-    "packages/host-internal/built-in/marketplace.json": '{"owner":"{{product.name}}"}\n',
+    "packages/extensions/built-in/skills/example/SKILL.md": "# {{product.name}}\n",
+    "packages/extensions/built-in/marketplace.json": '{"owner":"{{product.name}}"}\n',
   };
   try {
     for (const [filename, text] of Object.entries(sources)) {
@@ -98,13 +98,13 @@ test("single-source resources render outside source directories without banners 
       const outputs = await generateProductContent({ root, quality });
       assert.ok(outputs.includes("apps/site/.generated/product/docs/en-US/index.mdx"));
       assert.ok(
-        outputs.includes("packages/host-internal/dist/resources/built-in/skills/example/SKILL.md"),
+        outputs.includes("packages/extensions/dist/resources/built-in/skills/example/SKILL.md"),
       );
       assert.ok(
         outputs.every(
           (output) =>
             output.startsWith("apps/site/.generated/product/docs/") ||
-            output.startsWith("packages/host-internal/dist/resources/built-in/"),
+            output.startsWith("packages/extensions/dist/resources/built-in/"),
         ),
       );
       const rendered = await readFile(

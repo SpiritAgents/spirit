@@ -27,8 +27,8 @@ import type {
   DesktopMarketplaceSource,
 } from "../types.js";
 import type { EphemeralSessionRecord } from "./sessions.js";
-import { ensureBuiltInSkills, ensurePersonalMarketplace } from "@spiritagent/host-internal";
-import type { HostExtensionInstructionContributions } from "@spiritagent/host-internal";
+import { ensureBuiltInSkills, ensurePersonalMarketplace } from "@spiritagent/extensions";
+import type { HostExtensionInstructionContributions } from "@spiritagent/extensions";
 import { resolveWorkspaceBindingForRequestedRoot, sameWorkspaceRoot } from "./service-utils.js";
 import { spiritDataDir } from "./storage.js";
 import type { ExtensionWarmupTrigger } from "./extension-warmup.js";

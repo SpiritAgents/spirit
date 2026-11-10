@@ -12,7 +12,7 @@ import {
   appendBackgroundTaskOutput,
   backgroundTaskNotificationTool,
 } from "../lib/background-task-display.js";
-import type { HostExtensionEvent } from "@spiritagent/host-internal";
+import type { HostExtensionEvent } from "@spiritagent/extensions";
 
 import {
   attachEditFileLineDelta,

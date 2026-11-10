@@ -18,7 +18,7 @@ import {
 } from "@spiritagent/extension-toolkit";
 
 import { installPreparedExtensionDirectory, type HostInstalledExtension } from "../extensions.js";
-import type { ExtensionManagementContext } from "../storage.js";
+import type { ExtensionManagementContext } from "@spiritagent/host-internal/storage";
 import type { MarketplaceIndexFetch } from "./http-index-source.js";
 import type { MarketplaceRegistryRoot, MarketplaceSourceRecord } from "./types.js";
 

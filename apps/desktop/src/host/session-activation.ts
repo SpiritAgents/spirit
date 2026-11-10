@@ -28,7 +28,7 @@ import {
 } from "./sessions.js";
 import type { DesktopTimelineTurnSnapshot, DesktopMessageTimeline } from "./message-timeline.js";
 import { basicInfoHostFromClientHost, currentApiBase, sameWorkspaceRoot } from "./service-utils.js";
-import type { HostExtensionEvent } from "@spiritagent/host-internal";
+import type { HostExtensionEvent } from "@spiritagent/extensions";
 import { cancelPendingWorktreeBootstrapOnBundle } from "./worktree-bootstrap-orchestrator.js";
 import { resolveStoredSessionWorkspaceRoot } from "./resolve-session-workspace-root.js";
 

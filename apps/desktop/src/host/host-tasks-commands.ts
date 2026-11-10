@@ -11,12 +11,12 @@ import {
   type TaskPlatform,
   type TaskVariableContext,
   type WorkspaceTasksTrustGateResult,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/extensions";
 import {
   defaultShellForPty,
   shellRunCommandArgs,
 } from "@spiritagent/host-internal/default-terminal-shell";
-import type { TaskShellDefinition } from "@spiritagent/host-internal/tasks-runtime";
+import type { TaskShellDefinition } from "@spiritagent/extensions/tasks-runtime";
 
 import type { DesktopResolveTaskForRunResult, DesktopTaskMenuItem } from "../types.js";
 import { spiritDataDir } from "./storage.js";

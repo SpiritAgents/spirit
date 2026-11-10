@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/extensions": "workspace:*",
     "@spiritagent/host-internal": "workspace:*",
     "@spiritagent/remote-control": "workspace:*",
     "@spiritagent/ui": "workspace:*"

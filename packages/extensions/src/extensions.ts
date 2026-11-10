@@ -37,7 +37,7 @@ import {
   BUILT_IN_MARKETPLACE_SOURCE_ID,
   PERSONAL_MARKETPLACE_SOURCE_ID,
 } from "./marketplace/types.js";
-import { SKILLS_DIR_NAME } from "./skill-paths.js";
+import { SKILLS_DIR_NAME } from "@spiritagent/host-internal/skill-paths";
 import {
   createFileExtensionStateStore,
   loadToggleState,
@@ -51,7 +51,7 @@ import {
   type ExtensionStateStore,
   type ExtensionManagementContext,
   type ExtensionPaths,
-} from "./storage.js";
+} from "@spiritagent/host-internal/storage";
 
 const TEMP_DIR_PREFIX = "spirit-extension-";
 const EXTENSION_FIELD_KEY_PATTERN = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/u;

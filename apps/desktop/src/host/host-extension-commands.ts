@@ -41,7 +41,7 @@ import type {
   UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
 } from "../types.js";
-import type { HostExtensionEvent } from "@spiritagent/host-internal";
+import type { HostExtensionEvent } from "@spiritagent/extensions";
 import {
   addMarketplaceSource,
   installBuiltInExtension,
@@ -49,7 +49,7 @@ import {
   MarketplaceReviewAcknowledgementRequiredError,
   removeMarketplaceSource,
   updateExtensionById,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/extensions";
 import type { LlmActiveSkill } from "@spiritagent/agent-core";
 import type { DesktopExtensionHostAdapter } from "./extension-host-adapter.js";
 import type { DesktopConfigFile, DesktopWorkspaceBinding, HostMetadataSummary } from "./storage.js";

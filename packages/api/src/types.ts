@@ -48,8 +48,8 @@ import type {
   WorkspaceCapabilityTrustDecision,
   WorkspaceCapabilityTrustRequest,
 } from "@spiritagent/host-internal/hooks/trust";
-import type { ResolvedTask, TaskMenuItem } from "@spiritagent/host-internal/tasks";
-import type { TaskShellDefinition } from "@spiritagent/host-internal/tasks-runtime";
+import type { ResolvedTask, TaskMenuItem } from "@spiritagent/extensions/tasks";
+import type { TaskShellDefinition } from "@spiritagent/extensions/tasks-runtime";
 
 export type {
   ApprovalLevel,
