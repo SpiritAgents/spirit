@@ -137,6 +137,7 @@
     "@mozilla/readability": "0.6.0",
     "@napi-rs/keyring": "1.3.0",
     "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/automations": "workspace:*",
     "@spiritagent/code-completion": "workspace:*",
     "@spiritagent/config": "workspace:*",
     "@spiritagent/extension-toolkit": "workspace:*",
