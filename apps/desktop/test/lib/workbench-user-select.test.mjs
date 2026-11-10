@@ -9,18 +9,16 @@ const stylesCss = readFileSync(
   "utf8",
 );
 
-const nativeBlock = stylesCss.match(/html\.spirit-desktop-native\s*\{([\s\S]*?)\}/)?.[1];
-const allowBlock = stylesCss.match(
-  /html\.spirit-desktop-native\s+:is\(([\s\S]*?)\)\s*\{([\s\S]*?)\}/,
-);
+const nativeBlock = stylesCss.match(/^html\s*\{([\s\S]*?)\}/m)?.[1];
+const allowBlock = stylesCss.match(/^html\s+:is\(([\s\S]*?)\)\s*\{([\s\S]*?)\}/m);
 
-test("Electron chrome defaults to user-select: none on html.spirit-desktop-native", () => {
-  assert.ok(nativeBlock, "expected html.spirit-desktop-native rule");
+test("workbench chrome defaults to user-select: none on every host", () => {
+  assert.ok(nativeBlock, "expected the shared html rule");
   assert.match(nativeBlock, /user-select:\s*none/);
 });
 
-test("Electron content canvases restore user-select: text", () => {
-  assert.ok(allowBlock, "expected html.spirit-desktop-native :is(...) allowlist");
+test("content canvases restore user-select: text on every host", () => {
+  assert.ok(allowBlock, "expected the shared html :is(...) allowlist");
   const [selectors, declarations] = allowBlock.slice(1);
   assert.match(declarations, /user-select:\s*text/);
   for (const required of [

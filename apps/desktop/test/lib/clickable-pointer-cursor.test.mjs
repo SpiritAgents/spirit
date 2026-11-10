@@ -82,18 +82,15 @@ function withDocumentClassList(run) {
   }
 }
 
-test("defaultClickablePointerCursor is off on Desktop Electron chrome", () => {
+test("defaultClickablePointerCursor is off on every host", () => {
   withDesktopPlatform("darwin", () => {
     assert.equal(defaultClickablePointerCursor(), false);
   });
   withDesktopPlatform("win32", () => {
     assert.equal(defaultClickablePointerCursor(), false);
   });
-});
-
-test("defaultClickablePointerCursor is on when the host is not Desktop", () => {
   withWebWindow(() => {
-    assert.equal(defaultClickablePointerCursor(), true);
+    assert.equal(defaultClickablePointerCursor(), false);
   });
 });
 
@@ -105,10 +102,10 @@ test("getStoredClickablePointerCursor defaults to off on Desktop when unset", ()
   });
 });
 
-test("getStoredClickablePointerCursor defaults to on on Web when unset", () => {
+test("getStoredClickablePointerCursor defaults to off on Web when unset", () => {
   withWebWindow(() => {
     withLocalStorage(() => {
-      assert.equal(getStoredClickablePointerCursor(), true);
+      assert.equal(getStoredClickablePointerCursor(), false);
     });
   });
 });

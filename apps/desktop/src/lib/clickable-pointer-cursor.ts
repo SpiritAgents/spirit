@@ -1,16 +1,15 @@
 import { flushDesktopRendererStorage } from "./desktop-renderer-storage";
-import { isElectronChrome } from "./desktop-shell";
 
 export const CLICKABLE_POINTER_CURSOR_STORAGE_KEY = "spirit-desktop-clickable-pointer" as const;
 
 export const CLICKABLE_POINTER_CURSOR_CLASS = "spirit-clickable-pointer" as const;
 
 /**
- * Desktop (Electron chrome) defaults off to match platform HIGs that keep the
- * arrow cursor on clickable controls. Web Host keeps the traditional hand cursor.
+ * The workbench defaults to the arrow cursor on every host, matching native
+ * desktop application conventions rather than browser-page conventions.
  */
 export function defaultClickablePointerCursor(): boolean {
-  return !isElectronChrome();
+  return false;
 }
 
 export function getStoredClickablePointerCursor(): boolean {

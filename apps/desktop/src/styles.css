@@ -385,8 +385,7 @@ html.spirit-theme-switching *::after {
 }
 
 /*
- * Electron workbench: chrome is unselectable by default (VS Code model).
- * Browser host never has html.spirit-desktop-native (index.html / useDesktopShellEffects).
+ * Workbench chrome is unselectable by default on every host (VS Code model).
  * user-select inherits, so Radix portals in #spirit-ui-scale-root are covered.
  * Existing select-none utilities (Button, menu items, diff gutter, chips must stay off
  * select-none) still win on the element that sets them.
@@ -397,12 +396,12 @@ html.spirit-theme-switching *::after {
  * this list — its shell command, diff code, and guidance textarea stay selectable through
  * their own selectors above.
  */
-html.spirit-desktop-native {
+html {
   -webkit-user-select: none;
   user-select: none;
 }
 
-html.spirit-desktop-native
+html
   :is(
     input,
     textarea,
