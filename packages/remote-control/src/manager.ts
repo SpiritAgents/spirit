@@ -46,7 +46,7 @@ export class RemoteControlManager {
   }
 
   async getState(): Promise<RemoteControlState> {
-    return projectState(await this.read());
+    return this.projectWithHostAvailability(await this.read());
   }
 
   async enable(): Promise<RemoteControlState> {
@@ -58,7 +58,7 @@ export class RemoteControlManager {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
     await this.update((current) => ({ ...current, enabled: previous.enabled }));
-    throw new Error("Remote Control requires a running Desktop Web Host.");
+    throw new Error("Remote Control requires a running Workbench Host.");
   }
 
   async disable(): Promise<RemoteControlState> {
@@ -86,7 +86,7 @@ export class RemoteControlManager {
   }): Promise<RemoteControlEnrollment> {
     const state = await this.read();
     if (!state.enabled || !(await this.hostAvailable())) {
-      throw new Error("Remote Control requires a running Desktop Web Host.");
+      throw new Error("Remote Control requires a running Workbench Host.");
     }
     const pairingId = randomUUID();
     const token = createRemoteControlToken();
@@ -257,23 +257,41 @@ export class RemoteControlManager {
     }));
   }
 
-  async registerHost(pid: number, host: string, port: number): Promise<void> {
+  async registerHost(instanceId: string, pid: number, host: string, port: number): Promise<void> {
     const path = hostLeasePath(this.options.dataDir);
+    if (await this.hostAvailable()) {
+      const current = await readHostLease(path);
+      if (current?.instanceId !== instanceId) {
+        throw new Error("Remote Control Host is already running.");
+      }
+    }
     await mkdirForLease(this.options.dataDir);
-    await writeFile(path, JSON.stringify({ pid, host, port, startedAt: Date.now() }));
+    await writeFile(
+      path,
+      JSON.stringify({
+        instanceId,
+        pid,
+        host,
+        port,
+        startedAt: Date.now(),
+        heartbeatAt: Date.now(),
+      }),
+    );
+    this.options.onStateChanged?.(await this.getState());
   }
 
-  async unregisterHost(): Promise<void> {
+  async unregisterHost(instanceId: string): Promise<void> {
+    const current = await readHostLease(hostLeasePath(this.options.dataDir));
+    if (current?.instanceId !== instanceId) return;
     await rm(hostLeasePath(this.options.dataDir), { force: true });
+    this.options.onStateChanged?.(await this.getState());
   }
 
   private async hostAvailable(): Promise<boolean> {
     try {
-      const lease = JSON.parse(await readFile(hostLeasePath(this.options.dataDir), "utf8")) as {
-        pid: number;
-        startedAt: number;
-      };
-      if (Date.now() - lease.startedAt > 30_000) return false;
+      const lease = await readHostLease(hostLeasePath(this.options.dataDir));
+      if (!lease) return false;
+      if (Date.now() - lease.heartbeatAt > 30_000) return false;
       process.kill(lease.pid, 0);
       return true;
     } catch {
@@ -289,9 +307,15 @@ export class RemoteControlManager {
     mutate: (current: RemoteControlConfig) => RemoteControlConfig,
   ): Promise<RemoteControlState> {
     const next = await this.store.updateSection("webHost", normalizeRemoteControlConfig, mutate);
-    const projected = projectState(next);
-    this.options.onStateChanged?.(projected);
-    return projected;
+    const state = await this.projectWithHostAvailability(next);
+    this.options.onStateChanged?.(state);
+    return state;
+  }
+
+  private async projectWithHostAvailability(
+    config: RemoteControlConfig,
+  ): Promise<RemoteControlState> {
+    return { ...projectState(config), hostAvailable: await this.hostAvailable() };
   }
 }
 
@@ -303,7 +327,19 @@ async function mkdirForLease(dataDir: string): Promise<void> {
   await mkdir(join(dataDir, "server"), { recursive: true });
 }
 
-function projectState(config: RemoteControlConfig): RemoteControlState {
+async function readHostLease(
+  path: string,
+): Promise<
+  { instanceId: string; pid: number; host: string; port: number; heartbeatAt: number } | undefined
+> {
+  try {
+    return JSON.parse(await readFile(path, "utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
+function projectState(config: RemoteControlConfig): Omit<RemoteControlState, "hostAvailable"> {
   return {
     enabled: config.enabled,
     host: config.host,

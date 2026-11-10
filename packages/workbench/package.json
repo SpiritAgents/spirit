@@ -35,12 +35,14 @@
     "@spiritagent/extensions": "workspace:*",
     "@spiritagent/github": "workspace:*",
     "@spiritagent/host-internal": "workspace:*",
+    "@spiritagent/http": "workspace:*",
     "@spiritagent/i18n": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "@spiritagent/remote-control": "workspace:*",
     "@spiritagent/server": "workspace:*",
     "@spiritagent/sessions": "workspace:*",
     "@spiritagent/ui": "workspace:*",
+    "@spiritagent/web": "workspace:*",
     "@spiritagent/workspace": "workspace:*"
   },
   "devDependencies": {

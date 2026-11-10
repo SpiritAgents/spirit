@@ -74,6 +74,10 @@ impl RuntimeHandle {
         self.backend.call_daemon(method, Some(params))
     }
 
+    pub fn ensure_remote_host(&mut self) -> Result<()> {
+        crate::remote::ensure_remote_host(&mut self.backend)
+    }
+
     pub fn take_remote_control_confirmation(&mut self) -> Option<Value> {
         self.backend.take_remote_control_confirmation()
     }

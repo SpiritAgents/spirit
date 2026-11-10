@@ -14,7 +14,12 @@ test("remote RPC exposes pairing without leaking secrets into notifications", as
     events.push({ method, params }),
   );
   try {
-    await host.handle("remote.registerHost", { pid: process.pid, host: "127.0.0.1", port: 7788 });
+    await host.handle("remote.registerHost", {
+      instanceId: "test-instance",
+      pid: process.pid,
+      host: "127.0.0.1",
+      port: 7788,
+    });
     await host.handle("remote.enable");
     const enrollment = (await host.handle("remote.pair", {
       ownerClientId: "desktop-test",

@@ -1473,6 +1473,9 @@ importers:
       '@spiritagent/host-internal':
         specifier: workspace:*
         version: link:../host-internal
+      '@spiritagent/http':
+        specifier: workspace:*
+        version: link:../http
       '@spiritagent/i18n':
         specifier: workspace:*
         version: link:../i18n
@@ -1491,6 +1494,9 @@ importers:
       '@spiritagent/ui':
         specifier: workspace:*
         version: link:../ui
+      '@spiritagent/web':
+        specifier: workspace:*
+        version: link:../web
       '@spiritagent/workspace':
         specifier: workspace:*
         version: link:../workspace

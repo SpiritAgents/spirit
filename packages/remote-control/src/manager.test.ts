@@ -13,7 +13,7 @@ async function fixture() {
     dataDir,
     onConfirmationRequested: (pairing) => confirmations.push(pairing),
   });
-  await manager.registerHost(process.pid, "127.0.0.1", 7788);
+  await manager.registerHost("test-instance", process.pid, "127.0.0.1", 7788);
   await manager.enable();
   return { dataDir, manager, confirmations };
 }
@@ -75,13 +75,17 @@ test("rejection rotates enrollment and startup removes stale pending state", asy
   }
 });
 
-test("enable rolls back when no Desktop Host lease is available", { timeout: 10_000 }, async () => {
-  const dataDir = await mkdtemp(join(tmpdir(), "remote-control-no-host-"));
-  const manager = new RemoteControlManager({ dataDir });
-  try {
-    await assert.rejects(manager.enable(), /Desktop Web Host/);
-    assert.equal((await manager.getState()).enabled, false);
-  } finally {
-    await rm(dataDir, { recursive: true, force: true });
-  }
-});
+test(
+  "enable rolls back when no Workbench Host lease is available",
+  { timeout: 10_000 },
+  async () => {
+    const dataDir = await mkdtemp(join(tmpdir(), "remote-control-no-host-"));
+    const manager = new RemoteControlManager({ dataDir });
+    try {
+      await assert.rejects(manager.enable(), /Workbench Host/);
+      assert.equal((await manager.getState()).enabled, false);
+    } finally {
+      await rm(dataDir, { recursive: true, force: true });
+    }
+  },
+);

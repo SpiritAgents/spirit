@@ -337,7 +337,9 @@ async function stopDesktopWebHostIfRunning(): Promise<void> {
     return;
   }
   await desktopWebHost.stop();
-  await callDesktopRemoteControl(spiritDataDir(), "remote.unregisterHost");
+  await callDesktopRemoteControl(spiritDataDir(), "remote.unregisterHost", {
+    instanceId: `desktop-`,
+  });
 }
 
 async function startDesktopRemoteControlSync(): Promise<void> {
@@ -361,6 +363,7 @@ async function startDesktopRemoteControlSync(): Promise<void> {
   if (desktopWebHost?.isRunning()) {
     const state = desktopWebHost.getState();
     await callDesktopRemoteControl(spiritDataDir(), "remote.registerHost", {
+      instanceId: `desktop-`,
       pid: process.pid,
       host: state.host,
       port: state.port,
@@ -370,6 +373,7 @@ async function startDesktopRemoteControlSync(): Promise<void> {
     if (!desktopWebHost?.isRunning()) return;
     const state = desktopWebHost.getState();
     void callDesktopRemoteControl(spiritDataDir(), "remote.registerHost", {
+      instanceId: `desktop-`,
       pid: process.pid,
       host: state.host,
       port: state.port,
@@ -529,6 +533,7 @@ async function syncDesktopWebHostWithConfig(config: DesktopWebHostConfigFile): P
       ...(state.url ? { url: state.url } : {}),
     });
     await callDesktopRemoteControl(spiritDataDir(), "remote.registerHost", {
+      instanceId: `desktop-`,
       pid: process.pid,
       host: state.host,
       port: state.port,

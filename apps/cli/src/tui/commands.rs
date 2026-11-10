@@ -715,6 +715,9 @@ impl TuiShell {
                 "revoke" => serde_json::json!({ "deviceId": args.get(1).copied().unwrap_or("") }),
                 _ => serde_json::json!({}),
             };
+            if action == "enable" {
+                self.runtime.ensure_remote_host()?;
+            }
             self.runtime.call_remote_control(method, params)
         })();
         match result {
@@ -732,6 +735,9 @@ impl TuiShell {
             state["host"].as_str().unwrap_or("127.0.0.1"),
             state["port"].as_u64().unwrap_or(7788)
         );
+        if state["enabled"].as_bool() == Some(true) {
+            self.runtime.ensure_remote_host()?;
+        }
         let mut params = serde_json::json!({
             "ownerClientId": format!("cli-{}", std::process::id()),
             "origin": origin,

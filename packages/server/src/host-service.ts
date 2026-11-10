@@ -164,13 +164,14 @@ export class HostService {
         });
       case "remote.registerHost":
         await this.remoteControl.registerHost(
+          requiredString(params, "instanceId"),
           requiredNumber(params, "pid"),
           requiredString(params, "host"),
           requiredNumber(params, "port"),
         );
         return { ok: true };
       case "remote.unregisterHost":
-        await this.remoteControl.unregisterHost();
+        await this.remoteControl.unregisterHost(requiredString(params, "instanceId"));
         return { ok: true };
       case "remote.cancelOwnerPairing":
         await this.remoteControl.cancelOwnerPairing(requiredOwnerClientId(params));

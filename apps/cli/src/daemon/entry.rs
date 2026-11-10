@@ -4,7 +4,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::transport_config::constants::{ENV_RUNTIME_BACKEND_NODE_PATH, ENV_SERVER_ENTRY_PATH};
+use crate::transport_config::constants::{
+    ENV_RUNTIME_BACKEND_NODE_PATH, ENV_SERVER_ENTRY_PATH, ENV_WORKBENCH_ENTRY_PATH,
+};
 
 fn release_bundle_roots() -> Vec<PathBuf> {
     let mut roots = Vec::new();
@@ -88,6 +90,53 @@ pub(crate) fn resolve_server_entry(workspace_root: &Path) -> Result<PathBuf> {
 
     Err(anyhow!(
         "{} Server entry.js not found. Run pnpm run build in packages/server first.",
+        crate::product::NAME
+    ))
+}
+
+pub(crate) fn resolve_workbench_entry(workspace_root: &Path) -> Result<PathBuf> {
+    if let Ok(path) = env::var(ENV_WORKBENCH_ENTRY_PATH) {
+        let candidate = PathBuf::from(path);
+        if candidate.exists() {
+            return Ok(candidate);
+        }
+    }
+    for root in release_bundle_roots() {
+        let candidate = root
+            .join("packages")
+            .join("workbench")
+            .join("dist")
+            .join("entry.js");
+        if candidate.exists() {
+            return Ok(candidate);
+        }
+    }
+    let from_crate = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("packages")
+        .join("workbench")
+        .join("dist")
+        .join("entry.js");
+    if from_crate.exists() {
+        return Ok(from_crate);
+    }
+    let mut cursor = workspace_root.to_path_buf();
+    loop {
+        let candidate = cursor
+            .join("packages")
+            .join("workbench")
+            .join("dist")
+            .join("entry.js");
+        if candidate.exists() {
+            return Ok(candidate);
+        }
+        if !cursor.pop() {
+            break;
+        }
+    }
+    Err(anyhow!(
+        "{} Workbench entry.js not found. Run pnpm run build in packages/workbench first.",
         crate::product::NAME
     ))
 }

@@ -42,6 +42,7 @@ export interface RemoteControlState extends Omit<
   RemoteControlConfig,
   "devices" | "pendingPairing"
 > {
+  hostAvailable: boolean;
   devices: RemoteControlDeviceSnapshot[];
   pendingPairing?: Omit<RemoteControlPendingPairing, "tokenHash"> | undefined;
 }
