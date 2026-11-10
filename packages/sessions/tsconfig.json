@@ -24,5 +24,33 @@
     "incremental": true,
     "tsBuildInfoFile": "./.tsbuildinfo"
   },
-  "include": ["src/host/**/*.ts", "src/**/*.d.ts", "src/types.ts"]
+  "include": [
+    "src/host/**/*.ts",
+    "src/**/*.d.ts",
+    "src/types.ts",
+    "src/lib/composer-chip-navigate-meta.ts",
+    "src/lib/composer-draft-store.ts",
+    "src/lib/context-usage.ts",
+    "src/lib/conversation-compaction-ui.ts",
+    "src/lib/conversation-thinking-ui.ts",
+    "src/lib/conversation-turn-error-ui.ts",
+    "src/lib/fork-session-utils.ts",
+    "src/lib/git-changes-menu-items.ts",
+    "src/lib/grep-tool-display.ts",
+    "src/lib/lazy-built-in-tool-display.ts",
+    "src/lib/live-update.ts",
+    "src/lib/pane-pending-turn-routing.ts",
+    "src/lib/session-path-kind.ts",
+    "src/lib/subagent-display.ts",
+    "src/lib/todo-tool-display.ts",
+    "src/lib/tool-call-shimmer.ts",
+    "src/lib/tool-verb-context.ts",
+    "src/lib/translucency.ts",
+    "src/lib/workspace-content-invalidation.ts",
+    "src/lib/workspace-entry-path-sync.ts",
+    "src/lib/automation-schedule.ts",
+    "src/lib/automation-trigger.ts",
+    "src/lib/i18n-host.ts",
+    "src/lib/ui-locale.ts"
+  ]
 }

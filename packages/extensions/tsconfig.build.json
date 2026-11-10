@@ -3,5 +3,5 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./.tsbuildinfo.build"
   },
-  "exclude": ["src/**/*.test.ts"]
+  "exclude": ["src/**/*.test.ts", "src/extension-ui-kit"]
 }
