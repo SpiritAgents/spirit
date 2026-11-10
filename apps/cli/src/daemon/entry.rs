@@ -51,12 +51,24 @@ pub(crate) fn resolve_server_entry(workspace_root: &Path) -> Result<PathBuf> {
     for root in release_bundle_roots() {
         let candidate = root
             .join("packages")
+            .join("workbench")
+            .join("node_modules")
+            .join("@spiritagent")
             .join("server")
             .join("dist")
             .join("src")
             .join("entry.js");
         if candidate.exists() {
             return Ok(candidate);
+        }
+        let legacy = root
+            .join("packages")
+            .join("server")
+            .join("dist")
+            .join("src")
+            .join("entry.js");
+        if legacy.exists() {
+            return Ok(legacy);
         }
     }
 

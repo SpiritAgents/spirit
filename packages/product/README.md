@@ -44,8 +44,9 @@ silently spawn a replacement after a product mismatch.
 
 Desktop packaging loads `apps/desktop/electron-builder.config.mjs` over its
 platform-only YAML settings. Both the packaged app and the development app
-bundle declare the baked URL scheme. CLI packaging deploys the complete server
-production dependency graph rather than copying selected workspace packages.
+bundle declare the baked URL scheme. CLI packaging deploys the complete Workbench
+production dependency graph, including the shared server and Web static application,
+rather than copying selected workspace packages.
 For offline packaging, pass `--node-runtime-dir <distribution>` and
 `--node-version <version>` to `scripts/release/bundle-cli.mjs`, together with
 `--offline`. `--binary` and `--output-dir` select controlled local inputs and

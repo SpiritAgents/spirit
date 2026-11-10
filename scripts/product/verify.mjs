@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("../../", import.meta.url));
 for (const entry of [
   "packages/server/dist/src/daemon.js",
-  "apps/desktop/dist-electron/src/host/storage.js",
+  "packages/workbench/dist/entry.js",
+  "packages/web/dist/index.html",
 ]) {
   try {
     await access(path.join(root, entry));
