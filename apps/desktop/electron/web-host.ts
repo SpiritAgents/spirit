@@ -5,7 +5,7 @@ import {
   invokeDesktopHostCommand,
   shutdownDesktopHostService,
   subscribeDesktopDreamUpdates,
-  publishDesktopSnapshot,
+  refreshDesktopRemoteControlConfig,
 } from "../src/host/service.js";
 import {
   loadConfig,
@@ -83,10 +83,10 @@ await subscribeDesktopRemoteControl(spiritDataDir(), {
         await webHost.stop();
         await callDesktopRemoteControl(spiritDataDir(), "remote.unregisterHost");
       }
-      publishDesktopSnapshot();
+      await refreshDesktopRemoteControlConfig();
     })();
   },
-  onConfirmationRequested: () => publishDesktopSnapshot(),
+  onConfirmationRequested: () => refreshDesktopRemoteControlConfig(),
 });
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {

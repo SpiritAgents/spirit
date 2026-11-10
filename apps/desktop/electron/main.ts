@@ -152,7 +152,7 @@ import {
   setDesktopGitHubFetchImplementation,
   setDesktopExtensionHostAdapter,
   shutdownDesktopHostService,
-  publishDesktopSnapshot,
+  refreshDesktopRemoteControlConfig,
   subscribeDesktopAutomationsUpdates,
   subscribeDesktopDreamUpdates,
   subscribeDesktopSessionListUpdates,
@@ -340,14 +340,14 @@ async function startDesktopRemoteControlSync(): Promise<void> {
       void (async () => {
         const config = await loadConfig();
         await syncDesktopWebHostWithConfig(config.webHost);
-        publishDesktopSnapshot();
+        await refreshDesktopRemoteControlConfig();
       })();
     },
     onConfirmationRequested: () => {
       void (async () => {
         const config = await loadConfig();
         await syncDesktopWebHostWithConfig(config.webHost);
-        publishDesktopSnapshot();
+        await refreshDesktopRemoteControlConfig();
       })();
     },
   });

@@ -1628,6 +1628,13 @@ export class DesktopHostService {
     this.emitLiveSnapshotUpdate();
   }
 
+  async refreshRemoteControlConfig(): Promise<void> {
+    const config = await loadConfig();
+    const state = this.requireState();
+    state.config.webHost = config.webHost;
+    this.emitLiveSnapshotUpdate();
+  }
+
   subscribeAutomationsUpdates(listener: (snapshot: DesktopSnapshot) => void): () => void {
     this.automationUpdateListeners.add(listener);
     this.startAutomationSchedulerMonitorIfNeeded();
@@ -5295,6 +5302,10 @@ export async function invokeDesktopHostCommand(
 
 export function publishDesktopSnapshot(): void {
   desktopHostService.publishSnapshot();
+}
+
+export async function refreshDesktopRemoteControlConfig(): Promise<void> {
+  await desktopHostService.refreshRemoteControlConfig();
 }
 
 export async function resolveDesktopExtensionViewFile(

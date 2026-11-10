@@ -137,6 +137,20 @@ async function withHostService(run) {
   }
 }
 
+test("remote control snapshots refresh the shared config before publishing", async () => {
+  await withHostService(async ({ service, config }) => {
+    config.webHost.hasCompletedPairing = true;
+    await saveConfig(config, { preserveWebHost: false });
+    const emit = vi.fn();
+    service["emitLiveSnapshotUpdate"] = emit;
+
+    await service.refreshRemoteControlConfig();
+
+    assert.equal(service["state"].config.webHost.hasCompletedPairing, true);
+    assert.equal(emit.mock.calls.length, 1);
+  });
+});
+
 test("runtime refresh failures log the original error and context while preserving the UI error", async () => {
   await withHostService(async ({ service, bundle, config }) => {
     const error = new Error("Runtime initialization failed.");

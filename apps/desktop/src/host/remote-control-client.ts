@@ -25,11 +25,47 @@ export async function subscribeDesktopRemoteControl(
   dataDir: string,
   handlers: { onUpdated?: () => void; onConfirmationRequested?: () => void },
 ): Promise<() => void> {
-  const client = await sharedDesktopServerClient(dataDir);
-  return client.onNotification((notification) => {
-    if (notification.method === "remote.updated") handlers.onUpdated?.();
-    if (notification.method === "remote.confirmationRequested") {
-      handlers.onConfirmationRequested?.();
+  let stopped = false;
+  let attaching = false;
+  let unsubscribeNotifications: (() => void) | undefined;
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const attach = async () => {
+    if (stopped || attaching) return;
+    attaching = true;
+    try {
+      const client = await sharedDesktopServerClient(dataDir);
+      unsubscribeNotifications = client.onNotification((notification) => {
+        if (notification.method === "remote.updated") handlers.onUpdated?.();
+        if (notification.method === "remote.confirmationRequested") {
+          handlers.onConfirmationRequested?.();
+        }
+      });
+      client.onDisconnect(() => {
+        if (stopped) return;
+        unsubscribeNotifications?.();
+        unsubscribeNotifications = undefined;
+        retryTimer = setTimeout(() => {
+          retryTimer = undefined;
+          void attach();
+        }, 250);
+      });
+    } catch {
+      if (!stopped) {
+        retryTimer = setTimeout(() => {
+          retryTimer = undefined;
+          void attach();
+        }, 250);
+      }
+    } finally {
+      attaching = false;
     }
-  });
+  };
+
+  await attach();
+  return () => {
+    stopped = true;
+    if (retryTimer) clearTimeout(retryTimer);
+    unsubscribeNotifications?.();
+  };
 }
