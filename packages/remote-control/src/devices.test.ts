@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { create as createQrCode } from "qrcode";
 import { test } from "vitest";
 
 import {
@@ -17,7 +18,15 @@ test("creates independent high-entropy tokens and safe enrollment URLs", async (
   assert.match(hashRemoteControlToken(first), /^[a-f0-9]{64}$/);
   const url = buildRemoteControlUrl("http://127.0.0.1:7788", "fake-token");
   assert.equal(url, "http://127.0.0.1:7788/?token=fake-token");
-  assert.ok((await createRemoteControlQrCode(url, "svg")).includes("<svg"));
+  const svg = await createRemoteControlQrCode(url, "svg");
+  assert.ok(svg.includes("<svg"));
+  assert.ok(svg.includes('r="0.42"'));
+  assert.equal(svg.match(/width="6" height="6" rx="1.25"/g)?.length, 3);
+  assert.equal(svg.match(/r="1.5"\/>/g)?.length, 3);
+  const { modules } = createQrCode(url, { errorCorrectionLevel: "M" });
+  const darkModuleCount = modules.data.reduce((count, value) => count + value, 0);
+  assert.equal(svg.match(/r="0.42"\/>/g)?.length, darkModuleCount - 3 * 33);
+  assert.ok(svg.includes(`viewBox="0 0 ${modules.size + 2} ${modules.size + 2}"`));
   assert.ok((await createRemoteControlQrCode(url, "terminal")).length > 0);
 });
 

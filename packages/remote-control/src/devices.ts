@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { toString as renderQrCode } from "qrcode";
+import { create as createQrCode, toString as renderQrCode } from "qrcode";
 import { inferRemoteControlDevicePresentation } from "./presentation.js";
 
 export function createRemoteControlToken(): string {
@@ -31,8 +31,47 @@ export async function createRemoteControlQrCode(
   output: "svg" | "terminal",
 ): Promise<string> {
   return output === "svg"
-    ? renderQrCode(url, { type: "svg", errorCorrectionLevel: "M", margin: 1 })
+    ? renderRoundedQrCodeSvg(url)
     : renderQrCode(url, { type: "terminal", small: true });
+}
+
+const qrMargin = 1;
+
+function renderRoundedQrCodeSvg(url: string): string {
+  const { modules } = createQrCode(url, { errorCorrectionLevel: "M" });
+  const size = modules.size;
+  const dimension = size + qrMargin * 2;
+  const modulesSvg: string[] = [];
+
+  for (let row = 0; row < size; row += 1) {
+    for (let column = 0; column < size; column += 1) {
+      if (!modules.get(row, column) || isFinderModule(row, column, size)) continue;
+      modulesSvg.push(
+        `<circle cx="${column + qrMargin + 0.5}" cy="${row + qrMargin + 0.5}" r="0.42"/>`,
+      );
+    }
+  }
+
+  // Only the SVG geometry changes; qrcode still owns encoding and the module matrix.
+  const finderSvg = [
+    renderFinder(qrMargin, qrMargin),
+    renderFinder(size - 7 + qrMargin, qrMargin),
+    renderFinder(qrMargin, size - 7 + qrMargin),
+  ].join("");
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dimension} ${dimension}" shape-rendering="geometricPrecision"><rect width="${dimension}" height="${dimension}" fill="#fff"/><g fill="#000">${modulesSvg.join("")}${finderSvg}</g></svg>\n`;
+}
+
+function isFinderModule(row: number, column: number, size: number): boolean {
+  const inLeft = column < 7;
+  const inRight = column >= size - 7;
+  const inTop = row < 7;
+  const inBottom = row >= size - 7;
+  return (inTop && (inLeft || inRight)) || (inBottom && inLeft);
+}
+
+function renderFinder(x: number, y: number): string {
+  return `<rect x="${x + 0.5}" y="${y + 0.5}" width="6" height="6" rx="1.25" fill="none" stroke="#000" stroke-width="1"/><circle cx="${x + 3.5}" cy="${y + 3.5}" r="1.5"/>`;
 }
 
 // TODO: Native apps should declare their client identity explicitly; only then show
