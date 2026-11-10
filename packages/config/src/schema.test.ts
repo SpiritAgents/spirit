@@ -28,8 +28,8 @@ import {
   SpiritConfigSchemaError,
   SPIRIT_CONFIG_SCHEMA_VERSION,
   validateSpiritConfig,
-} from "./config.js";
-import type { ModelRef, ProviderEntry, SpiritConfigFile } from "./config.js";
+} from "./schema.js";
+import type { ModelRef, ProviderEntry, SpiritConfigFile } from "./schema.js";
 
 function validProvider(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {

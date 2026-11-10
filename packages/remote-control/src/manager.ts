@@ -1,7 +1,7 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
-import { mkdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { withSpiritConfigWriteLock } from "@spiritagent/host-internal";
+import { createConfigStore, type ConfigStore } from "@spiritagent/config";
 
 import { normalizeRemoteControlConfig } from "./config.js";
 import {
@@ -32,7 +32,11 @@ export type RemoteControlAccessResult =
   | { code: "TOKEN_REQUIRED" };
 
 export class RemoteControlManager {
-  constructor(private readonly options: RemoteControlManagerOptions) {}
+  private readonly store: ConfigStore;
+
+  constructor(private readonly options: RemoteControlManagerOptions) {
+    this.store = createConfigStore({ dataDir: options.dataDir });
+  }
 
   async initialize(): Promise<void> {
     const state = await this.read();
@@ -278,44 +282,17 @@ export class RemoteControlManager {
   }
 
   private async read(): Promise<RemoteControlConfig> {
-    try {
-      const raw = JSON.parse(await readFile(configPath(this.options.dataDir), "utf8")) as Record<
-        string,
-        unknown
-      >;
-      return normalizeRemoteControlConfig(raw["webHost"]);
-    } catch {
-      return normalizeRemoteControlConfig(undefined);
-    }
+    return this.store.readSection("webHost", normalizeRemoteControlConfig);
   }
 
   private async update(
     mutate: (current: RemoteControlConfig) => RemoteControlConfig,
   ): Promise<RemoteControlState> {
-    const next = await withSpiritConfigWriteLock(this.options.dataDir, async () => {
-      const path = configPath(this.options.dataDir);
-      const raw = await readRawConfig(path);
-      const current = normalizeRemoteControlConfig(raw["webHost"]);
-      const updated = mutate(current);
-      raw["webHost"] = updated;
-      const tmpPath = `${path}.${process.pid}.${Date.now()}.tmp`;
-      try {
-        await writeFile(tmpPath, `${JSON.stringify(raw, null, 2)}\n`, "utf8");
-        await rename(tmpPath, path);
-      } catch (error) {
-        await unlink(tmpPath).catch(() => {});
-        throw error;
-      }
-      return updated;
-    });
+    const next = await this.store.updateSection("webHost", normalizeRemoteControlConfig, mutate);
     const projected = projectState(next);
     this.options.onStateChanged?.(projected);
     return projected;
   }
-}
-
-function configPath(dataDir: string): string {
-  return join(dataDir, "config.json");
 }
 
 function hostLeasePath(dataDir: string): string {
@@ -324,14 +301,6 @@ function hostLeasePath(dataDir: string): string {
 
 async function mkdirForLease(dataDir: string): Promise<void> {
   await mkdir(join(dataDir, "server"), { recursive: true });
-}
-
-async function readRawConfig(path: string): Promise<Record<string, unknown>> {
-  try {
-    return JSON.parse(await readFile(path, "utf8")) as Record<string, unknown>;
-  } catch {
-    return { schemaVersion: 1, providers: [], activeModel: { providerId: "", name: "" } };
-  }
 }
 
 function projectState(config: RemoteControlConfig): RemoteControlState {

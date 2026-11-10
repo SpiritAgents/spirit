@@ -125,7 +125,7 @@ export async function rememberWorkspaceRootCommand(
       ...state.config,
       recentWorkspaces: mergeRecentWorkspaceRoots(state.config.recentWorkspaces, workspaceRoot),
     };
-    await saveConfig(state.config, { preserveWebHost: false });
+    await saveConfig(state.config);
     return ctx.buildSnapshot();
   });
 }
@@ -149,7 +149,7 @@ export async function forgetWorkspaceRootCommand(
       ...state.config,
       recentWorkspaces: removeRecentWorkspaceRoot(state.config.recentWorkspaces, workspaceRoot),
     };
-    await saveConfig(state.config, { preserveWebHost: false });
+    await saveConfig(state.config);
     return ctx.buildSnapshot();
   });
 }

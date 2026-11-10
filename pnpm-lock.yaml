@@ -237,6 +237,9 @@ importers:
       '@spiritagent/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@spiritagent/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@spiritagent/host-internal':
         specifier: workspace:*
         version: link:../../packages/host-internal
@@ -696,6 +699,22 @@ importers:
         specifier: '>=18'
         version: 19.2.8
 
+  packages/config:
+    dependencies:
+      '@spiritagent/agent-core':
+        specifier: workspace:*
+        version: link:../agent-core
+    devDependencies:
+      '@types/node':
+        specifier: 26.6.6
+        version: 26.6.6
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@26.6.6)(happy-dom@20.11.1)(jsdom@30.0.1(@noble/hashes@2.2.0))(vite@8.2.0(@types/node@26.6.6)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.7)(yaml@2.9.0))
+
   packages/create-extension:
     dependencies:
       '@inquirer/prompts':
@@ -757,6 +776,9 @@ importers:
       '@spiritagent/agent-core':
         specifier: workspace:*
         version: link:../agent-core
+      '@spiritagent/config':
+        specifier: workspace:*
+        version: link:../config
       '@spiritagent/extension-toolkit':
         specifier: workspace:*
         version: link:../extension-toolkit
@@ -842,6 +864,9 @@ importers:
 
   packages/remote-control:
     dependencies:
+      '@spiritagent/config':
+        specifier: workspace:*
+        version: link:../config
       '@spiritagent/host-internal':
         specifier: workspace:*
         version: link:../host-internal

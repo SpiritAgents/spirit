@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
 
-import { withSpiritConfigWriteLock } from "./credentials/config-write-lock.js";
-import { emptyModelRef, saveSpiritConfig, SPIRIT_CONFIG_SCHEMA_VERSION } from "./config.js";
+import { withSpiritConfigWriteLock } from "./write-lock.js";
+import { emptyModelRef, saveSpiritConfig, SPIRIT_CONFIG_SCHEMA_VERSION } from "./schema.js";
 
 test("serializes config writers across the shared lock", async () => {
   const dir = await mkdtemp(join(tmpdir(), "spirit-config-lock-"));

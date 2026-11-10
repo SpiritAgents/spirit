@@ -21,6 +21,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@spiritagent/config": "workspace:*",
     "@spiritagent/host-internal": "workspace:*",
     "qrcode": "^1.5.4"
   },
