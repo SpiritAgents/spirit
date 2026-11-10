@@ -2,7 +2,7 @@
   "name": "@spiritagent/config",
   "version": "1.0.0-alpha.0",
   "private": true,
-  "description": "Spirit configuration schema and atomic storage",
+  "description": "Configuration schema and atomic storage",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",

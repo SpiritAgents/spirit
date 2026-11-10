@@ -2,7 +2,7 @@
   "name": "@spiritagent/automations",
   "version": "1.0.0-alpha.0",
   "private": true,
-  "description": "Spirit automation storage, triggers, scheduling, and dreams",
+  "description": "Automation storage, triggers, scheduling, and dreams",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
