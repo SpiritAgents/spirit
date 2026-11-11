@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { resolveSpiritDataDir as resolveSharedSpiritDataDir } from "@spiritagent/host-internal";
+import { resolveSpiritDataDir as resolveSharedSpiritDataDir } from "@spiritagent/config/data-paths";
 
 /**
  * Resolves the Spirit data directory (shared with Desktop / CLI /

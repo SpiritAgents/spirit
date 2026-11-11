@@ -33,13 +33,21 @@
   },
   "dependencies": {
     "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/api": "workspace:*",
+    "@spiritagent/automations": "workspace:*",
+    "@spiritagent/config": "workspace:*",
     "@spiritagent/extensions": "workspace:*",
+    "@spiritagent/hooks": "workspace:*",
     "@spiritagent/host-internal": "workspace:*",
     "@spiritagent/i18n": "workspace:*",
+    "@spiritagent/instructions": "workspace:*",
     "@spiritagent/lsp": "workspace:*",
     "@spiritagent/mcp": "workspace:*",
     "@spiritagent/product": "workspace:*",
-    "@spiritagent/remote-control": "workspace:*"
+    "@spiritagent/remote-control": "workspace:*",
+    "@spiritagent/sessions": "workspace:*",
+    "@spiritagent/tools": "workspace:*",
+    "@spiritagent/workspace": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "26.6.6",

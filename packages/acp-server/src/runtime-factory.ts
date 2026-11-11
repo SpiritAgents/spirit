@@ -49,13 +49,14 @@ import {
 import {
   NodeHostToolService,
   createNoopMcpAdapter,
-  createHostMcpService,
-  loadHostInstructionMetadata,
+  persistToolOutputArchive,
+} from "@spiritagent/tools";
+import { createHostMcpService } from "@spiritagent/mcp";
+import { loadHostInstructionMetadata } from "@spiritagent/instructions";
+import {
   ensureTranscriptSessionDir,
   persistSessionTranscript,
   persistSubagentTranscript,
-  persistToolOutputArchive,
-  readGitBranchLabelForBasicInfo,
   resolveSubagentTranscriptFilePath,
   resolveTranscriptSessionDir,
   createBackgroundTaskOwner,
@@ -68,11 +69,14 @@ import {
   RuntimeSessionStore,
   acquireRuntimeSessionLease,
   type RuntimeSessionLease,
+} from "@spiritagent/sessions";
+import {
   createSubagentWorkspaceBootstrap,
-} from "@spiritagent/host-internal";
+  readGitBranchLabelForBasicInfo,
+} from "@spiritagent/workspace";
 
 import { createNoopPeer } from "./noop-peer.js";
-import { tryResolveTransportConfig } from "@spiritagent/host-internal";
+import { tryResolveTransportConfig } from "@spiritagent/config/resolve-transport";
 import type { AcpServerConfig } from "./types.js";
 
 export type AcpHostRuntime = AgentRuntime<LlmTransportConfig, LlmToolAgentState, JsonValue>;
@@ -84,7 +88,7 @@ export interface AcpRuntimeResult {
   workspaceRoot: string;
   sessionKind?: "default" | "dream-collector" | "subagent";
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
-  workLocation: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  workLocation: import("@spiritagent/api/work-location").WorkLocationKind;
   worktreePath?: string;
   worktreeBranch?: string;
   enabledRules: LlmEnabledRule[];
@@ -113,7 +117,7 @@ export async function createAcpRuntime(
     sessionKind?: "default" | "dream-collector" | "subagent";
     subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
     subagentSessionDelegate?: import("@spiritagent/agent-core").SubagentSessionDelegate;
-    workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+    workLocation?: import("@spiritagent/api/work-location").WorkLocationKind;
     worktreePath?: string;
     worktreeBranch?: string;
     adoptStoredWorkspace?: boolean;

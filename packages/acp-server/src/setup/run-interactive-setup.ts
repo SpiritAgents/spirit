@@ -7,7 +7,7 @@ import {
   listProviderPresets,
 } from "@spiritagent/agent-core/provider-presets";
 
-import type { ProviderSetupResult } from "@spiritagent/host-internal";
+import type { ProviderSetupResult } from "@spiritagent/config/credentials";
 import {
   buildProviderSetupResult,
   listSiteOptions,

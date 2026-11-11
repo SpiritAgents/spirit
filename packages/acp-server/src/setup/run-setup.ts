@@ -1,4 +1,4 @@
-import { saveProviderSetup } from "@spiritagent/host-internal";
+import { saveProviderSetup } from "@spiritagent/config/credentials";
 import { product } from "@spiritagent/product";
 import { resolveSpiritDataDir } from "../config.js";
 import { runProviderWizard } from "./run-interactive-setup.js";

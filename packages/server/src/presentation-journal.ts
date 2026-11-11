@@ -1,7 +1,4 @@
-import type {
-  RuntimePresentationPayload,
-  RuntimePresentationState,
-} from "@spiritagent/host-internal";
+import type { RuntimePresentationPayload, RuntimePresentationState } from "@spiritagent/sessions";
 
 const TRANSIENT_EVENTS = new Set([
   "background-task-changed",

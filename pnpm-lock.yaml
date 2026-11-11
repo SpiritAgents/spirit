@@ -584,15 +584,36 @@ importers:
       '@spiritagent/agent-core':
         specifier: workspace:*
         version: link:../agent-core
+      '@spiritagent/api':
+        specifier: workspace:*
+        version: link:../api
+      '@spiritagent/config':
+        specifier: workspace:*
+        version: link:../config
       '@spiritagent/extensions':
         specifier: workspace:*
         version: link:../extensions
       '@spiritagent/host-internal':
         specifier: workspace:*
         version: link:../host-internal
+      '@spiritagent/instructions':
+        specifier: workspace:*
+        version: link:../instructions
+      '@spiritagent/mcp':
+        specifier: workspace:*
+        version: link:../mcp
       '@spiritagent/product':
         specifier: workspace:*
         version: link:../product
+      '@spiritagent/sessions':
+        specifier: workspace:*
+        version: link:../sessions
+      '@spiritagent/tools':
+        specifier: workspace:*
+        version: link:../tools
+      '@spiritagent/workspace':
+        specifier: workspace:*
+        version: link:../workspace
     devDependencies:
       '@types/node':
         specifier: 26.6.6
@@ -1258,15 +1279,30 @@ importers:
       '@spiritagent/agent-core':
         specifier: workspace:*
         version: link:../agent-core
+      '@spiritagent/api':
+        specifier: workspace:*
+        version: link:../api
+      '@spiritagent/automations':
+        specifier: workspace:*
+        version: link:../automations
+      '@spiritagent/config':
+        specifier: workspace:*
+        version: link:../config
       '@spiritagent/extensions':
         specifier: workspace:*
         version: link:../extensions
+      '@spiritagent/hooks':
+        specifier: workspace:*
+        version: link:../hooks
       '@spiritagent/host-internal':
         specifier: workspace:*
         version: link:../host-internal
       '@spiritagent/i18n':
         specifier: workspace:*
         version: link:../i18n
+      '@spiritagent/instructions':
+        specifier: workspace:*
+        version: link:../instructions
       '@spiritagent/lsp':
         specifier: workspace:*
         version: link:../lsp
@@ -1279,6 +1315,15 @@ importers:
       '@spiritagent/remote-control':
         specifier: workspace:*
         version: link:../remote-control
+      '@spiritagent/sessions':
+        specifier: workspace:*
+        version: link:../sessions
+      '@spiritagent/tools':
+        specifier: workspace:*
+        version: link:../tools
+      '@spiritagent/workspace':
+        specifier: workspace:*
+        version: link:../workspace
     devDependencies:
       '@types/node':
         specifier: 26.6.6
@@ -1319,6 +1364,9 @@ importers:
       '@spiritagent/icons':
         specifier: workspace:*
         version: link:../icons
+      '@spiritagent/instructions':
+        specifier: workspace:*
+        version: link:../instructions
       '@spiritagent/lsp':
         specifier: workspace:*
         version: link:../lsp
@@ -1328,12 +1376,12 @@ importers:
       '@spiritagent/remote-control':
         specifier: workspace:*
         version: link:../remote-control
-      '@spiritagent/server':
-        specifier: workspace:*
-        version: link:../server
       '@spiritagent/tasks':
         specifier: workspace:*
         version: link:../tasks
+      '@spiritagent/tools':
+        specifier: workspace:*
+        version: link:../tools
       '@spiritagent/ui':
         specifier: workspace:*
         version: link:../ui

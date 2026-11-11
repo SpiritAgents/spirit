@@ -9,11 +9,11 @@ import type {
   ProviderOptions,
   ProviderSetupResult,
   SpiritTransportKind,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/config";
 import {
   isValidCloudflareAccountId,
   isValidCloudflareGatewayId,
-} from "@spiritagent/host-internal/cloudflare-ai-gateway-resource";
+} from "@spiritagent/agent-core/cloudflare-ai-gateway-resource";
 
 export function validateModelName(modelName: string): string | undefined {
   const trimmed = modelName.trim();

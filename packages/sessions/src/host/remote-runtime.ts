@@ -31,10 +31,10 @@ import type {
 } from "@spiritagent/host-internal";
 import { isSessionId, loadModelProfile } from "@spiritagent/host-internal";
 import {
-  connectOrSpawnServer,
+  requireServerConnector,
   type ServerNotificationListener,
   type ServerRpcClient,
-} from "@spiritagent/server/client";
+} from "./server-connector.js";
 
 import {
   parsePendingSubagentStatusText,
@@ -164,7 +164,7 @@ let sharedClientPromise: Promise<ServerRpcClient> | undefined;
 
 export async function sharedDesktopServerClient(dataDir: string): Promise<ServerRpcClient> {
   if (!sharedClientPromise) {
-    const connecting = connectOrSpawnServer({
+    const connecting = requireServerConnector()({
       dataDir,
       forwardStderr: Boolean(process.env.VITE_DEV_SERVER_URL?.trim()),
     })

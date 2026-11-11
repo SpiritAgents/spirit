@@ -85,6 +85,7 @@ import {
 
 import type { AskQuestionsQuestionSpec } from "../types.js";
 import { spiritDataDir } from "./storage.js";
+import { createHostTodoStore } from "../todo-store.js";
 import type { DesktopAgentMode } from "@spiritagent/ui/composer";
 import type { DesktopToolRequest } from "./contracts.js";
 
@@ -169,6 +170,10 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
       },
       {
         mcp: createNoopMcpAdapter(),
+        stores: {
+          createTodoStore: (scope) =>
+            createHostTodoStore({ spiritDataDir: spiritDataDir(), scope }),
+        },
         getModelCompatibilityProfile: () => this.activeModelCompatibilityProfile,
         getApprovalLevel: () => this.approvalLevel,
         ...(options.fileChangeObserver ? { fileChangeObserver: options.fileChangeObserver } : {}),

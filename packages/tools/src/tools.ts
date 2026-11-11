@@ -62,7 +62,8 @@ import {
   type HostDreamStore,
   type HostDreamSourceSessionRef,
 } from "@spiritagent/automations/dreams";
-import { createHostTodoStore, type HostTodoStore } from "./todo-store.js";
+import { createHostTodoStore } from "./todo-store.js";
+import type { HostTodoToolStore, HostToolStorePorts } from "./stores.js";
 import {
   detectSupportedImageFile,
   hasSupportedImageExtension,
@@ -200,6 +201,7 @@ export interface NodeHostToolServiceOptions {
   dreamScope?: HostDreamScope;
   dreamSourceSession?: HostDreamSourceSessionRef;
   todoScope?: HostTodoScope;
+  stores?: HostToolStorePorts;
   getModelCompatibilityProfile?: () => HostToolModelCompatibilityProfile | undefined;
   getApprovalLevel?: () => ApprovalLevel;
   getAutomationCreateDefaults?: () => HostAutomationCreateDefaults;
@@ -262,7 +264,8 @@ export class NodeHostToolService<
   private readonly extensions: HostExtensionRuntimeBinding<unknown> | undefined;
   private readonly dreamStore: HostDreamStore | undefined;
   private readonly dreamSourceSession: HostDreamSourceSessionRef | undefined;
-  private todoStore: HostTodoStore | undefined;
+  private todoStore: HostTodoToolStore | undefined;
+  private readonly createTodoStore: HostToolStorePorts["createTodoStore"];
   private readonly permissionConfigLoader: () => PermissionConfigLoadResult;
   private lastLoggedPermissionWarnings: string[] | undefined;
   /** Session-scoped remembered approvals; keys from {@link sessionApprovalKey}. */
@@ -285,9 +288,10 @@ export class NodeHostToolService<
       ? createHostDreamStore({ spiritDataDir: this.spiritDataDir, scope: options.dreamScope })
       : undefined;
     this.dreamSourceSession = options.dreamSourceSession;
-    this.todoStore = options.todoScope
-      ? createHostTodoStore({ spiritDataDir: this.spiritDataDir, scope: options.todoScope })
-      : undefined;
+    this.createTodoStore =
+      options.stores?.createTodoStore ??
+      ((scope) => createHostTodoStore({ spiritDataDir: this.spiritDataDir, scope }));
+    this.todoStore = options.todoScope ? this.createTodoStore(options.todoScope) : undefined;
     this.getModelCompatibilityProfile = options.getModelCompatibilityProfile;
     this.getApprovalLevel = options.getApprovalLevel;
     this.getAutomationCreateDefaults = options.getAutomationCreateDefaults;
@@ -312,9 +316,7 @@ export class NodeHostToolService<
   }
 
   setTodoScope(todoScope: HostTodoScope | undefined): void {
-    this.todoStore = todoScope
-      ? createHostTodoStore({ spiritDataDir: this.spiritDataDir, scope: todoScope })
-      : undefined;
+    this.todoStore = todoScope ? this.createTodoStore(todoScope) : undefined;
   }
 
   toolDefinitionEnvironment(): HostBuiltinToolDefinitionEnvironment {
@@ -1349,7 +1351,7 @@ export class NodeHostToolService<
     return this.dreamStore;
   }
 
-  private requireTodoStore(): HostTodoStore {
+  private requireTodoStore(): HostTodoToolStore {
     if (!this.todoStore) {
       throw new Error("Todo scope is not configured for this host.");
     }

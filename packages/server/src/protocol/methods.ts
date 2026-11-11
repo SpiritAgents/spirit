@@ -188,7 +188,7 @@ export interface SessionCreateParams {
   todoSessionKey?: string;
   sessionKind?: "default" | "dream-collector" | "subagent";
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
-  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  workLocation?: import("@spiritagent/api/work-location").WorkLocationKind;
   worktreePath?: string;
   worktreeBranch?: string;
   dreamScope?: { workspaceRoot: string; gitBranch: string };
@@ -241,7 +241,7 @@ export interface SessionInfo {
   conversationKey?: string;
   sessionKind?: "default" | "dream-collector" | "subagent";
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
-  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  workLocation?: import("@spiritagent/api/work-location").WorkLocationKind;
   worktreePath?: string;
   worktreeBranch?: string;
   attachmentCount: number;

@@ -8,7 +8,7 @@ import type { AuthState } from "./auth/auth-state.js";
 import { buildAuthMethods } from "./auth/build-auth-methods.js";
 import { TERMINAL_AUTH_METHOD_ID } from "./auth/constants.js";
 import { canCreateSession } from "./auth/session-auth.js";
-import { hasResolvableCredentials } from "@spiritagent/host-internal";
+import { hasResolvableCredentials } from "@spiritagent/config/credentials";
 import {
   mapRuntimeEventToUpdate,
   createEventMapperState,

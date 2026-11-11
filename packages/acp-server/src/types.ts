@@ -27,7 +27,7 @@ export interface AcpSessionState {
   readonly runtime: AgentRuntime<LlmTransportConfig, LlmToolAgentState, JsonValue>;
   toolExecutor: HostToolExecutorProxy;
   workspaceRoot: string;
-  workLocation: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  workLocation: import("@spiritagent/api/work-location").WorkLocationKind;
   worktreePath?: string;
   worktreeBranch?: string;
   readonly sessionKind?: "default" | "dream-collector" | "subagent";

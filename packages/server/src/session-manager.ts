@@ -23,21 +23,22 @@ import {
 import type { BridgeRuntimeSnapshot } from "@spiritagent/agent-core/host-bridge";
 import {
   createHostTodoStore,
+  deriveSessionTitleFallbackSeed,
+  generateSessionTitleForTurn,
+} from "@spiritagent/sessions";
+import { createSubagentWorkspaceBootstrap } from "@spiritagent/workspace";
+import { extractActivePlanPathFromLlmHistory } from "@spiritagent/instructions";
+import type { ApprovalLevel } from "@spiritagent/api/approval-level";
+import type { HostDreamScope, HostDreamSourceSessionRef } from "@spiritagent/automations/dreams";
+import type { ModelRef } from "@spiritagent/config";
+import {
   createBackgroundTaskOwner,
   createSessionId,
-  createSubagentWorkspaceBootstrap,
   readSessionStorageKey,
   resolveSubagentTranscriptFilePath,
   RuntimeSessionStore,
   type BackgroundTaskOwner,
-  deriveSessionTitleFallbackSeed,
-  generateSessionTitleForTurn,
-  extractActivePlanPathFromLlmHistory,
-  type ApprovalLevel,
-  type HostDreamScope,
-  type HostDreamSourceSessionRef,
-  type ModelRef,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/sessions";
 
 import {
   createServerRuntime,
@@ -79,7 +80,7 @@ export interface ServerSessionInfo {
   conversationKey?: string;
   sessionKind?: ServerSessionKind;
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
-  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  workLocation?: import("@spiritagent/api/work-location").WorkLocationKind;
   worktreePath?: string;
   worktreeBranch?: string;
   attachmentCount: number;
@@ -222,7 +223,7 @@ export interface CreateSessionParams {
   hostKind: ServerClientKind;
   sessionId?: string;
   title?: string;
-  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  workLocation?: import("@spiritagent/api/work-location").WorkLocationKind;
   worktreePath?: string;
   worktreeBranch?: string;
   approvalLevel?: ApprovalLevel;

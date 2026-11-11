@@ -33,11 +33,12 @@
     "@spiritagent/host-internal": "workspace:*",
     "@spiritagent/i18n": "workspace:*",
     "@spiritagent/icons": "workspace:*",
+    "@spiritagent/instructions": "workspace:*",
     "@spiritagent/lsp": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "@spiritagent/remote-control": "workspace:*",
-    "@spiritagent/server": "workspace:*",
     "@spiritagent/tasks": "workspace:*",
+    "@spiritagent/tools": "workspace:*",
     "@spiritagent/ui": "workspace:*",
     "@spiritagent/workspace": "workspace:*"
   },

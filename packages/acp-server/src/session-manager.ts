@@ -13,7 +13,6 @@ import {
 import {
   createBackgroundTaskOwner,
   createSessionId,
-  createSubagentWorkspaceBootstrap,
   acquireRuntimeSessionLease,
   deleteTranscriptSessionDir,
   FileBackgroundTaskStore,
@@ -22,7 +21,8 @@ import {
   readSessionStorageKey,
   resolveSubagentTranscriptFilePath,
   type BackgroundTaskOwner,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/sessions";
+import { createSubagentWorkspaceBootstrap } from "@spiritagent/workspace";
 import type { AcpServerConfig, AcpSessionState } from "./types.js";
 import { AVAILABLE_MODES, normalizeModeId } from "./types.js";
 import { createAcpRuntime, type AcpRuntimeResult } from "./runtime-factory.js";
@@ -33,7 +33,7 @@ interface SessionSummary {
   sessionId: string;
   sessionKind?: "default" | "dream-collector" | "subagent";
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
-  workLocation: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  workLocation: import("@spiritagent/api/work-location").WorkLocationKind;
   worktreePath?: string;
   worktreeBranch?: string;
   currentMode: AgentMode;

@@ -1,6 +1,8 @@
 import { lstat, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { configureServerConnector } from "@spiritagent/sessions/host/server-connector";
+import { connectOrSpawnServer } from "@spiritagent/server/client";
 import {
   hydrateTimelineSnapshotFromPersistence,
   normalizeTimelineSnapshotForPersistence,
@@ -665,6 +667,10 @@ async function loadDesktopPlanSnapshot(
 }
 
 export class DesktopHostService {
+  constructor() {
+    configureServerConnector(connectOrSpawnServer);
+  }
+
   private readonly invokeDispatch = createHostInvokeDispatch(this);
   private runtimeTransport: SpiritLlmTransport = createLlmTransport();
   private readonly extensionStateStore = createDesktopExtensionStateStore({
