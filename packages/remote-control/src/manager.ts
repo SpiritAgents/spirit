@@ -251,9 +251,25 @@ export class RemoteControlManager {
 
   async registerHost(instanceId: string, pid: number, host: string, port: number): Promise<void> {
     const path = hostLeasePath(this.options.dataDir);
+    const existing = await readHostLease(path);
+    if (
+      existing?.instanceId === instanceId &&
+      existing.pid === pid &&
+      existing.host === host &&
+      existing.port === port
+    ) {
+      // Heartbeats keep the lease fresh without producing a remote.updated feedback loop.
+      await writeFile(
+        path,
+        JSON.stringify({
+          ...existing,
+          heartbeatAt: Date.now(),
+        }),
+      );
+      return;
+    }
     if (await this.hostAvailable()) {
-      const current = await readHostLease(path);
-      if (current?.instanceId !== instanceId) {
+      if (existing?.instanceId !== instanceId) {
         throw new Error("Remote Control Host is already running.");
       }
     }
@@ -319,10 +335,16 @@ async function mkdirForLease(dataDir: string): Promise<void> {
   await mkdir(join(dataDir, "server"), { recursive: true });
 }
 
-async function readHostLease(
-  path: string,
-): Promise<
-  { instanceId: string; pid: number; host: string; port: number; heartbeatAt: number } | undefined
+async function readHostLease(path: string): Promise<
+  | {
+      instanceId: string;
+      pid: number;
+      host: string;
+      port: number;
+      startedAt: number;
+      heartbeatAt: number;
+    }
+  | undefined
 > {
   try {
     return JSON.parse(await readFile(path, "utf8"));
