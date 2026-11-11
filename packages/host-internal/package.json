@@ -121,6 +121,7 @@
     "@spiritagent/extension-toolkit": "workspace:*",
     "@spiritagent/hooks": "workspace:*",
     "@spiritagent/instructions": "workspace:*",
+    "@spiritagent/mcp": "workspace:*",
     "@spiritagent/permissions": "workspace:*",
     "@spiritagent/process": "workspace:*",
     "@spiritagent/product": "workspace:*",

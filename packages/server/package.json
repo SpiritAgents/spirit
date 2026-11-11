@@ -37,6 +37,7 @@
     "@spiritagent/host-internal": "workspace:*",
     "@spiritagent/i18n": "workspace:*",
     "@spiritagent/lsp": "workspace:*",
+    "@spiritagent/mcp": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "@spiritagent/remote-control": "workspace:*"
   },

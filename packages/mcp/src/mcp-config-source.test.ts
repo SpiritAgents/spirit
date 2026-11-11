@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, test } from "vitest";
 import { createHostMcpService, createMcpConfigSource } from "./mcp-config-source.js";
-import { mcpUserConfigPath, mcpWorkspaceConfigPath } from "./data-paths.js";
+import { mcpUserConfigPath, mcpWorkspaceConfigPath } from "@spiritagent/config/data-paths";
 
 test("MCP reads the injected daemon root and workspace configuration without ambient discovery", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "product-mcp-"));
