@@ -16,7 +16,7 @@ import {
   type ResolvedHookDefinition,
 } from "@spiritagent/agent-core";
 
-import { validateSkillName } from "@spiritagent/host-internal/discovery";
+import { validateSkillName } from "@spiritagent/instructions/discovery";
 import {
   EXTENSION_HOOKS_CONFIG_FILE_NAME,
   EXTENSION_MCP_CONFIG_FILE_NAME,
@@ -28,8 +28,8 @@ import {
   parseSkillFrontmatterFields,
   SKILL_FILE_NAME,
   splitSkillFrontmatter,
-} from "@spiritagent/host-internal/skill-paths";
-import { stablePathId } from "@spiritagent/host-internal/storage";
+} from "@spiritagent/instructions/skill-paths";
+import { stablePathId } from "@spiritagent/instructions/storage";
 
 export interface HostExtensionContributedSkill {
   id: string;

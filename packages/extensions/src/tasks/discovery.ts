@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { resolveWorkspaceDataDir } from "@spiritagent/host-internal";
+import { resolveWorkspaceDataDir } from "@spiritagent/config/data-paths";
 
 import type { LoadedTaskFile, TaskFileSourceKind } from "./schema.js";
 

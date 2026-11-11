@@ -37,8 +37,10 @@
   },
   "dependencies": {
     "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/config": "workspace:*",
     "@spiritagent/extension-toolkit": "workspace:*",
     "@spiritagent/host-internal": "workspace:*",
+    "@spiritagent/instructions": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "fflate": "0.8.3",
     "tar": "7.5.22"

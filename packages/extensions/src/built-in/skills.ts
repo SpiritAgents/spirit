@@ -3,7 +3,7 @@ import { cp, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { SKILL_FILE_NAME, SKILLS_DIR_NAME } from "@spiritagent/host-internal/storage";
+import { SKILL_FILE_NAME, SKILLS_DIR_NAME } from "@spiritagent/instructions/storage";
 import { loadBuiltInState } from "./state.js";
 
 export const BUILT_IN_SKILL_NAMES = [

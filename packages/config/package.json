@@ -44,6 +44,10 @@
       "types": "./dist/resolve-transport.d.ts",
       "default": "./dist/resolve-transport.js"
     },
+    "./toggle-state": {
+      "types": "./dist/toggle-state.d.ts",
+      "default": "./dist/toggle-state.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {

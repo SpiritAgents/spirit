@@ -6,7 +6,7 @@ import {
   readBuiltInMarketplaceIndex,
 } from "../built-in/extensions.js";
 import { listInstalledExtensions, type HostInstalledExtension } from "../extensions.js";
-import type { ExtensionHostKind } from "@spiritagent/host-internal/storage";
+import type { ExtensionHostKind } from "../storage.js";
 import { MarketplaceReviewAcknowledgementRequiredError } from "./errors.js";
 import type { MarketplaceGitRunner } from "./git-source.js";
 import type { MarketplaceIndexFetch } from "./http-index-source.js";

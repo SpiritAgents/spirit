@@ -5,3 +5,4 @@ export * from "./keyring-secret.js";
 export * from "./data-paths.js";
 export * from "./credentials/index.js";
 export * from "./resolve-transport.js";
+export * from "./toggle-state.js";

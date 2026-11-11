@@ -27,7 +27,7 @@ import {
   type MarketplaceRegistryRoot,
   type MarketplaceSourceRecord,
 } from "../marketplace/types.js";
-import type { ExtensionHostKind } from "@spiritagent/host-internal/storage";
+import type { ExtensionHostKind } from "../storage.js";
 import { loadBuiltInState } from "./state.js";
 
 /**
