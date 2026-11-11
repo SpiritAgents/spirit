@@ -35,7 +35,6 @@ const initialEndpoint = resolveDesktopWebHostFromEnv();
 let webHost: DesktopHttpHost | undefined;
 let syncTail = Promise.resolve();
 let stopping = false;
-let enabledOnce = false;
 
 function webDistPath(): string {
   const require = createRequire(import.meta.url);
@@ -98,6 +97,9 @@ async function shutdown(): Promise<void> {
   await Promise.all([stop(), shutdownDesktopHostService()]);
 }
 
+const initialConfig = await loadConfig();
+if (!initialConfig.webHost.enabled) process.exit(0);
+
 await start(initialEndpoint.host, initialEndpoint.port);
 
 const leaseTimer = setInterval(() => {
@@ -117,13 +119,9 @@ await subscribeDesktopRemoteControl(spiritDataDir(), {
     syncTail = syncTail.then(async () => {
       if (stopping) return;
       const config = await loadConfig();
-      if (config.webHost.enabled) enabledOnce = true;
       if (!config.webHost.enabled) {
-        if (enabledOnce) {
-          await shutdown();
-          process.exit(0);
-        }
-        return;
+        await shutdown();
+        process.exit(0);
       }
       await start(config.webHost.host, config.webHost.port);
       await refreshDesktopRemoteControlConfig();

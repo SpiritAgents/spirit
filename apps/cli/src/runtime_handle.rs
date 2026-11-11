@@ -78,6 +78,10 @@ impl RuntimeHandle {
         crate::remote::ensure_remote_host(&mut self.backend)
     }
 
+    pub fn enable_remote_control(&mut self) -> Result<Value> {
+        crate::remote::enable_remote_control(&mut self.backend)
+    }
+
     pub fn take_remote_control_confirmation(&mut self) -> Option<Value> {
         self.backend.take_remote_control_confirmation()
     }

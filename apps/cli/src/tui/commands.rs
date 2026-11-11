@@ -716,9 +716,10 @@ impl TuiShell {
                 _ => serde_json::json!({}),
             };
             if action == "enable" {
-                self.runtime.ensure_remote_host()?;
+                self.runtime.enable_remote_control()
+            } else {
+                self.runtime.call_remote_control(method, params)
             }
-            self.runtime.call_remote_control(method, params)
         })();
         match result {
             Ok(state) => self.push_agent_message(Self::remote_state_text(&state)),

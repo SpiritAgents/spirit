@@ -23,8 +23,7 @@ pub fn handle_remote_cli(command: RemoteCommand) -> Result<()> {
     match command {
         RemoteCommand::Enable { host, port } => {
             configure(&mut runtime, host, port)?;
-            ensure_remote_host(&mut runtime)?;
-            let state = call(&mut runtime, "remote.enable", json!({}))?;
+            let state = enable_remote_control(&mut runtime)?;
             print_state(&state);
         }
         RemoteCommand::Disable => {
@@ -75,6 +74,19 @@ fn configure(runtime: &mut DaemonRuntime, host: Option<String>, port: Option<u16
 
 fn call(runtime: &mut DaemonRuntime, method: &str, params: Value) -> Result<Value> {
     runtime.call_daemon(method, Some(params))
+}
+
+pub(crate) fn enable_remote_control(runtime: &mut DaemonRuntime) -> Result<Value> {
+    let was_enabled =
+        call(runtime, "remote.getState", json!({}))?["enabled"].as_bool() == Some(true);
+    let state = call(runtime, "remote.enable", json!({}))?;
+    if let Err(error) = ensure_remote_host(runtime) {
+        if !was_enabled {
+            let _ = call(runtime, "remote.disable", json!({}));
+        }
+        return Err(error);
+    }
+    Ok(state)
 }
 
 fn print_state(state: &Value) {
@@ -222,7 +234,7 @@ pub(crate) fn ensure_remote_host(runtime: &mut DaemonRuntime) -> Result<()> {
         const DETACHED_PROCESS: u32 = 0x0000_0008;
         command.creation_flags(CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS);
     }
-    command.spawn().context("spawn Spirit Workbench Host")?;
+    let mut child = command.spawn().context("spawn Spirit Workbench Host")?;
 
     let deadline = Instant::now() + Duration::from_secs(15);
     loop {
@@ -231,6 +243,8 @@ pub(crate) fn ensure_remote_host(runtime: &mut DaemonRuntime) -> Result<()> {
             return Ok(());
         }
         if Instant::now() >= deadline {
+            let _ = child.kill();
+            let _ = child.wait();
             return Err(anyhow!(
                 "Workbench Host startup timed out. Log: {}",
                 log_dir.join("workbench.log").display()
