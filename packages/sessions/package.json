@@ -37,6 +37,7 @@
     "@spiritagent/product": "workspace:*",
     "@spiritagent/remote-control": "workspace:*",
     "@spiritagent/server": "workspace:*",
+    "@spiritagent/tasks": "workspace:*",
     "@spiritagent/ui": "workspace:*",
     "@spiritagent/workspace": "workspace:*"
   },

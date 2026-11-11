@@ -1,11 +1,13 @@
 import { createHash } from "node:crypto";
 
 import {
+  applyWorkspaceCapabilityTrustDecision,
   findPermanentWorkspaceCapabilityTrust,
   hasSessionCapabilityAllow,
   hasSessionCapabilityDeny,
+  type WorkspaceCapabilityTrustDecision,
   type WorkspaceTaskTrustListEntry,
-} from "@spiritagent/host-internal/hooks/trust";
+} from "@spiritagent/hooks/trust";
 import { normalizeTaskFile, type LoadedTaskFile, type NormalizedTask } from "./schema.js";
 
 const WORKSPACE_CONTROLLED_KINDS = new Set<LoadedTaskFile["sourceKind"]>([
@@ -81,6 +83,15 @@ export type WorkspaceTasksTrustGateResult =
         items: WorkspaceTaskTrustListEntry[];
       };
     };
+
+export async function applyWorkspaceTasksTrustDecision(options: {
+  spiritDataDir: string;
+  workspaceRoot: string;
+  contentHash: string;
+  decision: WorkspaceCapabilityTrustDecision;
+}): Promise<"allow" | "deny"> {
+  return applyWorkspaceCapabilityTrustDecision({ ...options, kind: "tasks" });
+}
 
 export async function evaluateWorkspaceTasksTrustGate(options: {
   spiritDataDir: string;

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { ResolvedTask } from "../tasks/public.js";
+import type { ResolvedTask } from "../public.js";
 import type { ActiveTaskInstance } from "./instances.js";
 import type { TaskTerminalClaim } from "./pool.js";
 import type { TaskLaunchIntent } from "./presentation.js";

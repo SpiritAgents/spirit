@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { ResolvedTaskPresentation } from "../tasks/public.js";
+import type { ResolvedTaskPresentation } from "../public.js";
 import { computeExitIntent, computeLaunchIntent } from "./presentation.js";
 
 function presentation(overrides: Partial<ResolvedTaskPresentation>): ResolvedTaskPresentation {

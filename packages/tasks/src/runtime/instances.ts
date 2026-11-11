@@ -1,4 +1,4 @@
-import { taskKeyWithInstance } from "../tasks/public.js";
+import { taskKeyWithInstance } from "../public.js";
 
 export interface ActiveTaskInstance {
   instanceKey: string;

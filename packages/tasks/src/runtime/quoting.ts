@@ -1,9 +1,4 @@
-import type {
-  ResolvedTask,
-  TaskArgValue,
-  TaskCommandValue,
-  TaskQuotingStyle,
-} from "../tasks/public.js";
+import type { ResolvedTask, TaskArgValue, TaskCommandValue, TaskQuotingStyle } from "../public.js";
 
 export interface TaskShellDefinition {
   executable: string;

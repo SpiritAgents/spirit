@@ -1,4 +1,4 @@
-import type { ResolvedTaskPresentation } from "../tasks/public.js";
+import type { ResolvedTaskPresentation } from "../public.js";
 
 export interface TaskLaunchIntent {
   reveal: "expand" | "none";

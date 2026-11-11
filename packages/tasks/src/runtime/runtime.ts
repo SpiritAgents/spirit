@@ -1,4 +1,4 @@
-import type { ResolvedTask } from "../tasks/public.js";
+import type { ResolvedTask } from "../public.js";
 import { TaskInstanceRegistry, type ActiveTaskInstance } from "./instances.js";
 import { TaskTerminalPool, type TaskTerminalClaim } from "./pool.js";
 import {

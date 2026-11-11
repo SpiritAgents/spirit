@@ -46,8 +46,8 @@ import type {
   WorkspaceCapabilityTrustDecision,
   WorkspaceCapabilityTrustRequest,
 } from "./workspace-trust.js";
-import type { ResolvedTask, TaskMenuItem } from "@spiritagent/extensions/tasks";
-import type { TaskShellDefinition } from "@spiritagent/extensions/tasks-runtime";
+import type { ResolvedTask, TaskMenuItem } from "@spiritagent/tasks";
+import type { TaskShellDefinition } from "@spiritagent/tasks/runtime";
 
 export type {
   ApprovalLevel,

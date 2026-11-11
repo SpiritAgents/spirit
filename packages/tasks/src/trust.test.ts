@@ -5,17 +5,20 @@ import { join } from "node:path";
 import { test } from "vitest";
 
 import {
-  applyWorkspaceTasksTrustDecision,
   clearWorkspaceCapabilityTrustSessionForTests,
   loadWorkspaceCapabilityTrustStore,
   persistPermanentWorkspaceCapabilityTrust,
   persistPermanentWorkspaceHooksTrust,
   saveWorkspaceCapabilityTrustStore,
   WORKSPACE_CAPABILITY_TRUST_VERSION,
-} from "@spiritagent/host-internal/hooks/trust";
+} from "@spiritagent/hooks/trust";
 import { loadTaskFiles, userTasksFilePath } from "./discovery.js";
 import type { LoadedTaskFile, TaskFileSourceKind } from "./schema.js";
-import { computeWorkspaceTasksContentHash, evaluateWorkspaceTasksTrustGate } from "./trust.js";
+import {
+  applyWorkspaceTasksTrustDecision,
+  computeWorkspaceTasksContentHash,
+  evaluateWorkspaceTasksTrustGate,
+} from "./trust.js";
 
 async function withDataDir(run: (dataDir: string) => Promise<void>): Promise<void> {
   const dataDir = await mkdtemp(join(tmpdir(), "spirit-tasks-trust-"));

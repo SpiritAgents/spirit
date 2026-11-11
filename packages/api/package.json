@@ -66,10 +66,10 @@
   "dependencies": {
     "@spiritagent/agent-core": "workspace:*",
     "@spiritagent/config": "workspace:*",
-    "@spiritagent/extensions": "workspace:*",
     "@spiritagent/github": "workspace:*",
     "@spiritagent/host-internal": "workspace:*",
     "@spiritagent/remote-control": "workspace:*",
+    "@spiritagent/tasks": "workspace:*",
     "@spiritagent/ui": "workspace:*"
   },
   "devDependencies": {

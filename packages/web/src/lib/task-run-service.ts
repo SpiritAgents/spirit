@@ -1,4 +1,4 @@
-import type { ResolvedTask } from "@spiritagent/extensions/tasks";
+import type { ResolvedTask } from "@spiritagent/tasks";
 import {
   TaskRunCoordinator,
   type ActiveTaskInstance,
@@ -7,7 +7,7 @@ import {
   type TaskProcessHandle,
   type TaskRunHost,
   type TaskTerminalClaim,
-} from "@spiritagent/extensions/tasks-runtime";
+} from "@spiritagent/tasks/runtime";
 
 import {
   focusTaskTerminal,

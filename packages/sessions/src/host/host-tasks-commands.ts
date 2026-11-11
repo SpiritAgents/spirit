@@ -16,7 +16,7 @@ import {
   defaultShellForPty,
   shellRunCommandArgs,
 } from "@spiritagent/host-internal/default-terminal-shell";
-import type { TaskShellDefinition } from "@spiritagent/extensions/tasks-runtime";
+import type { TaskShellDefinition } from "@spiritagent/tasks/runtime";
 
 import type { DesktopResolveTaskForRunResult, DesktopTaskMenuItem } from "../types.js";
 import { spiritDataDir } from "./storage.js";

@@ -1,4 +1,4 @@
-import type { TaskPanelKind } from "../tasks/public.js";
+import type { TaskPanelKind } from "../public.js";
 
 export type TaskTerminalClaim = { reuse: string } | { create: true };
 
