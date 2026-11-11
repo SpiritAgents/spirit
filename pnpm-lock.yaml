@@ -1112,6 +1112,9 @@ importers:
       '@spiritagent/host-internal':
         specifier: workspace:*
         version: link:../host-internal
+      '@spiritagent/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@spiritagent/lsp':
         specifier: workspace:*
         version: link:../lsp
