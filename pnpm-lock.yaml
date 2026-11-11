@@ -793,6 +793,9 @@ importers:
       '@spiritagent/agent-core':
         specifier: workspace:*
         version: link:../agent-core
+      '@spiritagent/product':
+        specifier: workspace:*
+        version: link:../product
       koffi:
         specifier: 2.16.3
         version: 2.16.3
