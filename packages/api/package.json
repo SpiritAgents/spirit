@@ -48,6 +48,10 @@
       "types": "./dist/workspace-file-reference-query.d.ts",
       "default": "./dist/workspace-file-reference-query.js"
     },
+    "./approval-level": {
+      "types": "./dist/approval-level.d.ts",
+      "default": "./dist/approval-level.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {

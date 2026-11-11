@@ -4,8 +4,8 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
 
-import { SPIRIT_CONFIG_SCHEMA_VERSION } from "../config.js";
-import { configFilePath } from "../credentials/spirit-config.js";
+import { SPIRIT_CONFIG_SCHEMA_VERSION } from "@spiritagent/config";
+import { configFilePath } from "@spiritagent/config/credentials";
 import {
   createPermissionConfigLoader,
   loadPermissionConfig,

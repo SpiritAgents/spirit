@@ -38,7 +38,7 @@ import type { TranslucencyPreference } from "./lib/translucency.js";
 export type { DesktopAgentMode };
 export type { WorkspaceFileReferenceSuggestionsResult } from "./workspace-file-reference-query.js";
 import type { WorkspaceFileReferenceSuggestionsResult } from "./workspace-file-reference-query.js";
-import type { ApprovalLevel } from "@spiritagent/host-internal/approval-level";
+import type { ApprovalLevel } from "./approval-level.js";
 import type { WorkLocationKind } from "./work-location.js";
 import type { LocalFileComposerRoute } from "./local-file-composer-route.js";
 import type { DesktopGitSnapshot } from "@spiritagent/github/types";

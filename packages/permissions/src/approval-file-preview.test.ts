@@ -9,7 +9,7 @@ import {
   buildApprovalFileContentPreview,
   buildApprovalFileDiffPreview,
 } from "./approval-file-preview.js";
-import { NodeHostToolService } from "./tools.js";
+import { NodeHostToolService } from "@spiritagent/host-internal";
 
 function workspaceResolver(workspaceRoot: string): (inputPath: string) => string {
   return (inputPath) => join(workspaceRoot, inputPath);

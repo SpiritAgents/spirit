@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import type { PermissionDomainRules } from "../credentials/types.js";
+import type { PermissionDomainRules } from "@spiritagent/config/credentials";
 import { normalizeReadFilePattern } from "./config-io.js";
 import {
   evaluateReadFilePermission,

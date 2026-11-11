@@ -472,19 +472,12 @@ export interface HostToolExtensionManager<THostApi> {
   }): Promise<string>;
 }
 
-import type { ApprovalLevel } from "./approval-level.js";
+import {
+  normalizeApprovalLevel,
+  type ApprovalLevel,
+} from "@spiritagent/permissions/approval-level";
 
-export type { ApprovalLevel } from "./approval-level.js";
-
-export function normalizeApprovalLevel(value: unknown): ApprovalLevel {
-  if (value === "bypass-approval") {
-    return "bypass-approval";
-  }
-  if (value === "auto-approval") {
-    return "auto-approval";
-  }
-  return "default";
-}
+export { normalizeApprovalLevel, type ApprovalLevel };
 
 export interface HostAutomationCreateDefaults {
   workspaceRoot: string;

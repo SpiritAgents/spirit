@@ -5,3 +5,4 @@ export * from "./host-command-payloads.js";
 export * from "./work-location.js";
 export * from "./local-file-composer-route.js";
 export * from "./workspace-file-reference-query.js";
+export * from "./approval-level.js";

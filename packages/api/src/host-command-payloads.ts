@@ -1,4 +1,5 @@
-import type { ApprovalLevel, WorkLocationKind } from "@spiritagent/host-internal";
+import type { ApprovalLevel } from "./approval-level.js";
+import type { WorkLocationKind } from "./work-location.js";
 
 import type {
   AddMcpServerRequest,

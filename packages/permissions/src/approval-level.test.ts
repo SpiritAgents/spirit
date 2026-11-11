@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { normalizeApprovalLevel } from "./tools.js";
+import { normalizeApprovalLevel } from "./approval-level.js";
 
 test("normalizeApprovalLevel maps canonical values", () => {
   assert.equal(normalizeApprovalLevel("default"), "default");
