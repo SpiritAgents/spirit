@@ -63,7 +63,7 @@ pub mod view;
 mod word_wrap;
 
 #[cfg(feature = "tui")]
-rust_i18n::i18n!("locales", fallback = "en");
+rust_i18n::i18n!("target/i18n", fallback = "en");
 
 pub use cli::{
     ConfigCommand, ExtensionCommand, ExtensionMarketplaceCommand, HookCommand, McpCommand,

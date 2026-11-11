@@ -26,7 +26,7 @@ pub fn resolve_ui_locale(config: &AppConfig) -> String {
     resolve_ui_locale_with_override(config, None)
 }
 
-/// Priority: `cli_override` > `SPIRIT_UI_LANG` > `config.ui_locale` > default `en`.
+/// Priority: `cli_override` > `SPIRIT_UI_LANG` > config > system tags > default `en`.
 pub fn resolve_ui_locale_with_override(config: &AppConfig, cli_override: Option<&str>) -> String {
     cli_override
         .and_then(parse_ui_locale)
@@ -37,6 +37,7 @@ pub fn resolve_ui_locale_with_override(config: &AppConfig, cli_override: Option<
                 .and_then(parse_ui_locale)
         })
         .or_else(|| config.ui_locale.as_deref().and_then(parse_ui_locale))
+        .or_else(detect_system_ui_locale)
         .unwrap_or_else(|| DEFAULT_UI_LOCALE.to_string())
 }
 
@@ -49,19 +50,52 @@ pub fn normalize_ui_locale(locale: &str) -> String {
 }
 
 pub fn parse_ui_locale(locale: &str) -> Option<String> {
-    match locale.trim().to_ascii_lowercase().as_str() {
-        "zh" | "zh-cn" | "zh_cn" | "zh-hans" | "zh_hans" => Some("zh-CN".to_string()),
-        "zh-tw" | "zh_tw" | "zh-hant" | "zh_hant" => Some("zh-TW".to_string()),
-        "ja" | "ja-jp" | "ja_jp" => Some("ja".to_string()),
-        "ko" | "ko-kr" | "ko_kr" => Some("ko".to_string()),
-        "de" | "de-de" | "de_de" => Some("de".to_string()),
-        "fr" | "fr-fr" | "fr_fr" => Some("fr".to_string()),
-        "es" | "es-es" | "es_es" => Some("es".to_string()),
-        "pt" | "pt-br" | "pt_br" => Some("pt-BR".to_string()),
-        "ru" | "ru-ru" | "ru_ru" => Some("ru".to_string()),
-        "en" | "en-us" | "en_us" | "en-gb" | "en_gb" => Some("en".to_string()),
-        _ => None,
+    let normalized = locale.trim().replace('_', "-");
+    if normalized.is_empty() {
+        return None;
     }
+    let lower = normalized.to_ascii_lowercase();
+    if let Some(exact) = SUPPORTED_UI_LOCALES
+        .iter()
+        .find(|candidate| candidate.to_ascii_lowercase() == lower)
+    {
+        return Some((*exact).to_string());
+    }
+    if lower.starts_with("zh-hant")
+        || lower.starts_with("zh-tw")
+        || lower.starts_with("zh-hk")
+        || lower.starts_with("zh-mo")
+    {
+        return Some("zh-TW".to_string());
+    }
+    if lower.starts_with("zh") {
+        return Some("zh-CN".to_string());
+    }
+    if lower.starts_with("pt-br") {
+        return Some("pt-BR".to_string());
+    }
+    let primary = normalized.split('-').next()?;
+    SUPPORTED_UI_LOCALES
+        .iter()
+        .find(|candidate| *candidate == &primary)
+        .map(|candidate| (*candidate).to_string())
+}
+
+fn detect_system_ui_locale() -> Option<String> {
+    for key in ["LC_ALL", "LC_MESSAGES", "LANG"] {
+        if let Ok(value) = env::var(key) {
+            let tag = value
+                .trim()
+                .split('.')
+                .next()
+                .unwrap_or("")
+                .replace('_', "-");
+            if let Some(locale) = parse_ui_locale(&tag) {
+                return Some(locale);
+            }
+        }
+    }
+    None
 }
 
 pub fn supported_ui_locales() -> &'static [&'static str] {
@@ -122,6 +156,9 @@ mod tests {
         assert_eq!(parse_ui_locale("pt-BR").as_deref(), Some("pt-BR"));
         assert_eq!(parse_ui_locale("ru-RU").as_deref(), Some("ru"));
         assert_eq!(parse_ui_locale("en-US").as_deref(), Some("en"));
+        assert_eq!(parse_ui_locale("zh-HK").as_deref(), Some("zh-TW"));
+        assert_eq!(parse_ui_locale("zh-MO").as_deref(), Some("zh-TW"));
+        assert_eq!(parse_ui_locale("fr-CA").as_deref(), Some("fr"));
     }
 
     #[test]

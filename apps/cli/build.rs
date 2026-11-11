@@ -1,9 +1,14 @@
 use sha2::{Digest, Sha256};
-use std::{env, fs, path::PathBuf, process::Command};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 fn main() {
     let root = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").expect("Cargo manifest directory"))
         .join("../..");
+    generate_i18n(&root);
     let quality = env::var("SPIRIT_PRODUCT_QUALITY").unwrap_or_else(|_| "stable".into());
     let inputs = [
         "product.json",
@@ -59,4 +64,24 @@ fn main() {
             "Product schema validation or generation failed"
         );
     }
+}
+
+fn generate_i18n(root: &Path) {
+    let generator = root.join("packages/i18n/scripts/generate-rust-locales.mjs");
+    println!("cargo:rerun-if-changed={}", generator.display());
+    let locales = root.join("packages/i18n/src/cli-locales");
+    for entry in fs::read_dir(&locales).expect("Read canonical CLI locales") {
+        let path = entry.expect("Read CLI locale entry").path();
+        if path.extension().and_then(|value| value.to_str()) == Some("json") {
+            println!("cargo:rerun-if-changed={}", path.display());
+        }
+    }
+    let out = root.join("apps/cli/target/i18n");
+    let status = Command::new("node")
+        .arg(generator)
+        .arg("--out-dir")
+        .arg(out)
+        .status()
+        .expect("CLI locale generation requires Node.js and installed workspace dependencies");
+    assert!(status.success(), "CLI locale generation failed");
 }
