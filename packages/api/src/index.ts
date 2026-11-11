@@ -6,3 +6,4 @@ export * from "./work-location.js";
 export * from "./local-file-composer-route.js";
 export * from "./workspace-file-reference-query.js";
 export * from "./approval-level.js";
+export * from "./workspace-trust.js";

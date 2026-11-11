@@ -119,6 +119,7 @@
     "@spiritagent/automations": "workspace:*",
     "@spiritagent/config": "workspace:*",
     "@spiritagent/extension-toolkit": "workspace:*",
+    "@spiritagent/hooks": "workspace:*",
     "@spiritagent/instructions": "workspace:*",
     "@spiritagent/permissions": "workspace:*",
     "@spiritagent/process": "workspace:*",

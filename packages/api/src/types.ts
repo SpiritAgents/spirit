@@ -45,7 +45,7 @@ import type { DesktopGitSnapshot } from "@spiritagent/github/types";
 import type {
   WorkspaceCapabilityTrustDecision,
   WorkspaceCapabilityTrustRequest,
-} from "@spiritagent/host-internal/hooks/trust";
+} from "./workspace-trust.js";
 import type { ResolvedTask, TaskMenuItem } from "@spiritagent/extensions/tasks";
 import type { TaskShellDefinition } from "@spiritagent/extensions/tasks-runtime";
 
