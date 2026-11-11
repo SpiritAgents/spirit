@@ -20,6 +20,10 @@
       "types": "./dist/marketplace/index.d.ts",
       "default": "./dist/marketplace/index.js"
     },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -31,13 +35,17 @@
     "@spiritagent/agent-core": "workspace:*",
     "@spiritagent/config": "workspace:*",
     "@spiritagent/extension-toolkit": "workspace:*",
-    "@spiritagent/host-internal": "workspace:*",
     "@spiritagent/instructions": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "fflate": "0.8.3",
     "tar": "7.5.22"
   },
   "devDependencies": {
+    "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/config": "workspace:*",
+    "@spiritagent/extension-toolkit": "workspace:*",
+    "@spiritagent/instructions": "workspace:*",
+    "@spiritagent/product": "workspace:*",
     "@types/node": "26.6.6",
     "typescript": "7.0.2",
     "vitest": "^4.1.11"

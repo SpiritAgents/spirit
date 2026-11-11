@@ -18,7 +18,7 @@ import {
   shell,
 } from "electron";
 
-import { detectPreviewableImageFile } from "@spiritagent/host-internal/image-file-support";
+import { detectPreviewableImageFile } from "@spiritagent/workspace/image-file-support";
 import { configureElectronProductStorage } from "./product-storage.js";
 import { product } from "@spiritagent/product";
 import { setWorkspaceSystemOperations } from "@spiritagent/workspace/platform";

@@ -4,7 +4,8 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { ChatArchive } from "@spiritagent/agent-core";
-import type { HostRecordedFileChange, HostTodoRecord } from "@spiritagent/host-internal";
+import type { HostRecordedFileChange } from "@spiritagent/workspace";
+import type { HostTodoRecord } from "../todo-store.js";
 
 import type { PersistedDesktopTimelineTurnSnapshot } from "./chat-schema.js";
 import type { ConversationMessageSnapshot } from "../types.js";

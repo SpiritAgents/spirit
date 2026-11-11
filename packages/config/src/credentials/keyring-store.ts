@@ -2,7 +2,7 @@ import {
   deleteKeyringPassword,
   getKeyringPassword,
   setKeyringPassword,
-} from "@spiritagent/config/keyring-secret";
+} from "../keyring-secret.js";
 
 /** Test-only override for keyring operations. */
 export interface KeyringStore {

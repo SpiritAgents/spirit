@@ -8,12 +8,12 @@ import type { WebContents } from "electron";
 import {
   defaultShellForPty,
   shellDisplayNameForResolvedShell,
-} from "@spiritagent/host-internal/default-terminal-shell";
+} from "@spiritagent/process/default-terminal-shell";
 
 export {
   defaultShellForPty,
   shellDisplayNameForResolvedShell,
-} from "@spiritagent/host-internal/default-terminal-shell";
+} from "@spiritagent/process/default-terminal-shell";
 
 const require = createRequire(import.meta.url);
 

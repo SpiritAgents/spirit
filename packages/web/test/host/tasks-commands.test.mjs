@@ -4,10 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import {
-  applyWorkspaceTasksTrustDecision,
-  clearWorkspaceCapabilityTrustSessionForTests,
-} from "@spiritagent/host-internal";
+import { applyWorkspaceTasksTrustDecision } from "@spiritagent/tasks/trust";
+import { clearWorkspaceCapabilityTrustSessionForTests } from "@spiritagent/hooks";
 import {
   createTaskRunResolver,
   evaluateAndFilterTaskFiles,

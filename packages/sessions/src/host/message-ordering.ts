@@ -1,4 +1,4 @@
-import { formatTriggerLabel } from "@spiritagent/host-internal";
+import { formatTriggerLabel } from "@spiritagent/automations";
 
 import i18n from "../lib/i18n-host.js";
 import type {
@@ -21,7 +21,7 @@ import {
   hasAssistantToolLaterInTurn,
   isStandaloneThinkingMessage,
 } from "../lib/conversation-thinking-ui.js";
-import { lsToolDisplayPath } from "@spiritagent/host-internal/skill-paths";
+import { lsToolDisplayPath } from "@spiritagent/instructions/skill-paths";
 
 import {
   isSkillMarkdownPath,

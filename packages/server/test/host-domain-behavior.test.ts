@@ -6,16 +6,12 @@ import { test } from "vitest";
 
 import { matchLocaleTag } from "@spiritagent/i18n";
 import { mergeMcpConfigFiles } from "@spiritagent/agent-core";
-import {
-  RuntimeSessionStore,
-  createMcpConfigSource,
-  discoverSkillEntries,
-  loadHooksConfig,
-  resolveProviderApiKeyResolution,
-  splitShellCommandLine,
-  summarizeHooksConfig,
-  type RuntimeSessionState,
-} from "@spiritagent/host-internal";
+import { RuntimeSessionStore, type RuntimeSessionState } from "@spiritagent/sessions";
+import { createMcpConfigSource } from "@spiritagent/mcp/mcp-config-source";
+import { discoverSkillEntries } from "@spiritagent/instructions";
+import { loadHooksConfig, summarizeHooksConfig } from "@spiritagent/hooks";
+import { resolveProviderApiKeyResolution } from "@spiritagent/config/credentials";
+import { splitShellCommandLine } from "@spiritagent/permissions/shell-split";
 
 async function withTempDir(run: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(tmpdir(), "spirit-domain-contract-"));

@@ -1,7 +1,8 @@
 import { type RuntimeTurnResult } from "@spiritagent/agent-core";
 import { setImmediate as waitForImmediate } from "node:timers/promises";
 
-import type { HostDreamSourceSessionRef, ModelRef } from "@spiritagent/host-internal";
+import type { HostDreamSourceSessionRef } from "@spiritagent/automations/dreams";
+import type { ModelRef } from "@spiritagent/config";
 
 import type { DesktopToolRequest } from "@spiritagent/sessions/host/contracts";
 import type { DesktopHostRuntime } from "@spiritagent/sessions/host/runtime";

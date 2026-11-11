@@ -376,7 +376,7 @@ impl ProviderEntry {
 }
 
 /// Resolved model profile: the provider entry's connection fields plus the effective
-/// (post-inheritance) model fields. Vendor-free mirror of host-internal `SpiritModelProfile`.
+/// (post-inheritance) model fields. Vendor-free mirror of config `SpiritModelProfile`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelProfile {
     #[serde(rename = "providerId")]
@@ -772,7 +772,7 @@ impl Default for AppConfig {
 
 /// Resolved profile: connection fields come from the provider entry; the model-level fields
 /// apply the shared inheritance rule (provider flat declarations are the defaults, the model's
-/// explicit declaration wins). Mirrors host-internal `resolveModelEntry` + profile build.
+/// explicit declaration wins). Mirrors config `resolveModelEntry` + profile build.
 pub fn resolve_model_profile_from_parts(
     provider: &ProviderEntry,
     model: &ModelEntry,

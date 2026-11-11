@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
 
-import { providerInternalKeyAccount, setKeyringStoreForTests } from "@spiritagent/host-internal";
+import {
+  providerInternalKeyAccount,
+  setKeyringStoreForTests,
+} from "@spiritagent/config/credentials";
 
 import { createServerRuntime } from "../src/runtime-factory.js";
 

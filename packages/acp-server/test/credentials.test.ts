@@ -9,7 +9,7 @@ import {
   providerInternalSlotAccount,
   saveProviderSetup,
   setKeyringStoreForTests,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/config/credentials";
 import { buildProviderSetupResult } from "../src/setup/provider-wizard.js";
 
 function openAiSetup(overrides: Record<string, unknown> = {}) {

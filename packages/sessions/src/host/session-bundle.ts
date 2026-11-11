@@ -5,7 +5,8 @@ import type {
   SpiritLlmTransport,
 } from "@spiritagent/agent-core";
 import type { DesktopToolRequest, SessionTitleSource } from "./contracts.js";
-import type { ApprovalLevel, WorkLocationKind } from "@spiritagent/host-internal";
+import type { ApprovalLevel } from "@spiritagent/api/approval-level";
+import type { WorkLocationKind } from "@spiritagent/api/work-location";
 
 import type { ModelRef } from "../types.js";
 

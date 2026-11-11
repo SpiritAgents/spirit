@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { computeWorkspaceFileReferenceSuggestions } from "@spiritagent/host-internal/workspace-file-reference-query";
+import { computeWorkspaceFileReferenceSuggestions } from "@spiritagent/api/workspace-file-reference-query";
 
 import type { WorkspaceFileReferenceIndexSnapshot } from "@/types";
 

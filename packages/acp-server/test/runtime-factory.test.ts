@@ -5,7 +5,10 @@ import { join } from "node:path";
 import { test } from "vitest";
 
 import { setLlmFetchTransportOverrideForTests } from "@spiritagent/agent-core";
-import { providerInternalKeyAccount, setKeyringStoreForTests } from "@spiritagent/host-internal";
+import {
+  providerInternalKeyAccount,
+  setKeyringStoreForTests,
+} from "@spiritagent/config/credentials";
 
 import { createAcpRuntime } from "../src/runtime-factory.js";
 

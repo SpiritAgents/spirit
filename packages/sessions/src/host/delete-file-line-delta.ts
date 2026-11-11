@@ -1,10 +1,8 @@
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import {
-  resolveInstructionPaths,
-  type InstructionDiscoveryContext,
-} from "@spiritagent/host-internal";
+import { resolveInstructionPaths } from "@spiritagent/instructions/storage";
+import { type InstructionDiscoveryContext } from "@spiritagent/instructions";
 
 import {
   deleteFileLineDeltaFromContent,

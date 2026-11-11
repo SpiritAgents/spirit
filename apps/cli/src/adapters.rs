@@ -86,7 +86,7 @@ impl SecretStore for KeyringSecretStore {
         call_config_rpc(
             &workspace_root,
             "host.writeKeyringSecret",
-            serde_json::json!({ "service": "Spirit", "account": account, "value": secret }),
+            serde_json::json!({ "service": crate::product::NAME, "account": account, "value": secret }),
         )?;
         Ok(())
     }
@@ -96,7 +96,7 @@ impl SecretStore for KeyringSecretStore {
         call_config_rpc(
             &workspace_root,
             "host.deleteKeyringSecret",
-            serde_json::json!({ "service": "Spirit", "account": account }),
+            serde_json::json!({ "service": crate::product::NAME, "account": account }),
         )?;
         Ok(())
     }

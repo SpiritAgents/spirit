@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import {
-  buildSubagentConversationSnapshots,
-  resolveSubagentPromptFromTaskFields,
-} from "@spiritagent/host-internal";
+import { buildSubagentConversationSnapshots } from "@spiritagent/sessions";
+import { resolveSubagentPromptFromTaskFields } from "@spiritagent/sessions/subagent-viewer";
 
 test("buildSubagentConversationSnapshots maps user, assistant text, and tool results", () => {
   const messages = buildSubagentConversationSnapshots(

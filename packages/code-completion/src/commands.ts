@@ -1,12 +1,10 @@
 import { createJsonSchemaTransport } from "@spiritagent/agent-core";
 import { applyCodeCompletionTransportProfile } from "@spiritagent/agent-core";
-import { tryResolveTransportConfig } from "@spiritagent/host-internal";
+import { tryResolveTransportConfig } from "@spiritagent/config/resolve-transport";
 import { CodeCompletionService } from "./service.js";
 import type { CodeCompletionResult } from "./core/types.js";
+import type { ModelRef } from "@spiritagent/config";
 
-import { resolveSecondaryLanguageModelProfile } from "@spiritagent/sessions/host/secondary-language-model";
-import type { DesktopConfigFile } from "@spiritagent/sessions/host/storage";
-import { spiritDataDir } from "@spiritagent/sessions/host/storage";
 import type {
   RecordCodeCompletionFileStateRequest,
   RequestCodeCompletionRequest,
@@ -17,10 +15,20 @@ const abortControllersByWorkspaceRoot = new Map<string, AbortController>();
 
 export interface CodeCompletionCommandContext {
   workspaceRoot: string;
-  config: DesktopConfigFile;
+  spiritDataDir: string;
+  config: {
+    activeModel: ModelRef;
+    secondaryLanguageModel?: ModelRef;
+    providers: import("@spiritagent/config").ProviderEntry[];
+    agents: { codeCompletion: { enabled: boolean } };
+  };
+  resolveSecondaryLanguageModelProfile: (config: CodeCompletionCommandContext["config"]) => {
+    name: string;
+    profile: { ref: ModelRef; providerId: string };
+  } | null;
 }
 
-function codeCompletionEnabled(config: DesktopConfigFile): boolean {
+function codeCompletionEnabled(config: CodeCompletionCommandContext["config"]): boolean {
   return config.agents.codeCompletion.enabled;
 }
 
@@ -60,20 +68,20 @@ export function abortCodeCompletionCommand(workspaceRoot: string): void {
 }
 
 /**
- * The code-completion transport for the configured secondary model: host-internal resolves the
+ * The code-completion transport for the configured secondary model: config resolves the
  * declared profile + credentials from config.json, then the agent-core code-completion profile
  * strips reasoning/thinking. Returns undefined when setup is incomplete.
  */
 export function resolveCodeCompletionTransportConfig(
   context: CodeCompletionCommandContext,
 ): ReturnType<typeof applyCodeCompletionTransportProfile> | undefined {
-  const resolved = resolveSecondaryLanguageModelProfile(context.config);
+  const resolved = context.resolveSecondaryLanguageModelProfile(context.config);
   if (!resolved) {
     return undefined;
   }
   const resolvedTransport = tryResolveTransportConfig({
     workspaceRoot: context.workspaceRoot,
-    spiritDataDir: spiritDataDir(),
+    spiritDataDir: context.spiritDataDir,
     modelRef: resolved.profile.ref,
   });
   if (!resolvedTransport.ok) {
@@ -92,7 +100,7 @@ export async function requestCodeCompletionCommand(
 
   const signal = beginCompletionRequest(context.workspaceRoot);
   try {
-    const resolved = resolveSecondaryLanguageModelProfile(context.config);
+    const resolved = context.resolveSecondaryLanguageModelProfile(context.config);
     if (!resolved) {
       return { operations: [] };
     }

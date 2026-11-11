@@ -202,7 +202,7 @@ function buildSetupOptions(input: WizardSetupInput): ProviderOptions | undefined
 }
 
 /**
- * Builds the setup payload for host-internal `saveProviderSetup`: materialization input, wizard
+ * Builds the setup payload for config `saveProviderSetup`: materialization input, wizard
  * transport options, the first model entry, and the active model ref. Credential secrets are
  * attached by the caller (`credentials`).
  */

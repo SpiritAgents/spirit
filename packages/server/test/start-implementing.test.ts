@@ -7,7 +7,7 @@ import {
   createLlmMessageContentFromText,
   setLlmFetchTransportOverrideForTests,
 } from "@spiritagent/agent-core";
-import { readSessionStorageKey, RuntimeSessionStore } from "@spiritagent/host-internal";
+import { readSessionStorageKey, RuntimeSessionStore } from "@spiritagent/sessions";
 import { SessionManager } from "../src/session-manager.js";
 
 const cleanups: (() => Promise<void>)[] = [];

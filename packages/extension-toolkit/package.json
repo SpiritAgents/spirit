@@ -40,6 +40,9 @@
     "fflate": "0.8.3"
   },
   "devDependencies": {
+    "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/create-extension": "workspace:*",
+    "@spiritagent/product": "workspace:*",
     "@types/node": "26.6.6",
     "typescript": "7.0.2",
     "vitest": "^4.1.11"

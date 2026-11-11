@@ -4,11 +4,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
+import { SPIRIT_CONFIG_SCHEMA_VERSION } from "@spiritagent/config";
 import {
-  SPIRIT_CONFIG_SCHEMA_VERSION,
   providerInternalSlotAccount,
   setKeyringStoreForTests,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/config/credentials";
 
 import {
   addProviderModelsCommand,

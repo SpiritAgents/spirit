@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
 
-import { setKeyringStoreForTests, providerInternalKeyAccount } from "@spiritagent/host-internal";
+import {
+  setKeyringStoreForTests,
+  providerInternalKeyAccount,
+} from "@spiritagent/config/credentials";
 
 import {
   abortCodeCompletionCommand,
@@ -17,9 +20,20 @@ import {
 import {
   defaultAgentsConfig,
   setSpiritDataDirOverride,
+  spiritDataDir,
 } from "../../../../packages/sessions/dist/host/storage.js";
+import { resolveSecondaryLanguageModelProfile } from "../../../../packages/sessions/dist/host/secondary-language-model.js";
 
 const workspaceRoot = "/tmp/code-completion-test";
+
+function completionContext(config) {
+  return {
+    workspaceRoot,
+    spiritDataDir: spiritDataDir(),
+    config,
+    resolveSecondaryLanguageModelProfile,
+  };
+}
 
 function writeSecondaryModelFixture(modelName, { apiKeyEnv } = {}) {
   const dir = mkdtempSync(join(tmpdir(), "spirit-code-completion-"));
@@ -168,7 +182,7 @@ test("clearCodeCompletionStateForWorkspace drops journal after record", async ()
 
 test("resolveCodeCompletionTransportConfig resolves the secondary model with the completion profile", async () => {
   await withFixture("local-model", async (baseConfig) => {
-    const config = resolveCodeCompletionTransportConfig({ workspaceRoot, config: baseConfig });
+    const config = resolveCodeCompletionTransportConfig(completionContext(baseConfig));
     assert.ok(config);
     // The unified path carries no vendor identity; the completion profile marks the request.
     // (Reasoning-off for completions is agent-core's transitional llmVendor-keyed profile,
@@ -205,7 +219,7 @@ test("resolveCodeCompletionTransportConfig returns undefined when a declared cha
       secondaryLanguageModel: { providerId: "example", name: "local-model" },
       agents: defaultAgentsConfig(),
     };
-    assert.equal(resolveCodeCompletionTransportConfig({ workspaceRoot, config }), undefined);
+    assert.equal(resolveCodeCompletionTransportConfig(completionContext(config)), undefined);
   } finally {
     setSpiritDataDirOverride(undefined);
     setKeyringStoreForTests(undefined);

@@ -4,14 +4,13 @@ import {
   isEmptyModelRef,
   modelRefsEqual,
   providerCredentialSlotNames,
-  providerInternalSlotAccount,
   resolveProviderTransportKind,
-  saveProviderSetup,
   type ModelEntry,
   type ModelRef,
   type ProviderEntry,
   type ProviderOptions,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/config";
+import { providerInternalSlotAccount, saveProviderSetup } from "@spiritagent/config/credentials";
 import {
   findProviderPreset,
   materializeProviderPreset,
@@ -126,7 +125,7 @@ export interface HostModelCommandContext {
   refreshLspSnapshot(): Promise<void>;
 }
 
-/** Matches the keyring naming in host-internal (`provider::{id}[::{slot}]`). */
+/** Matches the keyring naming in config (`provider::{id}[::{slot}]`). */
 const KEYRING_SERVICE = "Spirit";
 
 /** Cloudflare AI Gateway's gateway id materializes into a literal request header (see .spec/config.md). */

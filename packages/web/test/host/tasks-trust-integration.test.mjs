@@ -8,7 +8,7 @@ import {
   canonicalizeWorkspaceRoot,
   clearWorkspaceCapabilityTrustSessionForTests,
   loadWorkspaceCapabilityTrustStore,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/hooks";
 import { setSpiritDataDirOverride } from "../../../../packages/sessions/dist/host/storage.js";
 
 // The trust integration drives a real DesktopHostService with a hand-set workspaceRoot;
@@ -210,8 +210,7 @@ test("startup initialization evaluates tasks trust for the restored workspace", 
     assert.equal(state.workspaceRoot, path.resolve(workspaceRoot));
 
     // And the restored content would indeed prompt (the chain test pins the enqueue path).
-    const { evaluateWorkspaceTasksTrustGate, loadTaskFiles } =
-      await import("@spiritagent/extensions");
+    const { evaluateWorkspaceTasksTrustGate, loadTaskFiles } = await import("@spiritagent/tasks");
     const gate = await evaluateWorkspaceTasksTrustGate({
       spiritDataDir,
       workspaceRoot: state.workspaceRoot,

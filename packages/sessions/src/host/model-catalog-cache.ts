@@ -10,10 +10,7 @@ import type {
 } from "@spiritagent/agent-core/model-catalog";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 import type { ThinkingCapabilities } from "@spiritagent/agent-core";
-import type {
-  SpiritServiceTiersDeclaration,
-  ThinkingSwitchDeclaration,
-} from "@spiritagent/host-internal/config";
+import type { SpiritServiceTiersDeclaration, ThinkingSwitchDeclaration } from "@spiritagent/config";
 
 import type {
   DesktopModelCapability,

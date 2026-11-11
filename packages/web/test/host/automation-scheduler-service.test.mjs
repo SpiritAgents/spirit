@@ -4,7 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { createHostAutomationStore } from "@spiritagent/host-internal";
+import { createHostAutomationStore } from "@spiritagent/automations";
 
 import {
   failDanglingAutomationRuns,

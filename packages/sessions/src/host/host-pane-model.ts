@@ -4,7 +4,7 @@ import type { DesktopSnapshot, SwitchPaneModelRequest } from "../types.js";
 import type { SessionBundle } from "./session-bundle.js";
 import type { SessionSplitHostContext } from "./session-split.js";
 import { freezePaneActiveModelIfNeeded } from "./active-model-sync.js";
-import { modelExistsInProvider } from "@spiritagent/host-internal";
+import { modelExistsInProvider } from "@spiritagent/config";
 
 export interface PaneModelHostContext extends SessionSplitHostContext {
   adoptActiveModelForForeground(modelRef: import("../types.js").ModelRef): Promise<void>;

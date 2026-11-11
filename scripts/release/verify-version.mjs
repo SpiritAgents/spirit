@@ -72,7 +72,6 @@ const versions = [
   ['product', 'packages/product/package.json', await readJsonVersion('packages/product/package.json')],
   ['desktop', 'apps/desktop/package.json', await readJsonVersion('apps/desktop/package.json')],
   ['agent-core', 'packages/agent-core/package.json', await readJsonVersion('packages/agent-core/package.json')],
-  ['host-internal', 'packages/host-internal/package.json', await readJsonVersion('packages/host-internal/package.json')],
   ['acp-server', 'packages/acp-server/package.json', await readJsonVersion('packages/acp-server/package.json')],
   ['server', 'packages/server/package.json', await readJsonVersion('packages/server/package.json')],
   ['workbench', 'packages/workbench/package.json', await readJsonVersion('packages/workbench/package.json')],

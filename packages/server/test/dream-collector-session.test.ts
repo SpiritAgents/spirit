@@ -5,11 +5,11 @@ import { join } from "node:path";
 import { describe, it } from "vitest";
 
 import { toolNamesFromDefinitions } from "@spiritagent/agent-core";
+import { isSessionId } from "@spiritagent/sessions";
 import {
-  isSessionId,
   setKeyringStoreForTests,
   providerInternalKeyAccount,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/config/credentials";
 
 import { createServerRuntime } from "../src/runtime-factory.js";
 import { SessionManager } from "../src/session-manager.js";

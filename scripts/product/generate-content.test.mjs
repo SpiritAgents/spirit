@@ -83,7 +83,7 @@ test("single-source resources render outside source directories without banners 
     "README.md": "# Project\n\nDirectly maintained documentation.\n",
     "CONTRIBUTING.md": "# Contributing\n",
     "docs/README_en.md": "# Project\n",
-    "packages/host-internal/README.md": "# Host\n",
+    "packages/config/README.md": "# Host\n",
     "apps/site/content/docs/en-US/index.mdx": document,
     "apps/site/content/docs/en-US/meta.json": metadata,
     "packages/extensions/built-in/skills/example/SKILL.md": "# {{product.name}}\n",

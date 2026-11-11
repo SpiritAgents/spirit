@@ -36,7 +36,6 @@
     "@spiritagent/api": "workspace:*",
     "@spiritagent/config": "workspace:*",
     "@spiritagent/extensions": "workspace:*",
-    "@spiritagent/host-internal": "workspace:*",
     "@spiritagent/instructions": "workspace:*",
     "@spiritagent/mcp": "workspace:*",
     "@spiritagent/product": "workspace:*",
@@ -45,6 +44,16 @@
     "@spiritagent/workspace": "workspace:*"
   },
   "devDependencies": {
+    "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/api": "workspace:*",
+    "@spiritagent/config": "workspace:*",
+    "@spiritagent/extensions": "workspace:*",
+    "@spiritagent/instructions": "workspace:*",
+    "@spiritagent/mcp": "workspace:*",
+    "@spiritagent/product": "workspace:*",
+    "@spiritagent/sessions": "workspace:*",
+    "@spiritagent/tools": "workspace:*",
+    "@spiritagent/workspace": "workspace:*",
     "@types/node": "26.6.6",
     "typescript": "7.0.2",
     "vitest": "^4.1.11"

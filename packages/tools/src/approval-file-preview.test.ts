@@ -8,8 +8,8 @@ import {
   APPROVAL_FILE_PREVIEW_MAX_BYTES,
   buildApprovalFileContentPreview,
   buildApprovalFileDiffPreview,
-} from "./approval-file-preview.js";
-import { NodeHostToolService } from "@spiritagent/host-internal";
+} from "@spiritagent/permissions/approval-file-preview";
+import { NodeHostToolService } from "./tools.js";
 
 function workspaceResolver(workspaceRoot: string): (inputPath: string) => string {
   return (inputPath) => join(workspaceRoot, inputPath);

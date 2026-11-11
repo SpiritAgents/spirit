@@ -38,7 +38,7 @@ async function runGit(cwd: string, args: string[]): Promise<void> {
 }
 
 test("listGitBranches and checkoutGitBranch work in a temp repository", async () => {
-  const repoRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-git-"));
+  const repoRoot = await mkdtemp(join(tmpdir(), "spirit-domain-git-"));
 
   try {
     await runGit(repoRoot, ["init"]);
@@ -77,7 +77,7 @@ test("listGitBranches and checkoutGitBranch work in a temp repository", async ()
 });
 
 test("checkoutGitBranch throws GitCheckoutBlockedError when local changes block checkout", async () => {
-  const repoRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-git-blocked-"));
+  const repoRoot = await mkdtemp(join(tmpdir(), "spirit-domain-git-blocked-"));
 
   try {
     await runGit(repoRoot, ["init"]);
@@ -166,7 +166,7 @@ test("computeGitNeedsPush and resolveGitPushRemote", () => {
 });
 
 test("pushGitBranch runs git push -u after local commit without upstream", async () => {
-  const repoRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-push-"));
+  const repoRoot = await mkdtemp(join(tmpdir(), "spirit-domain-push-"));
 
   try {
     await runGit(repoRoot, ["init"]);
@@ -195,7 +195,7 @@ test("pushGitBranch runs git push -u after local commit without upstream", async
 });
 
 test("readGitWorkspaceSnapshot returns empty snapshot outside git repo", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "spirit-host-internal-non-git-"));
+  const dir = await mkdtemp(join(tmpdir(), "spirit-domain-non-git-"));
   try {
     const snapshot = await readGitWorkspaceSnapshot(dir);
     assert.equal(snapshot.isRepository, false);
@@ -209,7 +209,7 @@ test("readGitWorkspaceSnapshot returns empty snapshot outside git repo", async (
 });
 
 test("readGitBranchLabelForBasicInfo reports non-git workspace label", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "spirit-host-internal-non-git-label-"));
+  const dir = await mkdtemp(join(tmpdir(), "spirit-domain-non-git-label-"));
   try {
     assert.equal(await readGitBranchLabelForBasicInfo(dir), NOT_A_GIT_REPOSITORY_BASIC_INFO_LABEL);
     assert.equal(
@@ -245,7 +245,7 @@ test("spirit worktree and branch name validation", () => {
 });
 
 test("addGitWorktree, readWorktreeContext, and mergeSpiritBranchToMain work in a temp repository", async () => {
-  const repoRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-worktree-"));
+  const repoRoot = await mkdtemp(join(tmpdir(), "spirit-domain-worktree-"));
   const worktreeName = "spirit-test-feature";
   const branchName = "spirit/test-feature";
 
@@ -319,7 +319,7 @@ test("parseGitDiffNumstat sums insertions and deletions", () => {
 });
 
 test("readGitWorkingTreeLineDelta counts tracked edits and untracked files", async () => {
-  const repoRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-git-line-delta-"));
+  const repoRoot = await mkdtemp(join(tmpdir(), "spirit-domain-git-line-delta-"));
 
   try {
     await runGit(repoRoot, ["init"]);

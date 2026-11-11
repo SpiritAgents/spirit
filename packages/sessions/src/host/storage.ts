@@ -22,32 +22,37 @@ import {
 import { normalizeModelReasoningEffort } from "@spiritagent/agent-core/reasoning-effort";
 import {
   assertSpiritConfigSchemaVersion,
-  createFileExtensionStateStore,
   emptyModelRef,
   findModelByRef,
   findProviderEntry,
   GOOGLE_VERTEX_SDK_PACKAGE_NAME,
   listAllModelRefs,
   parseModelRef,
-  providerInternalSlotAccount,
-  resolveProviderApiKey,
   SPIRIT_CONFIG_SCHEMA_VERSION,
   validateSpiritConfig,
-  type ExtensionManagementContext,
-  type ExtensionStateStore,
-  loadHostInstructionMetadata,
-  type HostInstructionMetadataSummary,
-  type HostRuleDiscoveryResult,
-  type HostSkillDiscoveryResult,
   type ModelRef,
   type PermissionConfig,
   type ProviderEntry,
   resolveModelByRef,
-  resolveSessionTranscriptFilePath,
-  readSessionStorageKey,
-  resolveDefaultSpiritDataDir,
-  resolveSpiritDataDir,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/config";
+import {
+  createFileExtensionStateStore,
+  type ExtensionManagementContext,
+  type ExtensionStateStore,
+} from "@spiritagent/extensions/storage";
+import {
+  providerInternalSlotAccount,
+  resolveProviderApiKey,
+} from "@spiritagent/config/credentials";
+import {
+  loadHostInstructionMetadata,
+  type HostInstructionMetadataSummary,
+  type HostRuleDiscoveryResult,
+  type HostSkillDiscoveryResult,
+} from "@spiritagent/instructions";
+import { readSessionStorageKey } from "../session-storage-identity.js";
+import { resolveSessionTranscriptFilePath } from "../transcript.js";
+import { resolveDefaultSpiritDataDir, resolveSpiritDataDir } from "@spiritagent/config/data-paths";
 
 import { resolveDesktopAgentMode, type DesktopAgentMode } from "@spiritagent/ui/composer";
 import { normalizeContextUsageSnapshot } from "../lib/context-usage.js";
@@ -77,7 +82,7 @@ import {
 } from "./provider-api-key.js";
 import { normalizeDesktopRewindMetadata } from "./rewind.js";
 
-export { SpiritConfigSchemaError as ConfigSchemaError } from "@spiritagent/host-internal";
+export { SpiritConfigSchemaError as ConfigSchemaError } from "@spiritagent/config";
 export {
   buildModelSecretKeyPresence,
   hasBedrockRuntimeCredentials,
@@ -164,7 +169,7 @@ export interface DesktopConfigFile {
   webHost: DesktopWebHostConfigFile;
   dreams: DesktopDreamConfigFile;
   agents: DesktopAgentsConfigFile;
-  /** Three-state permission allowlist; written by host-internal `savePermissionRule`. Desktop round-trips this so saves do not drop it. */
+  /** Three-state permission allowlist; written by permissions `savePermissionRule`. Desktop round-trips this so saves do not drop it. */
   permission?: PermissionConfig;
   /** CLI TUI layout; omitted means inline. Desktop round-trips this so saves do not drop it. */
   tui?: "inline" | "fullscreen";
@@ -181,7 +186,7 @@ export function resolveDesktopHomeDirectory(): string {
 export type DesktopWebHostConfigFile = RemoteControlConfig;
 export type DesktopWebHostDeviceRecord = RemoteControlDeviceRecord;
 
-/** Matches the keyring naming in `apps/cli/src/model_registry.rs` and host-internal. */
+/** Matches the keyring naming in `apps/cli/src/model_registry.rs` and config. */
 const KEYRING_SERVICE = "Spirit";
 
 function extensionSecretAccount(extensionId: string, key: string): string {
@@ -439,7 +444,7 @@ export async function saveConfig(config: DesktopConfigFile): Promise<void> {
 /**
  * API key resolution for a config model: the `SPIRIT_API_KEY` process override first (CLI
  * parity), then the provider entry's declared channels and the internal keyring
- * (`provider::{id}`), resolved by host-internal.
+ * (`provider::{id}`), resolved by config.
  */
 export async function resolveApiKeyForModel(providerId: string): Promise<string | undefined> {
   const envKey = process.env.SPIRIT_API_KEY?.trim();
@@ -951,7 +956,7 @@ function normalizeConfig(raw: Partial<DesktopConfigFile>): DesktopConfigFile {
     webHost: normalizeWebHostConfig(raw.webHost),
     dreams,
     agents: normalizeAgentsConfig(raw.agents),
-    // Rule-level validation lives in host-internal permissions/config-io; desktop only
+    // Rule-level validation lives in permissions/config-io; desktop only
     // round-trips the block so saves do not strip it.
     ...(typeof raw.permission === "object" &&
     raw.permission !== null &&

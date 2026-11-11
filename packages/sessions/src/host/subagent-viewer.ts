@@ -3,7 +3,7 @@ import {
   buildSubagentConversationSnapshots,
   resolveSubagentPromptFromTaskFields,
   type SubagentViewerMessage,
-} from "@spiritagent/host-internal";
+} from "../subagent-viewer.js";
 
 import type {
   ConversationMessageSnapshot,

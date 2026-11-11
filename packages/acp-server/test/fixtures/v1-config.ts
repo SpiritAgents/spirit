@@ -1,4 +1,4 @@
-import type { ModelRef, ProviderEntry } from "@spiritagent/host-internal";
+import type { ModelRef, ProviderEntry } from "@spiritagent/config";
 
 export function v1ConfigFixture(input: {
   providers: ProviderEntry[];

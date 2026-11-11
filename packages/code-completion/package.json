@@ -38,10 +38,13 @@
   "dependencies": {
     "@spiritagent/agent-core": "workspace:*",
     "@spiritagent/api": "workspace:*",
-    "@spiritagent/host-internal": "workspace:*",
-    "@spiritagent/sessions": "workspace:*"
+    "@spiritagent/config": "workspace:*",
+    "@spiritagent/product": "workspace:*"
   },
   "devDependencies": {
+    "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/api": "workspace:*",
+    "@spiritagent/config": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "@types/node": "26.6.6",
     "typescript": "7.0.2",

@@ -7,7 +7,6 @@ export const NPM_PACKAGE_DIRS = [
   // The existing toolkit/scaffolder cycle is staged as one publication group.
   "packages/extension-toolkit",
   "packages/create-extension",
-  "packages/host-internal",
   "packages/server",
   "packages/acp-server",
 ];

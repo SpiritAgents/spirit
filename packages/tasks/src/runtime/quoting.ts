@@ -1,9 +1,7 @@
 import type { ResolvedTask, TaskArgValue, TaskCommandValue, TaskQuotingStyle } from "../public.js";
 
-export interface TaskShellDefinition {
-  executable: string;
-  args: string[];
-}
+export type { TaskShellDefinition } from "@spiritagent/api/tasks";
+import type { TaskShellDefinition } from "@spiritagent/api/tasks";
 
 export interface TaskInvocation {
   file: string;

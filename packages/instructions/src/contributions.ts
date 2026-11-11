@@ -21,13 +21,15 @@ export interface HostExtensionContributedRule {
   content: string;
 }
 
-export function overlayExtensionRulesAndSkills(
-  existingRules: readonly LlmEnabledRule[],
-  existingSkills: readonly LlmEnabledSkillCatalogEntry[],
-  contributions: {
+export function overlayExtensionRulesAndSkills<
+  T extends {
     skills: readonly HostExtensionContributedSkill[];
     rules: readonly HostExtensionContributedRule[];
   },
+>(
+  existingRules: readonly LlmEnabledRule[],
+  existingSkills: readonly LlmEnabledSkillCatalogEntry[],
+  contributions: T,
   log?: (message: string) => void,
 ): {
   rules: LlmEnabledRule[];

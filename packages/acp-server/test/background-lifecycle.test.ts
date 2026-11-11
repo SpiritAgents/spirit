@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import * as acp from "@agentclientprotocol/sdk";
 import { setLlmFetchTransportOverrideForTests } from "@spiritagent/agent-core";
-import { isSessionId } from "@spiritagent/host-internal";
+import { isSessionId } from "@spiritagent/sessions";
 import type { BackgroundTaskRecord } from "@spiritagent/agent-core";
 import { afterEach, expect, it } from "vitest";
 import { SpiritAcpAgent } from "../src/acp-agent.js";

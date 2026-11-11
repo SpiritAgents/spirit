@@ -1,1 +1,1 @@
-export { withSpiritConfigWriteLock } from "@spiritagent/config/write-lock";
+export { withSpiritConfigWriteLock } from "../write-lock.js";

@@ -22,11 +22,8 @@ import {
   findProviderPreset,
   type ProviderPresetCatalog,
 } from "@spiritagent/agent-core/provider-presets";
-import {
-  providerInternalSlotAccount,
-  type ProviderOptions,
-  type SpiritTransportKind,
-} from "@spiritagent/host-internal";
+import { providerInternalSlotAccount } from "@spiritagent/config/credentials";
+import { type ProviderOptions, type SpiritTransportKind } from "@spiritagent/config";
 
 import type {
   AddProviderModelsRequest,

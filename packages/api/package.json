@@ -64,6 +64,14 @@
       "types": "./dist/errors.d.ts",
       "default": "./dist/errors.js"
     },
+    "./tasks": {
+      "types": "./dist/tasks.d.ts",
+      "default": "./dist/tasks.js"
+    },
+    "./github": {
+      "types": "./dist/github.d.ts",
+      "default": "./dist/github.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -75,12 +83,15 @@
     "@spiritagent/agent-core": "workspace:*",
     "@spiritagent/automations": "workspace:*",
     "@spiritagent/config": "workspace:*",
-    "@spiritagent/github": "workspace:*",
     "@spiritagent/remote-control": "workspace:*",
-    "@spiritagent/tasks": "workspace:*",
     "@spiritagent/ui": "workspace:*"
   },
   "devDependencies": {
+    "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/automations": "workspace:*",
+    "@spiritagent/config": "workspace:*",
+    "@spiritagent/remote-control": "workspace:*",
+    "@spiritagent/ui": "workspace:*",
     "@types/node": "26.6.6",
     "typescript": "7.0.2",
     "vitest": "^4.1.11"

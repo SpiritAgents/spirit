@@ -41,6 +41,7 @@
     "i18next": "26.3.0"
   },
   "devDependencies": {
+    "@spiritagent/product": "workspace:*",
     "@types/node": "26.6.6",
     "typescript": "7.0.2",
     "vitest": "^4.1.11",

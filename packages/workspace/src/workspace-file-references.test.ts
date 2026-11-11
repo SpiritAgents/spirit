@@ -115,7 +115,7 @@ test("derive workspace directory paths from indexed files", () => {
 });
 
 test("collect workspace file index respects root gitignore and default ignored dirs", async () => {
-  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-file-ref-"));
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-domain-file-ref-"));
   try {
     await mkdir(join(workspaceRoot, "src"), { recursive: true });
     await mkdir(join(workspaceRoot, "node_modules", "pkg"), { recursive: true });
@@ -139,7 +139,7 @@ test("collect workspace file index respects root gitignore and default ignored d
 });
 
 test("collect workspace file index respects nested gitignore without git", async () => {
-  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-file-ref-nested-"));
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-domain-file-ref-nested-"));
   try {
     await mkdir(join(workspaceRoot, "src", "pkg"), { recursive: true });
     await writeFile(join(workspaceRoot, "src", ".gitignore"), "pkg/\n");
@@ -156,7 +156,7 @@ test("collect workspace file index respects nested gitignore without git", async
 });
 
 test("cached workspace file suggestions do not block on cold index", async () => {
-  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-file-ref-cached-"));
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-domain-file-ref-cached-"));
   try {
     await writeFile(join(workspaceRoot, "README.md"), "# hello\n");
 
@@ -184,7 +184,7 @@ test("cached workspace file suggestions do not block on cold index", async () =>
 });
 
 test("resolve workspace file attachments truncates oversized content and ignores invalid references", async () => {
-  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-file-attachment-"));
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-domain-file-attachment-"));
   try {
     const oversizedText = "a".repeat(32_800);
     await writeFile(join(workspaceRoot, "README.md"), oversizedText);
@@ -212,7 +212,7 @@ const MINIMAL_MP4_HEADER = Buffer.from([
 ]);
 
 test("resolve workspace file attachments keeps validated videos and ignores fake video extensions", async () => {
-  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-video-attachment-"));
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-domain-video-attachment-"));
   try {
     await writeFile(join(workspaceRoot, "clip.mp4"), MINIMAL_MP4_HEADER);
     await writeFile(join(workspaceRoot, "fake.mp4"), "not really a video");
@@ -230,7 +230,7 @@ test("resolve workspace file attachments keeps validated videos and ignores fake
 });
 
 test("resolve workspace file attachments keeps validated images and ignores fake image extensions", async () => {
-  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-image-attachment-"));
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-domain-image-attachment-"));
   try {
     await writeFile(
       join(workspaceRoot, "diagram.png"),
@@ -254,8 +254,8 @@ test("resolve workspace file attachments keeps validated images and ignores fake
 });
 
 test("resolve workspace file attachments resolves absolute external text paths", async () => {
-  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-ws-"));
-  const externalRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-ext-"));
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-domain-ws-"));
+  const externalRoot = await mkdtemp(join(tmpdir(), "spirit-domain-ext-"));
   try {
     await writeFile(join(workspaceRoot, "README.md"), "# workspace\n");
     const externalFile = join(externalRoot, "notes.txt");
@@ -276,8 +276,8 @@ test("resolve workspace file attachments resolves absolute external text paths",
 });
 
 test("resolve workspace file attachments resolves absolute external image and video paths", async () => {
-  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-ws-abs-media-"));
-  const externalRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-ext-media-"));
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-domain-ws-abs-media-"));
+  const externalRoot = await mkdtemp(join(tmpdir(), "spirit-domain-ext-media-"));
   try {
     await writeFile(join(workspaceRoot, "README.md"), "# workspace\n");
     const pngPath = join(externalRoot, "diagram.png");
@@ -307,7 +307,7 @@ test("resolve workspace file attachments resolves absolute external image and vi
 });
 
 test("classifyLocalFileComposerRoute routes validated media and reference files", async () => {
-  const externalRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-classify-"));
+  const externalRoot = await mkdtemp(join(tmpdir(), "spirit-domain-classify-"));
   try {
     const textPath = join(externalRoot, "notes.txt");
     const pngPath = join(externalRoot, "diagram.png");

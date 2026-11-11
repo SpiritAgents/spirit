@@ -16,7 +16,7 @@ import { useTranslation } from "react-i18next";
 
 import { FilePlus, FolderPlus, ListTodo } from "lucide-react";
 
-import { WORKSPACE_REFERENCE_DIRECTORY_SUFFIX } from "@spiritagent/host-internal/workspace-file-reference-query";
+import { WORKSPACE_REFERENCE_DIRECTORY_SUFFIX } from "@spiritagent/api/workspace-file-reference-query";
 
 import {
   WorkspaceFileContextMenuContent,

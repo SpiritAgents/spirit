@@ -981,7 +981,8 @@ async function linkWorkspaceNodeModules(repoRoot, workspacePath) {
 
   const packageRelativePaths = [
     'packages/agent-core/node_modules',
-    'packages/host-internal/node_modules',
+    'packages/instructions/node_modules',
+    'packages/tools/node_modules',
     'packages/extension-toolkit/node_modules',
   ];
 
@@ -1048,8 +1049,8 @@ async function loadWorkspaceRuntimeModules(workspacePath) {
     importModuleFromWorkspace(workspacePath, 'packages/agent-core/dist/openai/transport-factory.js'),
     importModuleFromWorkspace(workspacePath, 'packages/agent-core/dist/openai/tool-agent-helpers.js'),
     importModuleFromWorkspace(workspacePath, 'packages/agent-core/dist/openai/openai-compat.js'),
-    importModuleFromWorkspace(workspacePath, 'packages/host-internal/dist/discovery.js'),
-    importModuleFromWorkspace(workspacePath, 'packages/host-internal/dist/tools.js'),
+    importModuleFromWorkspace(workspacePath, 'packages/instructions/dist/discovery.js'),
+    importModuleFromWorkspace(workspacePath, 'packages/tools/dist/tools.js'),
   ]);
 
   return {
@@ -1083,7 +1084,8 @@ async function buildWorkspacePackages(workspacePath) {
     'turbo',
     'run',
     'build',
-    '--filter=@spiritagent/host-internal',
+    '--filter=@spiritagent/instructions',
+    '--filter=@spiritagent/tools',
     '--filter=@spiritagent/agent-core',
   ]);
 }

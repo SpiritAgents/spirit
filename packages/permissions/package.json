@@ -30,7 +30,10 @@
     "@spiritagent/workspace": "workspace:*"
   },
   "devDependencies": {
-    "@spiritagent/host-internal": "workspace:*",
+    "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/api": "workspace:*",
+    "@spiritagent/config": "workspace:*",
+    "@spiritagent/workspace": "workspace:*",
     "@types/node": "26.6.6",
     "typescript": "7.0.2",
     "vitest": "^4.1.11"

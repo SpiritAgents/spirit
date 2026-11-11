@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { brandedMacExecutable, devElectronDir } from "./dev-electron-bundle.mjs";
 import { stopRegisteredDaemons } from "./dev-daemon-lifecycle.mjs";
 import { developmentRestartWatchDirs } from "./dev-reload-graph.mjs";
-import { resolveSpiritDataDir } from "../../../packages/host-internal/dist/data-paths.js";
+import { resolveSpiritDataDir } from "../../../packages/config/dist/data-paths.js";
 
 const desktopRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = path.resolve(desktopRoot, "..", "..");

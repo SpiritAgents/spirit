@@ -4,11 +4,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
+import { applyWorkspaceTasksTrustDecision } from "@spiritagent/tasks/trust";
 import {
-  applyWorkspaceTasksTrustDecision,
   clearWorkspaceCapabilityTrustSessionForTests,
   loadWorkspaceCapabilityTrustStore,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/hooks";
 import {
   createTaskRunResolver,
   evaluateAndFilterTaskFiles,

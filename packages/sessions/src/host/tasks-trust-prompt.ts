@@ -1,8 +1,8 @@
+import { canonicalizeWorkspaceRoot } from "@spiritagent/hooks";
 import {
-  canonicalizeWorkspaceRoot,
   type WorkspaceCapabilityTrustDecision,
   type WorkspaceCapabilityTrustRequest,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/api/workspace-trust";
 
 export type WorkspaceTasksTrustPayload = NonNullable<WorkspaceCapabilityTrustRequest["tasks"]>;
 

@@ -18,7 +18,7 @@ import {
 } from "@spiritagent/github";
 
 import { cloneDesktopConfig } from "@spiritagent/sessions/host/service-utils";
-import { modelExistsInProvider } from "@spiritagent/host-internal";
+import { modelExistsInProvider } from "@spiritagent/config";
 import { loadGitHubAccessToken } from "@spiritagent/github/auth-storage";
 import { spiritDataDir, type DesktopConfigFile } from "@spiritagent/sessions/host/storage";
 import { runDesktopAutomationOnce } from "./automation-runner.js";

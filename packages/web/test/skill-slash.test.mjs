@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { currentWorkspaceFileReferenceQuery } from "@spiritagent/host-internal/workspace-file-reference-query";
+import { currentWorkspaceFileReferenceQuery } from "@spiritagent/api/workspace-file-reference-query";
 
 import {
   buildSkillSlashSuggestions,

@@ -13,7 +13,7 @@ import type { TFunction } from "i18next";
 import {
   codeUnitIndexToCharCount,
   mergeRecentIntoSuggestions,
-} from "@spiritagent/host-internal/workspace-file-reference-query";
+} from "@spiritagent/api/workspace-file-reference-query";
 
 import type { ComposerRichInputHandle } from "@spiritagent/ui/composer";
 import { segmentsToMessageText, segmentsToPlainText } from "@spiritagent/ui/composer";

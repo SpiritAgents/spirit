@@ -329,7 +329,7 @@ interface PreparedAcpRuntime extends Pick<
  *
  * Key differences from the daemon-backed server runtime:
  * - No WebSocket session attach (ACP uses ndJSON on stdio)
- * - host-internal is loaded directly as a dependency (not via env-var dynamic import)
+ * - Host services are loaded directly as dependencies (not via env-var dynamic import)
  * - No LSP, extensions, todos, or image/video generation
  */
 async function prepareAcpRuntime(
@@ -375,7 +375,7 @@ async function prepareAcpRuntime(
   toolExecutor.setTransportConfigForToolDefinitions(transportConfig);
   await toolExecutor.refreshCaches();
 
-  // 3. Load rules/skills via host-internal discovery
+  // 3. Load rules/skills via instructions discovery
   const metadata = await loadHostInstructionMetadata(
     { workspaceRoot, spiritDataDir },
     { planMode: initialMode === "plan", agentMode: initialMode },

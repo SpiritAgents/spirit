@@ -7,8 +7,8 @@ import { test } from "vitest";
 import {
   clearWorkspaceCapabilityTrustSessionForTests,
   persistPermanentWorkspaceCapabilityTrust,
-} from "@spiritagent/host-internal";
-import { loadTaskFiles, computeWorkspaceTasksContentHash } from "@spiritagent/extensions";
+} from "@spiritagent/hooks";
+import { loadTaskFiles, computeWorkspaceTasksContentHash } from "@spiritagent/tasks";
 import { setSpiritDataDirOverride } from "../../../../packages/sessions/dist/host/storage.js";
 
 async function withService(run) {

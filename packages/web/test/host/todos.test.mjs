@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import { createHostTodoStore } from "@spiritagent/host-internal";
+import { createHostTodoStore } from "@spiritagent/sessions/todo-store";
 
 import {
   createTodoSessionScopeKey,

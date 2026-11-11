@@ -19,10 +19,6 @@
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/i18n/src/locales/*.json"],
       "outputs": [".next/**", ".source/**", ".generated/**", "public/**"]
     },
-    "@spiritagent/host-internal#build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
-    },
     "build:tsc": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]

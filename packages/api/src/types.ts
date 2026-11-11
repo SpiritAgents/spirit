@@ -41,13 +41,12 @@ import type { WorkspaceFileReferenceSuggestionsResult } from "./workspace-file-r
 import type { ApprovalLevel } from "./approval-level.js";
 import type { WorkLocationKind } from "./work-location.js";
 import type { LocalFileComposerRoute } from "./local-file-composer-route.js";
-import type { DesktopGitSnapshot } from "@spiritagent/github/types";
+import type { DesktopGitSnapshot } from "./github.js";
 import type {
   WorkspaceCapabilityTrustDecision,
   WorkspaceCapabilityTrustRequest,
 } from "./workspace-trust.js";
-import type { ResolvedTask, TaskMenuItem } from "@spiritagent/tasks";
-import type { TaskShellDefinition } from "@spiritagent/tasks/runtime";
+import type { ResolvedTask, TaskMenuItem, TaskShellDefinition } from "./tasks.js";
 
 export type {
   ApprovalLevel,
@@ -1418,7 +1417,7 @@ export type {
   SearchGitHubAutomationRepositoriesRequest,
   GitHubAutomationRepositoriesSnapshot,
   SearchGitHubAutomationRepositoriesSnapshot,
-} from "@spiritagent/github/types";
+} from "./github.js";
 
 export type DesktopAutomationRunStatus = "running" | "blocked" | "completed" | "failed";
 
@@ -1486,7 +1485,7 @@ export interface WorkspaceContentInvalidation {
   reason: WorkspaceContentInvalidationReason;
 }
 
-export type { DesktopGitSnapshot } from "@spiritagent/github/types";
+export type { DesktopGitSnapshot } from "./github.js";
 
 export interface GitWorkingTreeChange {
   path: string;
@@ -1575,19 +1574,16 @@ export type {
   GitHubPullRequestTabCounts,
   GitHubPullRequestTaskListProgress,
   GitHubRepositoryRef,
-} from "@spiritagent/github/types";
+} from "./github.js";
 
 export type {
   ListGitHubPullRequestsRequest,
   GetGitHubPullRequestTabCountsRequest,
   GetGitHubPullRequestDetailRequest,
   MergeGitHubPullRequestRequest,
-} from "@spiritagent/github/types";
+} from "./github.js";
 
-export type {
-  GitHubPullRequestMergeMethod,
-  GitHubPullRequestMergeResult,
-} from "@spiritagent/github/types";
+export type { GitHubPullRequestMergeMethod, GitHubPullRequestMergeResult } from "./github.js";
 
 export interface ModelProfileSnapshot {
   /** Provider entry id (`providers[].id` in config.json). */

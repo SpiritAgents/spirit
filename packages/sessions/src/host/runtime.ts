@@ -1,5 +1,5 @@
 import { type LlmActiveSkill, type LlmToolAgentBasicInfo } from "@spiritagent/agent-core";
-import { resolveTranscriptSessionDir } from "@spiritagent/host-internal";
+import { resolveTranscriptSessionDir } from "../transcript.js";
 
 import { spiritDataDir } from "./storage.js";
 import type { DesktopToolExecutor } from "./tool-executor.js";

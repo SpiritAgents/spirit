@@ -5,11 +5,11 @@ import {
   buildAutomationTriggerMessage,
   createHostAutomationStore,
   defaultAutomationRunTriggerContext,
-  readGitWorkspaceSnapshot,
   type AutomationRunTriggerContext,
   type HostAutomationDefinition,
   type HostAutomationRun,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/automations";
+import { readGitWorkspaceSnapshot } from "@spiritagent/workspace";
 import {
   AutomationConversationProjection,
   runAutomationStreamingTurn,
@@ -22,7 +22,7 @@ import {
 } from "./automation-runtime.js";
 import { createDesktopRewindMetadata } from "@spiritagent/sessions/host/rewind";
 import { buildStoredDesktopSession } from "@spiritagent/sessions/host/sessions";
-import { modelExistsInProvider, modelRefKey } from "@spiritagent/host-internal";
+import { modelExistsInProvider, modelRefKey } from "@spiritagent/config";
 import {
   chatsDirPath,
   resolveApiKeyForConfigModel,

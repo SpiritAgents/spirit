@@ -6,7 +6,7 @@ import {
   listGitWorktrees,
   readWorktreeContext,
   resolvePrimaryRepoRoot,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/workspace";
 
 export async function resolveStoredSessionWorkspaceRoot(input: {
   workspaceRoot: string;

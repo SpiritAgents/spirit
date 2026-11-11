@@ -1,11 +1,8 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 
-import {
-  createHostTodoStore,
-  type HostTodoRecord,
-  type HostTodoScope,
-} from "@spiritagent/host-internal";
+import { createHostTodoStore, type HostTodoRecord } from "../todo-store.js";
+import { type HostTodoScope } from "@spiritagent/api/tools";
 
 import type { DesktopTodoItem } from "../types.js";
 import { isProvisionalSessionPath, spiritDataDir } from "./storage.js";

@@ -250,7 +250,7 @@ test("mergeGitLogCommitPages dedupes tail commits and preserves head order", () 
 });
 
 test("readGitWorkingTreeChanges and readGitCommitHistory in a temp repo with merge", async () => {
-  const repoRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-git-graph-"));
+  const repoRoot = await mkdtemp(join(tmpdir(), "spirit-domain-git-graph-"));
 
   try {
     await runGit(repoRoot, ["init"]);

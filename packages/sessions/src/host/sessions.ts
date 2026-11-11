@@ -20,15 +20,11 @@ import type {
   ConversationMessageSnapshot,
   SessionListItem,
 } from "../types.js";
+import { normalizeApprovalLevel } from "@spiritagent/permissions/approval-level";
 import { resolveDesktopSessionTranscriptPath } from "./transcript-session.js";
-import {
-  extractActivePlanPathFromLlmHistory,
-  modelRefKey,
-  normalizeApprovalLevel,
-  parseModelRef,
-  type ApprovalLevel,
-  type ModelRef,
-} from "@spiritagent/host-internal";
+import { extractActivePlanPathFromLlmHistory } from "@spiritagent/instructions/plans";
+import { modelRefKey, parseModelRef, type ModelRef } from "@spiritagent/config";
+import { type ApprovalLevel } from "@spiritagent/api/approval-level";
 import type { QueuedUserTurn } from "./message-queue.js";
 import type { SessionTitleSource } from "./contracts.js";
 import type { DesktopTimelineTurnSnapshot } from "./message-timeline.js";
@@ -102,7 +98,7 @@ export interface RestoredSessionState {
   contextUsage?: ConversationContextUsageSnapshot;
   subagentDesktopMessagesBySessionId?: Map<string, ConversationMessageSnapshot[]>;
   queuedUserTurns?: QueuedUserTurn[];
-  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  workLocation?: import("@spiritagent/api/work-location").WorkLocationKind;
   worktreePath?: string;
   worktreeBranch?: string;
 }
@@ -254,7 +250,7 @@ export function buildStoredDesktopSession(input: {
   pinnedAtUnixMs?: number;
   workspaceRoot: string;
   gitBranch?: string;
-  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  workLocation?: import("@spiritagent/api/work-location").WorkLocationKind;
   worktreePath?: string;
   worktreeBranch?: string;
   activePlanPath?: string;

@@ -1096,15 +1096,15 @@ export class NodeHostToolService<
         });
       case "subagent":
         throw new Error(
-          "subagent must be handled by the Agent runtime, not the host-internal tool executor",
+          "subagent must be handled by the Agent runtime, not the built-in host tool executor",
         );
       case "generate_image":
         throw new Error(
-          "generate_image must be handled by the Agent runtime, not the host-internal tool executor",
+          "generate_image must be handled by the Agent runtime, not the built-in host tool executor",
         );
       case "generate_video":
         throw new Error(
-          "generate_video must be handled by the Agent runtime, not the host-internal tool executor",
+          "generate_video must be handled by the Agent runtime, not the built-in host tool executor",
         );
       case "ask_questions":
         throw new Error(

@@ -4,11 +4,11 @@ import {
   deleteTranscriptSessionDir,
   ensureTranscriptSessionDir,
   resolveSessionTranscriptFilePath,
-} from "@spiritagent/host-internal";
+} from "../transcript.js";
 
 import { spiritDataDir } from "./storage.js";
 
-/** The chat path is a lookup key; host-internal resolves its stable storage identity. */
+/** The chat path is a lookup key; sessions resolves its stable storage identity. */
 export function resolveTranscriptSessionKeyForChatPath(chatPath: string): string {
   return path.resolve(chatPath);
 }

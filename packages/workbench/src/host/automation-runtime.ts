@@ -1,7 +1,8 @@
 import path from "node:path";
 
 import { type ChatArchive } from "@spiritagent/agent-core";
-import { normalizeApprovalLevel, type HostAutomationDefinition } from "@spiritagent/host-internal";
+import { type HostAutomationDefinition } from "@spiritagent/automations";
+import { normalizeApprovalLevel } from "@spiritagent/permissions/approval-level";
 
 import type { DesktopHostRuntime } from "@spiritagent/sessions/host/runtime";
 import {

@@ -4,7 +4,8 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
 
-import { SPIRIT_CONFIG_SCHEMA_VERSION, configFilePath } from "@spiritagent/host-internal";
+import { SPIRIT_CONFIG_SCHEMA_VERSION } from "@spiritagent/config";
+import { configFilePath } from "@spiritagent/config/credentials";
 
 import { HOST_METHODS, HostService, type HostCheckPermissionResult } from "../src/host-service.js";
 import type { SessionManager } from "../src/session-manager.js";

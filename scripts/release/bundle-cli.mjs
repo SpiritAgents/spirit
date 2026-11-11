@@ -230,7 +230,6 @@ async function main() {
 
   const desktopPackage = await readJson('apps/desktop/package.json');
   const agentCorePackage = await readJson('packages/agent-core/package.json');
-  const hostInternalPackage = await readJson('packages/host-internal/package.json');
   const serverPackage = await readJson('packages/server/package.json');
   const workbenchPackage = await readJson('packages/workbench/package.json');
   const productPackage = await readJson('packages/product/package.json');
@@ -307,7 +306,6 @@ async function main() {
           cli: version,
           desktop: desktopPackage.version,
           agentCore: agentCorePackage.version,
-          hostInternal: hostInternalPackage.version,
           server: serverPackage.version,
           workbench: workbenchPackage.version,
           product: productPackage.version,

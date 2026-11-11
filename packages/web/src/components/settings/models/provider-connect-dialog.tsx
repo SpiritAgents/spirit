@@ -57,11 +57,11 @@ import type {
   PreviewModelsRequest,
   PreviewModelsResponse,
 } from "@/types";
-import { isValidAzureResourceName } from "@spiritagent/host-internal/azure-resource";
+import { isValidAzureResourceName } from "@spiritagent/agent-core/azure-resource";
 import {
   isValidCloudflareAccountId,
   isValidCloudflareGatewayId,
-} from "@spiritagent/host-internal/cloudflare-ai-gateway-resource";
+} from "@spiritagent/agent-core/cloudflare-ai-gateway-resource";
 
 export type ProviderConnectDialogProps = {
   /** Provider preset id (or `custom`) to connect; the parent remounts this component with a new key on each connection attempt to reset the form. */

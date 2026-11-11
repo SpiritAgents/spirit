@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 
-import { isWorkspaceReferenceDirectoryPath } from "@spiritagent/host-internal/workspace-file-reference-query";
+import { isWorkspaceReferenceDirectoryPath } from "@spiritagent/api/workspace-file-reference-query";
 
 import {
   evictRecentPoolPaths,
