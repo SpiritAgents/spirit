@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
@@ -111,6 +111,34 @@ test("same-instance host heartbeats refresh the lease without broadcasting updat
     assert.equal(secondLease.startedAt, firstLease.startedAt);
     assert.ok(secondLease.heartbeatAt >= firstLease.heartbeatAt);
     assert.equal((await manager.getState()).hostAvailable, true);
+  } finally {
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+test("a stale lease becoming available again emits one recovery update", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "remote-control-stale-heartbeat-"));
+  let notifications = 0;
+  const manager = new RemoteControlManager({
+    dataDir,
+    onStateChanged: () => {
+      notifications += 1;
+    },
+  });
+  try {
+    await manager.registerHost("workbench-test", process.pid, "127.0.0.1", 7788);
+    assert.equal(notifications, 1);
+    const path = join(dataDir, "server", "remote-control-host.json");
+    const stale = JSON.parse(await readFile(path, "utf8")) as { heartbeatAt: number };
+    stale.heartbeatAt = Date.now() - 31_000;
+    await writeFile(path, JSON.stringify(stale));
+
+    await manager.registerHost("workbench-test", process.pid, "127.0.0.1", 7788);
+
+    assert.equal(notifications, 2);
+    assert.equal((await manager.getState()).hostAvailable, true);
+    await manager.registerHost("workbench-test", process.pid, "127.0.0.1", 7788);
+    assert.equal(notifications, 2);
   } finally {
     await rm(dataDir, { recursive: true, force: true });
   }

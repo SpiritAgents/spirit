@@ -252,6 +252,7 @@ export class RemoteControlManager {
   async registerHost(instanceId: string, pid: number, host: string, port: number): Promise<void> {
     const path = hostLeasePath(this.options.dataDir);
     const existing = await readHostLease(path);
+    const wasAvailable = await this.hostAvailable();
     if (
       existing?.instanceId === instanceId &&
       existing.pid === pid &&
@@ -266,9 +267,12 @@ export class RemoteControlManager {
           heartbeatAt: Date.now(),
         }),
       );
+      if (!wasAvailable) {
+        this.options.onStateChanged?.(await this.getState());
+      }
       return;
     }
-    if (await this.hostAvailable()) {
+    if (wasAvailable) {
       if (existing?.instanceId !== instanceId) {
         throw new Error("Remote Control Host is already running.");
       }
