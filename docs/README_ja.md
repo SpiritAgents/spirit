@@ -56,8 +56,8 @@ pnpm run dev:cli    # cargo run -p spirit
 │    sessions, streaming, approvals       │             │
 │                  │                      │             │
 │                  ▼                      │             │
-│        packages/host-internal           │             │
-│     discovery, tools, workspace  ◀──────┘             │
+│       TS host domain packages           │             │
+│ config, sessions, tools, workspace ◀────┘             │
 │                  │                                    │
 │                  ▼                                    │
 │         packages/agent-core                           │
@@ -116,7 +116,7 @@ Agent Core がモデルから見えるプロジェクト文脈を決定します
 - **Smoke スイート** — `packages/agent-core/src/smoke` の契約・ランタイム・ライブプロバイダチェック。
 - **Eval ハーネス** — プロンプトやツール定義変更向けシナリオ比較（リポジトリルートで `pnpm run eval:compare`）。
 
-`@spiritagent/agent-core` は npm 公開；[`packages/host-internal`](../packages/host-internal) は Desktop 共有のホスト側探索、拡張、マーケットプレイス、ワークスペースヘルパー、LSP オーケストレーション。
+`@spiritagent/agent-core` は npm 公開；[TypeScript Host domain packages](../packages) は Desktop 共有のホスト側探索、拡張、マーケットプレイス、ワークスペースヘルパー、LSP オーケストレーション。
 
 ## Server
 
@@ -182,15 +182,15 @@ pnpm run dev:site
 
 **要件：** Node.js 26.13.0、pnpm 12.4.2（`npm install --global pnpm@12.4.2` でインストール）。CLI ビルドには Rust ツールチェーン。
 
-| コマンド                   | 説明                                                                      |
-| -------------------------- | ------------------------------------------------------------------------- |
-| `pnpm install`             | workspace 依存関係をインストール（リポジトリルートで一度）                |
-| `pnpm run dev:desktop`     | 共有パッケージをビルドして Desktop 起動（Vite + Electron）                |
-| `pnpm run dev:desktop:web` | Desktop レンダラー + ブラウザ Web ホスト                                  |
-| `pnpm run dev:site`        | マーケティング／ドキュメントサイトを起動（Next.js）                       |
-| `pnpm run dev:cli`         | TUI 付き CLI                                                              |
-| `pnpm run build`           | agent-core、host-internal、server、acp-server、Desktop、site の本番ビルド |
-| `pnpm run eval:compare`    | agent-core 変更後の eval 比較                                             |
+| コマンド                   | 説明                                                                  |
+| -------------------------- | --------------------------------------------------------------------- |
+| `pnpm install`             | workspace 依存関係をインストール（リポジトリルートで一度）            |
+| `pnpm run dev:desktop`     | 共有パッケージをビルドして Desktop 起動（Vite + Electron）            |
+| `pnpm run dev:desktop:web` | Desktop レンダラー + ブラウザ Web ホスト                              |
+| `pnpm run dev:site`        | マーケティング／ドキュメントサイトを起動（Next.js）                   |
+| `pnpm run dev:cli`         | TUI 付き CLI                                                          |
+| `pnpm run build`           | agent-core、workbench、server、acp-server、Desktop、site の本番ビルド |
+| `pnpm run eval:compare`    | agent-core 変更後の eval 比較                                         |
 
 ### リポジトリ構成
 
@@ -201,7 +201,11 @@ apps/
   cli/               Rust CLI と TUI
 packages/
   agent-core/        エージェントランタイム、プロンプト、ツール定義、トランスポート、MCP、eval
-  host-internal/     共有ホスト探索、ツール、拡張、LSP ヘルパー
+  config/            Configuration and credentials
+  sessions/          Session persistence and orchestration
+  tools/             Built-in Host tool execution
+  workbench/         Shared Workbench composition root
+  web/               Shared renderer and static application
   server/            CLI / Desktop / Web 向け共有デーモンバックエンド（WebSocket + JSON-RPC）
   acp-server/        エディタ統合向け ACP サーバーアダプター
 scripts/             リリース、eval、リポジトリ自動化

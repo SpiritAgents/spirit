@@ -16,7 +16,7 @@ We use GitHub’s private vulnerability reporting so details stay confidential u
 
 ## What to include
 
-- Affected component (Desktop, CLI, server, agent-core, host-internal, acp-server, etc.)
+- Affected component (Desktop, CLI, server, agent-core, config, sessions, tools, acp-server, etc.)
 - Steps to reproduce
 - Impact assessment (what an attacker could do)
 - Proof of concept, if available

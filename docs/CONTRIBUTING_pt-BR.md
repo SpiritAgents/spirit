@@ -39,7 +39,7 @@ O Spirit tem um modelo de camadas claro. Antes de mexer em vários pacotes, leia
 | Camada                       | Caminho                                                                           | Papel                                                               |
 | ---------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | Semântica do agente          | `packages/agent-core`                                                             | Runtime, prompts, contratos de ferramentas, MCP, transports         |
-| Lógica de host compartilhada | `packages/host-internal`                                                          | Descoberta, extensões, auxiliares de workspace, orquestração de LSP |
+| Lógica de host compartilhada | `packages/{config,instructions,sessions,tools,workspace,extensions,lsp}`          | Descoberta, extensões, auxiliares de workspace, orquestração de LSP |
 | Hosts / adaptadores          | `apps/desktop`, `apps/cli`, `apps/site`, `packages/server`, `packages/acp-server` | UI e execução finas, específicas da plataforma                      |
 
 Não duplique definições de ferramentas nem prompts entre a CLI e o Desktop. Contratos de ferramentas novos ficam em `agent-core`; a execução fica no host.

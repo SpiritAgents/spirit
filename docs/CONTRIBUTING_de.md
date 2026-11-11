@@ -39,7 +39,7 @@ Spirit hat ein klares Schichtenmodell. Lesen Sie vor Änderungen an mehreren Pak
 | Schicht               | Pfad                                                                              | Rolle                                                       |
 | --------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | Agentensemantik       | `packages/agent-core`                                                             | Runtime, Prompts, Tool-Verträge, MCP, Transports            |
-| Gemeinsame Host-Logik | `packages/host-internal`                                                          | Discovery, Extensions, Workspace-Helfer, LSP-Orchestrierung |
+| Gemeinsame Host-Logik | `packages/{config,instructions,sessions,tools,workspace,extensions,lsp}`          | Discovery, Extensions, Workspace-Helfer, LSP-Orchestrierung |
 | Hosts / Adapter       | `apps/desktop`, `apps/cli`, `apps/site`, `packages/server`, `packages/acp-server` | Dünne, plattformspezifische UI und Ausführung               |
 
 Duplizieren Sie Tool-Definitionen oder Prompts nicht zwischen CLI und Desktop. Neue Tool-Verträge gehören in `agent-core`; die Ausführung gehört in den Host.

@@ -27,7 +27,7 @@ This is an internal capability library, not a public SDK. If a public SDK ever s
 
 ## Host configuration sources
 
-`McpService` accepts `McpServiceOptions.configSource`. The host supplies synchronous configuration reads for immediate registry priming and a user-scope cache key. Without a source, the SDK service has no file-backed MCP servers; it does not discover a home directory or read configuration files. Hosts in this repository use `createHostMcpService` from `@spiritagent/host-internal`. MCP parsing, merging, protocol handling, and runtime semantics remain in Agent Core.
+`McpService` accepts `McpServiceOptions.configSource`. The host supplies synchronous configuration reads for immediate registry priming and a user-scope cache key. Without a source, the SDK service has no file-backed MCP servers; it does not discover a home directory or read configuration files. Hosts in this repository use `createHostMcpService` from `@spiritagent/mcp`. MCP parsing, merging, protocol handling, and runtime semantics remain in Agent Core.
 
 ## Requirements
 
@@ -35,7 +35,9 @@ This is an internal capability library, not a public SDK. If a public SDK ever s
 
 ## Related packages
 
-- [`@spiritagent/host-internal`](https://www.npmjs.com/package/@spiritagent/host-internal) — shared host discovery, tools, extensions, LSP helpers, and config / credential resolution.
+- [`@spiritagent/mcp`](../mcp) — file-backed MCP configuration and workspace service registries.
+- [`@spiritagent/tools`](../tools) — built-in Host tool execution and output archives.
+- [`@spiritagent/config`](../config) — configuration, credentials, and transport resolution.
 - [`@spiritagent/acp-server`](https://www.npmjs.com/package/@spiritagent/acp-server) — ACP server adapter for editor integration.
 
 ## License
