@@ -21,6 +21,8 @@ pub mod llm_types;
 #[cfg(feature = "tui")]
 pub mod locale;
 pub mod logging;
+#[cfg(target_os = "macos")]
+pub(crate) mod macos_keychain;
 pub mod mcp;
 pub mod mcp_types;
 pub mod model_catalog_display;

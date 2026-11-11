@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-import { open, readdir } from 'node:fs/promises';
+import { mkdtemp, open, readdir, rm } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { renderMacosKeychainEntitlements } from './macos-keychain-sharing.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const nodeEntitlements = path.join(scriptDir, 'entitlements', 'macos-node.plist');
@@ -121,20 +123,45 @@ export async function signCliBundle(bundleRoot) {
     return;
   }
 
-  // The node/ subtree uses upstream Node's entitlements; all other binaries only enable hardened runtime.
+  const teamId = process.env.SPIRIT_MACOS_TEAM_ID?.trim() || process.env.APPLE_TEAM_ID?.trim();
+  if (!teamId) {
+    throw new Error('SPIRIT_MACOS_TEAM_ID is required when signing the CLI bundle');
+  }
+  const entitlementDir = await mkdtemp(path.join(tmpdir(), 'spirit-macos-entitlements-'));
+  const nodeSharedEntitlements = path.join(entitlementDir, 'node.plist');
+  const cliSharedEntitlements = path.join(entitlementDir, 'cli.plist');
+  await renderMacosKeychainEntitlements({
+    teamId,
+    outputPath: nodeSharedEntitlements,
+    baseEntitlementsPath: nodeEntitlements,
+  });
+  await renderMacosKeychainEntitlements({
+    teamId,
+    outputPath: cliSharedEntitlements,
+  });
+
+  // Only Spirit's private Node runtime and CLI join the sharing group. Other bundled tools do not.
   const nodeRoot = path.join(bundleRoot, 'node');
   const groups = [
-    { files: await collectMachO(nodeRoot), entitlements: nodeEntitlements },
+    { files: await collectMachO(nodeRoot), entitlements: nodeSharedEntitlements },
     { files: await collectMachO(bundleRoot, ['node']), entitlements: undefined },
   ];
 
   let signed = 0;
-  for (const group of groups) {
-    for (const filePath of group.files) {
-      console.log(`Signing ${path.relative(bundleRoot, filePath)}`);
-      signFile(filePath, { ...signing, entitlements: group.entitlements });
-      signed += 1;
+  try {
+    for (const group of groups) {
+      for (const filePath of group.files) {
+        console.log(`Signing ${path.relative(bundleRoot, filePath)}`);
+        const entitlements =
+          filePath === path.join(bundleRoot, 'bin', 'spirit')
+            ? cliSharedEntitlements
+            : group.entitlements;
+        signFile(filePath, { ...signing, entitlements });
+        signed += 1;
+      }
     }
+  } finally {
+    await rm(entitlementDir, { recursive: true, force: true });
   }
 
   console.log(`Signed ${signed} Mach-O binaries with ${signing.identity}`);

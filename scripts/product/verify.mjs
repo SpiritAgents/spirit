@@ -54,6 +54,7 @@ try {
       "scripts/product/source-audit.test.mjs",
       "scripts/product/workbench-boundaries.test.mjs",
       "scripts/release/product-release.test.mjs",
+      "scripts/release/macos-keychain-sharing.test.mjs",
     ],
     { cwd: root, env, stdio: "inherit" },
   );

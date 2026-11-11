@@ -1463,12 +1463,23 @@ pub fn provider_slot_account(provider_id: &str, slot: &str) -> String {
     }
 }
 
-fn read_keyring_password(service: &str, account: &str) -> Option<String> {
+fn read_legacy_keyring_password(service: &str, account: &str) -> Option<String> {
     let entry = keyring::Entry::new(service, account).ok()?;
     entry
         .get_password()
         .ok()
         .and_then(|value| non_blank(&value))
+}
+
+fn read_keyring_password(service: &str, account: &str) -> Option<String> {
+    #[cfg(target_os = "macos")]
+    if service == KEYRING_SERVICE && crate::macos_keychain::shared_access_group().is_some() {
+        return crate::macos_keychain::get_shared_password(service, account)
+            .ok()
+            .flatten()
+            .and_then(|value| non_blank(&value));
+    }
+    read_legacy_keyring_password(service, account)
 }
 
 /// Reads an external keyring entry referenced by `apiKeyKeyring` or a `credentials` slot.
@@ -1478,6 +1489,14 @@ pub fn read_external_keyring_secret(service: &str, account: &str) -> Option<Stri
 
 /// Writes an internal keyring account; a blank value deletes the entry.
 pub fn save_provider_secret(account: &str, secret: &str) -> Result<()> {
+    #[cfg(target_os = "macos")]
+    if crate::macos_keychain::shared_access_group().is_some() {
+        crate::macos_keychain::delete_shared_password(KEYRING_SERVICE, account)?;
+        if !secret.trim().is_empty() {
+            crate::macos_keychain::add_shared_password(KEYRING_SERVICE, account, secret.trim())?;
+        }
+        return Ok(());
+    }
     let entry = keyring_entry_for_account(account)?;
     if secret.trim().is_empty() {
         match entry.delete_password() {
@@ -1494,6 +1513,11 @@ pub fn save_provider_secret(account: &str, secret: &str) -> Result<()> {
 }
 
 pub fn remove_provider_secret(account: &str) -> Result<()> {
+    #[cfg(target_os = "macos")]
+    if crate::macos_keychain::shared_access_group().is_some() {
+        crate::macos_keychain::delete_shared_password(KEYRING_SERVICE, account)?;
+        return Ok(());
+    }
     let entry = keyring_entry_for_account(account)?;
     match entry.delete_password() {
         Ok(_) | Err(keyring::Error::NoEntry) => Ok(()),

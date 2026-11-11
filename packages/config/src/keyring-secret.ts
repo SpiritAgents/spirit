@@ -1,5 +1,14 @@
 import { Entry } from "@napi-rs/keyring";
 
+import {
+  addSharedMacKeychainPassword,
+  deleteSharedMacKeychainPassword,
+  getSharedMacKeychainPassword,
+  sharedMacKeychainAccessGroup,
+} from "./macos-keychain.js";
+
+const KEYRING_SERVICE = "Spirit";
+
 /** Windows Credential Manager UTF-16 blob limit (bytes). */
 export const KEYRING_MAX_UTF16_BYTES = 2560;
 
@@ -73,13 +82,36 @@ export function buildShardedKeyringPrimary(shardCount: number): string {
   return `${KEYRING_SHARD_MARKER}${shardCount}`;
 }
 
+function usesSharedAccessGroup(service: string): boolean {
+  return service === KEYRING_SERVICE && sharedMacKeychainAccessGroup() !== undefined;
+}
+
 function readKeyringEntry(service: string, account: string): string | undefined {
+  if (usesSharedAccessGroup(service)) {
+    return getSharedMacKeychainPassword(service, account);
+  }
   try {
     const value = new Entry(service, account).getPassword();
     return value ?? undefined;
   } catch {
     return undefined;
   }
+}
+
+function writeKeyringEntry(service: string, account: string, password: string): void {
+  if (usesSharedAccessGroup(service)) {
+    addSharedMacKeychainPassword(service, account, password);
+    return;
+  }
+  new Entry(service, account).setPassword(password);
+}
+
+function deleteKeyringEntry(service: string, account: string): void {
+  if (usesSharedAccessGroup(service)) {
+    deleteSharedMacKeychainPassword(service, account);
+    return;
+  }
+  new Entry(service, account).deletePassword();
 }
 
 export function getKeyringPassword(service: string, account: string): string | undefined {
@@ -109,15 +141,15 @@ export function setKeyringPassword(service: string, account: string, password: s
 
   const chunks = splitKeyringPassword(password);
   if (chunks.length === 1) {
-    new Entry(service, account).setPassword(chunks[0]!);
+    writeKeyringEntry(service, account, chunks[0]!);
     return;
   }
 
   // Write shards before the primary marker so a crash cannot leave primary pointing at a missing shard.
   for (let index = 0; index < chunks.length; index += 1) {
-    new Entry(service, shardKeyringAccount(account, index)).setPassword(chunks[index]!);
+    writeKeyringEntry(service, shardKeyringAccount(account, index), chunks[index]!);
   }
-  new Entry(service, account).setPassword(buildShardedKeyringPrimary(chunks.length));
+  writeKeyringEntry(service, account, buildShardedKeyringPrimary(chunks.length));
 }
 
 export function deleteKeyringPassword(service: string, account: string): void {
@@ -127,7 +159,7 @@ export function deleteKeyringPassword(service: string, account: string): void {
   if (shardCount !== undefined) {
     for (let index = 0; index < shardCount; index += 1) {
       try {
-        new Entry(service, shardKeyringAccount(account, index)).deletePassword();
+        deleteKeyringEntry(service, shardKeyringAccount(account, index));
       } catch {
         /* ignore when there are no entries */
       }
@@ -135,7 +167,7 @@ export function deleteKeyringPassword(service: string, account: string): void {
   }
 
   try {
-    new Entry(service, account).deletePassword();
+    deleteKeyringEntry(service, account);
   } catch {
     /* ignore when there are no entries */
   }

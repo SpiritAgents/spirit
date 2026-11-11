@@ -15,6 +15,7 @@ const keyringFiles = new Set([
   "packages/sessions/src/host/host-model-commands.ts",
   "packages/sessions/src/host/model-config.ts",
   "packages/host-internal/src/credentials/provider-accounts.ts",
+  "packages/config/src/keyring-secret.ts",
 ]);
 const pattern =
   /https?:\/\/(?:download\.)?spirit\.dev|spirit:\/\/|["'`]\.spirit(?:["'`/])|["'`]Spirit(?:["'`]| [A-Za-z])/u;
