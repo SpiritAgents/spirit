@@ -1309,6 +1309,9 @@ importers:
       '@spiritagent/mcp':
         specifier: workspace:*
         version: link:../mcp
+      '@spiritagent/permissions':
+        specifier: workspace:*
+        version: link:../permissions
       '@spiritagent/product':
         specifier: workspace:*
         version: link:../product

@@ -60,6 +60,10 @@
       "types": "./dist/tools.d.ts",
       "default": "./dist/tools.js"
     },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "default": "./dist/errors.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {

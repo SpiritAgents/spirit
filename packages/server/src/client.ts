@@ -11,6 +11,17 @@ import type {
   JsonRpcSuccessResponse,
   ServerHealthResult,
 } from "./protocol/index.js";
+import { domainErrorPayload, type DomainErrorPayload } from "@spiritagent/api/errors";
+
+export class ServerRpcError extends Error {
+  constructor(
+    message: string,
+    readonly domainError?: DomainErrorPayload,
+  ) {
+    super(message);
+    this.name = "ServerRpcError";
+  }
+}
 
 export interface ServerRpcClientOptions {
   url: string;
@@ -212,7 +223,9 @@ export class ServerRpcClient {
     }
     this.pending.delete(response.id as JsonRpcId);
     if ("error" in response) {
-      pending.reject(new Error(response.error.message));
+      pending.reject(
+        new ServerRpcError(response.error.message, domainErrorPayload(response.error.data)),
+      );
       return;
     }
     pending.resolve(response.result);

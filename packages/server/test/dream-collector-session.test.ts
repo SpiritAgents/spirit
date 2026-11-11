@@ -14,8 +14,10 @@ import {
 import { createServerRuntime } from "../src/runtime-factory.js";
 import { SessionManager } from "../src/session-manager.js";
 
+const TEST_TMP_ROOT = process.platform === "win32" ? tmpdir() : "/tmp";
+
 function freshDataDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), "spirit-server-dream-collector-"));
+  const dir = mkdtempSync(join(TEST_TMP_ROOT, "sd-"));
   writeFileSync(
     join(dir, "config.json"),
     JSON.stringify({
@@ -53,7 +55,7 @@ describe("dream-collector session", () => {
   it("createServerRuntime exposes dream-only tool definitions", async () => {
     await withMockKeyring(async () => {
       const dataDir = freshDataDir();
-      const workspaceRoot = mkdtempSync(join(tmpdir(), "spirit-dream-collector-ws-"));
+      const workspaceRoot = mkdtempSync(join(TEST_TMP_ROOT, "sw-"));
       const result = await createServerRuntime({
         workspaceRoot,
         spiritDataDir: dataDir,
@@ -92,7 +94,7 @@ describe("dream-collector session", () => {
   it("SessionManager.createSession accepts dream-collector params", async () => {
     await withMockKeyring(async () => {
       const dataDir = freshDataDir();
-      const workspaceRoot = mkdtempSync(join(tmpdir(), "spirit-dream-collector-ws-"));
+      const workspaceRoot = mkdtempSync(join(TEST_TMP_ROOT, "sw-"));
       const manager = new SessionManager(dataDir, {
         broadcastRuntimeEvent: () => {},
         broadcastTurnFinished: () => {},

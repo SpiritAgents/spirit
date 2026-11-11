@@ -43,6 +43,7 @@
     "@spiritagent/instructions": "workspace:*",
     "@spiritagent/lsp": "workspace:*",
     "@spiritagent/mcp": "workspace:*",
+    "@spiritagent/permissions": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "@spiritagent/remote-control": "workspace:*",
     "@spiritagent/sessions": "workspace:*",

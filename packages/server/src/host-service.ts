@@ -22,24 +22,39 @@ import {
   installBuiltInExtension,
   type MarketplaceHostContext,
 } from "@spiritagent/extensions";
+import { createHostTodoStore } from "@spiritagent/sessions";
 import {
-  createHostTodoStore,
   deleteHookEntry,
+  listHookListItems,
+  saveHookEntry,
+  validateHooksConfig,
+} from "@spiritagent/hooks";
+import {
   discoverRuleEntries,
   discoverSkillEntries,
+  planMetadataSnapshot,
+  resolveInstructionPaths,
+} from "@spiritagent/instructions";
+import {
   evaluateReadFilePermission,
   evaluateShellPermission,
-  listCachedWorkspaceFileReferenceSuggestions,
-  listHookListItems,
   loadPermissionConfig,
-  planMetadataSnapshot,
-  primeWorkspaceFileReferenceIndexCache,
-  resolveInstructionPaths,
-  saveHookEntry,
-  saveToggleState,
-  validateHooksConfig,
   type PermissionEvalResult,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/permissions";
+import {
+  listCachedWorkspaceFileReferenceSuggestions,
+  primeWorkspaceFileReferenceIndexCache,
+} from "@spiritagent/workspace";
+import { saveToggleState } from "@spiritagent/config/toggle-state";
+import { buildActiveSkillPayload } from "@spiritagent/sessions/host/skills";
+import {
+  addMcpServer,
+  deleteMcpServer,
+  initializeMcpConfig,
+  setMcpServerEnabled,
+} from "@spiritagent/mcp/config-files";
+import { executeHostModelCommand } from "./model-commands.js";
+import { executeStoredSessionCommand } from "./stored-session-service.js";
 
 import {
   serializeListedHostExtension,
@@ -109,6 +124,24 @@ export class HostService {
 
   async handle(method: string, rawParams: unknown): Promise<unknown> {
     const params = (rawParams ?? {}) as Record<string, unknown>;
+    if (method.startsWith("session.")) {
+      return executeStoredSessionCommand(method, params);
+    }
+    if (
+      method === "host.getConfig" ||
+      method === "host.listProviderPresets" ||
+      method === "host.previewModels" ||
+      method === "host.updateConfig" ||
+      method === "host.addModel" ||
+      method === "host.addProviderModels" ||
+      method === "host.removeModel" ||
+      method === "host.removeProviderModels" ||
+      method === "host.removeProviderGroup" ||
+      method === "host.writeProviderSecret" ||
+      method === "host.deleteProviderSecret"
+    ) {
+      return executeHostModelCommand(method, params);
+    }
     switch (method) {
       case "remote.getState":
         return this.remoteControl.getState();
@@ -231,6 +264,22 @@ export class HostService {
         const enabledOverrides = (params["enabledOverrides"] ?? {}) as Record<string, boolean>;
         await saveToggleState(filePath, { enabledOverrides });
         return filePath;
+      }
+
+      case "host.resolveActiveSkill": {
+        const context = this.context(params);
+        const selector = (params["skill"] ?? {}) as Record<string, unknown>;
+        const entries = await discoverSkillEntries(context);
+        const entry = entries.find(
+          (candidate) =>
+            candidate.source.id === selector["id"] ||
+            candidate.source.path === selector["path"] ||
+            candidate.source.name === selector["name"],
+        );
+        if (!entry) {
+          throw new Error("Skill not found.");
+        }
+        return buildActiveSkillPayload(entry);
       }
 
       // ------------------------------------------------ workspace file references
@@ -583,6 +632,46 @@ export class HostService {
           case "startMcpBackgroundRefresh":
             service.startBackgroundRefreshInBackground(true);
             return service.statusSnapshot();
+          case "initializeMcpConfig": {
+            const result = await initializeMcpConfig({
+              scope: inner["scope"] === "workspace" ? "workspace" : "user",
+              spiritDataDir: this.spiritDataDir,
+              workspaceRoot,
+              force: inner["force"] === true,
+            });
+            await this.sessions.mcpRegistry.refreshAllConfigs();
+            return { path: result };
+          }
+          case "addMcpServer": {
+            const result = await addMcpServer({
+              scope: inner["scope"] === "workspace" ? "workspace" : "user",
+              spiritDataDir: this.spiritDataDir,
+              workspaceRoot,
+              name: String(inner["name"] ?? ""),
+              config: inner["config"] as never,
+            });
+            await this.sessions.mcpRegistry.refreshAllConfigs();
+            return { path: result };
+          }
+          case "deleteMcpServer":
+            await deleteMcpServer({
+              scope: inner["scope"] === "workspace" ? "workspace" : "user",
+              spiritDataDir: this.spiritDataDir,
+              workspaceRoot,
+              name: String(inner["name"] ?? ""),
+            });
+            await this.sessions.mcpRegistry.refreshAllConfigs();
+            return null;
+          case "setMcpServerEnabled":
+            await setMcpServerEnabled({
+              scope: inner["scope"] === "workspace" ? "workspace" : "user",
+              spiritDataDir: this.spiritDataDir,
+              workspaceRoot,
+              name: String(inner["name"] ?? ""),
+              enabled: inner["enabled"] === true,
+            });
+            await this.sessions.mcpRegistry.refreshAllConfigs();
+            return null;
           default:
             throw new Error(`unknown mcp action: ${action}`);
         }
@@ -658,6 +747,23 @@ export const HOST_METHODS = new Set([
   "remote.cancelOwnerPairing",
   "host.loadCliMetadata",
   "host.loadPlanMetadata",
+  "host.resolveActiveSkill",
+  "host.getConfig",
+  "host.listProviderPresets",
+  "host.previewModels",
+  "host.updateConfig",
+  "host.addModel",
+  "host.addProviderModels",
+  "host.removeModel",
+  "host.removeProviderModels",
+  "host.removeProviderGroup",
+  "host.writeProviderSecret",
+  "host.deleteProviderSecret",
+  "session.listStored",
+  "session.loadStored",
+  "session.saveStored",
+  "session.rewind",
+  "session.fork",
   "host.writeRuleState",
   "host.writeSkillState",
   "host.listWorkspaceFileReferenceSuggestions",
