@@ -99,6 +99,7 @@ import {
   loadHostInstructionMetadata,
   parseCreatePlanPathFromToolOutput,
   planMetadataSnapshot,
+  overlayExtensionRulesAndSkills,
 } from "@spiritagent/instructions";
 import {
   tryResolveTransportConfig,
@@ -115,7 +116,6 @@ import {
   ensureBuiltInExtensions,
   ensureBuiltInSkills,
   ensurePersonalMarketplace,
-  overlayEnabledExtensionRulesAndSkills,
 } from "@spiritagent/extensions";
 
 import { joinHostPromptSections, normalizeHostUiPromptSection } from "./host-ui-prompt.js";
@@ -665,10 +665,10 @@ async function prepareServerRuntime(
         enabledSkillCatalog.push(...baseEnabledSkillCatalog);
         return;
       }
-      const overlay = await overlayEnabledExtensionRulesAndSkills(
-        await extensionManager.list(),
+      const overlay = overlayExtensionRulesAndSkills(
         baseEnabledRules,
         baseEnabledSkillCatalog,
+        await collectEnabledExtensionInstructionContributions(await extensionManager.list()),
         (message: string) => log(message),
       );
       enabledRules.length = 0;

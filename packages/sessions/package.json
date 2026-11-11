@@ -35,6 +35,7 @@
     "@spiritagent/icons": "workspace:*",
     "@spiritagent/instructions": "workspace:*",
     "@spiritagent/lsp": "workspace:*",
+    "@spiritagent/process": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "@spiritagent/remote-control": "workspace:*",
     "@spiritagent/tasks": "workspace:*",

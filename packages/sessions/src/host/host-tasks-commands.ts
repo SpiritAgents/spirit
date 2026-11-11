@@ -11,11 +11,11 @@ import {
   type TaskPlatform,
   type TaskVariableContext,
   type WorkspaceTasksTrustGateResult,
-} from "@spiritagent/extensions";
+} from "@spiritagent/tasks";
 import {
   defaultShellForPty,
   shellRunCommandArgs,
-} from "@spiritagent/host-internal/default-terminal-shell";
+} from "@spiritagent/process/default-terminal-shell";
 import type { TaskShellDefinition } from "@spiritagent/tasks/runtime";
 
 import type { DesktopResolveTaskForRunResult, DesktopTaskMenuItem } from "../types.js";

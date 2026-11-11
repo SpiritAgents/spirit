@@ -63,17 +63,19 @@ import {
 import {
   createHostExtensionManager,
   collectEnabledExtensionInstructionContributions,
-  overlayExtensionRulesAndSkills,
   ensureBuiltInExtensions,
   listAllMarketplaceSources,
   compareMarketplaceDisplayOrder,
   readMarketplaceCatalogForSource,
   type HostExtensionEvent,
+  type HostExtensionInstructionContributions,
+} from "@spiritagent/extensions";
+import {
   computeWorkspaceTasksContentHash,
   loadTaskFiles,
   type LoadedTaskFile,
-  type HostExtensionInstructionContributions,
-} from "@spiritagent/extensions";
+} from "@spiritagent/tasks";
+import { overlayExtensionRulesAndSkills } from "@spiritagent/instructions/contributions";
 
 import type {
   AddModelRequest,

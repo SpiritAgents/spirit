@@ -44,7 +44,7 @@ import {
   createHostExtensionManager,
   ensureBuiltInSkills,
   ensurePersonalMarketplace,
-  overlayEnabledExtensionRulesAndSkills,
+  collectEnabledExtensionInstructionContributions,
 } from "@spiritagent/extensions";
 import {
   NodeHostToolService,
@@ -52,7 +52,10 @@ import {
   persistToolOutputArchive,
 } from "@spiritagent/tools";
 import { createHostMcpService } from "@spiritagent/mcp";
-import { loadHostInstructionMetadata } from "@spiritagent/instructions";
+import {
+  loadHostInstructionMetadata,
+  overlayExtensionRulesAndSkills,
+} from "@spiritagent/instructions";
 import {
   ensureTranscriptSessionDir,
   persistSessionTranscript,
@@ -383,10 +386,10 @@ async function prepareAcpRuntime(
   ];
   try {
     const extensionManager = createHostExtensionManager({ spiritDataDir, hostKind: "cli" });
-    const overlay = await overlayEnabledExtensionRulesAndSkills(
-      await extensionManager.list(),
+    const overlay = overlayExtensionRulesAndSkills(
       enabledRules,
       enabledSkillCatalog,
+      await collectEnabledExtensionInstructionContributions(await extensionManager.list()),
     );
     enabledRules.length = 0;
     enabledRules.push(...overlay.rules);

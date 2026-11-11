@@ -1370,6 +1370,9 @@ importers:
       '@spiritagent/lsp':
         specifier: workspace:*
         version: link:../lsp
+      '@spiritagent/process':
+        specifier: workspace:*
+        version: link:../process
       '@spiritagent/product':
         specifier: workspace:*
         version: link:../product
@@ -1801,6 +1804,9 @@ importers:
       '@spiritagent/i18n':
         specifier: workspace:*
         version: link:../i18n
+      '@spiritagent/instructions':
+        specifier: workspace:*
+        version: link:../instructions
       '@spiritagent/lsp':
         specifier: workspace:*
         version: link:../lsp
@@ -1816,6 +1822,9 @@ importers:
       '@spiritagent/sessions':
         specifier: workspace:*
         version: link:../sessions
+      '@spiritagent/tasks':
+        specifier: workspace:*
+        version: link:../tasks
       '@spiritagent/ui':
         specifier: workspace:*
         version: link:../ui
