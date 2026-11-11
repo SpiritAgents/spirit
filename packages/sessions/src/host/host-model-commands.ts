@@ -1142,6 +1142,9 @@ export async function addModelCommand(
       throw new Error(i18n.t("error.modelNameRequired"));
     }
     const provider = request.provider?.trim() || "custom";
+    if (request.reasoningEffort !== undefined && request.effort !== undefined) {
+      throw new Error("reasoningEffort and effort cannot be used together.");
+    }
     if (
       provider === "azure" &&
       request.transportKind !== undefined &&
@@ -1230,6 +1233,13 @@ export async function addModelCommand(
     const requestedCapabilities = normalizeModelCapabilities(request.capabilities);
 
     const modelEntry: ModelEntry = catalogEntryToModelEntry(name, catalogEntry);
+    if (request.reasoningEffort !== undefined) {
+      modelEntry.reasoningEffort = request.reasoningEffort;
+    }
+    if (request.effort !== undefined) {
+      modelEntry.effortSemantics = "output";
+      modelEntry.effort = request.effort;
+    }
     const capabilities = resolveAddedModelCapabilities({
       providerId: provider,
       requestedCapabilities,

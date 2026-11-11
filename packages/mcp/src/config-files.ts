@@ -12,6 +12,16 @@ import { mcpUserConfigPath, mcpWorkspaceConfigPath } from "@spiritagent/config/d
 
 export type McpConfigScope = "user" | "workspace";
 
+export function readMcpConfigFiles(input: { spiritDataDir: string; workspaceRoot: string }): {
+  user: McpConfigFile;
+  workspace: McpConfigFile;
+  merged: McpConfigFile;
+} {
+  const user = loadMcpConfigFileAt(mcpUserConfigPath(input.spiritDataDir));
+  const workspace = loadMcpConfigFileAt(mcpWorkspaceConfigPath(input.workspaceRoot));
+  return { user, workspace, merged: { servers: { ...user.servers, ...workspace.servers } } };
+}
+
 export function loadMcpConfigFileAt(configPath: string): McpConfigFile {
   if (!existsSync(configPath)) {
     return { servers: {} };
@@ -42,12 +52,13 @@ export async function initializeMcpConfig(input: {
   spiritDataDir: string;
   workspaceRoot: string;
   force?: boolean;
+  config?: McpConfigFile;
 }): Promise<string> {
   const configPath = mcpConfigPathForScope(input);
   if (existsSync(configPath) && input.force !== true) {
     throw new Error(`MCP config already exists: ${configPath}`);
   }
-  await saveMcpConfigFileAt(configPath, { servers: {} });
+  await saveMcpConfigFileAt(configPath, input.config ?? { servers: {} });
   return configPath;
 }
 
@@ -90,13 +101,18 @@ export async function deleteMcpServer(input: {
 }
 
 export async function setMcpServerEnabled(input: {
-  scope: McpConfigScope;
+  scope?: McpConfigScope;
   spiritDataDir: string;
   workspaceRoot: string;
   name: string;
   enabled: boolean;
-}): Promise<void> {
-  const configPath = mcpConfigPathForScope(input);
+}): Promise<string> {
+  const scope =
+    input.scope ??
+    (loadMcpConfigFileAt(mcpUserConfigPath(input.spiritDataDir)).servers[input.name.trim()]
+      ? "user"
+      : "workspace");
+  const configPath = mcpConfigPathForScope({ ...input, scope });
   const config = loadMcpConfigFileAt(configPath);
   const server = config.servers[input.name.trim()];
   if (!server) {
@@ -104,4 +120,5 @@ export async function setMcpServerEnabled(input: {
   }
   server.enabled = input.enabled;
   await saveMcpConfigFileAt(configPath, config);
+  return configPath;
 }

@@ -14,9 +14,8 @@ use crate::{
         CUSTOM_PROVIDER_PRESET_ID, PresetConnectSelections, ProviderPresetSite,
         is_valid_azure_resource_name, is_valid_cloudflare_account_id,
         is_valid_cloudflare_gateway_id, list_base_template_keys, model_add_picker_order_ids,
-        model_add_provider_id_at_choice_index, preset_connect_api_base,
-        preset_connect_base_template, preset_default_transport_kind, preset_entry,
-        preset_supports_bulk_listing,
+        model_add_provider_id_at_choice_index, preset_connect_base_template,
+        preset_default_transport_kind, preset_entry, preset_supports_bulk_listing,
     },
     rules::{RuleEntry, RuleScope},
     skills::{SkillEntry, SkillScope},
@@ -566,7 +565,6 @@ impl ModelAddFormPlan {
             transport_kind: Some(transport_kind),
             site_id: site_id.as_deref(),
             billing_plan_id: billing_plan_id.as_deref(),
-            template_values: BTreeMap::new(),
             credential_kind: Some(credential_form.kind_str()),
         };
         let mut template_keys = preset_connect_base_template(provider_id, &selections)
@@ -1002,18 +1000,6 @@ pub(crate) fn new_model_add_form() -> BottomFormView {
     form
 }
 
-/// How the bulk import lists models for a parsed connection.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum ModelAddListing {
-    /// `GET {api_base}/models` with the transport's listing shape.
-    Http {
-        api_base: String,
-        transport_kind: ModelTransportKind,
-    },
-    /// Vertex publisher listing via host-internal (service account project/location).
-    VertexServiceAccount,
-}
-
 /// Parses the "connect provider" bottom form; semantics are aligned with the Desktop settings page (single / bulk).
 /// Sites, billing plans, and `{placeholder}` template values are materialized into `api_base`
 /// here; only values that land in config.json (`options`) or the internal keyring are carried
@@ -1023,8 +1009,13 @@ pub(crate) struct ParsedModelAddForm {
     /// Preset id from the presets manifest, or `custom`.
     pub provider_id: String,
     pub transport_kind: ModelTransportKind,
+    pub credential_kind: String,
     /// Selected preset site; per-site templates resolve against it.
     pub site_id: Option<String>,
+    pub billing_plan_id: Option<String>,
+    pub workspace_id: Option<String>,
+    pub cloudflare_account_id: Option<String>,
+    pub azure_resource_name: Option<String>,
     pub bulk: bool,
     pub model_name: Option<String>,
     pub api_base: String,
@@ -1038,8 +1029,6 @@ pub(crate) struct ParsedModelAddForm {
     /// Non-apiKey credential slots to store in the internal keyring
     /// (`provider::{id}::{slot}`).
     pub credential_slots: Vec<(String, String)>,
-    /// The bulk listing endpoint; `None` for manual single-model entry.
-    pub listing: Option<ModelAddListing>,
 }
 
 pub(crate) fn parse_model_add_connection(
@@ -1112,17 +1101,8 @@ pub(crate) fn parse_model_add_connection(
         }
         value
     } else {
-        preset_connect_api_base(
-            &plan.provider_id,
-            &PresetConnectSelections {
-                transport_kind: Some(plan.transport_kind),
-                site_id: plan.site_id.as_deref(),
-                billing_plan_id: plan.billing_plan_id.as_deref(),
-                template_values: template_values.clone(),
-                credential_kind: Some(plan.credential_form.kind_str()),
-            },
-        )
-        .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
+        // The daemon materializes preset endpoints from the same manifest and selections.
+        String::new()
     };
 
     let context_length = if plan.manual_single {
@@ -1203,49 +1183,15 @@ pub(crate) fn parse_model_add_connection(
         .map(|(key, value)| (key.clone(), value.clone()))
         .collect();
 
-    let listing = if !plan.bulk {
-        None
-    } else if plan.provider_id == CUSTOM_PROVIDER_PRESET_ID {
-        Some(ModelAddListing::Http {
-            api_base: api_base.clone(),
-            transport_kind: plan.transport_kind,
-        })
-    } else {
-        match preset_entry(&plan.provider_id)
-            .and_then(|entry| entry.catalog())
-            .map(|catalog| catalog.parser.as_str())
-        {
-            Some("google-vertex-models") => Some(ModelAddListing::VertexServiceAccount),
-            // The minimax catalog parser lists via the openai-compatible endpoint on the
-            // same site, not the anthropic connect base.
-            Some("minimax-models") if plan.transport_kind == ModelTransportKind::Anthropic => {
-                let listing_base = preset_connect_api_base(
-                    &plan.provider_id,
-                    &PresetConnectSelections {
-                        transport_kind: Some(ModelTransportKind::OpenAiCompatible),
-                        site_id: plan.site_id.as_deref(),
-                        billing_plan_id: plan.billing_plan_id.as_deref(),
-                        template_values: template_values.clone(),
-                        credential_kind: Some(plan.credential_form.kind_str()),
-                    },
-                )
-                .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?;
-                Some(ModelAddListing::Http {
-                    api_base: listing_base,
-                    transport_kind: ModelTransportKind::OpenAiCompatible,
-                })
-            }
-            _ => Some(ModelAddListing::Http {
-                api_base: api_base.clone(),
-                transport_kind: plan.transport_kind,
-            }),
-        }
-    };
-
     Ok(ParsedModelAddForm {
         provider_id: plan.provider_id,
         transport_kind: plan.transport_kind,
+        credential_kind: plan.credential_form.kind_str().to_string(),
         site_id: plan.site_id.clone(),
+        billing_plan_id: plan.billing_plan_id.clone(),
+        workspace_id: template_values.get("workspaceId").cloned(),
+        cloudflare_account_id: template_values.get("accountId").cloned(),
+        azure_resource_name: template_values.get("resourceName").cloned(),
         bulk: plan.bulk,
         model_name,
         api_base,
@@ -1254,7 +1200,6 @@ pub(crate) fn parse_model_add_connection(
         cloudflare_gateway_id,
         options,
         credential_slots,
-        listing,
     })
 }
 
@@ -2711,16 +2656,9 @@ mod tests {
         assert!(parsed.bulk);
         // DeepSeek's preset default transport is openai-compatible; the form materializes its base.
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
-        assert_eq!(parsed.api_base, "https://api.deepseek.com/v1");
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "sk-secret");
         assert!(parsed.model_name.is_none());
-        assert_eq!(
-            parsed.listing,
-            Some(super::ModelAddListing::Http {
-                api_base: "https://api.deepseek.com/v1".to_string(),
-                transport_kind: ModelTransportKind::OpenAiCompatible,
-            })
-        );
     }
 
     #[test]
@@ -2783,7 +2721,6 @@ mod tests {
         assert_eq!(parsed.api_base, "https://custom.example/v1");
         assert_eq!(parsed.api_key, "sk-c");
         assert_eq!(parsed.context_length, None);
-        assert!(parsed.listing.is_none());
     }
 
     #[test]
@@ -2836,13 +2773,6 @@ mod tests {
         assert!(parsed.model_name.is_none());
         assert_eq!(parsed.api_base, "https://bulk.example/v1");
         assert_eq!(parsed.api_key, "sk-bulk");
-        assert_eq!(
-            parsed.listing,
-            Some(super::ModelAddListing::Http {
-                api_base: "https://bulk.example/v1".to_string(),
-                transport_kind: ModelTransportKind::OpenAiCompatible,
-            })
-        );
     }
 
     #[test]
@@ -2890,10 +2820,7 @@ mod tests {
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
-        assert_eq!(
-            parsed.api_base,
-            "https://ws-cn.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
-        );
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "sk-ali");
     }
 
@@ -2914,10 +2841,7 @@ mod tests {
         assert_eq!(parsed.provider_id, "alibaba");
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(parsed.bulk);
-        assert_eq!(
-            parsed.api_base,
-            "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
-        );
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "sk-ali-token");
     }
 
@@ -2936,7 +2860,7 @@ mod tests {
         assert_eq!(parsed.provider_id, "anthropic");
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
-        assert_eq!(parsed.api_base, "https://api.anthropic.com/v1");
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "sk-anthropic");
     }
 
@@ -2955,7 +2879,7 @@ mod tests {
         assert_eq!(parsed.provider_id, "stepfun");
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(parsed.bulk);
-        assert_eq!(parsed.api_base, "https://api.stepfun.com/step_plan/v1");
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "sk-stepfun");
     }
 
@@ -2974,7 +2898,7 @@ mod tests {
         assert_eq!(parsed.provider_id, "stepfun");
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(parsed.bulk);
-        assert_eq!(parsed.api_base, "https://api.stepfun.ai/v1");
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "sk-stepfun-intl");
     }
 
@@ -2994,7 +2918,7 @@ mod tests {
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(parsed.bulk);
         // The step-plan billing plan pins the China host regardless of the selected site.
-        assert_eq!(parsed.api_base, "https://api.stepfun.com/step_plan/v1");
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "sk-stepfun-intl-plan");
     }
 
@@ -3009,7 +2933,7 @@ mod tests {
         let parsed = parse_model_add_connection(&form).expect("parse");
         assert_eq!(parsed.provider_id, "z-ai");
         assert!(parsed.bulk);
-        assert_eq!(parsed.api_base, "https://api.z.ai/api/coding/paas/v4");
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "sk-zai");
     }
 
@@ -3024,10 +2948,7 @@ mod tests {
         let parsed = parse_model_add_connection(&form).expect("parse");
         assert_eq!(parsed.provider_id, "zhipu-ai");
         assert!(parsed.bulk);
-        assert_eq!(
-            parsed.api_base,
-            "https://open.bigmodel.cn/api/coding/paas/v4"
-        );
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "sk-zhipu");
     }
 
@@ -3044,7 +2965,7 @@ mod tests {
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenResponses);
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
-        assert_eq!(parsed.api_base, "https://ark.cn-beijing.volces.com/api/v3");
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "sk-volc");
     }
 
@@ -3065,10 +2986,7 @@ mod tests {
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenResponses);
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
-        assert_eq!(
-            parsed.api_base,
-            "https://ark.ap-southeast.bytepluses.com/api/v3"
-        );
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "sk-byteplus");
     }
 
@@ -3085,7 +3003,7 @@ mod tests {
         assert_eq!(parsed.transport_kind, ModelTransportKind::Anthropic);
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
-        assert_eq!(parsed.api_base, "https://api.siliconflow.com/v1");
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "sk-sf");
     }
 
@@ -3102,7 +3020,7 @@ mod tests {
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
-        assert_eq!(parsed.api_base, "https://api.moonshot.cn/v1");
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "sk-moon");
     }
 
@@ -3121,7 +3039,7 @@ mod tests {
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
-        assert_eq!(parsed.api_base, "https://api.kimi.ai/coding/v1");
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "sk-kimi-code");
     }
 
@@ -3138,7 +3056,7 @@ mod tests {
 
         let parsed = parse_model_add_connection(&form).expect("parse");
         assert_eq!(parsed.provider_id, "kimi-code");
-        assert_eq!(parsed.api_base, "https://api.kimi.com/coding/v1");
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "sk-kimi-code");
     }
 
@@ -3155,16 +3073,9 @@ mod tests {
         assert_eq!(parsed.transport_kind, ModelTransportKind::Anthropic);
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
-        assert_eq!(parsed.api_base, "https://api.minimax.io/anthropic/v1");
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "sk-mm");
         // The minimax catalog parser lists via the openai-compatible endpoint on the same site.
-        assert_eq!(
-            parsed.listing,
-            Some(super::ModelAddListing::Http {
-                api_base: "https://api.minimax.io/v1".to_string(),
-                transport_kind: ModelTransportKind::OpenAiCompatible,
-            })
-        );
     }
 
     #[test]
@@ -3192,10 +3103,7 @@ mod tests {
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenResponses);
         assert!(!parsed.bulk);
         assert_eq!(parsed.model_name.as_deref(), Some("my-gpt4o-deploy"));
-        assert_eq!(
-            parsed.api_base,
-            "https://my-openai-resource.openai.azure.com/openai/v1"
-        );
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "azure-key");
     }
 
@@ -3230,10 +3138,7 @@ mod tests {
         assert_eq!(parsed.transport_kind, ModelTransportKind::Anthropic);
         assert!(!parsed.bulk);
         assert_eq!(parsed.model_name.as_deref(), Some("openai/gpt-4.1-mini"));
-        assert_eq!(
-            parsed.api_base,
-            "https://api.cloudflare.com/client/v4/accounts/0123456789abcdef0123456789abcdef/ai/v1"
-        );
+        assert!(parsed.api_base.is_empty());
         assert_eq!(parsed.api_key, "cf-token");
         assert_eq!(parsed.cloudflare_gateway_id.as_deref(), Some("my-gateway"));
     }
@@ -3279,10 +3184,7 @@ mod tests {
         let parsed = parse_model_add_connection(&form).expect("parse");
         assert_eq!(parsed.provider_id, "google-vertex-ai");
         assert!(parsed.bulk);
-        assert_eq!(
-            parsed.api_base,
-            "https://us-central1-aiplatform.googleapis.com/v1/projects/my-gcp-project/locations/us-central1"
-        );
+        assert!(parsed.api_base.is_empty());
         assert!(parsed.api_key.is_empty());
         assert_eq!(
             parsed.options.get("project").map(String::as_str),
@@ -3301,10 +3203,6 @@ mod tests {
                     "-----BEGIN PRIVATE KEY-----".to_string()
                 ),
             ]
-        );
-        assert_eq!(
-            parsed.listing,
-            Some(super::ModelAddListing::VertexServiceAccount)
         );
     }
 
@@ -3336,10 +3234,7 @@ mod tests {
         assert_eq!(parsed.provider_id, "google-vertex-ai");
         assert!(!parsed.bulk);
         // Vertex Express materializes the preset's expressApiBase and writes no options.
-        assert_eq!(
-            parsed.api_base,
-            "https://aiplatform.googleapis.com/v1/publishers/google"
-        );
+        assert!(parsed.api_base.is_empty());
         assert!(parsed.options.is_empty());
         assert_eq!(parsed.api_key, "aq-key");
         assert_eq!(
@@ -3347,7 +3242,6 @@ mod tests {
             Some("publishers/google/models/gemini-2.5-flash")
         );
         assert!(parsed.credential_slots.is_empty());
-        assert!(parsed.listing.is_none());
     }
 
     #[test]
@@ -3414,7 +3308,7 @@ mod tests {
         assert_eq!(parsed.transport_kind, ModelTransportKind::Bedrock);
         assert!(!parsed.bulk);
         // The region field defaults to us-east-1 and materializes into the endpoint + options.
-        assert_eq!(parsed.api_base, "https://bedrock.us-east-1.amazonaws.com");
+        assert!(parsed.api_base.is_empty());
         assert_eq!(
             parsed.options.get("awsRegion").map(String::as_str),
             Some("us-east-1")
@@ -3427,7 +3321,6 @@ mod tests {
                 ("secretAccessKey".to_string(), "secret".to_string()),
             ]
         );
-        assert!(parsed.listing.is_none());
     }
 
     #[test]

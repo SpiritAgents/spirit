@@ -58,7 +58,7 @@ impl RuntimeHandle {
         self.backend.config()
     }
 
-    pub fn validate_config_change(&self, config: &AppConfig) -> Result<()> {
+    pub fn validate_config_change(&mut self, config: &AppConfig) -> Result<()> {
         self.backend.validate_config_change(config)
     }
 
@@ -92,6 +92,57 @@ impl RuntimeHandle {
 
     pub fn activate_skill(&mut self, skill: ActiveSkillPayload) -> Result<()> {
         self.backend.activate_skill(skill)
+    }
+
+    pub fn resolve_active_skill(
+        &mut self,
+        skill: &crate::skills::SkillEntry,
+    ) -> Result<ActiveSkillPayload> {
+        self.backend.resolve_active_skill(skill)
+    }
+
+    pub fn preview_models(&mut self, request: Value) -> Result<Value> {
+        self.backend.preview_models(request)
+    }
+
+    pub fn build_model_display_titles(
+        &mut self,
+        profiles: &[crate::model_registry::ModelProfile],
+    ) -> Result<std::collections::HashMap<String, String>> {
+        self.backend.build_model_display_titles(profiles)
+    }
+
+    pub fn add_model(&mut self, request: Value) -> Result<AppConfig> {
+        self.backend.add_model(request)
+    }
+
+    pub fn update_config(&mut self, request: Value) -> Result<AppConfig> {
+        self.backend.update_config(request)
+    }
+
+    pub fn add_provider_models(&mut self, request: Value) -> Result<AppConfig> {
+        self.backend.add_provider_models(request)
+    }
+
+    pub fn remove_model(
+        &mut self,
+        model_ref: &crate::model_registry::ModelRef,
+    ) -> Result<AppConfig> {
+        self.backend.remove_model(model_ref)
+    }
+
+    pub fn fork_archive(
+        &mut self,
+        archive: &crate::ports::ChatArchive,
+        desktop_messages: &[crate::rewind::ConversationMessageSnapshot],
+        anchor_index: usize,
+    ) -> Result<(
+        crate::ports::ChatArchive,
+        Vec<crate::rewind::ConversationMessageSnapshot>,
+        Value,
+    )> {
+        self.backend
+            .fork_archive(archive, desktop_messages, anchor_index)
     }
 
     pub fn load_cli_host_metadata(&mut self, agent_mode: &str) -> Result<CliHostMetadataSnapshot> {

@@ -12,6 +12,36 @@ fn workspace_hooks_scope_available(workspace_root: &Path, workspace_binding: &st
         || workspace_root.join(".git").exists()
 }
 
+pub(super) fn provider_request(parsed: &bottom_form::ParsedModelAddForm) -> serde_json::Value {
+    let credential = |slot: &str| {
+        parsed
+            .credential_slots
+            .iter()
+            .find(|(name, _)| name == slot)
+            .map(|(_, value)| value.clone())
+    };
+    crate::daemon::params::compact_json(serde_json::json!({
+        "provider": parsed.provider_id,
+        "transportKind": parsed.transport_kind.as_str(),
+        "credentialKind": parsed.credential_kind,
+        "apiBase": parsed.api_base,
+        "apiKey": parsed.api_key,
+        "siteId": parsed.site_id,
+        "billingPlanId": parsed.billing_plan_id,
+        "workspaceId": parsed.workspace_id,
+        "cloudflareAccountId": parsed.cloudflare_account_id,
+        "cloudflareGatewayId": parsed.cloudflare_gateway_id,
+        "azureResourceName": parsed.azure_resource_name,
+        "awsRegion": parsed.options.get("awsRegion"),
+        "vertexProject": parsed.options.get("project"),
+        "vertexLocation": parsed.options.get("location"),
+        "accessKeyId": credential("accessKeyId"),
+        "secretAccessKey": credential("secretAccessKey"),
+        "vertexClientEmail": credential("clientEmail"),
+        "vertexPrivateKey": credential("privateKey"),
+    }))
+}
+
 #[derive(Default)]
 pub(crate) struct BottomFormUiState {
     pub(crate) active: Option<BottomFormView>,
@@ -453,42 +483,9 @@ impl TuiShell {
             self.forms.active = None;
 
             if parsed.bulk {
-                let list_result = match &parsed.listing {
-                    Some(bottom_form::ModelAddListing::VertexServiceAccount) => {
-                        crate::vertex_models_list::list_vertex_model_ids(
-                            crate::vertex_models_list::VertexListOptions {
-                                project: parsed.options.get("project").cloned().unwrap_or_default(),
-                                location: parsed
-                                    .options
-                                    .get("location")
-                                    .cloned()
-                                    .unwrap_or_default(),
-                                api_key: parsed.api_key.clone(),
-                                client_email: parsed
-                                    .credential_slots
-                                    .iter()
-                                    .find(|(slot, _)| slot == "clientEmail")
-                                    .map(|(_, value)| value.clone()),
-                                private_key: parsed
-                                    .credential_slots
-                                    .iter()
-                                    .find(|(slot, _)| slot == "privateKey")
-                                    .map(|(_, value)| value.clone()),
-                            },
-                        )
-                    }
-                    Some(bottom_form::ModelAddListing::Http {
-                        api_base,
-                        transport_kind,
-                    }) => openai_models_list::list_model_ids(
-                        api_base.as_str(),
-                        parsed.api_key.as_str(),
-                        *transport_kind,
-                    ),
-                    None => Err(t!("tui.model_add.list_empty").into_owned()),
-                };
+                let list_result = self.runtime.preview_models(provider_request(&parsed));
                 match list_result {
-                    Ok(ids) => match self.apply_model_add_bulk(&ids, &parsed) {
+                    Ok(preview) => match self.apply_model_add_bulk(&preview, &parsed) {
                         Ok(msg) => {
                             self.messages.push(ChatMessage {
                                 role: MessageRole::Agent,
@@ -517,18 +514,7 @@ impl TuiShell {
                     .model_name
                     .as_ref()
                     .expect("parse_model_add_connection sets name when not bulk");
-                match self.apply_model_add_and_switch(ApplyModelAddParams {
-                    name: name.as_str(),
-                    api_base: parsed.api_base.as_str(),
-                    api_key: parsed.api_key.as_str(),
-                    provider_id: parsed.provider_id.as_str(),
-                    transport_kind: parsed.transport_kind,
-                    context_length: parsed.context_length,
-                    cloudflare_gateway_id: parsed.cloudflare_gateway_id.as_deref(),
-                    site_id: parsed.site_id.as_deref(),
-                    options: &parsed.options,
-                    credential_slots: &parsed.credential_slots,
-                }) {
+                match self.apply_model_add_and_switch(name, &parsed) {
                     Ok(()) => {
                         self.messages.push(ChatMessage {
                             role: MessageRole::Agent,
@@ -703,104 +689,36 @@ impl TuiShell {
 
     fn apply_model_add_bulk(
         &mut self,
-        ids: &[String],
+        preview: &serde_json::Value,
         parsed: &bottom_form::ParsedModelAddForm,
     ) -> Result<String, String> {
+        let current = self.runtime.config().clone();
+        let ids = preview["modelIds"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(serde_json::Value::as_str)
+            .filter(|id| !current.has_model_name(id))
+            .map(ToOwned::to_owned)
+            .collect::<Vec<_>>();
         if ids.is_empty() {
-            return Err(t!("tui.model_add.list_empty").into_owned());
-        }
-
-        let mut config = self.runtime.config().clone();
-        let mut first_new: Option<String> = None;
-        let mut added: usize = 0;
-
-        for id in ids {
-            if config.has_model_name(id) {
-                continue;
-            }
-            let provider_id = parsed.provider_id.as_str();
-            // Sites, billing plans, and `{placeholder}` template values were already
-            // materialized into `parsed.api_base` by the connect form; transport options
-            // (vertex `project` / `location`, bedrock `awsRegion`) land in `options`.
-            let mut connect = crate::provider_presets::preset_connect_draft(
-                provider_id,
-                parsed.transport_kind,
-                parsed.site_id.as_deref(),
-            );
-            if !parsed.options.is_empty() {
-                // Wizard input wins per key over the preset's mechanism-option template.
-                let wizard_options: serde_json::Map<String, serde_json::Value> = parsed
-                    .options
-                    .iter()
-                    .map(|(key, value)| (key.clone(), serde_json::Value::String(value.clone())))
-                    .collect();
-                connect.options = Some(match connect.options {
-                    Some(mut template) => {
-                        template.extend(wizard_options);
-                        template
-                    }
-                    None => wizard_options,
-                });
-            }
-            config.add_model_to_provider(
-                provider_id,
-                parsed.api_base.clone(),
-                connect,
-                crate::model_registry::ModelEntry {
-                    name: id.clone(),
-                    ..Default::default()
-                },
-            );
-            if !parsed.api_key.trim().is_empty() {
-                if let Err(err) = crate::model_registry::save_provider_api_key(
-                    provider_id,
-                    parsed.api_key.as_str(),
-                ) {
-                    return Err(
-                        t!("tui.model_add.key_save_failed", err = err.to_string()).into_owned()
-                    );
-                }
-            }
-            // Composite credential slots (bedrock IAM pair, vertex service account) land in
-            // `provider::{id}::{slot}` internal keyring accounts.
-            for (slot, value) in &parsed.credential_slots {
-                if let Err(err) =
-                    crate::model_registry::save_provider_slot_secret(provider_id, slot, value)
-                {
-                    return Err(
-                        t!("tui.model_add.key_save_failed", err = err.to_string()).into_owned()
-                    );
-                }
-            }
-            added += 1;
-            if first_new.is_none() {
-                first_new = Some(id.clone());
-            }
-        }
-
-        if added == 0 {
             return Err(t!("tui.model_add.all_duplicates").into_owned());
         }
-
-        let active = first_new.expect("added > 0");
-        config.active_model = crate::model_registry::ModelRef {
-            provider_id: parsed.provider_id.clone(),
-            name: active.clone(),
-        };
-
-        if let Err(err) = self.runtime.validate_config_change(&config) {
-            return Err(err.to_string());
+        let active = ids[0].clone();
+        let mut request = provider_request(parsed);
+        request["modelIds"] = serde_json::to_value(&ids).map_err(|err| err.to_string())?;
+        if !preview["models"].is_null() {
+            request["modelCatalog"] = preview["models"].clone();
         }
-
-        if let Err(err) = self.config_store.save(&config) {
-            return Err(t!("tui.model_add.config_save_failed", err = err.to_string()).into_owned());
-        }
-
-        self.runtime.replace_config(config);
+        let updated = self
+            .runtime
+            .add_provider_models(request)
+            .map_err(|err| err.to_string())?;
+        self.runtime.replace_config(updated);
         self.apply_runtime_events();
         Ok(t!(
             "tui.model_add.bulk_saved",
-            count = added,
+            count = ids.len(),
             name = active.as_str()
         )
         .into_owned())

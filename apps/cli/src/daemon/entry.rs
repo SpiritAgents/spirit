@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::transport_config::constants::{
+use super::paths::{
     ENV_RUNTIME_BACKEND_NODE_PATH, ENV_SERVER_ENTRY_PATH, ENV_WORKBENCH_ENTRY_PATH,
 };
 

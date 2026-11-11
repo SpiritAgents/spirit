@@ -392,6 +392,8 @@ export interface AddModelRequest {
   /** Absent means the entry's materialized default transport. */
   provider?: string;
   transportKind?: DesktopTransportKind;
+  reasoningEffort?: ModelEntry["reasoningEffort"];
+  effort?: ModelEntry["effort"];
   /** The wizard credential form; `apiKey` on a non-apiKey preset materializes the express base. */
   credentialKind?: DesktopProviderCredentialKind;
   capabilities?: DesktopModelCapability[];

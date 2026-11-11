@@ -310,7 +310,8 @@ pub trait SecretStore: Send + Sync {
     fn remove_provider_secret(&self, account: &str) -> Result<()>;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChatSessionListItem {
     pub path: String,
     pub display_name: String,

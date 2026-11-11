@@ -13,7 +13,6 @@ use std::{
 use crate::{
     adapters::KeyringSecretStore,
     chat_archive::chat_archive_to_bridge_json,
-    chat_store,
     host_protocol::{
         BridgeChatArchive, BridgeExportState, BridgeManualToolCommandStartResult,
         BridgeRuntimeEvent, BridgeRuntimeSnapshot, BridgeSubagentSessionArchiveEntry,
@@ -33,9 +32,9 @@ use crate::{
     rewind::{self, DesktopRewindCheckpointSnapshot, RewindRestoreOutcome},
     runtime_sync::RuntimeSyncState,
     session::SessionModel,
+    session_paths,
     skills::ActiveSkillPayload,
     tool_ui::approval_decision_from_input,
-    transport_config::{TransportHost, transport_config_will_change},
     view::{ChatMessage, PendingAssistantAux, PendingSubagentApprovalView},
 };
 
@@ -50,7 +49,6 @@ pub(crate) struct DaemonRuntime {
     /// None for host-only connections (management subcommands, no session).
     session_id: Option<String>,
     pub(crate) config: AppConfig,
-    pub(crate) secret_store: Arc<dyn SecretStore>,
     pub(crate) workspace_root: PathBuf,
     remote_control_confirmation: Option<Value>,
     pub(crate) sync: RuntimeSyncState,
@@ -67,10 +65,10 @@ pub(crate) struct DaemonRuntime {
 impl DaemonRuntime {
     pub fn new(
         config: AppConfig,
-        secret_store: Arc<dyn SecretStore>,
+        _secret_store: Arc<dyn SecretStore>,
         workspace_root: PathBuf,
     ) -> Result<Self> {
-        let mut runtime = Self::connect(config, secret_store, workspace_root)?;
+        let mut runtime = Self::connect(config, _secret_store, workspace_root)?;
 
         let rewind = rewind::create_desktop_rewind_metadata();
         let created = runtime.client.call(
@@ -112,7 +110,7 @@ impl DaemonRuntime {
 
     fn connect(
         config: AppConfig,
-        secret_store: Arc<dyn SecretStore>,
+        _secret_store: Arc<dyn SecretStore>,
         workspace_root: PathBuf,
     ) -> Result<Self> {
         let (instance, token) = ensure_daemon(&workspace_root)?;
@@ -158,7 +156,6 @@ impl DaemonRuntime {
             client,
             session_id: None,
             config,
-            secret_store,
             workspace_root,
             remote_control_confirmation: None,
             sync: RuntimeSyncState::new(),
@@ -174,7 +171,7 @@ impl DaemonRuntime {
     }
 
     fn conversation_key_for_path(chat_path: &Path) -> String {
-        chat_store::conversation_key_for_path(chat_path)
+        session_paths::conversation_key_for_path(chat_path)
     }
 
     fn is_attach_miss(err: &anyhow::Error) -> bool {
@@ -722,18 +719,11 @@ impl DaemonRuntime {
         &self.sync.session
     }
 
-    fn transport_host(&self) -> TransportHost<'_> {
-        TransportHost {
-            workspace_root: &self.workspace_root,
-            secret_store: self.secret_store.as_ref(),
-        }
-    }
-
-    pub fn validate_config_change(&self, config: &AppConfig) -> Result<()> {
-        if !transport_config_will_change(&self.config, config) {
+    pub fn validate_config_change(&mut self, config: &AppConfig) -> Result<()> {
+        if serde_json::to_value(&self.config).ok() == serde_json::to_value(config).ok() {
             return Ok(());
         }
-        crate::transport_config::resolve_transport_config_json_for(&self.transport_host(), config)
+        self.call_daemon("host.validateConfig", Some(json!({ "config": config })))
             .map(|_| ())
     }
 
@@ -747,7 +737,8 @@ impl DaemonRuntime {
                 )));
             return;
         }
-        let transport_changed = transport_config_will_change(&self.config, &config);
+        let transport_changed =
+            serde_json::to_value(&self.config).ok() != serde_json::to_value(&config).ok();
         self.config = config;
         if let Err(err) = self.apply_attribution_to_daemon() {
             self.handle_daemon_error(err);
@@ -848,6 +839,24 @@ impl DaemonRuntime {
         }
         self.call_daemon("session.activateSkill", Some(json!({ "skill": skill })))?;
         Ok(())
+    }
+
+    pub fn resolve_active_skill(
+        &mut self,
+        skill: &crate::skills::SkillEntry,
+    ) -> Result<ActiveSkillPayload> {
+        let value = self.client.call(
+            "host.resolveActiveSkill",
+            json!({
+                "workspaceRoot": self.workspace_root.to_string_lossy(),
+                "skill": {
+                    "id": skill.source.id,
+                    "name": skill.source.name,
+                    "path": skill.source.path,
+                },
+            }),
+        )?;
+        Ok(serde_json::from_value(value)?)
     }
 
     pub fn has_active_plan(&self) -> bool {
@@ -1310,12 +1319,13 @@ impl DaemonRuntime {
             message_index,
             self.rewind.next_sequence(),
         );
-        let spirit_data_dir = crate::mcp::spirit_data_dir();
-        rewind::save_rewind_checkpoint_snapshot(
-            &spirit_data_dir,
-            &self.rewind.session_id,
-            &checkpoint.id,
-            &snapshot,
+        self.client.call(
+            "session.saveRewindCheckpoint",
+            json!({
+                "sessionId": self.rewind.session_id,
+                "checkpointId": checkpoint.id,
+                "snapshot": snapshot,
+            }),
         )?;
         self.rewind.upsert_checkpoint(checkpoint);
         Ok(())
@@ -1327,13 +1337,13 @@ impl DaemonRuntime {
             .checkpoint_for_message_id(message_id)
             .cloned()
             .ok_or_else(|| anyhow!("This message has no rewind checkpoint available."))?;
-        let spirit_data_dir = crate::mcp::spirit_data_dir();
-        let snapshot = rewind::load_rewind_checkpoint_snapshot(
-            &spirit_data_dir,
-            &self.rewind.session_id,
-            &checkpoint.id,
-        )?
-        .ok_or_else(|| anyhow!("The rewind checkpoint file does not exist; cannot rewind."))?;
+        let snapshot: DesktopRewindCheckpointSnapshot = serde_json::from_value(self.client.call(
+            "session.loadRewindCheckpoint",
+            json!({
+                "sessionId": self.rewind.session_id,
+                "checkpointId": checkpoint.id,
+            }),
+        )?)?;
 
         let changes_to_restore = self
             .rewind
@@ -1345,11 +1355,15 @@ impl DaemonRuntime {
         let mut loaded_changes = Vec::new();
         let mut warnings = Vec::new();
         for metadata in changes_to_restore {
-            if let Some(stored) = rewind::load_rewind_file_change(
-                &spirit_data_dir,
-                &self.rewind.session_id,
-                &metadata.id,
-            )? {
+            let stored: Option<rewind::HostRecordedFileChange> =
+                serde_json::from_value(self.client.call(
+                    "session.loadRewindFileChange",
+                    json!({
+                        "sessionId": self.rewind.session_id,
+                        "changeId": metadata.id,
+                    }),
+                )?)?;
+            if let Some(stored) = stored {
                 loaded_changes.push(stored);
             } else {
                 warnings.push(rewind::HostFileRewindWarning {
@@ -1362,7 +1376,10 @@ impl DaemonRuntime {
             }
         }
 
-        let restore_result = rewind::restore_host_file_changes(&loaded_changes)?;
+        let restore_result: rewind::HostFileRewindResult = serde_json::from_value(
+            self.client
+                .call("session.rewind", json!({ "changes": loaded_changes }))?,
+        )?;
         let mut outcome = rewind::resolve_before_checkpoint_state(&snapshot);
         outcome.restored = restore_result.restored;
         outcome.skipped = restore_result.skipped + warnings.len();
@@ -1392,9 +1409,14 @@ impl DaemonRuntime {
             );
         }
 
-        let spirit_data_dir = crate::mcp::spirit_data_dir();
         let stored = rewind::to_desktop_file_change(change, self.rewind.next_sequence());
-        rewind::save_rewind_file_change(&spirit_data_dir, &self.rewind.session_id, &stored)?;
+        self.client.call(
+            "session.saveRewindFileChange",
+            json!({
+                "sessionId": self.rewind.session_id,
+                "change": stored,
+            }),
+        )?;
         self.rewind
             .file_changes
             .push(rewind::file_change_metadata(&stored));
@@ -1691,9 +1713,186 @@ impl DaemonRuntime {
         name: &str,
         config: crate::mcp::McpServerConfig,
     ) -> Result<PathBuf> {
-        let path = crate::mcp::add_mcp_server(&self.workspace_root, scope, name, config)?;
-        let _ = self.mcp_call("startMcpBackgroundRefresh", Value::Null)?;
+        let scope = match scope {
+            crate::mcp::McpScope::User => "user",
+            crate::mcp::McpScope::Workspace => "workspace",
+        };
+        let value = self.mcp_call(
+            "addMcpServer",
+            json!({ "scope": scope, "name": name, "config": config }),
+        )?;
+        let path = value
+            .get("path")
+            .and_then(Value::as_str)
+            .map(PathBuf::from)
+            .ok_or_else(|| anyhow!("addMcpServer did not return a path"))?;
         Ok(path)
+    }
+
+    pub fn initialize_mcp_config(&mut self, force: bool, config: Value) -> Result<PathBuf> {
+        let value = self.mcp_call(
+            "initializeMcpConfig",
+            json!({ "scope": "user", "force": force, "config": config }),
+        )?;
+        value
+            .get("path")
+            .and_then(Value::as_str)
+            .map(PathBuf::from)
+            .ok_or_else(|| anyhow!("initializeMcpConfig did not return a path"))
+    }
+
+    pub fn set_mcp_server_enabled(&mut self, name: &str, enabled: bool) -> Result<PathBuf> {
+        let value = self.mcp_call(
+            "setMcpServerEnabled",
+            json!({ "name": name, "enabled": enabled }),
+        )?;
+        value
+            .get("path")
+            .and_then(Value::as_str)
+            .map(PathBuf::from)
+            .ok_or_else(|| anyhow!("setMcpServerEnabled did not return a path"))
+    }
+
+    pub fn preview_models(&mut self, request: Value) -> Result<Value> {
+        self.client
+            .call("host.previewModels", json!({ "request": request }))
+    }
+
+    pub fn build_model_display_titles(
+        &mut self,
+        profiles: &[crate::model_registry::ModelProfile],
+    ) -> Result<std::collections::HashMap<String, String>> {
+        let value = self.client.call(
+            "host.buildModelDisplayTitles",
+            json!({ "profiles": profiles }),
+        )?;
+        Ok(serde_json::from_value(value)?)
+    }
+
+    pub fn add_model(&mut self, request: Value) -> Result<AppConfig> {
+        let value = self.client.call(
+            "host.addModel",
+            json!({
+                "workspaceRoot": self.workspace_root.to_string_lossy(),
+                "request": request,
+            }),
+        )?;
+        Ok(serde_json::from_value(value)?)
+    }
+
+    pub fn update_config(&mut self, request: Value) -> Result<AppConfig> {
+        let value = self.client.call(
+            "host.updateConfig",
+            json!({
+                "workspaceRoot": self.workspace_root.to_string_lossy(),
+                "request": request,
+            }),
+        )?;
+        Ok(serde_json::from_value(value)?)
+    }
+
+    pub fn add_provider_models(&mut self, request: Value) -> Result<AppConfig> {
+        let value = self.client.call(
+            "host.addProviderModels",
+            json!({
+                "workspaceRoot": self.workspace_root.to_string_lossy(),
+                "request": request,
+            }),
+        )?;
+        Ok(serde_json::from_value(value)?)
+    }
+
+    pub fn remove_model(
+        &mut self,
+        model_ref: &crate::model_registry::ModelRef,
+    ) -> Result<AppConfig> {
+        let value = self.client.call(
+            "host.removeModel",
+            json!({
+                "workspaceRoot": self.workspace_root.to_string_lossy(),
+                "request": { "ref": model_ref },
+            }),
+        )?;
+        Ok(serde_json::from_value(value)?)
+    }
+
+    pub fn fork_archive(
+        &mut self,
+        archive: &ChatArchive,
+        desktop_messages: &[crate::rewind::ConversationMessageSnapshot],
+        anchor_index: usize,
+    ) -> Result<(
+        ChatArchive,
+        Vec<crate::rewind::ConversationMessageSnapshot>,
+        Value,
+    )> {
+        let response = self.client.call(
+            "session.fork",
+            json!({
+                "archive": chat_archive_to_bridge_json(archive),
+                "desktopMessages": desktop_messages,
+                "anchorIndex": anchor_index,
+            }),
+        )?;
+        let archive: BridgeChatArchive = serde_json::from_value(response["archive"].clone())?;
+        let desktop_messages: Vec<crate::rewind::ConversationMessageSnapshot> =
+            serde_json::from_value(response["desktopMessages"].clone())?;
+        Ok((
+            ChatArchive {
+                messages: archive
+                    .messages
+                    .into_iter()
+                    .map(|message| (message.role, message.content))
+                    .collect(),
+                assistant_aux: archive
+                    .assistant_aux
+                    .into_iter()
+                    .map(|entry| AssistantAuxArchiveEntry {
+                        message_index: entry.message_index,
+                        thinking: entry.thinking,
+                        compaction: entry.compaction,
+                        finish_task_notice: entry.finish_task_notice,
+                    })
+                    .collect(),
+                llm_history: archive.llm_history,
+                loop_enabled: archive.loop_enabled,
+                approval_level: archive.approval_level,
+                subagent_sessions: archive
+                    .subagent_sessions
+                    .into_iter()
+                    .map(|entry| SubagentSessionArchiveEntry {
+                        summary: SubagentSessionSummary {
+                            session_id: entry.summary.session_id,
+                            parent_tool_call_id: entry.summary.parent_tool_call_id,
+                            title: entry.summary.title,
+                            status: entry.summary.status,
+                            started_at_unix_ms: entry.summary.started_at_unix_ms,
+                            updated_at_unix_ms: entry.summary.updated_at_unix_ms,
+                            completed_at_unix_ms: entry.summary.completed_at_unix_ms,
+                            latest_message: entry.summary.latest_message,
+                            final_output: entry.summary.final_output,
+                            error: entry.summary.error,
+                        },
+                        llm_history: entry.llm_history,
+                    })
+                    .collect(),
+                desktop_messages: Some(desktop_messages.clone()),
+                rewind: Some(response["rewind"].clone()),
+                session_display_name: None,
+                session_title_source: None,
+            },
+            desktop_messages,
+            response["rewind"].clone(),
+        ))
+    }
+
+    pub fn read_mcp_config(&mut self) -> Result<crate::mcp::LoadedMcpConfig> {
+        let value = self.mcp_call("readMcpConfig", Value::Null)?;
+        Ok(crate::mcp::LoadedMcpConfig {
+            user_path: crate::mcp::user_mcp_config_path(),
+            workspace_path: crate::mcp::workspace_mcp_config_path(&self.workspace_root),
+            config: crate::mcp::parse_shared_config(value["merged"].clone())?,
+        })
     }
 
     pub fn execute_mcp_tool(

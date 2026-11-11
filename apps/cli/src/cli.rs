@@ -4,26 +4,16 @@ use std::fs;
 use std::{env, path::PathBuf};
 
 use crate::{
-    adapters::{DefaultAppPaths, JsonConfigStore, KeyringSecretStore},
-    daemon::DaemonRuntime,
-    mcp::{
-        example_github_mcp_config, load_mcp_config, save_mcp_config, set_server_enabled,
-        user_mcp_config_path, workspace_mcp_config_path,
-    },
-    model_registry::{
-        AppConfig, DEFAULT_API_BASE, ModelEntry, ModelProfile, ModelRef, ModelTransportKind,
-        env_channel_value, model_refs_equal, resolve_provider_api_key, save_provider_api_key,
-        save_provider_slot_secret,
-    },
-    ports::{AppPaths, ConfigStore, SecretStore},
-    provider_presets::{
-        CUSTOM_PROVIDER_PRESET_ID, PresetConnectSelections, is_known_preset_id,
-        list_base_template_keys, model_add_default_custom_api_base, preset_connect_api_base,
-        preset_connect_draft, preset_credential_kind, preset_entry, validate_azure_resource_name,
-    },
+    adapters::{DefaultAppPaths, JsonConfigStore},
+    daemon::{DaemonRuntime, config::call_config_rpc},
+    mcp::{example_github_mcp_config, user_mcp_config_path, workspace_mcp_config_path},
+    model_registry::{AppConfig, ModelProfile, ModelRef},
+    ports::{AppPaths, ConfigStore},
 };
 
 const ENV_API_KEY: &str = "SPIRIT_API_KEY";
+
+use crate::daemon::params::compact_json;
 
 pub struct ModelAddCommand {
     pub name: String,
@@ -180,7 +170,6 @@ pub enum ExtensionMarketplaceCommand {
 
 pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
     let config_store = JsonConfigStore;
-    let secret_store = KeyringSecretStore;
     let mut cfg = config_store.load()?;
 
     match action {
@@ -191,7 +180,7 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
             );
             println!("{}", t!("cli.model.list_header"));
             for model in cfg.flatten_models() {
-                let key_saved = model_key_resolves(&secret_store, &model);
+                let key_saved = model_key_resolves(&model);
                 let (effort_label, effort) = model_effort_display(&model);
                 println!(
                     "{}",
@@ -234,295 +223,47 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
             if cfg.has_model_name(&name) {
                 println!("{}", t!("cli.model.already_exists", name = name));
             } else {
-                let provider = parse_model_provider(provider)?;
-                let transport_kind =
-                    parse_model_transport_kind(transport_kind, provider.as_deref())?;
-                let explicit_custom = provider.as_deref() == Some(CUSTOM_PROVIDER_PRESET_ID);
-                let entry_id = provider.unwrap_or_else(|| CUSTOM_PROVIDER_PRESET_ID.to_string());
-                let is_custom = entry_id == CUSTOM_PROVIDER_PRESET_ID;
-
-                let azure_resource_name = azure_resource_name
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                    .map(ToOwned::to_owned);
-                if let Some(resource_name) = azure_resource_name.as_deref() {
-                    validate_azure_resource_name(resource_name).map_err(anyhow::Error::msg)?;
-                }
-                let reasoning_effort = parse_model_reasoning_effort(reasoning_effort)?;
-                let effort = parse_model_effort(effort)?;
-                if effort.is_some() && reasoning_effort.is_some() {
-                    return Err(anyhow!("{}", t!("cli.model.error.effort_conflict")));
-                }
-                if transport_kind == ModelTransportKind::Anthropic && reasoning_effort.is_some() {
-                    return Err(anyhow!(
-                        "{}",
-                        t!("cli.model.error.anthropic_reasoning_effort")
-                    ));
-                }
-                if explicit_custom && api_base.as_deref().map(str::trim).is_none_or(str::is_empty) {
-                    return Err(anyhow!("{}", t!("cli.model.error.endpoint_empty")));
-                }
-
-                // Vertex: project/location select the service-account credential form;
-                // without them the apiKey (Express) form materializes `expressApiBase`.
-                let vertex_project = vertex_project
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                    .map(ToOwned::to_owned);
-                let vertex_location = vertex_location
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                    .map(ToOwned::to_owned);
-                if vertex_project.is_some() != vertex_location.is_some() {
-                    return Err(anyhow!(
-                        "{}",
-                        t!("cli.model.error.vertex_project_location_required")
-                    ));
-                }
-                let vertex_client_email = vertex_client_email
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                    .map(ToOwned::to_owned);
-                let vertex_private_key = vertex_private_key
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                    .map(ToOwned::to_owned);
-                if vertex_client_email.is_some() != vertex_private_key.is_some() {
-                    return Err(anyhow!(
-                        "{}",
-                        t!("cli.model.error.vertex_service_account_incomplete")
-                    ));
-                }
-                let aws_access_key_id = aws_access_key_id
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                    .map(ToOwned::to_owned);
-                let aws_secret_access_key = aws_secret_access_key
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                    .map(ToOwned::to_owned);
-                if aws_access_key_id.is_some() != aws_secret_access_key.is_some() {
-                    return Err(anyhow!(
-                        "{}",
-                        t!("cli.model.error.bedrock_credentials_incomplete")
-                    ));
-                }
-
-                let credential_kind = match preset_credential_kind(&entry_id) {
-                    "vertex" if vertex_project.is_some() => "vertex",
-                    "vertex" => "apiKey",
-                    kind => kind,
-                };
-
-                let provider_site = provider_site
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                    .map(ToOwned::to_owned);
-                let billing_plan = billing_plan
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                    .map(ToOwned::to_owned);
-                if !is_custom {
-                    if let Some(site) = provider_site.as_deref() {
-                        let known = preset_entry(&entry_id)
-                            .is_some_and(|preset| preset.sites().iter().any(|s| s.id == site));
-                        if !known {
-                            return Err(anyhow!(
-                                "{}",
-                                t!(
-                                    "cli.model.error.provider_site_invalid",
-                                    provider = entry_id,
-                                    site = site
-                                )
-                            ));
-                        }
-                    }
-                    if let Some(plan) = billing_plan.as_deref() {
-                        let known = preset_entry(&entry_id).is_some_and(|preset| {
-                            preset.billing_plans().iter().any(|p| p.id == plan)
-                        });
-                        if !known {
-                            return Err(anyhow!(
-                                "{}",
-                                t!(
-                                    "cli.model.error.billing_plan_invalid",
-                                    provider = entry_id,
-                                    plan = plan
-                                )
-                            ));
-                        }
-                    }
-                }
-
-                // `{placeholder}` template values collected from flags; `awsRegion` defaults
-                // to us-east-1 for the bedrock preset's templated endpoint.
-                let mut template_values = std::collections::BTreeMap::new();
-                if let Some(value) = azure_resource_name {
-                    template_values.insert("resourceName".to_string(), value);
-                }
-                if let Some(value) = workspace_id
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                {
-                    template_values.insert("workspaceId".to_string(), value.to_string());
-                }
-                if let (Some(project), Some(location)) =
-                    (vertex_project.as_ref(), vertex_location.as_ref())
-                {
-                    template_values.insert("project".to_string(), project.clone());
-                    template_values.insert("location".to_string(), location.clone());
-                }
-                if credential_kind == "bedrock" {
-                    let region = aws_region
-                        .as_deref()
-                        .map(str::trim)
-                        .filter(|value| !value.is_empty())
-                        .unwrap_or("us-east-1");
-                    template_values.insert("awsRegion".to_string(), region.to_string());
-                }
-
-                let api_base = match api_base
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                {
-                    Some(value) => value.to_string(),
-                    None if is_custom => match transport_kind {
-                        ModelTransportKind::Anthropic => {
-                            model_add_default_custom_api_base(ModelTransportKind::Anthropic)
-                        }
-                        _ => DEFAULT_API_BASE.to_string(),
-                    },
-                    None => {
-                        let selections = PresetConnectSelections {
-                            transport_kind: Some(transport_kind),
-                            site_id: provider_site.as_deref(),
-                            billing_plan_id: billing_plan.as_deref(),
-                            template_values: template_values.clone(),
-                            credential_kind: Some(credential_kind),
-                        };
-                        let base = preset_connect_api_base(&entry_id, &selections)
-                            .ok_or_else(|| anyhow!("{}", t!("cli.model.error.endpoint_empty")))?;
-                        let unresolved = list_base_template_keys(&base);
-                        if !unresolved.is_empty() {
-                            return Err(anyhow!(
-                                "{}",
-                                t!(
-                                    "cli.model.error.endpoint_template_unresolved",
-                                    provider = entry_id,
-                                    placeholders = unresolved.join(", ")
-                                )
-                            ));
-                        }
-                        base
-                    }
-                };
-                let capabilities = normalize_model_capabilities(capabilities);
-                // Composite credential forms (bedrock IAM pair, vertex service account)
-                // collect slot flags instead of the plain api key.
-                let needs_api_key = credential_kind == "apiKey";
-                let key_value = if needs_api_key {
-                    match key {
-                        Some(v) => v,
-                        None => rpassword::prompt_password(&t!("cli.model.prompt_api_key"))
-                            .context(t!("cli.model.api_key_read_failed").into_owned())?,
-                    }
-                } else {
-                    String::new()
-                };
-                if needs_api_key && key_value.trim().is_empty() && !is_custom {
-                    return Err(anyhow!("{}", t!("cli.model.error.api_key_empty")));
-                }
-                let context_length = match context_length {
-                    None => None,
-                    Some(0) => {
-                        return Err(anyhow!("{}", t!("cli.model.error.context_length_positive")));
-                    }
-                    Some(value) => Some(value),
-                };
-
-                let mut connect =
-                    preset_connect_draft(&entry_id, transport_kind, provider_site.as_deref());
-                // Transport options materialized from wizard template values (bedrock
-                // `awsRegion`, vertex `project` / `location`); express connects write none.
-                let options: serde_json::Map<String, serde_json::Value> =
-                    ["awsRegion", "project", "location"]
-                        .into_iter()
-                        .filter_map(|key| {
-                            template_values.get(key).map(|value| {
-                                (key.to_string(), serde_json::Value::String(value.clone()))
-                            })
-                        })
-                        .collect();
-                if !options.is_empty() {
-                    // Wizard input wins per key over the preset's mechanism-option template.
-                    connect.options = Some(match connect.options {
-                        Some(mut template) => {
-                            template.extend(options);
-                            template
-                        }
-                        None => options,
-                    });
-                }
-                let entry = ModelEntry {
-                    name: name.clone(),
-                    reasoning_effort: reasoning_effort.clone(),
-                    effort_semantics: effort.as_ref().map(|_| "output".to_string()),
-                    effort: effort.clone(),
-                    capabilities: if capabilities.is_empty() {
-                        None
-                    } else {
-                        Some(capabilities.clone())
-                    },
-                    context_length,
-                    ..ModelEntry::default()
-                };
-                cfg.add_model_to_provider(&entry_id, api_base.clone(), connect, entry);
+                let workspace_root = env::current_dir()?;
+                let request = compact_json(serde_json::json!({
+                    "name": name,
+                    "apiBase": api_base.unwrap_or_default(),
+                    "apiKey": key.unwrap_or_default(),
+                    "provider": provider,
+                    "transportKind": transport_kind,
+                    "reasoningEffort": reasoning_effort,
+                    "effort": effort,
+                    "capabilities": capabilities,
+                    "contextLength": context_length,
+                    "azureResourceName": azure_resource_name,
+                    "siteId": provider_site,
+                    "billingPlanId": billing_plan,
+                    "workspaceId": workspace_id,
+                    "vertexProject": vertex_project,
+                    "vertexLocation": vertex_location,
+                    "vertexClientEmail": vertex_client_email,
+                    "vertexPrivateKey": vertex_private_key,
+                    "awsRegion": aws_region,
+                    "accessKeyId": aws_access_key_id,
+                    "secretAccessKey": aws_secret_access_key,
+                }));
+                let updated = call_config_rpc(
+                    &workspace_root,
+                    "host.addModel",
+                    serde_json::json!({
+                        "workspaceRoot": workspace_root.to_string_lossy(),
+                        "request": request
+                    }),
+                )?;
+                cfg = serde_json::from_value(updated)?;
+                let entry_id = cfg.active_model.provider_id.clone();
                 let model_ref = ModelRef {
                     provider_id: entry_id.clone(),
                     name: name.clone(),
                 };
-                if cfg.image_generation_model.is_none()
-                    && cfg
-                        .resolve_model_profile(&model_ref)
-                        .is_some_and(|profile| profile.supports_image_generation())
-                {
-                    cfg.image_generation_model = Some(model_ref.clone());
-                }
-                if cfg.video_generation_model.is_none()
-                    && cfg
-                        .resolve_model_profile(&model_ref)
-                        .is_some_and(|profile| profile.supports_video_generation())
-                {
-                    cfg.video_generation_model = Some(model_ref.clone());
-                }
-                cfg.active_model = model_ref;
-                if !key_value.trim().is_empty() {
-                    save_provider_api_key(&entry_id, &key_value)?;
-                }
-                if let (Some(access_key_id), Some(secret_access_key)) =
-                    (aws_access_key_id, aws_secret_access_key)
-                {
-                    save_provider_slot_secret(&entry_id, "accessKeyId", &access_key_id)?;
-                    save_provider_slot_secret(&entry_id, "secretAccessKey", &secret_access_key)?;
-                }
-                if let (Some(client_email), Some(private_key)) =
-                    (vertex_client_email, vertex_private_key)
-                {
-                    save_provider_slot_secret(&entry_id, "clientEmail", &client_email)?;
-                    save_provider_slot_secret(&entry_id, "privateKey", &private_key)?;
-                }
-                config_store.save(&cfg)?;
+                let api_base = cfg
+                    .resolve_model_profile(&model_ref)
+                    .map(|profile| profile.api_base.clone())
+                    .unwrap_or_default();
                 println!("{}", t!("cli.model.added_and_active", name = name));
                 println!("api_base: {}", api_base);
                 println!("provider: {}", entry_id);
@@ -545,12 +286,9 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                 }
                 println!(
                     "capabilities: {}",
-                    cfg.resolve_model_profile(&ModelRef {
-                        provider_id: entry_id,
-                        name: name.clone(),
-                    })
-                    .map(|profile| format_model_capabilities(&profile))
-                    .unwrap_or_else(|| t!("cli.common.unset").into_owned())
+                    cfg.resolve_model_profile(&model_ref)
+                        .map(|profile| format_model_capabilities(&profile))
+                        .unwrap_or_else(|| t!("cli.common.unset").into_owned())
                 );
             }
         }
@@ -558,42 +296,18 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
             let model_ref = cfg
                 .parse_model_ref_selector(&name)
                 .map_err(|err| anyhow!(err))?;
-            if !cfg.remove_model(&model_ref) {
+            if cfg.resolve_model_profile(&model_ref).is_none() {
                 println!("{}", t!("cli.model.not_found_name", name = name));
             } else {
-                if model_refs_equal(&cfg.active_model, &model_ref) {
-                    cfg.active_model = cfg.first_model_ref();
-                }
-                if cfg
-                    .image_generation_model
-                    .as_ref()
-                    .is_some_and(|slot| model_refs_equal(slot, &model_ref))
-                {
-                    cfg.image_generation_model = None;
-                }
-                if cfg
-                    .video_generation_model
-                    .as_ref()
-                    .is_some_and(|slot| model_refs_equal(slot, &model_ref))
-                {
-                    cfg.video_generation_model = None;
-                }
-                config_store.save(&cfg)?;
-                // When the removal emptied the provider entry, drop its internal keyring
-                // accounts (`provider::{id}` plus the wizard-written Vertex slot pair).
-                if cfg.find_provider_entry(&model_ref.provider_id).is_none() {
-                    let _ = secret_store.remove_provider_secret(
-                        &crate::model_registry::provider_key_account(&model_ref.provider_id),
-                    );
-                    for slot in ["clientEmail", "privateKey"] {
-                        let _ = secret_store.remove_provider_secret(
-                            &crate::model_registry::provider_slot_account(
-                                &model_ref.provider_id,
-                                slot,
-                            ),
-                        );
-                    }
-                }
+                let workspace_root = env::current_dir()?;
+                call_config_rpc(
+                    &workspace_root,
+                    "host.removeModel",
+                    serde_json::json!({
+                        "workspaceRoot": workspace_root.to_string_lossy(),
+                        "request": { "ref": model_ref },
+                    }),
+                )?;
                 println!("{}", t!("cli.model.removed", name = name));
             }
         }
@@ -614,9 +328,8 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
 
 pub fn handle_config_cli(action: ConfigCommand) -> Result<()> {
     let config_store = JsonConfigStore;
-    let secret_store = KeyringSecretStore;
     let app_paths = DefaultAppPaths::new();
-    let mut cfg = config_store.load()?;
+    let cfg = config_store.load()?;
 
     match action {
         ConfigCommand::Show => {
@@ -655,7 +368,7 @@ pub fn handle_config_cli(action: ConfigCommand) -> Result<()> {
             );
             println!("{}", t!("cli.config.models_header"));
             for model in cfg.flatten_models() {
-                let key_saved = model_key_resolves(&secret_store, &model);
+                let key_saved = model_key_resolves(&model);
                 let (effort_label, effort) = model_effort_display(&model);
                 println!(
                     "{}",
@@ -689,60 +402,53 @@ pub fn handle_config_cli(action: ConfigCommand) -> Result<()> {
             );
         }
         ConfigCommand::SetBase { url } => {
-            if let Some(provider) = cfg.active_provider_entry_mut() {
-                provider.api_base = url.clone();
-            }
-            config_store.save(&cfg)?;
+            update_config_cli(&cfg, serde_json::json!({ "apiBase": url }))?;
             println!("{}", t!("cli.config.api_base_updated", url = url));
         }
         ConfigCommand::SetImageModel { name } => {
             let model_ref = cfg
                 .parse_model_ref_selector(&name)
                 .map_err(|err| anyhow!(err))?;
-            let Some(profile) = cfg.resolve_model_profile(&model_ref) else {
+            let Some(_profile) = cfg.resolve_model_profile(&model_ref) else {
                 return Err(anyhow!(
                     "{}",
                     crate::cli_bootstrap::model_not_found_message(&name, &cfg)
                 ));
             };
-            if !profile.supports_image_generation() {
-                return Err(anyhow!(
-                    "{}",
-                    t!("cli.model.error.no_image_generation", name = name)
-                ));
-            }
-            cfg.image_generation_model = Some(model_ref);
-            config_store.save(&cfg)?;
+            update_config_cli(
+                &cfg,
+                serde_json::json!({ "imageGenerationModel": model_ref }),
+            )?;
             println!("{}", t!("cli.config.image_model_set", name = name));
         }
         ConfigCommand::ClearImageModel => {
-            cfg.image_generation_model = None;
-            config_store.save(&cfg)?;
+            update_config_cli(
+                &cfg,
+                serde_json::json!({ "imageGenerationModel": ModelRef::empty() }),
+            )?;
             println!("{}", t!("cli.config.image_model_cleared"));
         }
         ConfigCommand::SetVideoModel { name } => {
             let model_ref = cfg
                 .parse_model_ref_selector(&name)
                 .map_err(|err| anyhow!(err))?;
-            let Some(profile) = cfg.resolve_model_profile(&model_ref) else {
+            let Some(_profile) = cfg.resolve_model_profile(&model_ref) else {
                 return Err(anyhow!(
                     "{}",
                     crate::cli_bootstrap::model_not_found_message(&name, &cfg)
                 ));
             };
-            if !profile.supports_video_generation() {
-                return Err(anyhow!(
-                    "{}",
-                    t!("cli.model.error.no_video_generation", name = name)
-                ));
-            }
-            cfg.video_generation_model = Some(model_ref);
-            config_store.save(&cfg)?;
+            update_config_cli(
+                &cfg,
+                serde_json::json!({ "videoGenerationModel": model_ref }),
+            )?;
             println!("{}", t!("cli.config.video_model_set", name = name));
         }
         ConfigCommand::ClearVideoModel => {
-            cfg.video_generation_model = None;
-            config_store.save(&cfg)?;
+            update_config_cli(
+                &cfg,
+                serde_json::json!({ "videoGenerationModel": ModelRef::empty() }),
+            )?;
             println!("{}", t!("cli.config.video_model_cleared"));
         }
     }
@@ -750,114 +456,30 @@ pub fn handle_config_cli(action: ConfigCommand) -> Result<()> {
     Ok(())
 }
 
+fn update_config_cli(config: &AppConfig, updates: serde_json::Value) -> Result<AppConfig> {
+    let workspace_root = env::current_dir()?;
+    let mut request = serde_json::json!({
+        "activeModel": config.active_model,
+        "apiBase": config
+            .active_model_profile()
+            .map(|profile| profile.api_base)
+            .unwrap_or_default(),
+    });
+    if let (Some(request), Some(updates)) = (request.as_object_mut(), updates.as_object()) {
+        request.extend(updates.clone());
+    }
+    let value = call_config_rpc(
+        &workspace_root,
+        "host.updateConfig",
+        serde_json::json!({
+            "workspaceRoot": workspace_root.to_string_lossy(),
+            "request": request,
+        }),
+    )?;
+    Ok(serde_json::from_value(value)?)
+}
+
 /// `model add --provider` names a preset id from the presets manifest (or `custom`).
-fn parse_model_provider(value: Option<String>) -> Result<Option<String>> {
-    match normalize_choice_arg(value) {
-        Some(provider) => {
-            let id = provider.to_ascii_lowercase();
-            if is_known_preset_id(&id) {
-                Ok(Some(id))
-            } else {
-                Err(anyhow!("Unsupported provider: {id}"))
-            }
-        }
-        None => Ok(None),
-    }
-}
-
-fn parse_model_transport_kind(
-    value: Option<String>,
-    provider: Option<&str>,
-) -> Result<ModelTransportKind> {
-    let parsed = match normalize_choice_arg(value) {
-        Some(transport_kind) => transport_kind.parse().map_err(|err: String| anyhow!(err))?,
-        // The preset manifest's `defaultTransport` is the unflagged default.
-        None => match provider {
-            Some(provider) if provider != CUSTOM_PROVIDER_PRESET_ID => {
-                crate::provider_presets::preset_default_transport_kind(provider)
-            }
-            _ => ModelTransportKind::OpenAiCompatible,
-        },
-    };
-
-    match (provider, parsed) {
-        // The preset manifest's `transports` keys are the provider's supported set
-        // (the bedrock preset declares only the bedrock transport).
-        (Some(provider), transport_kind)
-            if provider != CUSTOM_PROVIDER_PRESET_ID
-                && !crate::provider_presets::preset_supports_transport(
-                    provider,
-                    transport_kind,
-                ) =>
-        {
-            Err(anyhow!(
-                "{}",
-                t!(
-                    "cli.model.error.transport.provider_transport_unsupported",
-                    provider = provider,
-                    transport = transport_kind.as_str()
-                )
-            ))
-        }
-        // Custom endpoints accept any non-bedrock transport (bedrock needs the preset's
-        // IAM credential flow).
-        (Some(CUSTOM_PROVIDER_PRESET_ID) | None, ModelTransportKind::Bedrock) => Err(anyhow!(
-            "{}",
-            t!("cli.model.error.transport.bedrock_exclusive")
-        )),
-        _ => Ok(parsed),
-    }
-}
-
-/// `model add --reasoning-effort` accepts any schemaVersion-1 effort token; whether the value
-/// reaches the wire is decided by the daemon from the model's declared
-/// `supportedReasoningEfforts` (absent = trusted pass-through), not by the CLI.
-fn parse_model_reasoning_effort(value: Option<String>) -> Result<Option<String>> {
-    let normalized = match normalize_choice_arg(value) {
-        Some(reasoning_effort) => reasoning_effort.to_ascii_lowercase(),
-        None => return Ok(None),
-    };
-
-    const ALLOWED: [&str; 8] = [
-        "default", "none", "minimal", "low", "medium", "high", "xhigh", "max",
-    ];
-    if ALLOWED.contains(&normalized.as_str()) {
-        return Ok(Some(normalized));
-    }
-
-    let expected = ALLOWED.join("|");
-    Err(anyhow!(
-        "{}",
-        t!(
-            "cli.model.error.reasoning_effort_invalid",
-            expected = expected,
-            received = normalized
-        )
-    ))
-}
-
-fn parse_model_effort(value: Option<String>) -> Result<Option<String>> {
-    let normalized = match normalize_choice_arg(value) {
-        Some(effort) => effort.to_ascii_lowercase(),
-        None => return Ok(None),
-    };
-
-    const ALLOWED: [&str; 6] = ["default", "low", "medium", "high", "xhigh", "max"];
-    if ALLOWED.contains(&normalized.as_str()) {
-        return Ok(Some(normalized));
-    }
-
-    let expected = ALLOWED.join("|");
-    Err(anyhow!(
-        "{}",
-        t!(
-            "cli.model.error.effort_invalid",
-            expected = expected,
-            received = normalized
-        )
-    ))
-}
-
 fn model_effort_display(model: &ModelProfile) -> (&'static str, String) {
     let output = model.effort_semantics.as_deref() == Some("output");
     let value = if output {
@@ -870,40 +492,24 @@ fn model_effort_display(model: &ModelProfile) -> (&'static str, String) {
     (if output { "effort" } else { "reasoning_effort" }, value)
 }
 
-fn normalize_choice_arg(value: Option<String>) -> Option<String> {
-    let trimmed = value?.trim().to_string();
-    if trimmed.is_empty() {
-        None
-    } else {
-        Some(trimmed)
-    }
-}
-
 /// Whether any credential channel (flat keys, env, keyring references, or the internal
 /// `provider::{id}` account) resolves to a key for this model's provider entry.
-fn model_key_resolves(secret_store: &KeyringSecretStore, model: &ModelProfile) -> bool {
-    resolve_provider_api_key(
-        &model.key_channels(),
-        env_channel_value,
-        |service, account| {
-            secret_store
-                .read_keyring_secret(service, account)
-                .ok()
-                .flatten()
-        },
-    )
-    .is_some()
-}
-
-fn normalize_model_capabilities(capabilities: Vec<String>) -> Vec<String> {
-    let mut normalized = Vec::new();
-    for capability in capabilities {
-        let trimmed = capability.trim();
-        if !trimmed.is_empty() && !normalized.iter().any(|value| value == trimmed) {
-            normalized.push(trimmed.to_string());
-        }
-    }
-    normalized
+fn model_key_resolves(model: &ModelProfile) -> bool {
+    env::current_dir()
+        .ok()
+        .and_then(|workspace_root| {
+            let provider = serde_json::to_value(model.key_channels())
+                .map(compact_json)
+                .unwrap_or(serde_json::Value::Null);
+            call_config_rpc(
+                &workspace_root,
+                "host.hasProviderCredential",
+                serde_json::json!({ "provider": provider }),
+            )
+            .ok()
+        })
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false)
 }
 
 fn format_model_capabilities(model: &ModelProfile) -> String {
@@ -963,7 +569,8 @@ pub fn handle_mcp_cli(action: McpCommand) -> Result<()> {
             }
         }
         McpCommand::Show => {
-            let loaded = load_mcp_config(&workspace_root)?;
+            let mut runtime = new_mcp_cli_runtime(workspace_root.clone())?;
+            let loaded = runtime.read_mcp_config()?;
 
             println!(
                 "{}",
@@ -989,9 +596,9 @@ pub fn handle_mcp_cli(action: McpCommand) -> Result<()> {
             println!("{}", serde_json::to_string_pretty(&loaded.config)?);
         }
         McpCommand::Init { force } => {
-            let path = user_mcp_config_path();
-
-            save_mcp_config(&path, &example_github_mcp_config(), force)?;
+            let mut runtime = new_mcp_cli_runtime(workspace_root)?;
+            let path = runtime
+                .initialize_mcp_config(force, serde_json::to_value(example_github_mcp_config())?)?;
             println!(
                 "{}",
                 t!("cli.mcp.init_created", path = path.display().to_string())
@@ -999,7 +606,8 @@ pub fn handle_mcp_cli(action: McpCommand) -> Result<()> {
             println!("{}", t!("cli.mcp.init_hint"));
         }
         McpCommand::Enable { name } => {
-            let path = set_server_enabled(&workspace_root, &name, true)?;
+            let mut runtime = new_mcp_cli_runtime(workspace_root)?;
+            let path = runtime.set_mcp_server_enabled(&name, true)?;
             println!(
                 "{}",
                 t!(
@@ -1010,7 +618,8 @@ pub fn handle_mcp_cli(action: McpCommand) -> Result<()> {
             );
         }
         McpCommand::Disable { name } => {
-            let path = set_server_enabled(&workspace_root, &name, false)?;
+            let mut runtime = new_mcp_cli_runtime(workspace_root)?;
+            let path = runtime.set_mcp_server_enabled(&name, false)?;
             println!(
                 "{}",
                 t!(
@@ -1453,107 +1062,4 @@ pub fn load_or_default_config() -> AppConfig {
     JsonConfigStore
         .load()
         .unwrap_or_else(|_| AppConfig::default())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{
-        parse_model_effort, parse_model_provider, parse_model_reasoning_effort,
-        parse_model_transport_kind,
-    };
-    use crate::model_registry::ModelTransportKind;
-
-    #[test]
-    fn parse_model_reasoning_effort_accepts_v1_tokens_verbatim() {
-        assert_eq!(
-            parse_model_reasoning_effort(Some("minimal".to_string())).expect("parse"),
-            Some("minimal".to_string())
-        );
-        assert_eq!(
-            parse_model_reasoning_effort(Some("max".to_string())).expect("parse"),
-            Some("max".to_string())
-        );
-        assert_eq!(parse_model_reasoning_effort(None).expect("parse"), None);
-        assert!(parse_model_reasoning_effort(Some("extreme".to_string())).is_err());
-    }
-
-    #[test]
-    fn parse_model_effort_accepts_only_output_effort_tokens() {
-        assert_eq!(
-            parse_model_effort(Some("xhigh".to_string())).expect("parse"),
-            Some("xhigh".to_string())
-        );
-        assert_eq!(
-            parse_model_effort(Some("default".to_string())).expect("parse"),
-            Some("default".to_string())
-        );
-        assert!(parse_model_effort(Some("none".to_string())).is_err());
-        assert!(parse_model_effort(Some("minimal".to_string())).is_err());
-    }
-
-    #[test]
-    fn parse_model_provider_accepts_manifest_ids_and_custom() {
-        assert_eq!(
-            parse_model_provider(Some("kimi-code".to_string())).expect("parse"),
-            Some("kimi-code".to_string())
-        );
-        // Ids normalize to lowercase; `custom` is the wizard-only pseudo preset.
-        assert_eq!(
-            parse_model_provider(Some("Google-Vertex-AI".to_string())).expect("parse"),
-            Some("google-vertex-ai".to_string())
-        );
-        assert_eq!(
-            parse_model_provider(Some("custom".to_string())).expect("parse"),
-            Some("custom".to_string())
-        );
-        assert_eq!(parse_model_provider(None).expect("parse"), None);
-        assert!(parse_model_provider(Some("acme-unknown".to_string())).is_err());
-    }
-
-    #[test]
-    fn parse_model_transport_kind_defaults_to_the_preset_default_transport() {
-        assert_eq!(
-            parse_model_transport_kind(None, Some("deepseek")).expect("parse"),
-            ModelTransportKind::OpenAiCompatible
-        );
-        assert_eq!(
-            parse_model_transport_kind(None, Some("amazon-bedrock")).expect("parse"),
-            ModelTransportKind::Bedrock
-        );
-        assert_eq!(
-            parse_model_transport_kind(None, None).expect("parse"),
-            ModelTransportKind::OpenAiCompatible
-        );
-    }
-
-    #[test]
-    fn parse_model_transport_kind_validates_against_the_manifest_transport_keys() {
-        // The bedrock preset declares only the bedrock transport.
-        assert!(
-            parse_model_transport_kind(
-                Some("openai-compatible".to_string()),
-                Some("amazon-bedrock")
-            )
-            .is_err()
-        );
-        assert_eq!(
-            parse_model_transport_kind(Some("bedrock".to_string()), Some("amazon-bedrock"))
-                .expect("parse"),
-            ModelTransportKind::Bedrock
-        );
-        // Custom endpoints accept any non-bedrock transport.
-        assert_eq!(
-            parse_model_transport_kind(Some("anthropic".to_string()), Some("custom"))
-                .expect("parse"),
-            ModelTransportKind::Anthropic
-        );
-        assert!(parse_model_transport_kind(Some("bedrock".to_string()), Some("custom")).is_err());
-        assert!(parse_model_transport_kind(Some("bedrock".to_string()), None).is_err());
-        assert!(
-            parse_model_transport_kind(Some("anthropic".to_string()), Some("kimi-code")).is_ok()
-        );
-        assert!(
-            parse_model_transport_kind(Some("bedrock".to_string()), Some("kimi-code")).is_err()
-        );
-    }
 }

@@ -441,10 +441,8 @@ pub(in crate::ui) fn build_model_picker_lines(
         let is_selected = idx == selected;
         let is_active = model.provider_id == app.config.active_model.provider_id
             && model.name == app.config.active_model.name;
-        let display_title = crate::model_catalog_display::model_display_title(
-            &model.name,
-            &app.model_display_titles,
-        );
+        let display_title =
+            crate::model_display::model_display_title(&model.name, &app.model_display_titles);
 
         let active_suffix = if is_active {
             t!("ui.picker.models.current_suffix").into_owned()

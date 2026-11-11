@@ -51,6 +51,7 @@ import {
   addMcpServer,
   deleteMcpServer,
   initializeMcpConfig,
+  readMcpConfigFiles,
   setMcpServerEnabled,
 } from "@spiritagent/mcp/config-files";
 import { executeHostModelCommand } from "./model-commands.js";
@@ -125,11 +126,18 @@ export class HostService {
   async handle(method: string, rawParams: unknown): Promise<unknown> {
     const params = (rawParams ?? {}) as Record<string, unknown>;
     if (method.startsWith("session.")) {
-      return executeStoredSessionCommand(method, params);
+      return executeStoredSessionCommand(method, params, this.spiritDataDir);
     }
     if (
       method === "host.getConfig" ||
+      method === "host.validateConfig" ||
+      method === "host.replaceConfig" ||
       method === "host.listProviderPresets" ||
+      method === "host.buildModelDisplayTitles" ||
+      method === "host.hasProviderCredential" ||
+      method === "host.readKeyringSecret" ||
+      method === "host.writeKeyringSecret" ||
+      method === "host.deleteKeyringSecret" ||
       method === "host.previewModels" ||
       method === "host.updateConfig" ||
       method === "host.addModel" ||
@@ -601,6 +609,8 @@ export class HostService {
         const action = String(params["action"] ?? "");
         const inner = (params["params"] ?? {}) as Record<string, unknown>;
         switch (action) {
+          case "readMcpConfig":
+            return readMcpConfigFiles({ spiritDataDir: this.spiritDataDir, workspaceRoot });
           case "listMcpServers":
             return service.listServers();
           case "inspectMcpServer":
@@ -638,6 +648,7 @@ export class HostService {
               spiritDataDir: this.spiritDataDir,
               workspaceRoot,
               force: inner["force"] === true,
+              config: inner["config"] as never,
             });
             await this.sessions.mcpRegistry.refreshAllConfigs();
             return { path: result };
@@ -663,7 +674,7 @@ export class HostService {
             await this.sessions.mcpRegistry.refreshAllConfigs();
             return null;
           case "setMcpServerEnabled":
-            await setMcpServerEnabled({
+            const result = await setMcpServerEnabled({
               scope: inner["scope"] === "workspace" ? "workspace" : "user",
               spiritDataDir: this.spiritDataDir,
               workspaceRoot,
@@ -671,7 +682,7 @@ export class HostService {
               enabled: inner["enabled"] === true,
             });
             await this.sessions.mcpRegistry.refreshAllConfigs();
-            return null;
+            return { path: result };
           default:
             throw new Error(`unknown mcp action: ${action}`);
         }
@@ -749,7 +760,14 @@ export const HOST_METHODS = new Set([
   "host.loadPlanMetadata",
   "host.resolveActiveSkill",
   "host.getConfig",
+  "host.validateConfig",
+  "host.replaceConfig",
   "host.listProviderPresets",
+  "host.buildModelDisplayTitles",
+  "host.hasProviderCredential",
+  "host.readKeyringSecret",
+  "host.writeKeyringSecret",
+  "host.deleteKeyringSecret",
   "host.previewModels",
   "host.updateConfig",
   "host.addModel",
@@ -763,6 +781,10 @@ export const HOST_METHODS = new Set([
   "session.loadStored",
   "session.saveStored",
   "session.rewind",
+  "session.saveRewindCheckpoint",
+  "session.loadRewindCheckpoint",
+  "session.saveRewindFileChange",
+  "session.loadRewindFileChange",
   "session.fork",
   "host.writeRuleState",
   "host.writeSkillState",

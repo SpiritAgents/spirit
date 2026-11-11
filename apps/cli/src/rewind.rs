@@ -1,10 +1,7 @@
-use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
     collections::HashMap,
-    fs,
-    path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
 use uuid::Uuid;
@@ -14,7 +11,22 @@ use crate::{
     view::{AssistantAuxData, ChatMessage, MessageRole, ToolUiBlock, ToolUiPhase},
 };
 
-const REWIND_DIR_NAME: &str = "rewind";
+fn fresh_id() -> String {
+    Uuid::new_v4().to_string()
+}
+
+fn current_unix_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|value| value.as_millis() as u64)
+        .unwrap_or(0)
+}
+
+fn find_last_index<T>(items: &[T], predicate: impl Fn(&T) -> bool) -> Option<usize> {
+    (0..items.len())
+        .rev()
+        .find(|index| predicate(&items[*index]))
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -220,7 +232,8 @@ pub enum ToolBlockSnapshotPhase {
     Failed,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct HostFileRewindWarning {
     pub change_id: Option<String>,
     pub path: String,
@@ -228,7 +241,8 @@ pub struct HostFileRewindWarning {
     pub message: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct HostFileRewindResult {
     pub restored: usize,
     pub skipped: usize,
@@ -370,45 +384,6 @@ pub fn file_change_metadata(change: &DesktopStoredFileChange) -> DesktopRewindFi
     }
 }
 
-pub fn save_rewind_checkpoint_snapshot(
-    spirit_data_dir: &Path,
-    session_id: &str,
-    checkpoint_id: &str,
-    snapshot: &DesktopRewindCheckpointSnapshot,
-) -> Result<()> {
-    write_sidecar_json(
-        &checkpoint_path(spirit_data_dir, session_id, checkpoint_id),
-        snapshot,
-    )
-}
-
-pub fn load_rewind_checkpoint_snapshot(
-    spirit_data_dir: &Path,
-    session_id: &str,
-    checkpoint_id: &str,
-) -> Result<Option<DesktopRewindCheckpointSnapshot>> {
-    read_sidecar_json(&checkpoint_path(spirit_data_dir, session_id, checkpoint_id))
-}
-
-pub fn save_rewind_file_change(
-    spirit_data_dir: &Path,
-    session_id: &str,
-    change: &DesktopStoredFileChange,
-) -> Result<()> {
-    write_sidecar_json(
-        &file_change_path(spirit_data_dir, session_id, &change.id),
-        change,
-    )
-}
-
-pub fn load_rewind_file_change(
-    spirit_data_dir: &Path,
-    session_id: &str,
-    change_id: &str,
-) -> Result<Option<DesktopStoredFileChange>> {
-    read_sidecar_json(&file_change_path(spirit_data_dir, session_id, change_id))
-}
-
 pub fn archive_before_last_user(archive: &ChatArchive) -> ChatArchive {
     let mut cloned = archive.clone();
     let message_index = find_last_index(&cloned.messages, |(role, _)| role == "user");
@@ -546,239 +521,6 @@ pub fn assistant_aux_entries(
     entries
 }
 
-pub fn read_host_file_snapshot(resolved_path: &Path) -> Result<HostFileSnapshot> {
-    if !resolved_path.exists() {
-        return Ok(HostFileSnapshot {
-            exists: false,
-            file: false,
-            content: None,
-            sha256: None,
-            mtime_ms: None,
-            size: None,
-        });
-    }
-
-    let metadata = fs::metadata(resolved_path)
-        .with_context(|| format!("Failed to read file metadata: {}", resolved_path.display()))?;
-    let modified = metadata
-        .modified()
-        .ok()
-        .and_then(|value| value.duration_since(UNIX_EPOCH).ok())
-        .map(|value| value.as_millis() as u64);
-    if !metadata.is_file() {
-        return Ok(HostFileSnapshot {
-            exists: true,
-            file: false,
-            content: None,
-            sha256: None,
-            mtime_ms: modified,
-            size: Some(metadata.len()),
-        });
-    }
-
-    let content = fs::read_to_string(resolved_path)
-        .with_context(|| format!("Failed to read file: {}", resolved_path.display()))?;
-    Ok(HostFileSnapshot {
-        exists: true,
-        file: true,
-        content: Some(content),
-        sha256: None,
-        mtime_ms: modified,
-        size: Some(metadata.len()),
-    })
-}
-
-pub fn restore_host_file_changes(
-    changes: &[DesktopStoredFileChange],
-) -> Result<HostFileRewindResult> {
-    let mut warnings = Vec::new();
-    let mut restored = 0usize;
-    let mut skipped = 0usize;
-
-    for change in changes.iter().rev() {
-        match restore_host_file_change(change)? {
-            Ok(()) => {
-                restored += 1;
-            }
-            Err(warning) => {
-                skipped += 1;
-                warnings.push(warning);
-            }
-        }
-    }
-
-    Ok(HostFileRewindResult {
-        restored,
-        skipped,
-        warnings,
-    })
-}
-
-fn restore_host_file_change(
-    change: &DesktopStoredFileChange,
-) -> Result<std::result::Result<(), HostFileRewindWarning>> {
-    match change.kind {
-        HostFileChangeKind::CreateFile => restore_create_file_change(change),
-        HostFileChangeKind::EditFile => restore_edit_file_change(change),
-        HostFileChangeKind::DeleteFile => restore_delete_file_change(change),
-    }
-}
-
-fn restore_create_file_change(
-    change: &DesktopStoredFileChange,
-) -> Result<std::result::Result<(), HostFileRewindWarning>> {
-    let target = PathBuf::from(&change.resolved_path);
-    let current = read_host_file_snapshot(&target)?;
-    if !current.exists {
-        return Ok(Ok(()));
-    }
-    if !current.file {
-        return Ok(Err(skipped_warning(
-            change,
-            "Target path already exists and is not a file; deletion skipped.",
-        )));
-    }
-    if current.content == change.after.content {
-        fs::remove_file(&target)
-            .with_context(|| format!("Failed to delete file: {}", target.display()))?;
-        return Ok(Ok(()));
-    }
-    Ok(Err(skipped_warning(
-        change,
-        "File was modified after creation; deletion skipped to avoid overwriting user changes.",
-    )))
-}
-
-fn restore_edit_file_change(
-    change: &DesktopStoredFileChange,
-) -> Result<std::result::Result<(), HostFileRewindWarning>> {
-    let Some(before_content) = change.before.content.as_deref() else {
-        return Ok(Err(skipped_warning(
-            change,
-            "Missing pre-edit file snapshot; cannot rewind.",
-        )));
-    };
-    if !change.before.file {
-        return Ok(Err(skipped_warning(
-            change,
-            "Missing pre-edit file snapshot; cannot rewind.",
-        )));
-    }
-    let Some(after_content) = change.after.content.as_deref() else {
-        return Ok(Err(skipped_warning(
-            change,
-            "Missing post-edit file snapshot; cannot rewind.",
-        )));
-    };
-    if !change.after.file {
-        return Ok(Err(skipped_warning(
-            change,
-            "Missing post-edit file snapshot; cannot rewind.",
-        )));
-    }
-
-    let target = PathBuf::from(&change.resolved_path);
-    let current = read_host_file_snapshot(&target)?;
-    let Some(current_content) = current.content.as_deref() else {
-        if !current.exists {
-            return Ok(Err(skipped_warning(
-                change,
-                "Target file no longer exists; cannot apply edit rewind.",
-            )));
-        }
-        return Ok(Err(skipped_warning(
-            change,
-            "Target path exists but is not a file; cannot apply edit rewind.",
-        )));
-    };
-
-    if current_content == before_content {
-        return Ok(Ok(()));
-    }
-    if current_content == after_content {
-        fs::write(&target, before_content)
-            .with_context(|| format!("Failed to write file: {}", target.display()))?;
-        return Ok(Ok(()));
-    }
-
-    let Some(hunk) = build_single_text_hunk(before_content, after_content) else {
-        return Ok(Err(skipped_warning(
-            change,
-            "Could not locate a unique edit hunk; skipped to avoid overwriting user changes.",
-        )));
-    };
-    if hunk.after_text.is_empty() {
-        return Ok(Err(skipped_warning(
-            change,
-            "Could not locate a unique edit hunk; skipped to avoid overwriting user changes.",
-        )));
-    }
-
-    let hits = count_substring_occurrences(current_content, &hunk.after_text);
-    if hits != 1 {
-        return Ok(Err(skipped_warning(
-            change,
-            format!(
-                "Edit hunk currently matches {} locations; skipped to avoid overwriting user changes.",
-                hits
-            ),
-        )));
-    }
-
-    fs::write(
-        &target,
-        current_content.replacen(&hunk.after_text, &hunk.before_text, 1),
-    )
-    .with_context(|| format!("Failed to write file: {}", target.display()))?;
-    Ok(Ok(()))
-}
-
-fn restore_delete_file_change(
-    change: &DesktopStoredFileChange,
-) -> Result<std::result::Result<(), HostFileRewindWarning>> {
-    let Some(before_content) = change.before.content.as_deref() else {
-        return Ok(Err(skipped_warning(
-            change,
-            "Missing pre-delete file snapshot; cannot rebuild file.",
-        )));
-    };
-    if !change.before.file {
-        return Ok(Err(skipped_warning(
-            change,
-            "Missing pre-delete file snapshot; cannot rebuild file.",
-        )));
-    }
-
-    let target = PathBuf::from(&change.resolved_path);
-    let current = read_host_file_snapshot(&target)?;
-    if current.exists {
-        return Ok(Err(skipped_warning(
-            change,
-            "Target path exists again; rebuild skipped to avoid overwriting user changes.",
-        )));
-    }
-
-    if let Some(parent) = target.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
-    }
-    fs::write(&target, before_content)
-        .with_context(|| format!("Failed to write file: {}", target.display()))?;
-    Ok(Ok(()))
-}
-
-fn skipped_warning(
-    change: &DesktopStoredFileChange,
-    message: impl Into<String>,
-) -> HostFileRewindWarning {
-    HostFileRewindWarning {
-        change_id: Some(change.id.clone()),
-        path: change.resolved_path.clone(),
-        action: change.kind.clone(),
-        message: message.into(),
-    }
-}
-
 fn message_aux_snapshot_from_data(aux: &AssistantAuxData) -> Option<MessageAuxSnapshot> {
     let thinking = aux
         .thinking
@@ -860,135 +602,13 @@ fn tool_block_from_snapshot(snapshot: &ToolBlockSnapshot) -> ToolUiBlock {
     }
 }
 
-fn checkpoint_path(spirit_data_dir: &Path, session_id: &str, checkpoint_id: &str) -> PathBuf {
-    session_rewind_dir(spirit_data_dir, session_id)
-        .join("checkpoints")
-        .join(format!("{}.json", safe_name(checkpoint_id)))
-}
-
-fn file_change_path(spirit_data_dir: &Path, session_id: &str, change_id: &str) -> PathBuf {
-    session_rewind_dir(spirit_data_dir, session_id)
-        .join("file-changes")
-        .join(format!("{}.json", safe_name(change_id)))
-}
-
-fn session_rewind_dir(spirit_data_dir: &Path, session_id: &str) -> PathBuf {
-    spirit_data_dir
-        .join(REWIND_DIR_NAME)
-        .join(safe_name(session_id))
-}
-
-fn write_sidecar_json(path: &Path, value: &impl Serialize) -> Result<()> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("Failed to create rewind directory: {}", parent.display()))?;
-    }
-    let content = serde_json::to_string_pretty(value)?;
-    fs::write(path, format!("{}\n", content))
-        .with_context(|| format!("Failed to write rewind sidecar: {}", path.display()))
-}
-
-fn read_sidecar_json<T>(path: &Path) -> Result<Option<T>>
-where
-    T: for<'de> Deserialize<'de>,
-{
-    if !path.exists() {
-        return Ok(None);
-    }
-    let text = fs::read_to_string(path)
-        .with_context(|| format!("Failed to read rewind sidecar: {}", path.display()))?;
-    let value = serde_json::from_str(&text)
-        .with_context(|| format!("Failed to parse rewind sidecar: {}", path.display()))?;
-    Ok(Some(value))
-}
-
-fn build_single_text_hunk(before: &str, after: &str) -> Option<TextHunk> {
-    if before == after {
-        return Some(TextHunk {
-            before_text: String::new(),
-            after_text: String::new(),
-        });
-    }
-
-    let before_chars = before.chars().collect::<Vec<_>>();
-    let after_chars = after.chars().collect::<Vec<_>>();
-    let mut prefix = 0usize;
-    while prefix < before_chars.len()
-        && prefix < after_chars.len()
-        && before_chars[prefix] == after_chars[prefix]
-    {
-        prefix += 1;
-    }
-
-    let mut before_end = before_chars.len();
-    let mut after_end = after_chars.len();
-    while before_end > prefix
-        && after_end > prefix
-        && before_chars[before_end - 1] == after_chars[after_end - 1]
-    {
-        before_end -= 1;
-        after_end -= 1;
-    }
-
-    Some(TextHunk {
-        before_text: before_chars[prefix..before_end].iter().collect(),
-        after_text: after_chars[prefix..after_end].iter().collect(),
-    })
-}
-
-fn count_substring_occurrences(source: &str, needle: &str) -> usize {
-    if needle.is_empty() {
-        return 0;
-    }
-    source.match_indices(needle).count()
-}
-
-fn fresh_id() -> String {
-    Uuid::new_v4().to_string()
-}
-
-fn current_unix_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|value| value.as_millis() as u64)
-        .unwrap_or(0)
-}
-
-fn safe_name(value: &str) -> String {
-    value
-        .chars()
-        .map(|ch| {
-            if ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '-') {
-                ch
-            } else {
-                '_'
-            }
-        })
-        .collect()
-}
-
-fn find_last_index<T>(items: &[T], predicate: impl Fn(&T) -> bool) -> Option<usize> {
-    (0..items.len())
-        .rev()
-        .find(|index| predicate(&items[*index]))
-}
-
-#[derive(Clone, Debug)]
-struct TextHunk {
-    before_text: String,
-    after_text: String,
-}
-
 #[cfg(test)]
 mod tests {
     use super::{
-        DesktopStoredFileChange, HostFileChangeKind, HostFileChangeRequestSummary,
-        HostFileSnapshot, StoredDesktopRewindMetadata, create_desktop_rewind_metadata,
-        normalize_desktop_rewind_metadata, restore_host_file_changes,
+        StoredDesktopRewindMetadata, create_desktop_rewind_metadata,
+        normalize_desktop_rewind_metadata,
     };
     use serde_json::json;
-    use std::{env, fs, path::PathBuf};
-    use uuid::Uuid;
 
     #[test]
     fn normalize_desktop_rewind_metadata_advances_next_sequence() {
@@ -1018,61 +638,6 @@ mod tests {
         })));
 
         assert_eq!(metadata.next_sequence, 5);
-    }
-
-    #[test]
-    fn restore_host_file_changes_reverts_edit_when_current_matches_after() {
-        let temp_dir = env::temp_dir().join(format!("spirit-rewind-test-{}", Uuid::new_v4()));
-        fs::create_dir_all(&temp_dir).unwrap();
-        let file_path = temp_dir.join("note.txt");
-        fs::write(&file_path, "after").unwrap();
-
-        let change = DesktopStoredFileChange {
-            id: "change-1".to_string(),
-            kind: HostFileChangeKind::EditFile,
-            path: "note.txt".to_string(),
-            resolved_path: file_path.to_string_lossy().to_string(),
-            tool_name: "edit_file".to_string(),
-            tool_call_id: None,
-            subagent_session_id: None,
-            subagent_title: None,
-            request: HostFileChangeRequestSummary {
-                name: HostFileChangeKind::EditFile,
-                path: "note.txt".to_string(),
-                content_chars: None,
-                old_chars: Some(6),
-                new_chars: Some(5),
-            },
-            before: HostFileSnapshot {
-                exists: true,
-                file: true,
-                content: Some("before".to_string()),
-                sha256: None,
-                mtime_ms: None,
-                size: Some(6),
-            },
-            after: HostFileSnapshot {
-                exists: true,
-                file: true,
-                content: Some("after".to_string()),
-                sha256: None,
-                mtime_ms: None,
-                size: Some(5),
-            },
-            created_at_unix_ms: 1,
-            sequence: 1,
-            message_id: None,
-        };
-
-        let result = restore_host_file_changes(&[change]).unwrap();
-        let content = fs::read_to_string(&file_path).unwrap();
-
-        assert_eq!(result.restored, 1);
-        assert_eq!(result.skipped, 0);
-        assert_eq!(content, "before");
-
-        let _ = fs::remove_file(&file_path);
-        let _ = fs::remove_dir_all(PathBuf::from(&temp_dir));
     }
 
     #[test]

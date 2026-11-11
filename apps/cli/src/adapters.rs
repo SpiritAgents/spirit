@@ -2,12 +2,11 @@ use anyhow::Result;
 use std::{env, path::PathBuf};
 
 use crate::{
-    chat_store, logging,
-    model_registry::{
-        AppConfig, config_file_path, load_config, read_external_keyring_secret,
-        remove_provider_secret, save_config, save_provider_secret,
-    },
+    daemon::config::call_config_rpc,
+    logging,
+    model_registry::{AppConfig, config_file_path},
     ports::{AppPaths, ChatArchive, ChatRepository, ConfigStore, SecretStore},
+    session_paths,
 };
 
 pub struct DefaultAppPaths {
@@ -38,7 +37,7 @@ impl AppPaths for DefaultAppPaths {
     }
 
     fn chats_dir(&self) -> PathBuf {
-        chat_store::chat_dir_path()
+        session_paths::chat_dir_path()
     }
 
     fn log_file(&self) -> PathBuf {
@@ -50,11 +49,19 @@ pub struct JsonConfigStore;
 
 impl ConfigStore for JsonConfigStore {
     fn load(&self) -> Result<AppConfig> {
-        load_config()
+        let workspace_root = env::current_dir()?;
+        let value = call_config_rpc(&workspace_root, "host.getConfig", serde_json::json!({}))?;
+        Ok(serde_json::from_value(value)?)
     }
 
     fn save(&self, config: &AppConfig) -> Result<()> {
-        save_config(config)
+        let workspace_root = env::current_dir()?;
+        call_config_rpc(
+            &workspace_root,
+            "host.replaceConfig",
+            serde_json::json!({ "config": config }),
+        )?;
+        Ok(())
     }
 }
 
@@ -62,15 +69,36 @@ pub struct KeyringSecretStore;
 
 impl SecretStore for KeyringSecretStore {
     fn read_keyring_secret(&self, service: &str, account: &str) -> Result<Option<String>> {
-        Ok(read_external_keyring_secret(service, account))
+        let workspace_root = env::current_dir()?;
+        let value = call_config_rpc(
+            &workspace_root,
+            "host.readKeyringSecret",
+            serde_json::json!({ "service": service, "account": account }),
+        )?;
+        Ok(value
+            .get("value")
+            .and_then(serde_json::Value::as_str)
+            .map(ToOwned::to_owned))
     }
 
     fn save_provider_secret(&self, account: &str, secret: &str) -> Result<()> {
-        save_provider_secret(account, secret)
+        let workspace_root = env::current_dir()?;
+        call_config_rpc(
+            &workspace_root,
+            "host.writeKeyringSecret",
+            serde_json::json!({ "service": "Spirit", "account": account, "value": secret }),
+        )?;
+        Ok(())
     }
 
     fn remove_provider_secret(&self, account: &str) -> Result<()> {
-        remove_provider_secret(account)
+        let workspace_root = env::current_dir()?;
+        call_config_rpc(
+            &workspace_root,
+            "host.deleteKeyringSecret",
+            serde_json::json!({ "service": "Spirit", "account": account }),
+        )?;
+        Ok(())
     }
 }
 
@@ -78,38 +106,53 @@ pub struct JsonChatRepository;
 
 impl ChatRepository for JsonChatRepository {
     fn list(&self) -> Result<Vec<crate::ports::ChatSessionListItem>> {
-        chat_store::list_chat_sessions()
+        let workspace_root = env::current_dir()?;
+        let value = call_config_rpc(&workspace_root, "session.listStored", serde_json::json!({}))?;
+        Ok(serde_json::from_value(value)?)
     }
 
     fn save(&self, path: Option<&str>, archive: &ChatArchive) -> Result<PathBuf> {
-        chat_store::save_chat(chat_store::SaveChatParams {
-            path_arg: path,
-            messages: &archive.messages,
-            assistant_aux: &archive.assistant_aux,
-            llm_history: &archive.llm_history,
-            loop_enabled: archive.loop_enabled,
-            approval_level: &archive.approval_level,
-            subagent_sessions: &archive.subagent_sessions,
-            rewind: archive.rewind.as_ref(),
-            desktop_messages: archive.desktop_messages.as_deref(),
-            session_display_name_override: archive.session_display_name.as_deref(),
-            session_title_source: archive.session_title_source.as_deref(),
-        })
+        let workspace_root = env::current_dir()?;
+        let archive = crate::chat_archive::chat_archive_to_bridge_json(archive);
+        let value = call_config_rpc(
+            &workspace_root,
+            "session.saveStored",
+            serde_json::json!({ "path": path, "archive": archive }),
+        )?;
+        let path = value
+            .get("path")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| anyhow::anyhow!("session.saveStored did not return a path"))?;
+        Ok(PathBuf::from(path))
     }
 
     fn load(&self, path: &str) -> Result<ChatArchive> {
-        let loaded = chat_store::load_chat(path)?;
+        let workspace_root = env::current_dir()?;
+        let stored = call_config_rpc(
+            &workspace_root,
+            "session.loadStored",
+            serde_json::json!({ "path": path }),
+        )?;
+        let timeline: Vec<crate::chat_timeline::PersistedTimelineTurn> =
+            serde_json::from_value(stored["desktopMessageTimeline"].clone())?;
+        let desktop_messages =
+            crate::chat_timeline::hydrate_desktop_messages_from_timeline(&timeline);
+        let (messages, assistant_aux) =
+            crate::chat_timeline::derive_archive_projection(&desktop_messages);
         Ok(ChatArchive {
-            messages: loaded.messages,
-            assistant_aux: loaded.assistant_aux,
-            llm_history: loaded.llm_history,
-            loop_enabled: loaded.loop_enabled,
-            approval_level: loaded.approval_level,
-            subagent_sessions: loaded.subagent_sessions,
-            desktop_messages: loaded.desktop_messages,
-            rewind: loaded.rewind,
-            session_display_name: loaded.session_display_name,
-            session_title_source: loaded.session_title_source,
+            messages,
+            assistant_aux,
+            llm_history: serde_json::from_value(stored["llmHistory"].clone())?,
+            loop_enabled: stored["loopEnabled"].as_bool().unwrap_or(false),
+            approval_level: stored["approvalLevel"]
+                .as_str()
+                .unwrap_or("default")
+                .to_string(),
+            subagent_sessions: serde_json::from_value(stored["subagentSessions"].clone())?,
+            desktop_messages: Some(desktop_messages),
+            rewind: Some(stored["rewind"].clone()),
+            session_display_name: stored["sessionDisplayName"].as_str().map(ToOwned::to_owned),
+            session_title_source: stored["sessionTitleSource"].as_str().map(ToOwned::to_owned),
         })
     }
 }
