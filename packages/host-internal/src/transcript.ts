@@ -2,6 +2,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { mergeSessionTranscripts, type SessionTranscript } from "@spiritagent/agent-core";
+import { resolveTranscriptsDir } from "@spiritagent/config/data-paths";
 
 import { sanitizeSessionIdForFilename } from "./spirit-filename-sanitize.js";
 import {
@@ -13,6 +14,7 @@ import {
 export const TRANSCRIPTS_DIR_NAME = "transcripts";
 export const SESSION_TRANSCRIPT_FILE_NAME = "transcript.json";
 export const SUBAGENT_TRANSCRIPTS_DIR_NAME = "subagents";
+export { resolveTranscriptsDir } from "@spiritagent/config/data-paths";
 
 /** Internal IDs name the directory directly; unregistered lookup keys retain their bounded hash. */
 export function transcriptSessionDirName(sessionKey: string | undefined): string {
@@ -21,10 +23,6 @@ export function transcriptSessionDirName(sessionKey: string | undefined): string
     return "unknown";
   }
   return sessionStorageDirectoryName(trimmed);
-}
-
-export function resolveTranscriptsDir(spiritDataDir: string): string {
-  return path.join(spiritDataDir, TRANSCRIPTS_DIR_NAME);
 }
 
 export function resolveTranscriptSessionDir(

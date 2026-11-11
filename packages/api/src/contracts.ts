@@ -1,4 +1,4 @@
-import type { HostToolRequest } from "@spiritagent/host-internal";
+import type { HostToolRequest } from "./tools.js";
 
 import type { CommitChangesRequest, AskQuestionsQuestionSpec } from "./types.js";
 

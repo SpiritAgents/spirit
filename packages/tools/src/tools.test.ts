@@ -9,10 +9,10 @@ import { basename, dirname, join } from "node:path";
 import { promisify } from "node:util";
 
 import { NodeHostToolService, type HostToolExecutionOutput } from "./tools.js";
-import { APPROVAL_FILE_PREVIEW_MAX_BYTES } from "./approval-file-preview.js";
-import { SPIRIT_CONFIG_SCHEMA_VERSION } from "./config.js";
-import { configFilePath } from "./credentials/spirit-config.js";
-import { loadPermissionConfig } from "./permissions/index.js";
+import { APPROVAL_FILE_PREVIEW_MAX_BYTES } from "@spiritagent/permissions/approval-file-preview";
+import { SPIRIT_CONFIG_SCHEMA_VERSION } from "@spiritagent/config";
+import { configFilePath } from "@spiritagent/config/credentials";
+import { loadPermissionConfig } from "@spiritagent/permissions";
 
 const execFileAsync = promisify(execFile);
 

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { NodeHostToolService } from "./tools.js";
-import { createHostTodoStore } from "./todos.js";
+import { createHostTodoStore } from "./todo-store.js";
 
 test("todo_list and todo_write replace the full session list", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-todos-"));

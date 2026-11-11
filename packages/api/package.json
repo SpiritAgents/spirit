@@ -56,6 +56,10 @@
       "types": "./dist/workspace-trust.d.ts",
       "default": "./dist/workspace-trust.js"
     },
+    "./tools": {
+      "types": "./dist/tools.d.ts",
+      "default": "./dist/tools.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -65,9 +69,9 @@
   },
   "dependencies": {
     "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/automations": "workspace:*",
     "@spiritagent/config": "workspace:*",
     "@spiritagent/github": "workspace:*",
-    "@spiritagent/host-internal": "workspace:*",
     "@spiritagent/remote-control": "workspace:*",
     "@spiritagent/tasks": "workspace:*",
     "@spiritagent/ui": "workspace:*"

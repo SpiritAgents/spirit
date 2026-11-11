@@ -125,6 +125,7 @@
     "@spiritagent/permissions": "workspace:*",
     "@spiritagent/process": "workspace:*",
     "@spiritagent/product": "workspace:*",
+    "@spiritagent/tools": "workspace:*",
     "@spiritagent/workspace": "workspace:*",
     "@vscode/ripgrep": "1.18.0",
     "fast-glob": "3.3.3",

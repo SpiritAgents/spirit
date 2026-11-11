@@ -33,6 +33,10 @@ export function resolveWorkspaceDataDir(workspaceRoot: string): string {
   return path.join(workspaceRoot, product.workspaceDataFolderName);
 }
 
+export function resolveTranscriptsDir(spiritDataDir: string): string {
+  return path.join(spiritDataDir, "transcripts");
+}
+
 export function mcpUserConfigPath(dataDir: string): string {
   return path.join(dataDir, "mcp.json");
 }

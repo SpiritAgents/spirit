@@ -7,16 +7,12 @@ import {
   shellDisplayNameForResolvedShell,
   withShellCommandHighRiskConfirmHint,
 } from "./default-terminal-shell.js";
+import type {
+  HostBuiltinToolDefinitionEnvironment,
+  HostOperatingSystemInfo,
+} from "@spiritagent/api/tools";
 
-export interface HostBuiltinToolDefinitionEnvironment {
-  shellDisplayName: string;
-  commandParameterDescription: string;
-}
-
-export interface HostOperatingSystemInfo {
-  name: string;
-  version: string;
-}
+export type { HostBuiltinToolDefinitionEnvironment, HostOperatingSystemInfo };
 
 export function detectShellForTools(): HostBuiltinToolDefinitionEnvironment {
   if (process.platform !== "win32") {

@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { lstat, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import path from "node:path";
+export type { HostToolRequestMetadata } from "@spiritagent/api/tools";
 
 export type HostFileChangeKind = "create_file" | "edit_file" | "delete_file";
 
@@ -20,17 +21,6 @@ export interface HostFileChangeRequestSummary {
   contentChars?: number;
   oldChars?: number;
   newChars?: number;
-}
-
-export interface HostToolRequestMetadata {
-  toolCallId?: string;
-  toolName?: string;
-  subagentSessionId?: string;
-  subagentTitle?: string;
-  userInitiated?: boolean;
-  /** In-process only; not serialized across host bridge IPC. */
-  onOutputChunk?: (chunk: string) => void | Promise<void>;
-  signal?: AbortSignal;
 }
 
 export interface HostRecordedFileChange {

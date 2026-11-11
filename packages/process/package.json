@@ -24,6 +24,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@spiritagent/api": "workspace:*",
     "@vscode/ripgrep": "1.18.0"
   },
   "devDependencies": {
