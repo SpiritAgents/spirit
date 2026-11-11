@@ -2,8 +2,13 @@ import { randomUUID } from "node:crypto";
 import { product } from "@spiritagent/product";
 import { existsSync, realpathSync } from "node:fs";
 import { lstat, mkdir, readdir, readFile, realpath, unlink, writeFile } from "node:fs/promises";
-import { release as osRelease } from "node:os";
 import path from "node:path";
+import {
+  detectOperatingSystemInfo,
+  detectShellForTools,
+  type HostBuiltinToolDefinitionEnvironment,
+  type HostOperatingSystemInfo,
+} from "@spiritagent/process/environment";
 
 import { glob as globPaths } from "glob";
 
@@ -36,12 +41,6 @@ import {
   type GrepToolOutputMode,
 } from "./ripgrep-search.js";
 import { resolveTranscriptsDir } from "./transcript.js";
-import {
-  defaultShellForPty,
-  commandParameterDescriptionForResolvedShell,
-  shellDisplayNameForResolvedShell,
-  withShellCommandHighRiskConfirmHint,
-} from "./default-terminal-shell.js";
 import { runShell } from "./shell-execution.js";
 import { resolveToolOutputArchivesDir } from "./tool-output-archive.js";
 import {
@@ -194,15 +193,7 @@ interface ResolvedReadFileTarget {
   managed: boolean;
 }
 
-export interface HostBuiltinToolDefinitionEnvironment {
-  shellDisplayName: string;
-  commandParameterDescription: string;
-}
-
-export interface HostOperatingSystemInfo {
-  name: string;
-  version: string;
-}
+export type { HostBuiltinToolDefinitionEnvironment, HostOperatingSystemInfo };
 
 export interface HostAskQuestionsOptionSpec {
   id: string;
@@ -558,39 +549,7 @@ export function createNoopMcpAdapter(): HostMcpAdapter {
   };
 }
 
-export function detectShellForTools(): HostBuiltinToolDefinitionEnvironment {
-  if (process.platform !== "win32") {
-    const shell = process.env.SHELL ?? "/bin/sh";
-    const name = path.basename(shell);
-    return {
-      shellDisplayName: `POSIX shell (${name})`,
-      commandParameterDescription: withShellCommandHighRiskConfirmHint(
-        `The command to execute in POSIX shell (${name}). Prefer POSIX shell syntax such as ls, find, grep, cat, pwd, and cd.`,
-      ),
-    };
-  }
-
-  const { file } = defaultShellForPty();
-  return {
-    shellDisplayName: shellDisplayNameForResolvedShell(file),
-    commandParameterDescription: commandParameterDescriptionForResolvedShell(file),
-  };
-}
-
-export function detectOperatingSystemInfo(): HostOperatingSystemInfo {
-  const name =
-    process.platform === "win32"
-      ? "Windows"
-      : process.platform === "darwin"
-        ? "macOS"
-        : process.platform === "linux"
-          ? "Linux"
-          : process.platform;
-  return {
-    name,
-    version: osRelease(),
-  };
-}
+export { detectOperatingSystemInfo, detectShellForTools };
 
 export class NodeHostToolService<
   QuestionSpec = HostAskQuestionsQuestionSpec,

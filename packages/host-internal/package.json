@@ -118,6 +118,7 @@
     "@spiritagent/automations": "workspace:*",
     "@spiritagent/config": "workspace:*",
     "@spiritagent/extension-toolkit": "workspace:*",
+    "@spiritagent/process": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "@vscode/ripgrep": "1.18.0",
     "fast-glob": "3.3.3",

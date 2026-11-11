@@ -14,7 +14,7 @@ import {
   shellHostExecUsesBufferOutput,
   shellRunCommandArgs,
 } from "./default-terminal-shell.js";
-import { detectShellForTools } from "./tools.js";
+import { detectShellForTools } from "./environment.js";
 
 const exec = promisify(execCallback);
 
