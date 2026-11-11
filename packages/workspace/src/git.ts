@@ -4,23 +4,25 @@ import { promisify } from "node:util";
 import i18n from "@spiritagent/i18n/host";
 import {
   addGitWorktree as addGitWorktreeInternal,
-  buildGitCommitHistorySnapshot,
   checkoutGitBranch as checkoutGitBranchInternal,
   buildWorktreeRootPath,
   isGitCheckoutBlockedError,
-  mergeGitLogCommitPages,
   mergeSpiritBranchToMain as mergeSpiritBranchToMainInternal,
   pushGitBranch as pushGitBranchInternal,
-  readGitCommitHistory,
   readGitWorkingTreeChanges,
   readGitWorkspaceSnapshot,
-  readGitCommitMessage as readGitCommitMessageInternal,
   readWorktreeContext,
   removeGitWorktree as removeGitWorktreeInternal,
   resolveDefaultBranch,
   resolvePrimaryRepoRoot,
   type GitCheckoutOptions,
-} from "@spiritagent/host-internal";
+} from "./git-workspace.js";
+import {
+  buildGitCommitHistorySnapshot,
+  mergeGitLogCommitPages,
+  readGitCommitHistory,
+} from "./git-log-graph.js";
+import { readGitCommitMessage as readGitCommitMessageInternal } from "./git-commit-message.js";
 
 import type {
   DesktopGitSnapshot,

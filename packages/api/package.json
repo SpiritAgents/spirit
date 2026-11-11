@@ -36,6 +36,18 @@
       "types": "./dist/remote-control.d.ts",
       "default": "./dist/remote-control.js"
     },
+    "./work-location": {
+      "types": "./dist/work-location.d.ts",
+      "default": "./dist/work-location.js"
+    },
+    "./local-file-composer-route": {
+      "types": "./dist/local-file-composer-route.d.ts",
+      "default": "./dist/local-file-composer-route.js"
+    },
+    "./workspace-file-reference-query": {
+      "types": "./dist/workspace-file-reference-query.d.ts",
+      "default": "./dist/workspace-file-reference-query.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -45,6 +57,7 @@
   },
   "dependencies": {
     "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/config": "workspace:*",
     "@spiritagent/extensions": "workspace:*",
     "@spiritagent/github": "workspace:*",
     "@spiritagent/host-internal": "workspace:*",

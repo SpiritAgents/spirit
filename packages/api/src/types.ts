@@ -8,7 +8,7 @@ import type {
   SpiritServiceTiersDeclaration,
   SpiritTransportKind,
   ThinkingSwitchDeclaration,
-} from "@spiritagent/host-internal/config";
+} from "@spiritagent/config";
 import type { ModelReasoningEffort } from "@spiritagent/agent-core/reasoning-effort";
 import type { RemoteControlPendingPairing } from "@spiritagent/remote-control";
 import type {
@@ -36,10 +36,11 @@ import type { DesktopAutomationTrigger } from "./lib/automation-trigger.js";
 import type { TranslucencyPreference } from "./lib/translucency.js";
 
 export type { DesktopAgentMode };
-import type { WorkspaceFileReferenceSuggestionsResult as HostWorkspaceFileReferenceSuggestionsResult } from "@spiritagent/host-internal/workspace-file-reference-query";
+export type { WorkspaceFileReferenceSuggestionsResult } from "./workspace-file-reference-query.js";
+import type { WorkspaceFileReferenceSuggestionsResult } from "./workspace-file-reference-query.js";
 import type { ApprovalLevel } from "@spiritagent/host-internal/approval-level";
-import type { WorkLocationKind } from "@spiritagent/host-internal/work-location";
-import type { LocalFileComposerRoute } from "@spiritagent/host-internal/local-file-composer-route";
+import type { WorkLocationKind } from "./work-location.js";
+import type { LocalFileComposerRoute } from "./local-file-composer-route.js";
 import type { DesktopGitSnapshot } from "@spiritagent/github/types";
 import type {
   WorkspaceCapabilityTrustDecision,
@@ -1074,7 +1075,6 @@ export interface QueryWorkspaceFileReferenceSuggestionsRequest {
   cursorChars: number;
 }
 
-export type WorkspaceFileReferenceSuggestionsResult = HostWorkspaceFileReferenceSuggestionsResult;
 export type WorkspaceFileReferenceSuggestionsResponse =
   WorkspaceFileReferenceSuggestionsResult | null;
 

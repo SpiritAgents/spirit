@@ -10,7 +10,7 @@ import {
   WORKSPACE_TEXT_FILE_MAX_BYTES,
   workspaceTextFileResultFromBuffer,
 } from "./workspace-files.js";
-import { hasSupportedImageExtension } from "@spiritagent/host-internal/image-file-support";
+import { hasSupportedImageExtension } from "./image-file-support.js";
 
 export async function resolveHostTextFilePath(absolutePath: string): Promise<string> {
   const cleaned = absolutePath.replace(/\0/g, "").trim();

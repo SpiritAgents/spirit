@@ -2,3 +2,6 @@ export * from "./types.js";
 export * from "./host-api.js";
 export * from "./contracts.js";
 export * from "./host-command-payloads.js";
+export * from "./work-location.js";
+export * from "./local-file-composer-route.js";
+export * from "./workspace-file-reference-query.js";

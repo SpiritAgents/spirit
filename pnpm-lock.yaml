@@ -706,6 +706,9 @@ importers:
       '@spiritagent/agent-core':
         specifier: workspace:*
         version: link:../agent-core
+      '@spiritagent/config':
+        specifier: workspace:*
+        version: link:../config
       '@spiritagent/extensions':
         specifier: workspace:*
         version: link:../extensions
@@ -921,6 +924,9 @@ importers:
       '@spiritagent/agent-core':
         specifier: workspace:*
         version: link:../agent-core
+      '@spiritagent/api':
+        specifier: workspace:*
+        version: link:../api
       '@spiritagent/automations':
         specifier: workspace:*
         version: link:../automations
@@ -936,6 +942,9 @@ importers:
       '@spiritagent/product':
         specifier: workspace:*
         version: link:../product
+      '@spiritagent/workspace':
+        specifier: workspace:*
+        version: link:../workspace
       '@vscode/ripgrep':
         specifier: 1.18.0
         version: 1.18.0
@@ -1568,15 +1577,24 @@ importers:
 
   packages/workspace:
     dependencies:
+      '@spiritagent/agent-core':
+        specifier: workspace:*
+        version: link:../agent-core
       '@spiritagent/api':
         specifier: workspace:*
         version: link:../api
-      '@spiritagent/host-internal':
-        specifier: workspace:*
-        version: link:../host-internal
       '@spiritagent/i18n':
         specifier: workspace:*
         version: link:../i18n
+      '@spiritagent/product':
+        specifier: workspace:*
+        version: link:../product
+      fast-glob:
+        specifier: 3.3.3
+        version: 3.3.3
+      ignore:
+        specifier: 5.3.2
+        version: 5.3.2
     devDependencies:
       '@types/node':
         specifier: 26.6.6
