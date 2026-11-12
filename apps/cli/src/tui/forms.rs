@@ -386,22 +386,13 @@ impl TuiShell {
         let Some(form) = self.forms.active.as_ref() else {
             return;
         };
-        let BottomFormKind::RemotePair {
-            pairing_id,
-            awaiting_approval,
-        } = &form.kind
-        else {
+        let BottomFormKind::RemotePair { pairing_id, .. } = &form.kind else {
             return;
         };
         let owner = format!("cli-{}", std::process::id());
-        let (method, output) = if *awaiting_approval {
-            ("remote.rejectPairing", Some("terminal"))
-        } else {
-            ("remote.cancelPairing", None)
-        };
         let result = self.runtime.call_remote_control(
-            method,
-            serde_json::json!({ "pairingId": pairing_id, "ownerClientId": owner, "output": output }),
+            "remote.cancelPairing",
+            serde_json::json!({ "pairingId": pairing_id, "ownerClientId": owner }),
         );
         if let Err(err) = result {
             self.push_agent_message(err.to_string());
