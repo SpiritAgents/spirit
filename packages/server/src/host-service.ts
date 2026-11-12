@@ -706,7 +706,9 @@ export class HostService {
             return null;
           case "setMcpServerEnabled":
             const result = await setMcpServerEnabled({
-              scope: inner["scope"] === "workspace" ? "workspace" : "user",
+              ...(inner["scope"] === "workspace" || inner["scope"] === "user"
+                ? { scope: inner["scope"] }
+                : {}),
               spiritDataDir: this.spiritDataDir,
               workspaceRoot,
               name: String(inner["name"] ?? ""),

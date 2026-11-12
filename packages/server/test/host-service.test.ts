@@ -253,6 +253,50 @@ test("host.resolveActiveSkill resolves extension skills with base-name precedenc
   });
 });
 
+test("host.mcp infers workspace scope and prefers a same-named user server", async () => {
+  await withTempDir(async (dir) => {
+    const workspaceRoot = join(dir, "workspace");
+    const workspaceConfigPath = join(workspaceRoot, ".spirit", "mcp.json");
+    await mkdir(join(workspaceRoot, ".spirit"), { recursive: true });
+    const server = {
+      enabled: true,
+      transport: { type: "stdio", command: "fixture" },
+    };
+    await writeFile(workspaceConfigPath, JSON.stringify({ servers: { fixture: server } }));
+    const service = new HostService(dir, {
+      mcpRegistry: {
+        forWorkspace: () => ({}),
+        refreshAllConfigs: async () => {},
+      },
+    } as unknown as SessionManager);
+
+    const workspaceToggle = (await service.handle("host.mcp", {
+      workspaceRoot,
+      action: "setMcpServerEnabled",
+      params: { name: "fixture", enabled: false },
+    })) as { path: string };
+    assert.equal(workspaceToggle.path, workspaceConfigPath);
+    assert.equal(
+      JSON.parse(await readFile(workspaceConfigPath, "utf8")).servers.fixture.enabled,
+      false,
+    );
+
+    const userConfigPath = join(dir, "mcp.json");
+    await writeFile(userConfigPath, JSON.stringify({ servers: { fixture: server } }));
+    const userToggle = (await service.handle("host.mcp", {
+      workspaceRoot,
+      action: "setMcpServerEnabled",
+      params: { name: "fixture", enabled: true },
+    })) as { path: string };
+    assert.equal(userToggle.path, userConfigPath);
+    assert.equal(JSON.parse(await readFile(userConfigPath, "utf8")).servers.fixture.enabled, true);
+    assert.equal(
+      JSON.parse(await readFile(workspaceConfigPath, "utf8")).servers.fixture.enabled,
+      false,
+    );
+  });
+});
+
 test("session.listStored reads only the daemon data dir", async () => {
   await withTempDir(async (dir) => {
     const previous = process.env.SPIRIT_DATA_DIR;
