@@ -12,6 +12,7 @@ import { connectOrSpawnServer } from "../../server/src/client.js";
 import { listInstances } from "../../server/src/instance-registry.js";
 
 const entryPath = fileURLToPath(new URL("../dist/entry.js", import.meta.url));
+const devEntryPath = fileURLToPath(new URL("../dist/dev-entry.js", import.meta.url));
 const ENTRY_STARTUP_TIMEOUT_MS = 30_000;
 const ENTRY_TEST_TIMEOUT_MS = 60_000;
 
@@ -49,8 +50,8 @@ async function writeConfig(dataDir: string, enabled: boolean, port: number): Pro
   );
 }
 
-function startEntry(dataDir: string, port: number): ChildProcess {
-  return spawn(process.execPath, [entryPath, "serve"], {
+function startEntry(dataDir: string, port: number, entry = entryPath): ChildProcess {
+  return spawn(process.execPath, [entry, "serve"], {
     env: {
       ...process.env,
       SPIRIT_DATA_DIR: dataDir,
@@ -137,6 +138,36 @@ test(
       });
       await client.call("remote.disable");
       client.close();
+      assert.equal(await waitForExit(child), 0);
+    } finally {
+      await cleanup(dataDir, child);
+    }
+  },
+);
+
+test(
+  "development entry starts with disabled configuration",
+  { timeout: ENTRY_TEST_TIMEOUT_MS },
+  async () => {
+    const dataDir = await mkdtemp(join(tmpdir(), "workbench-dev-entry-"));
+    const port = await freePort();
+    await writeConfig(dataDir, false, port);
+    const child = startEntry(dataDir, port, devEntryPath);
+    try {
+      const deadline = Date.now() + ENTRY_STARTUP_TIMEOUT_MS;
+      let available = false;
+      while (Date.now() < deadline && !available) {
+        const { client } = await connectOrSpawnServer({
+          dataDir,
+          connectTimeoutMs: ENTRY_STARTUP_TIMEOUT_MS,
+        });
+        const state = await client.call<{ hostAvailable: boolean }>("remote.getState");
+        client.close();
+        available = state.hostAvailable;
+        if (!available) await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      assert.equal(available, true);
+      child.kill("SIGTERM");
       assert.equal(await waitForExit(child), 0);
     } finally {
       await cleanup(dataDir, child);
