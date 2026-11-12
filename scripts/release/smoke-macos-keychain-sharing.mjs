@@ -10,14 +10,15 @@ const { sharedMacKeychainAccessGroup } = await import(new URL('./macos-keychain.
 if (!sharedMacKeychainAccessGroup()) {
   throw new Error('The signed runtime did not resolve its Spirit keychain access group');
 }
-const { deleteKeyringPassword, getKeyringPassword, setKeyringPassword } = await import(entryUrl);
+const { KEYRING_SERVICE, deleteKeyringPassword, getKeyringPassword, setKeyringPassword } =
+  await import(entryUrl);
 const account = `ci::keychain-sharing::${randomUUID()}`;
 const password = randomUUID();
 try {
-  setKeyringPassword('Spirit', account, password);
-  if (getKeyringPassword('Spirit', account) !== password) {
+  setKeyringPassword(KEYRING_SERVICE, account, password);
+  if (getKeyringPassword(KEYRING_SERVICE, account) !== password) {
     throw new Error('Shared keychain round-trip failed');
   }
 } finally {
-  deleteKeyringPassword('Spirit', account);
+  deleteKeyringPassword(KEYRING_SERVICE, account);
 }
