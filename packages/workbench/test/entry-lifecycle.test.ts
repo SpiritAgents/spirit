@@ -94,6 +94,21 @@ async function cleanup(dataDir: string, child?: ChildProcess): Promise<void> {
   await rm(dataDir, { recursive: true, force: true });
 }
 
+async function waitForHostAvailability(dataDir: string, expected: boolean): Promise<boolean> {
+  const deadline = Date.now() + ENTRY_STARTUP_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const { client } = await connectOrSpawnServer({
+      dataDir,
+      connectTimeoutMs: ENTRY_STARTUP_TIMEOUT_MS,
+    });
+    const state = await client.call<{ hostAvailable: boolean }>("remote.getState");
+    client.close();
+    if (state.hostAvailable === expected) return true;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return false;
+}
+
 test(
   "disabled configuration exits before opening the Workbench listener",
   { timeout: ENTRY_TEST_TIMEOUT_MS },
@@ -167,6 +182,24 @@ test(
         if (!available) await new Promise((resolve) => setTimeout(resolve, 100));
       }
       assert.equal(available, true);
+      const { client: disableClient } = await connectOrSpawnServer({
+        dataDir,
+        connectTimeoutMs: ENTRY_STARTUP_TIMEOUT_MS,
+      });
+      await disableClient.call("remote.disable");
+      disableClient.close();
+      assert.equal(await waitForHostAvailability(dataDir, false), true);
+      assert.equal(child.exitCode, null);
+
+      const { client: enableClient } = await connectOrSpawnServer({
+        dataDir,
+        connectTimeoutMs: ENTRY_STARTUP_TIMEOUT_MS,
+      });
+      await enableClient.call("remote.enable");
+      enableClient.close();
+      assert.equal(await waitForHostAvailability(dataDir, true), true);
+      assert.equal(child.exitCode, null);
+
       child.kill("SIGTERM");
       assert.equal(await waitForExit(child), 0);
     } finally {

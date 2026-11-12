@@ -112,7 +112,7 @@ export async function runWorkbench({
       pid: process.pid,
       host: current.host,
       port: current.port,
-    });
+    }).catch(() => undefined);
   }, 10_000);
   leaseTimer.unref();
 
@@ -122,11 +122,19 @@ export async function runWorkbench({
         if (stopping) return;
         const config = await loadConfig();
         if (!config.webHost.enabled) {
-          await shutdown();
-          process.exit(0);
+          if (allowDisabled) {
+            await stop();
+          } else {
+            await shutdown();
+            process.exit(0);
+          }
+        } else {
+          await start(config.webHost.host, config.webHost.port);
         }
-        await start(config.webHost.host, config.webHost.port);
         await refreshDesktopRemoteControlConfig();
+      });
+      syncTail = syncTail.catch((error) => {
+        if (!stopping) console.warn("[workbench] failed to synchronize Remote Control", error);
       });
       return syncTail;
     },
