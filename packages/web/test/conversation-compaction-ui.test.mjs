@@ -4,7 +4,7 @@ import { test } from "vitest";
 import {
   assistantCompactionLive,
   shouldShowAssistantCompactionCollapsible,
-} from "../../packages/sessions/dist/lib/conversation-compaction-ui.js";
+} from "../../../packages/sessions/dist/lib/conversation-compaction-ui.js";
 
 test("shouldShowAssistantCompactionCollapsible shows Compacting placeholder before summary text", () => {
   const message = {

@@ -4,7 +4,7 @@ import { test } from "vitest";
 import {
   hasAssistantToolLaterInTurn,
   shouldShowAssistantThinkingCollapsible,
-} from "../../packages/sessions/dist/lib/conversation-thinking-ui.js";
+} from "../../../packages/sessions/dist/lib/conversation-thinking-ui.js";
 
 test("shouldShowAssistantThinkingCollapsible hides finalized Thought when live Thinking is adjacent", () => {
   const messages = [
