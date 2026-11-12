@@ -106,7 +106,6 @@
     "test": "vitest run",
     "test:workspace-file-references": "vitest run src/workspace-file-references.test.ts",
     "test:lsp": "vitest run src/lsp",
-    "smoke:lsp": "npm run build && node dist/smoke/lsp-pyright-smoke.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "notice": "node scripts/gen-notice.mjs",
     "notice:production": "node scripts/gen-notice.mjs --production",

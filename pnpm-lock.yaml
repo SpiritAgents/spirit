@@ -772,6 +772,9 @@ importers:
         specifier: workspace:*
         version: link:../sessions
     devDependencies:
+      '@spiritagent/product':
+        specifier: workspace:*
+        version: link:../product
       '@types/node':
         specifier: 26.6.6
         version: 26.6.6
@@ -1137,6 +1140,9 @@ importers:
       '@spiritagent/api':
         specifier: workspace:*
         version: link:../api
+      '@spiritagent/brand':
+        specifier: workspace:*
+        version: link:../brand
       '@spiritagent/config':
         specifier: workspace:*
         version: link:../config
@@ -1152,6 +1158,9 @@ importers:
       '@spiritagent/i18n':
         specifier: workspace:*
         version: link:../i18n
+      '@spiritagent/icons':
+        specifier: workspace:*
+        version: link:../icons
       '@spiritagent/lsp':
         specifier: workspace:*
         version: link:../lsp

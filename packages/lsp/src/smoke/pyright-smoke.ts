@@ -2,14 +2,11 @@ import { rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { LspService, resolvePyrightOnPath } from "@spiritagent/lsp";
+import { LspService, resolvePyrightOnPath } from "../index.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.resolve(here, "../../../..");
-const sampleFile = path.join(
-  workspaceRoot,
-  "packages/host-internal/src/lsp/.smoke-pyright-temp.py",
-);
+const sampleFile = path.join(workspaceRoot, "packages/lsp/src/.smoke-pyright-temp.py");
 
 async function main(): Promise<void> {
   const resolved = await resolvePyrightOnPath();
