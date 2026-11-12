@@ -30,3 +30,20 @@ test("startup timeout waits for the owned Workbench child to exit", async () => 
   await stopWorkbenchChild(state);
   assert.deepEqual(calls, ["SIGTERM"]);
 });
+
+test("startup timeout escalates a stuck child to SIGKILL and still waits for exit", async () => {
+  const calls = [];
+  const child = new EventEmitter();
+  child.exitCode = null;
+  child.signalCode = null;
+  child.kill = (signal) => {
+    calls.push(signal);
+    if (signal === "SIGKILL") setImmediate(() => child.emit("exit", 0));
+  };
+  const state = { child };
+
+  await stopWorkbenchChild(state, 5);
+
+  assert.deepEqual(calls, ["SIGTERM", "SIGKILL"]);
+  assert.equal(state.child, undefined);
+});
