@@ -716,6 +716,10 @@ impl TuiShell {
                 _ => serde_json::json!({}),
             };
             if action == "enable" {
+                if params.as_object().is_some_and(|values| !values.is_empty()) {
+                    self.runtime
+                        .call_remote_control("remote.configure", params)?;
+                }
                 self.runtime.enable_remote_control()
             } else {
                 self.runtime.call_remote_control(method, params)
