@@ -8,9 +8,9 @@
 
 # Spirit
 
-Открытый AI-агент, созданный умножать вашу продуктивность.
+AI-агент с открытым исходным кодом, который оркестрирует модели любых провайдеров в одном harness.
 
-[Desktop-приложение](#desktop) · [Site](#site) · [CLI](#cli) · [Server](#server) · [ACP Server](#acp-server) · [Agent Core](#agent-core) · [Разработка](#разработка)
+[Desktop-приложение](#desktop) · [CLI](#cli) · [Архитектура](#архитектура) · [Agent Core](#agent-core) · [Server](#server) · [ACP Server](#acp-server) · [Site](#site) · [Разработка](#разработка)
 
 > Проект активно развивается. Поведение и API могут меняться между релизами.
 
@@ -20,7 +20,28 @@
 
 ## Обзор
 
-Spirit — **агент для кодирования с инструментами**, работающий от корня реального проекта. Один и тот же runtime питает нативный Desktop workspace и терминальный UI. Общая логика живёт в TypeScript-пакетах; хосты добавляют платформенное выполнение, discovery и UI.
+Spirit обеспечивает единый и последовательный опыт работы с агентом для моделей любых провайдеров. Сеансы, инструменты и конфигурация сохраняются при переключении моделей или переходе между Desktop и терминалом.
+
+## Desktop
+
+[Desktop-приложение](../apps/desktop) — основной графический хост: IDE-поверхность, привязанная к workspace, с conversational agent.
+
+- **Dock-панели** — проводник файлов с Monaco, встроенный терминал (Electron), Git changes и history, in-app browser для локальных dev-серверов.
+- **Сессии** — история нескольких диалогов, worktree-per-session workflows, одобрение инструментов, subagent viewer, структурированные опросники, использование контекста и rewind.
+- **Настройки** — провайдеры моделей и API keys, Skills и Rules, MCP servers, расширения, Dreams (beta), LSP, темы и язык UI (английский / упрощённый китайский / русский и др.).
+- **Платформы** — Electron на Windows, macOS и Linux; опциональный web host с remote pairing.
+
+См. [apps/desktop/README.md](../apps/desktop/README.md) для разработки Desktop.
+
+## CLI
+
+[Rust CLI](../apps/cli) (`spirit`) — terminal-first хост с опциональным Ratatui UI. Подключается к общему daemon Spirit Server по WebSocket; подходит для скриптов, SSH-сессий и минимальных окружений.
+
+```bash
+pnpm run dev:cli    # cargo run -p spirit
+```
+
+## Архитектура
 
 ```
 ┌───────────────────────────────────────────────────────┐
@@ -97,35 +118,6 @@ Agent Core определяет, как модель видит контекст
 
 `@spiritagent/agent-core` публикуется в npm; [`packages/host-internal`](../packages/host-internal) содержит общий host discovery, extensions, workspace helpers и оркестрацию LSP для Desktop.
 
-## Desktop
-
-[Desktop-приложение](../apps/desktop) — основной графический хост: IDE-поверхность, привязанная к workspace, с conversational agent.
-
-- **Dock-панели** — проводник файлов с Monaco, встроенный терминал (Electron), Git changes и history, in-app browser для локальных dev-серверов.
-- **Сессии** — история нескольких диалогов, worktree-per-session workflows, одобрение инструментов, subagent viewer, структурированные опросники, использование контекста и rewind.
-- **Настройки** — провайдеры моделей и API keys, Skills и Rules, MCP servers, расширения, Dreams (beta), LSP, темы и язык UI (английский / упрощённый китайский / русский и др.).
-- **Платформы** — Electron на Windows, macOS и Linux; опциональный web host с remote pairing.
-
-См. [apps/desktop/README.md](../apps/desktop/README.md) для разработки Desktop.
-
-## Site
-
-[Маркетинговый и документационный сайт](../apps/site) — приложение Next.js + Fumadocs (`@spiritagent/site`), деплой на Vercel.
-
-```bash
-pnpm run dev:site
-```
-
-Локальная разработка и переключение Git в Vercel — в [apps/site/README.md](../apps/site/README.md).
-
-## CLI
-
-[Rust CLI](../apps/cli) (`spirit`) — terminal-first хост с опциональным Ratatui UI. Подключается к общему daemon Spirit Server по WebSocket; подходит для скриптов, SSH-сессий и минимальных окружений.
-
-```bash
-pnpm run dev:cli    # cargo run -p spirit
-```
-
 ## Server
 
 [`packages/server`](../packages/server) (`@spiritagent/server`, бинарь `spirit-server` / `spirit serve`) — **общий daemon-бэкенд** для собственных хостов. CLI и Desktop больше не встраивают рантайм в свой процесс, а подключаются к одному и тому же daemon по WebSocket (JSON-RPC 2.0): сессия, начатая в терминале, стримится в Desktop в реальном времени — и наоборот.
@@ -175,6 +167,16 @@ node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 | ---------------------- | ----------- | -------------------------------------------------------------------------------- |
 | `SPIRIT_ACP_WORKSPACE` | Нет         | Корень workspace (по умолчанию: `cwd` клиента)                                   |
 | `SPIRIT_ACP_DATA_DIR`  | Нет         | Каталог данных Spirit (по умолчанию: Stable: `~/.spirit` · Dev: `~/.spirit-dev`) |
+
+## Site
+
+[Маркетинговый и документационный сайт](../apps/site) — приложение Next.js + Fumadocs (`@spiritagent/site`), деплой на Vercel.
+
+```bash
+pnpm run dev:site
+```
+
+Локальная разработка и переключение Git в Vercel — в [apps/site/README.md](../apps/site/README.md).
 
 ## Разработка
 

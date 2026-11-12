@@ -8,9 +8,9 @@
 
 # Spirit
 
-생산성을 배가시키기 위해 만들어진 오픈소스 AI 에이전트.
+모든 제공업체의 모델을 하나의 하네스에서 오케스트레이션하는 오픈소스 AI 에이전트.
 
-[Desktop 앱](#desktop) · [Site](#site) · [CLI](#cli) · [Server](#server) · [ACP Server](#acp-server) · [Agent Core](#agent-core) · [개발](#개발)
+[Desktop 앱](#desktop) · [CLI](#cli) · [아키텍처](#아키텍처) · [Agent Core](#agent-core) · [Server](#server) · [ACP Server](#acp-server) · [Site](#site) · [개발](#개발)
 
 > 본 프로젝트는 활발히 개발 중입니다. 릴리스 간 동작과 API가 변경될 수 있습니다.
 
@@ -20,7 +20,28 @@
 
 ## 개요
 
-Spirit는 실제 프로젝트 루트를 컨텍스트로 동작하는 **도구 기반 코딩 에이전트**입니다. 동일한 런타임이 네이티브 Desktop 워크스페이스와 터미널 UI를 모두 구동합니다. 공유 로직은 TypeScript 패키지에 있으며, 각 호스트가 플랫폼별 실행·탐색·UI를 추가합니다.
+Spirit은 모든 제공업체의 모델에 일관된 에이전트 경험을 제공합니다. 모델을 전환하거나 Desktop과 터미널 사이를 오가더라도 세션, 도구, 구성은 그대로 유지됩니다.
+
+## Desktop
+
+[Desktop 앱](../apps/desktop)은 주요 그래픽 호스트: 워크스페이스에 묶인 IDE 표면과 대화형 에이전트.
+
+- **도킹 패널** — Monaco 에디터 파일 탐색기, 내장 터미널(Electron), Git 변경 및 기록, 로컬 개발 서버용 앱 내 브라우저.
+- **세션** — 다중 대화 기록, 세션별 worktree 워크플로, 도구 승인, 서브에이전트 뷰어, 구조화 설문, 컨텍스트 사용량, rewind.
+- **설정** — 모델 프로바이더 및 API 키, Skills 및 Rules, MCP 서버, 확장 마켓플레이스, Dreams(beta), LSP, 테마, UI 언어(영어 / 간체 중국어 / 한국어 등).
+- **플랫폼** — Windows, macOS, Linux의 Electron; 원격 페어링 가능 Web 호스트.
+
+Desktop 전용 개발 및 레이아웃은 [apps/desktop/README.md](../apps/desktop/README.md) 참조.
+
+## CLI
+
+[Rust CLI](../apps/cli)(`spirit`)는 터미널 우선 호스트로 선택적 Ratatui UI를 제공합니다. WebSocket으로 공유 Spirit Server 데몬에 연결하며, 스크립팅, SSH 세션, 최소 환경에 적합합니다.
+
+```bash
+pnpm run dev:cli    # cargo run -p spirit
+```
+
+## 아키텍처
 
 ```
 ┌───────────────────────────────────────────────────────┐
@@ -97,35 +118,6 @@ Agent Core가 모델이 보는 프로젝트 컨텍스트를 결정합니다:
 
 `@spiritagent/agent-core`는 npm에 게시됩니다. [`packages/host-internal`](../packages/host-internal)은 Desktop 공유 호스트 탐색, 확장, 마켓플레이스, 워크스페이스 헬퍼, LSP 오케스트레이션을 담당합니다.
 
-## Desktop
-
-[Desktop 앱](../apps/desktop)은 주요 그래픽 호스트: 워크스페이스에 묶인 IDE 표면과 대화형 에이전트.
-
-- **도킹 패널** — Monaco 에디터 파일 탐색기, 내장 터미널(Electron), Git 변경 및 기록, 로컬 개발 서버용 앱 내 브라우저.
-- **세션** — 다중 대화 기록, 세션별 worktree 워크플로, 도구 승인, 서브에이전트 뷰어, 구조화 설문, 컨텍스트 사용량, rewind.
-- **설정** — 모델 프로바이더 및 API 키, Skills 및 Rules, MCP 서버, 확장 마켓플레이스, Dreams(beta), LSP, 테마, UI 언어(영어 / 간체 중국어 / 한국어 등).
-- **플랫폼** — Windows, macOS, Linux의 Electron; 원격 페어링 가능 Web 호스트.
-
-Desktop 전용 개발 및 레이아웃은 [apps/desktop/README.md](../apps/desktop/README.md) 참조.
-
-## Site
-
-[마케팅/문서 사이트](../apps/site)는 Next.js + Fumadocs 앱(`@spiritagent/site`)이며 Vercel에 배포합니다.
-
-```bash
-pnpm run dev:site
-```
-
-로컬 개발과 Vercel 저장소 전환 절차는 [apps/site/README.md](../apps/site/README.md)를 참조하세요.
-
-## CLI
-
-[Rust CLI](../apps/cli)(`spirit`)는 터미널 우선 호스트로 선택적 Ratatui UI를 제공합니다. WebSocket으로 공유 Spirit Server 데몬에 연결하며, 스크립팅, SSH 세션, 최소 환경에 적합합니다.
-
-```bash
-pnpm run dev:cli    # cargo run -p spirit
-```
-
 ## Server
 
 [`packages/server`](../packages/server)(`@spiritagent/server`, bin `spirit-server` / `spirit serve`)는 퍼스트파티 호스트를 위한 **공유 데몬 백엔드**입니다. CLI와 Desktop은 프로세스 내에 런타임을 내장하는 대신 WebSocket(JSON-RPC 2.0)으로 같은 데몬에 연결합니다. 터미널에서 시작한 세션이 Desktop으로 실시간 스트리밍되고, 그 반대도 마찬가지입니다.
@@ -175,6 +167,16 @@ node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 | ---------------------- | ------ | ------------------------------------------------------------------------ |
 | `SPIRIT_ACP_WORKSPACE` | 아니오 | 워크스페이스 루트(기본: 클라이언트 `cwd`)                                |
 | `SPIRIT_ACP_DATA_DIR`  | 아니오 | Spirit 데이터 디렉터리(기본: Stable: `~/.spirit` · Dev: `~/.spirit-dev`) |
+
+## Site
+
+[마케팅/문서 사이트](../apps/site)는 Next.js + Fumadocs 앱(`@spiritagent/site`)이며 Vercel에 배포합니다.
+
+```bash
+pnpm run dev:site
+```
+
+로컬 개발과 Vercel 저장소 전환 절차는 [apps/site/README.md](../apps/site/README.md)를 참조하세요.
 
 ## 개발
 

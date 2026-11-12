@@ -8,9 +8,9 @@
 
 # Spirit
 
-生産性を何倍にも引き上げるオープンソース AI エージェント。
+あらゆるプロバイダーのモデルを単一のハーネスでオーケストレーションするオープンソース AI エージェント。
 
-[Desktop アプリ](#desktop) · [Site](#site) · [CLI](#cli) · [Server](#server) · [ACP Server](#acp-server) · [Agent Core](#agent-core) · [開発](#開発)
+[Desktop アプリ](#desktop) · [CLI](#cli) · [アーキテクチャ](#アーキテクチャ) · [Agent Core](#agent-core) · [Server](#server) · [ACP Server](#acp-server) · [Site](#site) · [開発](#開発)
 
 > 本プロジェクトは活発に開発中です。リリース間で動作や API が変わる場合があります。
 
@@ -20,7 +20,28 @@
 
 ## 概要
 
-Spirit は、実プロジェクトのルートをコンテキストに動作する**ツール利用型コーディングエージェント**です。同一ランタイムがネイティブ Desktop ワークスペースとターミナル UI の両方を駆動します。共有ロジックは TypeScript パッケージにあり、各ホストがプラットフォーム固有の実行・探索・ UI を追加します。
+Spirit は、あらゆるプロバイダーのモデルに一貫したエージェント体験を提供します。モデルの切り替えや Desktop とターミナル間の移動でも、セッション、ツール、設定はそのまま維持されます。
+
+## Desktop
+
+[Desktop アプリ](../apps/desktop) は主要なグラフィカルホスト：ワークスペースに紐づく IDE 面と会話型エージェント。
+
+- **ドックパネル** — Monaco エディタ付きファイルエクスプローラ、組み込みターミナル（Electron）、Git 変更と履歴、ローカル開発サーバー向けアプリ内ブラウザ。
+- **セッション** — 複数会話履歴、セッションごとの worktree ワークフロー、ツール承認、サブエージェントビューア、構造化アンケート、コンテキスト使用量、rewind。
+- **設定** — モデルプロバイダと API キー、Skills と Rules、MCP サーバー、拡張マーケットプレイス、Dreams（beta）、LSP、テーマ、UI 言語（英語 / 簡体字中国語 / 日本語など）。
+- **プラットフォーム** — Windows、macOS、Linux 上の Electron；リモートペアリング可能な Web ホスト。
+
+Desktop 固有の開発・レイアウトは [apps/desktop/README.md](../apps/desktop/README.md) を参照。
+
+## CLI
+
+[Rust CLI](../apps/cli)（`spirit`）はターミナル優先ホストで、オプションの Ratatui UI を提供。WebSocket 経由で共有 Spirit Server デーモンに接続し、スクリプト、SSH セッション、最小環境に適します。
+
+```bash
+pnpm run dev:cli    # cargo run -p spirit
+```
+
+## アーキテクチャ
 
 ```
 ┌───────────────────────────────────────────────────────┐
@@ -97,35 +118,6 @@ Agent Core がモデルから見えるプロジェクト文脈を決定します
 
 `@spiritagent/agent-core` は npm 公開；[`packages/host-internal`](../packages/host-internal) は Desktop 共有のホスト側探索、拡張、マーケットプレイス、ワークスペースヘルパー、LSP オーケストレーション。
 
-## Desktop
-
-[Desktop アプリ](../apps/desktop) は主要なグラフィカルホスト：ワークスペースに紐づく IDE 面と会話型エージェント。
-
-- **ドックパネル** — Monaco エディタ付きファイルエクスプローラ、組み込みターミナル（Electron）、Git 変更と履歴、ローカル開発サーバー向けアプリ内ブラウザ。
-- **セッション** — 複数会話履歴、セッションごとの worktree ワークフロー、ツール承認、サブエージェントビューア、構造化アンケート、コンテキスト使用量、rewind。
-- **設定** — モデルプロバイダと API キー、Skills と Rules、MCP サーバー、拡張マーケットプレイス、Dreams（beta）、LSP、テーマ、UI 言語（英語 / 簡体字中国語 / 日本語など）。
-- **プラットフォーム** — Windows、macOS、Linux 上の Electron；リモートペアリング可能な Web ホスト。
-
-Desktop 固有の開発・レイアウトは [apps/desktop/README.md](../apps/desktop/README.md) を参照。
-
-## Site
-
-[マーケティング／ドキュメントサイト](../apps/site) は Next.js + Fumadocs アプリ（`@spiritagent/site`）で、Vercel にデプロイします。
-
-```bash
-pnpm run dev:site
-```
-
-ローカル開発と Vercel のリポジトリ切り替え手順は [apps/site/README.md](../apps/site/README.md) を参照。
-
-## CLI
-
-[Rust CLI](../apps/cli)（`spirit`）はターミナル優先ホストで、オプションの Ratatui UI を提供。WebSocket 経由で共有 Spirit Server デーモンに接続し、スクリプト、SSH セッション、最小環境に適します。
-
-```bash
-pnpm run dev:cli    # cargo run -p spirit
-```
-
 ## Server
 
 [`packages/server`](../packages/server)（`@spiritagent/server`、bin `spirit-server` / `spirit serve`）は、ファーストパーティホスト向けの**共有デーモンバックエンド**です。CLI と Desktop はプロセス内にランタイムを埋め込まず、WebSocket（JSON-RPC 2.0）で同じデーモンに接続します。ターミナルで開始したセッションはリアルタイムで Desktop にストリーミングされ、その逆も同様です。
@@ -175,6 +167,16 @@ node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 | ---------------------- | ------ | ----------------------------------------------------------------------------------- |
 | `SPIRIT_ACP_WORKSPACE` | いいえ | ワークスペースルート（デフォルト：クライアント `cwd`）                              |
 | `SPIRIT_ACP_DATA_DIR`  | いいえ | Spirit データディレクトリ（デフォルト：Stable: `~/.spirit` · Dev: `~/.spirit-dev`） |
+
+## Site
+
+[マーケティング／ドキュメントサイト](../apps/site) は Next.js + Fumadocs アプリ（`@spiritagent/site`）で、Vercel にデプロイします。
+
+```bash
+pnpm run dev:site
+```
+
+ローカル開発と Vercel のリポジトリ切り替え手順は [apps/site/README.md](../apps/site/README.md) を参照。
 
 ## 開発
 

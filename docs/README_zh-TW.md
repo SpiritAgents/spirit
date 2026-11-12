@@ -8,9 +8,9 @@
 
 # Spirit
 
-一款開源 AI 智能體，旨在成倍提升你的生產力。
+開源 AI Agent，在同一個 Harness 中編排來自任意提供者的模型。
 
-[Desktop 應用](#desktop) · [Site](#site) · [CLI](#cli) · [Server](#server) · [ACP Server](#acp-server) · [Agent Core](#agent-core) · [開發](#開發)
+[Desktop 應用](#desktop) · [CLI](#cli) · [架構](#架構) · [Agent Core](#agent-core) · [Server](#server) · [ACP Server](#acp-server) · [Site](#site) · [開發](#開發)
 
 > 本專案仍在積極開發中。各版本之間的行為與 API 可能發生變化。
 
@@ -20,7 +20,28 @@
 
 ## 概覽
 
-Spirit 是一款**工具型程式設計智能體**，以真實專案根目錄為執行上下文。同一套執行時同時驅動原生桌面工作區與終端介面。共享邏輯位於 TypeScript 套件中；各宿主在此基礎上疊加平台相關的執行、探索與 UI。
+Spirit 將來自任意提供者的模型帶入一致的 Agent 體驗。無論切換模型，還是在 Desktop 與終端機之間切換，你的工作階段、工具和設定都能延續。
+
+## Desktop
+
+[Desktop 應用](../apps/desktop) 是主要的圖形宿主：綁定工作區的 IDE 介面，內嵌對話式智能體。
+
+- **停靠面板** — 含 Monaco 編輯器的檔案瀏覽器、嵌入式終端（Electron）、Git 變更與歷史、用於本機開發伺服器的應用內瀏覽器。
+- **工作階段** — 多對話歷史、按工作階段隔離的 worktree 工作流、工具審批、子智能體檢視器、結構化問卷、上下文用量與回退（rewind）。
+- **設定** — 模型提供商與 API 金鑰、Skills 與 Rules、MCP 伺服器、擴充市集、Dreams（beta）、LSP、主題，以及 UI 語言（英文 / 簡體中文 / 繁體中文等）。
+- **平台** — Windows、macOS、Linux 上的 Electron；可選帶遠端配對的 Web 宿主。
+
+Desktop 專屬開發與目錄說明見 [apps/desktop/README.md](../apps/desktop/README.md)。
+
+## CLI
+
+[Rust CLI](../apps/cli)（`spirit`）提供終端優先的宿主，可選 Ratatui 介面。透過 WebSocket 連接共享 Spirit Server daemon，適合腳本化、SSH 工作階段與極簡環境。
+
+```bash
+pnpm run dev:cli    # cargo run -p spirit
+```
+
+## 架構
 
 ```
 ┌───────────────────────────────────────────────────────┐
@@ -97,35 +118,6 @@ Agent Core 決定模型如何「看見」專案上下文：
 
 `@spiritagent/agent-core` 發布至 npm；[`packages/host-internal`](../packages/host-internal) 承載 Desktop 共用的宿主側探索、擴充、市集、工作區輔助與 LSP 編排。
 
-## Desktop
-
-[Desktop 應用](../apps/desktop) 是主要的圖形宿主：綁定工作區的 IDE 介面，內嵌對話式智能體。
-
-- **停靠面板** — 含 Monaco 編輯器的檔案瀏覽器、嵌入式終端（Electron）、Git 變更與歷史、用於本機開發伺服器的應用內瀏覽器。
-- **工作階段** — 多對話歷史、按工作階段隔離的 worktree 工作流、工具審批、子智能體檢視器、結構化問卷、上下文用量與回退（rewind）。
-- **設定** — 模型提供商與 API 金鑰、Skills 與 Rules、MCP 伺服器、擴充市集、Dreams（beta）、LSP、主題，以及 UI 語言（英文 / 簡體中文 / 繁體中文等）。
-- **平台** — Windows、macOS、Linux 上的 Electron；可選帶遠端配對的 Web 宿主。
-
-Desktop 專屬開發與目錄說明見 [apps/desktop/README.md](../apps/desktop/README.md)。
-
-## Site
-
-[行銷站與文件站](../apps/site) 是 Next.js + Fumadocs 應用（`@spiritagent/site`），部署於 Vercel。
-
-```bash
-pnpm run dev:site
-```
-
-本機開發與 Vercel 換倉步驟見 [apps/site/README.md](../apps/site/README.md)。
-
-## CLI
-
-[Rust CLI](../apps/cli)（`spirit`）提供終端優先的宿主，可選 Ratatui 介面。透過 WebSocket 連接共享 Spirit Server daemon，適合腳本化、SSH 工作階段與極簡環境。
-
-```bash
-pnpm run dev:cli    # cargo run -p spirit
-```
-
 ## Server
 
 [`packages/server`](../packages/server)（`@spiritagent/server`，bin `spirit-server` / `spirit serve`）是第一方宿主的**共享 daemon 後端**。CLI 與 Desktop 不再在處理程序內嵌入執行階段，而是透過 WebSocket（JSON-RPC 2.0）連線同一個 daemon——在終端機發起的會話可以即時串流同步到 Desktop，反之亦然。
@@ -175,6 +167,16 @@ node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 | ---------------------- | ---- | ------------------------------------------------------------------- |
 | `SPIRIT_ACP_WORKSPACE` | 否   | 工作區根路徑（預設：用戶端 `cwd`）                                  |
 | `SPIRIT_ACP_DATA_DIR`  | 否   | Spirit 資料目錄（預設：Stable: `~/.spirit` · Dev: `~/.spirit-dev`） |
+
+## Site
+
+[行銷站與文件站](../apps/site) 是 Next.js + Fumadocs 應用（`@spiritagent/site`），部署於 Vercel。
+
+```bash
+pnpm run dev:site
+```
+
+本機開發與 Vercel 換倉步驟見 [apps/site/README.md](../apps/site/README.md)。
 
 ## 開發
 

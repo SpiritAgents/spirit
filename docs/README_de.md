@@ -8,9 +8,9 @@
 
 # Spirit
 
-Ein Open-Source-KI-Agent, der Ihre Produktivität vervielfacht.
+Der Open-Source-KI-Agent, der Modelle beliebiger Anbieter in einem einzigen Harness orchestriert.
 
-[Desktop-App](#desktop) · [Site](#site) · [CLI](#cli) · [Server](#server) · [ACP Server](#acp-server) · [Agent Core](#agent-core) · [Entwicklung](#entwicklung)
+[Desktop-App](#desktop) · [CLI](#cli) · [Architektur](#architektur) · [Agent Core](#agent-core) · [Server](#server) · [ACP Server](#acp-server) · [Site](#site) · [Entwicklung](#entwicklung)
 
 > Dieses Projekt befindet sich in aktiver Entwicklung. Verhalten und APIs können sich zwischen Releases ändern.
 
@@ -20,7 +20,28 @@ Ein Open-Source-KI-Agent, der Ihre Produktivität vervielfacht.
 
 ## Überblick
 
-Spirit ist ein **werkzeugnutzender Coding-Agent**, der gegen eine echte Projektwurzel arbeitet. Dieselbe Runtime treibt einen nativen Desktop-Workspace und eine Terminal-UI an. Gemeinsame Logik liegt in TypeScript-Paketen; Hosts fügen plattformspezifische Ausführung, Discovery und UI hinzu.
+Spirit bietet für Modelle beliebiger Anbieter ein konsistentes Agent-Erlebnis. Ihre Sitzungen, Tools und Ihre Konfiguration bleiben sowohl beim Modellwechsel als auch beim Wechsel zwischen Desktop und Terminal erhalten.
+
+## Desktop
+
+Die [Desktop-App](../apps/desktop) ist der primäre grafische Host: eine workspace-gebundene IDE-Oberfläche mit konversationellem Agent.
+
+- **Andockpanels** — Datei-Explorer mit Monaco-Editor, eingebettetes Terminal (Electron), Git-Änderungen und Historie, In-App-Browser für lokale Dev-Server.
+- **Sessions** — Mehrfach-Konversationshistorie, Worktree-pro-Session-Workflows, Tool-Freigabe, Subagent-Viewer, strukturierte Fragebögen, Kontextnutzung und Rewind.
+- **Konfiguration** — Modellanbieter und API-Schlüssel, Skills und Rules, MCP-Server, Extensions, Dreams (beta), LSP, Themes und UI-Sprache (Englisch / Vereinfachtes Chinesisch / Deutsch u. a.).
+- **Plattformen** — Electron auf Windows, macOS und Linux; optionaler Web-Host mit Remote-Pairing.
+
+Siehe [apps/desktop/README.md](../apps/desktop/README.md) für Desktop-spezifische Entwicklung.
+
+## CLI
+
+Die [Rust CLI](../apps/cli) (`spirit`) bietet einen terminal-first Host mit optionaler Ratatui-UI. Sie verbindet sich per WebSocket mit dem gemeinsamen Spirit-Server-Daemon und eignet sich für Skripte, SSH-Sitzungen und Minimalumgebungen.
+
+```bash
+pnpm run dev:cli    # cargo run -p spirit
+```
+
+## Architektur
 
 ```
 ┌───────────────────────────────────────────────────────┐
@@ -97,35 +118,6 @@ Agent Core bestimmt, wie das Modell den Projektkontext sieht:
 
 `@spiritagent/agent-core` wird auf npm veröffentlicht; [`packages/host-internal`](../packages/host-internal) enthält gemeinsame Host-Discovery, Extensions, Workspace-Helfer und LSP-Orchestrierung für Desktop.
 
-## Desktop
-
-Die [Desktop-App](../apps/desktop) ist der primäre grafische Host: eine workspace-gebundene IDE-Oberfläche mit konversationellem Agent.
-
-- **Andockpanels** — Datei-Explorer mit Monaco-Editor, eingebettetes Terminal (Electron), Git-Änderungen und Historie, In-App-Browser für lokale Dev-Server.
-- **Sessions** — Mehrfach-Konversationshistorie, Worktree-pro-Session-Workflows, Tool-Freigabe, Subagent-Viewer, strukturierte Fragebögen, Kontextnutzung und Rewind.
-- **Konfiguration** — Modellanbieter und API-Schlüssel, Skills und Rules, MCP-Server, Extensions, Dreams (beta), LSP, Themes und UI-Sprache (Englisch / Vereinfachtes Chinesisch / Deutsch u. a.).
-- **Plattformen** — Electron auf Windows, macOS und Linux; optionaler Web-Host mit Remote-Pairing.
-
-Siehe [apps/desktop/README.md](../apps/desktop/README.md) für Desktop-spezifische Entwicklung.
-
-## Site
-
-Die [Marketing- und Dokumentationssite](../apps/site) ist eine Next.js- + Fumadocs-App (`@spiritagent/site`) und wird auf Vercel bereitgestellt.
-
-```bash
-pnpm run dev:site
-```
-
-Lokale Entwicklung und der Vercel-Repo-Wechsel stehen in [apps/site/README.md](../apps/site/README.md).
-
-## CLI
-
-Die [Rust CLI](../apps/cli) (`spirit`) bietet einen terminal-first Host mit optionaler Ratatui-UI. Sie verbindet sich per WebSocket mit dem gemeinsamen Spirit-Server-Daemon und eignet sich für Skripte, SSH-Sitzungen und Minimalumgebungen.
-
-```bash
-pnpm run dev:cli    # cargo run -p spirit
-```
-
 ## Server
 
 [`packages/server`](../packages/server) (`@spiritagent/server`, Bin `spirit-server` / `spirit serve`) ist das **gemeinsame Daemon-Backend** für die First-Party-Hosts. CLI und Desktop betten die Runtime nicht mehr im Prozess ein, sondern verbinden sich per WebSocket (JSON-RPC 2.0) mit demselben Daemon — eine im Terminal gestartete Sitzung streamt live in die Desktop-App und umgekehrt.
@@ -175,6 +167,16 @@ node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 | ---------------------- | ------------ | ------------------------------------------------------------------------------ |
 | `SPIRIT_ACP_WORKSPACE` | Nein         | Workspace-Root (Standard: Client-`cwd`)                                        |
 | `SPIRIT_ACP_DATA_DIR`  | Nein         | Spirit-Datenverzeichnis (Standard: Stable: `~/.spirit` · Dev: `~/.spirit-dev`) |
+
+## Site
+
+Die [Marketing- und Dokumentationssite](../apps/site) ist eine Next.js- + Fumadocs-App (`@spiritagent/site`) und wird auf Vercel bereitgestellt.
+
+```bash
+pnpm run dev:site
+```
+
+Lokale Entwicklung und der Vercel-Repo-Wechsel stehen in [apps/site/README.md](../apps/site/README.md).
 
 ## Entwicklung
 

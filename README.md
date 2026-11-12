@@ -8,9 +8,9 @@
 
 # Spirit
 
-An open-source AI agent built to multiply your productivity.
+The open source AI agent that orchestrates models from any provider in one harness.
 
-[Desktop app](#desktop) · [Site](#site) · [CLI](#cli) · [Server](#server) · [ACP Server](#acp-server) · [Agent Core](#agent-core) · [Development](#development)
+[Desktop app](#desktop) · [CLI](#cli) · [Architecture](#architecture) · [Agent Core](#agent-core) · [Server](#server) · [ACP Server](#acp-server) · [Site](#site) · [Development](#development)
 
 > This project is under active development. Behavior and APIs may change between releases.
 
@@ -20,7 +20,28 @@ An open-source AI agent built to multiply your productivity.
 
 ## Overview
 
-Spirit is a **tool-using coding agent** that runs against a real project root. The same runtime powers a native desktop workspace and a terminal UI. Shared logic lives in TypeScript packages; hosts add platform-specific execution, discovery, and UI.
+Spirit brings models from any provider into one consistent agent experience. Your sessions, tools, and configuration stay with you as you switch models or move between Desktop and the terminal.
+
+## Desktop
+
+The [Desktop app](apps/desktop) is the primary graphical host: a workspace-bound IDE surface with a conversational agent.
+
+- **Docked panels** — file explorer with Monaco editor, embedded terminal (Electron), Git changes and history, in-app browser for local dev servers.
+- **Sessions** — multi-conversation history, worktree-per-session workflows, tool approval, subagent viewer, structured questionnaires, context usage, and rewind.
+- **Configuration** — model providers and API keys, Skills and Rules, MCP servers, extensions, Dreams (beta), LSP, themes, and UI locale (10 languages including English, 简体中文, 繁體中文, 日本語, 한국어, Deutsch, Français, Español, Português do Brasil, and Русский).
+- **Platforms** — Electron on Windows, macOS, and Linux; optional web host with remote pairing.
+
+See [apps/desktop/README.md](apps/desktop/README.md) for Desktop-specific development and layout.
+
+## CLI
+
+The [Rust CLI](apps/cli) (`spirit`) provides a terminal-first host with an optional Ratatui UI. It connects to the shared Spirit Server daemon over WebSocket and suits scripting, SSH sessions, and minimal environments.
+
+```bash
+pnpm run dev:cli    # cargo run -p spirit
+```
+
+## Architecture
 
 ```
 ┌───────────────────────────────────────────────────────┐
@@ -97,35 +118,6 @@ Agent Core owns how the model sees project context:
 
 `@spiritagent/agent-core` is published to npm; [`packages/host-internal`](packages/host-internal) holds shared host-side discovery, extensions, workspace helpers, and LSP orchestration used by Desktop.
 
-## Desktop
-
-The [Desktop app](apps/desktop) is the primary graphical host: a workspace-bound IDE surface with a conversational agent.
-
-- **Docked panels** — file explorer with Monaco editor, embedded terminal (Electron), Git changes and history, in-app browser for local dev servers.
-- **Sessions** — multi-conversation history, worktree-per-session workflows, tool approval, subagent viewer, structured questionnaires, context usage, and rewind.
-- **Configuration** — model providers and API keys, Skills and Rules, MCP servers, extensions, Dreams (beta), LSP, themes, and UI locale (10 languages including English, 简体中文, 繁體中文, 日本語, 한국어, Deutsch, Français, Español, Português do Brasil, and Русский).
-- **Platforms** — Electron on Windows, macOS, and Linux; optional web host with remote pairing.
-
-See [apps/desktop/README.md](apps/desktop/README.md) for Desktop-specific development and layout.
-
-## Site
-
-The [marketing and docs site](apps/site) is a Next.js + Fumadocs app (`@spiritagent/site`), deployed on Vercel.
-
-```bash
-pnpm run dev:site
-```
-
-See [apps/site/README.md](apps/site/README.md) for local development and the Vercel Git switch checklist.
-
-## CLI
-
-The [Rust CLI](apps/cli) (`spirit`) provides a terminal-first host with an optional Ratatui UI. It connects to the shared Spirit Server daemon over WebSocket and suits scripting, SSH sessions, and minimal environments.
-
-```bash
-pnpm run dev:cli    # cargo run -p spirit
-```
-
 ## Server
 
 [`packages/server`](packages/server) (`@spiritagent/server`, bin `spirit-server` / `spirit serve`) is the **shared daemon backend** for first-party hosts. Instead of embedding a runtime in-process, CLI and Desktop attach to the same daemon over WebSocket (JSON-RPC 2.0) — so a session started in the terminal streams live into Desktop, and vice versa.
@@ -175,6 +167,16 @@ node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 | ---------------------- | -------- | --------------------------------------------------------------------------- |
 | `SPIRIT_ACP_WORKSPACE` | No       | Workspace root (default: `cwd` from client)                                 |
 | `SPIRIT_ACP_DATA_DIR`  | No       | Spirit data directory (default: Stable: `~/.spirit` · Dev: `~/.spirit-dev`) |
+
+## Site
+
+The [marketing and docs site](apps/site) is a Next.js + Fumadocs app (`@spiritagent/site`), deployed on Vercel.
+
+```bash
+pnpm run dev:site
+```
+
+See [apps/site/README.md](apps/site/README.md) for local development and the Vercel Git switch checklist.
 
 ## Development
 
