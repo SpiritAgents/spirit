@@ -104,6 +104,41 @@ export class HostService {
     return { spiritDataDir: this.spiritDataDir, hostKind };
   }
 
+  private async cliSkillState(params: Record<string, unknown>) {
+    const context = this.context(params);
+    const hostKind = HostService.readHostKind(params);
+    const [discovered, contributions] = await Promise.all([
+      discoverSkillEntries(context),
+      this.extensionManager(hostKind)
+        .list()
+        .then((extensions) => collectEnabledExtensionInstructionContributions(extensions)),
+    ]);
+    const enabledBaseEntries = discovered.filter((entry) => entry.enabled);
+    const claimedNames = new Set(enabledBaseEntries.map((entry) => entry.source.name));
+    const extensionSkills = contributions.skills.filter((skill) => {
+      if (claimedNames.has(skill.name)) {
+        return false;
+      }
+      claimedNames.add(skill.name);
+      return true;
+    });
+    const extensionEntries = extensionSkills.map((skill) => ({
+      source: {
+        id: skill.id,
+        scope: skill.scope,
+        name: skill.name,
+        description: skill.description,
+        path: skill.path,
+      },
+      content: skill.content,
+    }));
+    return {
+      discovered,
+      extensionSkills,
+      candidates: [...enabledBaseEntries, ...extensionEntries] as const,
+    };
+  }
+
   private static readWorkspaceRoot(params: Record<string, unknown>): string {
     const workspaceRoot = params["workspaceRoot"];
     if (typeof workspaceRoot !== "string" || !workspaceRoot.trim()) {
@@ -225,14 +260,11 @@ export class HostService {
         ) as AgentMode;
         const activePlanPath =
           typeof params["activePlanPath"] === "string" ? params["activePlanPath"] : undefined;
-        const hostKind = HostService.readHostKind(params);
-        const contributions = await collectEnabledExtensionInstructionContributions(
-          await this.extensionManager(hostKind).list(),
-        );
+        const skills = await this.cliSkillState(params);
         return {
           ruleEntries: await discoverRuleEntries(context),
-          skillEntries: await discoverSkillEntries(context),
-          extensionSkillEntries: contributions.skills.map((skill) => ({
+          skillEntries: skills.discovered,
+          extensionSkillEntries: skills.extensionSkills.map((skill) => ({
             id: skill.id,
             name: skill.name,
             description: skill.description,
@@ -275,10 +307,9 @@ export class HostService {
       }
 
       case "host.resolveActiveSkill": {
-        const context = this.context(params);
         const selector = (params["skill"] ?? {}) as Record<string, unknown>;
-        const entries = await discoverSkillEntries(context);
-        const entry = entries.find(
+        const { candidates } = await this.cliSkillState(params);
+        const entry = candidates.find(
           (candidate) =>
             candidate.source.id === selector["id"] ||
             candidate.source.path === selector["path"] ||

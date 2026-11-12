@@ -6,6 +6,7 @@ import { test } from "vitest";
 
 import { SPIRIT_CONFIG_SCHEMA_VERSION } from "@spiritagent/config";
 import { configFilePath } from "@spiritagent/config/credentials";
+import { installPreparedExtensionDirectory } from "@spiritagent/extensions";
 
 import { HOST_METHODS, HostService, type HostCheckPermissionResult } from "../src/host-service.js";
 import type { SessionManager } from "../src/session-manager.js";
@@ -177,6 +178,78 @@ test("host.resolveActiveSkill uses the TypeScript payload builder", async () => 
     assert.equal(skill.name, "fixture");
     assert.equal(skill.content, "Use the fixture.");
     assert.deepEqual(skill.resources, []);
+  });
+});
+
+test("host.resolveActiveSkill resolves extension skills with base-name precedence", async () => {
+  await withTempDir(async (dir) => {
+    const spiritDataDir = join(dir, "data");
+    const workspaceRoot = join(dir, "workspace");
+    const preparedDirectoryPath = join(dir, "prepared");
+    const baseSkillDir = join(workspaceRoot, ".spirit", "skills", "shared");
+    await mkdir(baseSkillDir, { recursive: true });
+    await writeFile(
+      join(baseSkillDir, "SKILL.md"),
+      "---\nname: shared\ndescription: Base skill\n---\nUse the base skill.\n",
+    );
+    await mkdir(join(preparedDirectoryPath, ".spirit"), { recursive: true });
+    await writeFile(
+      join(preparedDirectoryPath, "package.json"),
+      JSON.stringify({ name: "fixture-skills", version: "0.0.1" }),
+    );
+    await writeFile(
+      join(preparedDirectoryPath, ".spirit", "extension.json"),
+      JSON.stringify({
+        schemaVersion: 1,
+        name: "fixture-skills",
+        version: "0.0.1",
+        sourceId: "personal",
+        displayName: "Fixture Skills",
+        description: "Fixture extension skills.",
+        manifest: {
+          supportedHosts: ["cli"],
+          requestedCapabilities: ["skills"],
+          contributes: { skills: true },
+        },
+      }),
+    );
+    for (const [name, description] of [
+      ["shared", "Extension shadow"],
+      ["extension-only", "Extension skill"],
+    ] as const) {
+      const skillDir = join(preparedDirectoryPath, "skills", name);
+      await mkdir(skillDir, { recursive: true });
+      await writeFile(
+        join(skillDir, "SKILL.md"),
+        `---\nname: ${name}\ndescription: ${description}\n---\nUse ${description}.\n`,
+      );
+    }
+    await installPreparedExtensionDirectory(
+      { spiritDataDir, hostKind: "cli" },
+      { preparedDirectoryPath },
+    );
+
+    const service = makeService(spiritDataDir);
+    const metadata = (await service.handle("host.loadCliMetadata", {
+      workspaceRoot,
+      hostKind: "cli",
+    })) as { extensionSkillEntries: Array<{ name: string }> };
+    assert.deepEqual(
+      metadata.extensionSkillEntries.map((entry) => entry.name),
+      ["extension-only"],
+    );
+    const shared = (await service.handle("host.resolveActiveSkill", {
+      workspaceRoot,
+      skill: { name: "shared" },
+    })) as { scope: string; content: string };
+    assert.equal(shared.scope, "workspace");
+    assert.equal(shared.content, "Use the base skill.");
+    const extension = (await service.handle("host.resolveActiveSkill", {
+      workspaceRoot,
+      skill: { name: "extension-only" },
+    })) as { scope: string; content: string };
+    assert.equal(extension.scope, "extension");
+    assert.equal(extension.content, "Use Extension skill.");
   });
 });
 
