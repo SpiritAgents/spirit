@@ -20,7 +20,6 @@ pub mod llm_types;
 #[cfg(feature = "tui")]
 pub mod locale;
 pub mod logging;
-#[cfg(target_os = "macos")]
 pub mod mcp;
 pub mod mcp_types;
 pub mod model_display;
