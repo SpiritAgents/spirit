@@ -6,6 +6,7 @@ import { createDesktopRewindMetadata } from "@spiritagent/sessions/host/rewind";
 import {
   listStoredSessions,
   loadStoredSession,
+  runWithSpiritDataDir,
   saveStoredSession,
 } from "@spiritagent/sessions/host/storage";
 import {
@@ -20,6 +21,16 @@ import {
 } from "@spiritagent/workspace/file-rewind";
 
 export async function executeStoredSessionCommand(
+  method: string,
+  params: Record<string, unknown>,
+  spiritDataDir: string,
+): Promise<unknown> {
+  return runWithSpiritDataDir(spiritDataDir, () =>
+    executeStoredSessionCommandInScope(method, params, spiritDataDir),
+  );
+}
+
+async function executeStoredSessionCommandInScope(
   method: string,
   params: Record<string, unknown>,
   spiritDataDir: string,

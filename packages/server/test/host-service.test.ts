@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
@@ -76,6 +76,80 @@ test("host.getConfig initializes the shared schema in the daemon data dir", asyn
       };
       assert.equal(config.schemaVersion, SPIRIT_CONFIG_SCHEMA_VERSION);
       assert.deepEqual(config.providers, []);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.SPIRIT_DATA_DIR;
+      } else {
+        process.env.SPIRIT_DATA_DIR = previous;
+      }
+    }
+  });
+});
+
+test("host config and stored sessions stay isolated to each daemon data dir", async () => {
+  await withTempDir(async (dir) => {
+    const firstDir = join(dir, "first");
+    const secondDir = join(dir, "second");
+    const processDir = join(dir, "process");
+    const previous = process.env.SPIRIT_DATA_DIR;
+    process.env.SPIRIT_DATA_DIR = processDir;
+    try {
+      const first = makeService(firstDir);
+      const second = makeService(secondDir);
+      await Promise.all([first.handle("host.getConfig", {}), second.handle("host.getConfig", {})]);
+      assert.equal(
+        JSON.parse(await readFile(join(firstDir, "config.json"), "utf8")).schemaVersion,
+        SPIRIT_CONFIG_SCHEMA_VERSION,
+      );
+      assert.equal(
+        JSON.parse(await readFile(join(secondDir, "config.json"), "utf8")).schemaVersion,
+        SPIRIT_CONFIG_SCHEMA_VERSION,
+      );
+      await assert.rejects(readFile(join(processDir, "config.json"), "utf8"), {
+        code: "ENOENT",
+      });
+
+      const timeline = [
+        {
+          turnId: 1,
+          createdOrder: 1,
+          userRow: {
+            rowId: "user-1",
+            messageId: 1,
+            turnId: 1,
+            kind: "user",
+            createdOrder: 1,
+            content: "Daemon chat",
+            pending: false,
+          },
+          segments: [],
+        },
+      ];
+      await mkdir(join(firstDir, "chats"), { recursive: true });
+      await mkdir(join(processDir, "chats"), { recursive: true });
+      const storedSession = (displayName: string) => ({
+        chatSchemaVersion: 2,
+        llmHistory: [],
+        subagentSessions: [],
+        desktopMessageTimeline: timeline,
+        savedAtUnixMs: 1,
+        sessionDisplayName: displayName,
+      });
+      await writeFile(
+        join(firstDir, "chats", "chat.json"),
+        JSON.stringify(storedSession("Daemon chat")),
+      );
+      await writeFile(
+        join(processDir, "chats", "chat.json"),
+        JSON.stringify(storedSession("Process chat")),
+      );
+      const stored = (await first.handle("session.listStored", {})) as Array<{
+        displayName: string;
+      }>;
+      assert.deepEqual(
+        stored.map((entry) => entry.displayName),
+        ["Daemon chat"],
+      );
     } finally {
       if (previous === undefined) {
         delete process.env.SPIRIT_DATA_DIR;

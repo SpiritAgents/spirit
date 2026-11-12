@@ -17,7 +17,11 @@ import {
   updateConfigCommand,
   type HostModelCommandContext,
 } from "@spiritagent/sessions/host/host-model-commands";
-import { loadConfig, loadHostMetadata } from "@spiritagent/sessions/host/storage";
+import {
+  loadConfig,
+  loadHostMetadata,
+  runWithSpiritDataDir,
+} from "@spiritagent/sessions/host/storage";
 import { saveConfig } from "@spiritagent/sessions/host/storage";
 import { buildModelCatalogHints } from "@spiritagent/sessions/host/model-config";
 import { assertSpiritConfigSchemaVersion, validateSpiritConfig } from "@spiritagent/config";
@@ -47,6 +51,14 @@ function modelContext(): HostModelCommandContext {
 }
 
 export async function executeHostModelCommand(
+  method: string,
+  params: Record<string, unknown>,
+  spiritDataDir: string,
+): Promise<unknown> {
+  return runWithSpiritDataDir(spiritDataDir, () => executeHostModelCommandInScope(method, params));
+}
+
+async function executeHostModelCommandInScope(
   method: string,
   params: Record<string, unknown>,
 ): Promise<unknown> {

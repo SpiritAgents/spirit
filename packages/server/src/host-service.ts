@@ -148,7 +148,7 @@ export class HostService {
       method === "host.writeProviderSecret" ||
       method === "host.deleteProviderSecret"
     ) {
-      return executeHostModelCommand(method, params);
+      return executeHostModelCommand(method, params, this.spiritDataDir);
     }
     switch (method) {
       case "remote.getState":

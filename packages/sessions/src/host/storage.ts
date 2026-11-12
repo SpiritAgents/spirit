@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdir, readdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { homedir } from "node:os";
@@ -198,15 +199,25 @@ export type SkillDiscoveryResult = HostSkillDiscoveryResult;
 export type HostMetadataSummary = HostInstructionMetadataSummary;
 
 let spiritDataDirOverride: string | undefined;
+const spiritDataDirScope = new AsyncLocalStorage<string>();
 
 export function setSpiritDataDirOverride(dir: string | undefined): void {
   spiritDataDirOverride = dir;
+}
+
+/** Runs related host operations against one daemon's data root without process-global mutation. */
+export function runWithSpiritDataDir<T>(dataDir: string, work: () => T): T {
+  return spiritDataDirScope.run(path.resolve(dataDir), work);
 }
 
 export { resolveDefaultSpiritDataDir };
 export const resolveConfiguredSpiritDataDir = resolveSpiritDataDir;
 
 export function spiritDataDir(): string {
+  const scoped = spiritDataDirScope.getStore();
+  if (scoped) {
+    return scoped;
+  }
   if (spiritDataDirOverride) {
     return spiritDataDirOverride;
   }
