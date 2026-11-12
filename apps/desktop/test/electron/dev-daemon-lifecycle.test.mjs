@@ -20,8 +20,9 @@ test("dev restart stops and unregisters the previous daemon", async () => {
   });
   child.unref();
   try {
+    // Contended CI workers can take more than five seconds to load the daemon's dependency graph.
     await expect
-      .poll(async () => (await listInstances(dataDir)).length, { timeout: 5_000, interval: 50 })
+      .poll(async () => (await listInstances(dataDir)).length, { timeout: 20_000, interval: 50 })
       .toBe(1);
     const exited = new Promise((resolve) => child.once("exit", resolve));
     await stopRegisteredDaemons(dataDir);
