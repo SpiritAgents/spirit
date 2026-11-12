@@ -5,30 +5,34 @@ import { createRequire } from "node:module";
 import { randomUUID } from "node:crypto";
 
 import {
-  invokeDesktopHostCommand,
-  shutdownDesktopHostService,
-  subscribeDesktopDreamUpdates,
-  refreshDesktopRemoteControlConfig,
-} from "./host/service.js";
-import {
   loadConfig,
   resolveConfiguredSpiritDataDir,
   setSpiritDataDirOverride,
   spiritDataDir,
 } from "@spiritagent/sessions/host/storage";
-import { setDesktopWebHostRuntimeStatus } from "@spiritagent/sessions/host/web-host-state";
-import {
-  callDesktopRemoteControl,
-  requestDesktopRemoteControlAccess,
-  subscribeDesktopRemoteControl,
-} from "@spiritagent/sessions/host/remote-control-client";
-import {
-  createDesktopHttpHost,
-  resolveDesktopWebHostFromEnv,
-  type DesktopHttpHost,
-} from "@spiritagent/http/http-host";
+import type { DesktopHttpHost } from "@spiritagent/http/http-host";
 
 setSpiritDataDirOverride(resolveConfiguredSpiritDataDir());
+
+const initialConfig = await loadConfig();
+if (!initialConfig.webHost.enabled) process.exit(0);
+
+const [
+  {
+    invokeDesktopHostCommand,
+    shutdownDesktopHostService,
+    subscribeDesktopDreamUpdates,
+    refreshDesktopRemoteControlConfig,
+  },
+  { setDesktopWebHostRuntimeStatus },
+  { callDesktopRemoteControl, requestDesktopRemoteControlAccess, subscribeDesktopRemoteControl },
+  { createDesktopHttpHost, resolveDesktopWebHostFromEnv },
+] = await Promise.all([
+  import("./host/service.js"),
+  import("@spiritagent/sessions/host/web-host-state"),
+  import("@spiritagent/sessions/host/remote-control-client"),
+  import("@spiritagent/http/http-host"),
+]);
 
 const instanceId = `workbench-${process.pid}-${randomUUID()}`;
 const initialEndpoint = resolveDesktopWebHostFromEnv();
@@ -96,9 +100,6 @@ async function shutdown(): Promise<void> {
   stopping = true;
   await Promise.all([stop(), shutdownDesktopHostService()]);
 }
-
-const initialConfig = await loadConfig();
-if (!initialConfig.webHost.enabled) process.exit(0);
 
 await start(initialEndpoint.host, initialEndpoint.port);
 
