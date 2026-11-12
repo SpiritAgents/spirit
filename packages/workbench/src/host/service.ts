@@ -460,11 +460,12 @@ import { applyGeneratedSessionTitle } from "@spiritagent/sessions/host/session-t
 import { isForegroundProvisionalSessionPath } from "@spiritagent/sessions/lib/session-path-kind";
 import {
   abortCodeCompletionCommand,
+  clearCodeCompletionStateForWorkspace,
   recordCodeCompletionFileStateCommand,
   requestCodeCompletionCommand,
   resetCodeCompletionJournalCommand,
   type CodeCompletionCommandContext,
-} from "@spiritagent/sessions/host/code-completion-commands";
+} from "@spiritagent/code-completion/commands";
 import {
   buildContextUsagePercent,
   type ContextUsageModelProfile,
@@ -967,6 +968,7 @@ export class DesktopHostService {
       runCoalescedGitRefresh: () => this.runCoalescedGitRefresh(),
       hasState: () => Boolean(this.state),
       buildSnapshot: () => this.buildSnapshot(),
+      clearCodeCompletionStateForWorkspace,
     };
   }
 

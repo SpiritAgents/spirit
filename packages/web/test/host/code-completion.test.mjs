@@ -13,7 +13,7 @@ import {
   requestCodeCompletionCommand,
   resetCodeCompletionJournalCommand,
   resolveCodeCompletionTransportConfig,
-} from "../../../../packages/sessions/dist/host/code-completion-commands.js";
+} from "../../../../packages/code-completion/dist/commands.js";
 import {
   defaultAgentsConfig,
   setSpiritDataDirOverride,

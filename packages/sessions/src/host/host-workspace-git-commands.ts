@@ -12,7 +12,6 @@ import {
 } from "@spiritagent/host-internal";
 
 import i18n from "../lib/i18n-host.js";
-import { clearCodeCompletionStateForWorkspace } from "./code-completion-commands.js";
 import type {
   CheckoutGitBranchRequest,
   CommitChangesRequest,
@@ -105,6 +104,7 @@ export interface HostWorkspaceGitCommandContext {
   runCoalescedGitRefresh(): Promise<void>;
   hasState(): boolean;
   buildSnapshot(): DesktopSnapshot;
+  clearCodeCompletionStateForWorkspace(workspaceRoot: string): void;
 }
 
 export async function rememberWorkspaceRootCommand(
@@ -144,7 +144,7 @@ export async function forgetWorkspaceRootCommand(
     }
 
     const state = ctx.requireState();
-    clearCodeCompletionStateForWorkspace(workspaceRoot);
+    ctx.clearCodeCompletionStateForWorkspace(workspaceRoot);
     state.config = {
       ...state.config,
       recentWorkspaces: removeRecentWorkspaceRoot(state.config.recentWorkspaces, workspaceRoot),

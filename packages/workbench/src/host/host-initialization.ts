@@ -1,7 +1,7 @@
 import path from "node:path";
 
 import { resolveDesktopAgentMode } from "@spiritagent/ui/composer";
-import { clearCodeCompletionStateForWorkspace } from "@spiritagent/sessions/host/code-completion-commands";
+import { clearCodeCompletionStateForWorkspace } from "@spiritagent/code-completion/commands";
 import type { PlanSnapshot } from "@spiritagent/api/types";
 import {
   discoverWorkspaceRoot,
