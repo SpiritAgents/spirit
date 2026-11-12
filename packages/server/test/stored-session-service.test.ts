@@ -78,3 +78,39 @@ test("CLI overwrite saves preserve pinning and refresh workspace metadata", asyn
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("stored-session forks preserve every approval level", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "spirit-stored-fork-"));
+  try {
+    for (const approvalLevel of ["default", "auto-approval", "bypass-approval"] as const) {
+      const result = (await executeStoredSessionCommand(
+        "session.fork",
+        {
+          archive: {
+            messages: [
+              { role: "user", content: "Question" },
+              { role: "assistant", content: "Answer" },
+            ],
+            assistantAux: [],
+            llmHistory: [
+              { role: "user", content: "Question" },
+              { role: "assistant", content: "Answer" },
+            ],
+            subagentSessions: [],
+            loopEnabled: false,
+            approvalLevel,
+          },
+          desktopMessages: [
+            { id: 1, role: "user", content: "Question", pending: false },
+            { id: 2, role: "assistant", content: "Answer", pending: false },
+          ],
+          anchorIndex: 1,
+        },
+        root,
+      )) as { archive: { approvalLevel?: string } };
+      assert.equal(result.archive.approvalLevel, approvalLevel);
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

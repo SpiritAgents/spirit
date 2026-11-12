@@ -39,6 +39,7 @@ export function buildTruncatedChatArchiveForFork(
       ),
     ),
     loopEnabled: sourceArchive.loopEnabled,
+    approvalLevel: sourceArchive.approvalLevel,
   };
 }
 
