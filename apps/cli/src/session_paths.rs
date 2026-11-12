@@ -1,10 +1,37 @@
 use anyhow::{Result, anyhow};
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use crate::{mcp::spirit_data_dir, rewind::ConversationMessageSnapshot};
 
 pub fn chat_dir_path() -> PathBuf {
     spirit_data_dir().join("chats")
+}
+
+pub fn resolve_chat_save_path(path_arg: Option<&str>) -> Result<PathBuf> {
+    match path_arg {
+        Some(raw) if !raw.trim().is_empty() => {
+            resolve_explicit_chat_save_path(raw, &std::env::current_dir()?)
+        }
+        _ => {
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|duration| duration.as_secs())
+                .unwrap_or(0);
+            Ok(chat_dir_path().join(format!("chat-{timestamp}.json")))
+        }
+    }
+}
+
+fn resolve_explicit_chat_save_path(raw: &str, workspace_root: &Path) -> Result<PathBuf> {
+    let path = with_json_extension(PathBuf::from(raw.trim()));
+    Ok(if path.is_absolute() {
+        path
+    } else {
+        workspace_root.join(path)
+    })
 }
 
 pub fn resolve_chat_file_path(path_arg: &str) -> Result<PathBuf> {
@@ -69,4 +96,20 @@ fn with_json_extension(path: PathBuf) -> PathBuf {
         p.set_extension("json");
     }
     p
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_explicit_chat_save_path;
+
+    #[test]
+    fn explicit_relative_save_paths_use_the_cli_working_directory() {
+        let workspace_root = std::env::temp_dir().join("spirit-save-path-fixture");
+        let resolved = resolve_explicit_chat_save_path("exports/conversation", &workspace_root)
+            .expect("resolve relative save path");
+        assert_eq!(
+            resolved,
+            workspace_root.join("exports").join("conversation.json")
+        );
+    }
 }

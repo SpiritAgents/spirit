@@ -113,12 +113,13 @@ impl ChatRepository for JsonChatRepository {
 
     fn save(&self, path: Option<&str>, archive: &ChatArchive) -> Result<PathBuf> {
         let workspace_root = env::current_dir()?;
+        let save_path = session_paths::resolve_chat_save_path(path)?;
         let archive = crate::chat_archive::chat_archive_to_bridge_json(archive);
         let value = call_config_rpc(
             &workspace_root,
             "session.saveStored",
             serde_json::json!({
-                "path": path,
+                "path": save_path.to_string_lossy(),
                 "archive": archive,
                 "workspaceRoot": workspace_root.to_string_lossy(),
             }),
