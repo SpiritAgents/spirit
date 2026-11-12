@@ -490,7 +490,7 @@ async function ensureDesktopWorkbenchProcess(config: DesktopWebHostConfigFile): 
     if (current.hostAvailable) return;
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  stopWorkbenchChild(desktopWorkbenchProcess);
+  await stopWorkbenchChild(desktopWorkbenchProcess);
   throw new Error("Workbench Host startup timed out.");
 }
 
