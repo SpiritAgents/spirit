@@ -35,6 +35,14 @@ fn resolve_explicit_chat_save_path(raw: &str, workspace_root: &Path) -> Result<P
 }
 
 pub fn resolve_chat_file_path(path_arg: &str) -> Result<PathBuf> {
+    resolve_chat_file_path_from(path_arg, &std::env::current_dir()?, &chat_dir_path())
+}
+
+fn resolve_chat_file_path_from(
+    path_arg: &str,
+    workspace_root: &Path,
+    chats_dir: &Path,
+) -> Result<PathBuf> {
     let trimmed = path_arg.trim();
     if trimmed.is_empty() {
         return Err(anyhow!("/session load requires a file name or path"));
@@ -43,11 +51,11 @@ pub fn resolve_chat_file_path(path_arg: &str) -> Result<PathBuf> {
     let candidate = if raw.is_absolute() {
         with_json_extension(raw)
     } else {
-        let in_chat_dir = with_json_extension(chat_dir_path().join(&raw));
+        let in_chat_dir = with_json_extension(chats_dir.join(&raw));
         if in_chat_dir.exists() {
             in_chat_dir
         } else {
-            with_json_extension(raw)
+            with_json_extension(workspace_root.join(raw))
         }
     };
     if !candidate.exists() {
@@ -100,7 +108,8 @@ fn with_json_extension(path: PathBuf) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::resolve_explicit_chat_save_path;
+    use super::{resolve_chat_file_path_from, resolve_explicit_chat_save_path};
+    use std::fs;
 
     #[test]
     fn explicit_relative_save_paths_use_the_cli_working_directory() {
@@ -111,5 +120,28 @@ mod tests {
             resolved,
             workspace_root.join("exports").join("conversation.json")
         );
+    }
+
+    #[test]
+    fn relative_load_paths_preserve_chat_dir_and_working_directory_semantics() {
+        let fixture =
+            std::env::temp_dir().join(format!("spirit-load-path-{}", uuid::Uuid::new_v4()));
+        let workspace_root = fixture.join("workspace");
+        let chats_dir = fixture.join("chats");
+        fs::create_dir_all(workspace_root.join("exports")).expect("create workspace fixture");
+        fs::create_dir_all(&chats_dir).expect("create chats fixture");
+        fs::write(workspace_root.join("exports/conversation.json"), "{}").expect("write cwd chat");
+        fs::write(workspace_root.join("shared.json"), "{}").expect("write cwd duplicate");
+        fs::write(chats_dir.join("shared.json"), "{}").expect("write chats duplicate");
+
+        let cwd_path =
+            resolve_chat_file_path_from("exports/conversation", &workspace_root, &chats_dir)
+                .expect("resolve cwd chat");
+        let chats_path = resolve_chat_file_path_from("shared", &workspace_root, &chats_dir)
+            .expect("prefer chats chat");
+
+        assert_eq!(cwd_path, workspace_root.join("exports/conversation.json"));
+        assert_eq!(chats_path, chats_dir.join("shared.json"));
+        fs::remove_dir_all(fixture).expect("remove load path fixture");
     }
 }

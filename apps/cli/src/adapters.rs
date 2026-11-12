@@ -133,10 +133,11 @@ impl ChatRepository for JsonChatRepository {
 
     fn load(&self, path: &str) -> Result<ChatArchive> {
         let workspace_root = env::current_dir()?;
+        let load_path = session_paths::resolve_chat_file_path(path)?;
         let stored = call_config_rpc(
             &workspace_root,
             "session.loadStored",
-            serde_json::json!({ "path": path }),
+            serde_json::json!({ "path": load_path.to_string_lossy() }),
         )?;
         let timeline: Vec<crate::chat_timeline::PersistedTimelineTurn> =
             serde_json::from_value(stored["desktopMessageTimeline"].clone())?;
