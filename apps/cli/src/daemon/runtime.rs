@@ -39,6 +39,7 @@ use crate::{
 };
 
 use super::client::{DaemonClient, validate_product_build};
+use super::config::transport_config_will_change;
 use super::resolve::{ensure_daemon, is_loopback_host};
 
 /// Buffer window for draining daemon notifications without blocking.
@@ -725,7 +726,7 @@ impl DaemonRuntime {
     }
 
     pub fn validate_config_change(&mut self, config: &AppConfig) -> Result<()> {
-        if serde_json::to_value(&self.config).ok() == serde_json::to_value(config).ok() {
+        if !transport_config_will_change(&self.config, config) {
             return Ok(());
         }
         self.call_daemon("host.validateConfig", Some(json!({ "config": config })))
@@ -742,8 +743,7 @@ impl DaemonRuntime {
                 )));
             return;
         }
-        let transport_changed =
-            serde_json::to_value(&self.config).ok() != serde_json::to_value(&config).ok();
+        let transport_changed = transport_config_will_change(&self.config, &config);
         self.config = config;
         if let Err(err) = self.apply_attribution_to_daemon() {
             self.handle_daemon_error(err);
