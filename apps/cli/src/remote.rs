@@ -3,6 +3,7 @@ use serde_json::{Value, json};
 use std::{
     fs,
     io::Write,
+    path::Path,
     process::{Command, Stdio},
     thread,
     time::{Duration, Instant},
@@ -16,6 +17,12 @@ use crate::{
     },
     mcp::spirit_data_dir,
 };
+
+fn apply_workbench_data_dir(command: &mut Command, data_dir: &Path) {
+    command
+        .env("SPIRIT_DATA_DIR", data_dir)
+        .env("SPIRIT_SERVER_DATA_DIR", data_dir);
+}
 
 pub fn handle_remote_cli(command: RemoteCommand) -> Result<()> {
     let workspace = std::env::current_dir()?;
@@ -207,10 +214,10 @@ pub(crate) fn ensure_remote_host(runtime: &mut DaemonRuntime) -> Result<()> {
     let log_file = fs::File::create(log_dir.join("workbench.log"))?;
     let log_err = log_file.try_clone()?;
     let mut command = Command::new(node);
+    apply_workbench_data_dir(&mut command, &data_dir);
     command
         .arg(entry)
         .arg("serve")
-        .env("SPIRIT_SERVER_DATA_DIR", &data_dir)
         .env(
             "SPIRIT_WEB_HOST",
             state["host"].as_str().unwrap_or("127.0.0.1"),
@@ -260,5 +267,25 @@ fn print_enrollment(enrollment: &Value) {
     }
     if let Some(url) = enrollment["url"].as_str() {
         println!("Pairing URL: {url}");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn workbench_environment_shares_data_dir_with_server() {
+        let data_dir = Path::new("/tmp/spirit-workbench-environment-test");
+        let mut command = Command::new("node");
+        apply_workbench_data_dir(&mut command, data_dir);
+
+        for variable in ["SPIRIT_DATA_DIR", "SPIRIT_SERVER_DATA_DIR"] {
+            let value = command
+                .get_envs()
+                .find(|(key, _)| *key == variable)
+                .and_then(|(_, value)| value);
+            assert_eq!(value, Some(data_dir.as_os_str()));
+        }
     }
 }
