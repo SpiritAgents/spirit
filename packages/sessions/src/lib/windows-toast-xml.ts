@@ -1,0 +1,120 @@
+export type WindowsToastPayload = {
+  requestId?: string;
+  title: string;
+  body?: string;
+  tag?: string;
+  actions?: Array<{ type: "button"; text: string }>;
+};
+
+const TOAST_TEXT_LINE_MAX = 4;
+const TOAST_ACTION_MAX = 2;
+
+export function escapeToastXml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function toastTextLines(payload: WindowsToastPayload): string[] {
+  const lines: string[] = [];
+  const title = payload.title?.trim();
+  if (title) {
+    lines.push(title);
+  }
+  if (payload.body) {
+    for (const line of payload.body.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (trimmed) {
+        lines.push(trimmed);
+      }
+    }
+  }
+  return lines.slice(0, TOAST_TEXT_LINE_MAX);
+}
+
+function parseActionIndexParam(raw: string | null): number | undefined {
+  if (raw === null) {
+    return undefined;
+  }
+  const actionIndex = Number(raw);
+  if (!Number.isFinite(actionIndex) || actionIndex < 0) {
+    return undefined;
+  }
+  return actionIndex;
+}
+
+/** Build WinRT toast XML. Electron's high-level `actions` are hardcoded as foreground; approval toasts need background COM activation. */
+export function buildWindowsToastXml(payload: WindowsToastPayload): string {
+  const textXml = toastTextLines(payload)
+    .map((line) => `<text>${escapeToastXml(line)}</text>`)
+    .join("");
+  const actionsXml = (payload.actions ?? [])
+    .slice(0, TOAST_ACTION_MAX)
+    .map((action, index) => {
+      const argumentsValue = `type=action&action=${index}${payload.requestId ? `&requestId=${encodeURIComponent(payload.requestId)}` : ""}`;
+      return `<action content="${escapeToastXml(action.text)}" arguments="${escapeToastXml(argumentsValue)}" activationType="background" />`;
+    })
+    .join("");
+  const launch = escapeToastXml("type=click");
+  return `<toast launch="${launch}" activationType="background"><visual><binding template="ToastGeneric">${textXml}</binding></visual><actions>${actionsXml}</actions></toast>`;
+}
+
+export function shouldUseWindowsToastXml(payload: WindowsToastPayload): boolean {
+  return Boolean(payload.actions && payload.actions.length > 0);
+}
+
+export type WindowsToastActivationDetails = {
+  type?: string;
+  actionIndex?: number;
+  arguments?: string;
+};
+
+/** Normalize WinRT activation payload from `Notification.handleActivation` / `action` events. */
+export function parseWindowsToastActivation(
+  details: WindowsToastActivationDetails,
+): { kind: "click" } | { kind: "action"; actionIndex: number; requestId?: string } {
+  const rawArguments = details.arguments?.trim() ?? "";
+  const params = new URLSearchParams(rawArguments.replace(/;/g, "&"));
+  const requestId = params.get("requestId");
+  if (details.type?.toLowerCase() === "action") {
+    const directIndex = details.actionIndex;
+    if (typeof directIndex === "number" && directIndex >= 0) {
+      return { kind: "action", actionIndex: directIndex, ...(requestId ? { requestId } : {}) };
+    }
+  }
+
+  const activationType = (params.get("type") ?? details.type ?? "click").toLowerCase();
+  if (activationType !== "action") {
+    return { kind: "click" };
+  }
+  const fromDetails =
+    typeof details.actionIndex === "number" && details.actionIndex >= 0
+      ? details.actionIndex
+      : undefined;
+  const actionIndex =
+    fromDetails ??
+    parseActionIndexParam(params.get("action")) ??
+    parseActionIndexParam(params.get("actionIndex"));
+  if (actionIndex === undefined) {
+    return { kind: "click" };
+  }
+  return { kind: "action", actionIndex, ...(requestId ? { requestId } : {}) };
+}
+
+export function resolveNotificationActionIndex(
+  event: unknown,
+  legacyIndex?: number,
+): number | undefined {
+  if (typeof event === "object" && event !== null && "actionIndex" in event) {
+    const fromEvent = (event as { actionIndex?: number }).actionIndex;
+    if (typeof fromEvent === "number" && fromEvent >= 0) {
+      return fromEvent;
+    }
+  }
+  if (typeof legacyIndex === "number" && legacyIndex >= 0) {
+    return legacyIndex;
+  }
+  return undefined;
+}

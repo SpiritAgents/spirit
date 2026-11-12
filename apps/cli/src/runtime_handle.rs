@@ -70,6 +70,22 @@ impl RuntimeHandle {
         self.backend.store_config(config)
     }
 
+    pub fn call_remote_control(&mut self, method: &str, params: Value) -> Result<Value> {
+        self.backend.call_daemon(method, Some(params))
+    }
+
+    pub fn ensure_remote_host(&mut self) -> Result<()> {
+        crate::remote::ensure_remote_host(&mut self.backend)
+    }
+
+    pub fn enable_remote_control(&mut self) -> Result<Value> {
+        crate::remote::enable_remote_control(&mut self.backend)
+    }
+
+    pub fn take_remote_control_confirmation(&mut self) -> Option<Value> {
+        self.backend.take_remote_control_confirmation()
+    }
+
     pub fn replace_plan_metadata(&mut self, metadata: PlanMetadata) {
         self.backend.replace_plan_metadata(metadata)
     }

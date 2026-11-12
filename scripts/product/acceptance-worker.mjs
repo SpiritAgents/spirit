@@ -117,6 +117,7 @@ const load = (relative) => import(pathToFileURL(path.join(repo, relative)).href)
 let daemon;
 try {
   const host = await load("packages/host-internal/dist/index.js");
+  const extensions = await load("packages/extensions/dist/index.js");
   const { startDaemon } = await load("packages/server/dist/src/daemon.js");
   const { ServerRpcClient, ProductBuildMismatchError } = await load(
     "packages/server/dist/src/client.js",
@@ -160,7 +161,7 @@ try {
   assert.equal(configs.workspace.servers.fixture.transport.command, "workspace-command");
   assert.equal(host.listHookListItems({ ...context, workspaceBinding: "project" }).length, 2);
   assert.deepEqual(
-    (await host.loadTaskFiles(context)).map((file) => file.path),
+    (await extensions.loadTaskFiles(context)).map((file) => file.path),
     [path.join(workspaceData, "tasks.json")],
   );
   const config = {
@@ -171,13 +172,13 @@ try {
   };
   await host.saveSpiritConfig(dataDir, config);
   assert.equal(host.loadSpiritConfig(dataDir).fixture, product.quality);
-  const desktopStorage = await load("apps/desktop/dist-electron/src/host/storage.js");
-  const rewind = await load("apps/desktop/dist-electron/src/host/rewind.js");
+  const desktopStorage = await load("packages/sessions/dist/host/storage.js");
+  const rewind = await load("packages/sessions/dist/host/rewind.js");
   const { DesktopMessageTimeline } = await load(
-    "apps/desktop/dist-electron/src/host/message-timeline.js",
+    "packages/sessions/dist/host/message-timeline.js",
   );
   const { normalizeTimelineSnapshotForPersistence } = await load(
-    "apps/desktop/dist-electron/src/host/chat-schema.js",
+    "packages/sessions/dist/host/chat-schema.js",
   );
   let nextMessageId = 1;
   const timeline = new DesktopMessageTimeline({ allocateMessageId: () => nextMessageId++ });
@@ -238,9 +239,12 @@ try {
       path.join(dataDir, "extensions", hostKind),
     );
   }
-  await host.ensurePersonalMarketplace(dataDir);
-  assert.equal(host.personalRegistryRoot(dataDir), path.join(dataDir, "marketplaces", "personal"));
-  assert.equal((await host.readPersonalMarketplaceIndex(dataDir)).name, "personal");
+  await extensions.ensurePersonalMarketplace(dataDir);
+  assert.equal(
+    extensions.personalRegistryRoot(dataDir),
+    path.join(dataDir, "marketplaces", "personal"),
+  );
+  assert.equal((await extensions.readPersonalMarketplaceIndex(dataDir)).name, "personal");
   const automation = await host.createHostAutomationStore(dataDir).create({
     title: "Fixture",
     overview: "No execution",

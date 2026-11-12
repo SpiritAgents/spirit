@@ -110,8 +110,8 @@ export async function generateProductContent({
     generatedRoots.push(outputRoot);
   }
   if (scope === "all" || scope === "built-in") {
-    const sourceRoot = path.join(root, "packages/host-internal/built-in");
-    const outputRoot = path.join(root, "packages/host-internal/dist/resources/built-in");
+    const sourceRoot = path.join(root, "packages/extensions/built-in");
+    const outputRoot = path.join(root, "packages/extensions/dist/resources/built-in");
     await addTree(path.join(sourceRoot, "skills"), path.join(outputRoot, "skills"));
     entries.push({
       source: path.join(sourceRoot, "marketplace.json"),

@@ -6,6 +6,12 @@ export default {
   artifactName: `${product.name}-Desktop-\${version}-\${os}-\${arch}.\${ext}`,
   mac: {
     artifactName: `${product.name}-Desktop-\${version}-darwin-\${arch}.\${ext}`,
+    ...(process.env.SPIRIT_MACOS_ENTITLEMENTS
+      ? {
+          entitlements: process.env.SPIRIT_MACOS_ENTITLEMENTS,
+          entitlementsInherit: process.env.SPIRIT_MACOS_ENTITLEMENTS,
+        }
+      : {}),
   },
   protocols: [{ name: product.name, schemes: [product.urlProtocol] }],
   extraMetadata: {

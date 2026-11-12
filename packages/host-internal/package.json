@@ -40,10 +40,6 @@
       "types": "./dist/local-file-composer-route.d.ts",
       "default": "./dist/local-file-composer-route.js"
     },
-    "./github/types": {
-      "types": "./dist/github/types.d.ts",
-      "default": "./dist/github/types.js"
-    },
     "./hooks/trust": {
       "types": "./dist/hooks/trust.d.ts",
       "default": "./dist/hooks/trust.js"
@@ -63,14 +59,6 @@
     "./reasoning-effort": {
       "types": "./dist/reasoning-effort.d.ts",
       "default": "./dist/reasoning-effort.js"
-    },
-    "./extensions": {
-      "types": "./dist/extensions.d.ts",
-      "default": "./dist/extensions.js"
-    },
-    "./marketplace": {
-      "types": "./dist/marketplace/index.d.ts",
-      "default": "./dist/marketplace/index.js"
     },
     "./runtime": {
       "types": "./dist/runtime.d.ts",
@@ -107,42 +95,17 @@
     "./workspace-file-references": {
       "types": "./dist/workspace-file-references.d.ts",
       "default": "./dist/workspace-file-references.js"
-    },
-    "./github-pull-request-url": {
-      "types": "./dist/github/pull-request-url.d.ts",
-      "default": "./dist/github/pull-request-url.js"
-    },
-    "./github-pull-request-checks-pages": {
-      "types": "./dist/github/pull-request-checks-pages.d.ts",
-      "default": "./dist/github/pull-request-checks-pages.js"
-    },
-    "./github-pull-request-conversation-pages": {
-      "types": "./dist/github/pull-request-conversation-pages.d.ts",
-      "default": "./dist/github/pull-request-conversation-pages.js"
-    },
-    "./lsp": {
-      "types": "./dist/lsp/index.d.ts",
-      "default": "./dist/lsp/index.js"
-    },
-    "./tasks": {
-      "types": "./dist/tasks/public.d.ts",
-      "default": "./dist/tasks/public.js"
-    },
-    "./tasks-runtime": {
-      "types": "./dist/tasks-runtime/index.d.ts",
-      "default": "./dist/tasks-runtime/index.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "node ../../scripts/product/generate-content.mjs --scope built-in && tsc -p tsconfig.build.json && node scripts/assemble-built-in-extensions.mjs",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
     "build:tsc": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:workspace-file-references": "vitest run src/workspace-file-references.test.ts",
     "test:lsp": "vitest run src/lsp",
-    "smoke:lsp": "npm run build && node dist/smoke/lsp-pyright-smoke.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "notice": "node scripts/gen-notice.mjs",
     "notice:production": "node scripts/gen-notice.mjs --production",
@@ -151,8 +114,9 @@
   "dependencies": {
     "@aws-sdk/client-bedrock": "3.1103.0",
     "@mozilla/readability": "0.6.0",
-    "@napi-rs/keyring": "1.3.0",
     "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/automations": "workspace:*",
+    "@spiritagent/config": "workspace:*",
     "@spiritagent/extension-toolkit": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "@vscode/ripgrep": "1.18.0",

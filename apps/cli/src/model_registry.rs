@@ -5,8 +5,11 @@ use serde_json::{Map, Value};
 use std::{
     collections::{BTreeMap, HashMap},
     env, fs,
+    io::Write,
     path::{Path, PathBuf},
     str::FromStr,
+    thread,
+    time::{Duration, Instant},
 };
 
 pub const DEFAULT_API_BASE: &str = "https://api.openai.com/v1";
@@ -1276,17 +1279,66 @@ fn deserialize_config(content: &str, path: &Path) -> Result<AppConfig> {
 
 pub fn save_config(cfg: &AppConfig) -> Result<()> {
     let path = config_file_path();
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("Failed to create config directory: {}", parent.display()))?;
+    let parent = path
+        .parent()
+        .context("Config path has no parent directory")?;
+    fs::create_dir_all(parent)
+        .with_context(|| format!("Failed to create config directory: {}", parent.display()))?;
+    let lock_path = parent.join("config.json.lock");
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        match fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&lock_path)
+        {
+            Ok(mut lock) => {
+                write!(lock, "{{\"pid\":{}}}", std::process::id())?;
+                break;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                let stale = fs::metadata(&lock_path)
+                    .and_then(|metadata| metadata.modified())
+                    .ok()
+                    .and_then(|modified| modified.elapsed().ok())
+                    .is_some_and(|age| age > Duration::from_secs(30));
+                if stale {
+                    let _ = fs::remove_file(&lock_path);
+                    continue;
+                }
+                if Instant::now() >= deadline {
+                    anyhow::bail!("Timed out waiting for the Spirit config write lock");
+                }
+                thread::sleep(Duration::from_millis(25));
+            }
+            Err(error) => return Err(error).context("Failed to acquire config write lock"),
+        }
     }
 
-    let content = serialize_config(cfg)?;
-    fs::write(&path, content)
-        .with_context(|| format!("Failed to write config: {}", path.display()))?;
-    Ok(())
+    let result = (|| {
+        let latest_web_host = fs::read_to_string(&path)
+            .ok()
+            .and_then(|content| serde_json::from_str::<Value>(&content).ok())
+            .and_then(|value| value.get("webHost").cloned());
+        let mut value = serde_json::to_value(cfg)?;
+        if let Some(web_host) = latest_web_host
+            && let Some(record) = value.as_object_mut()
+        {
+            record.insert("webHost".to_string(), web_host);
+        }
+        let content = serde_json::to_string_pretty(&value)?;
+        let tmp_path = parent.join(format!("config.json.{}.tmp", std::process::id()));
+        fs::write(&tmp_path, content)
+            .with_context(|| format!("Failed to write config: {}", tmp_path.display()))?;
+        fs::rename(&tmp_path, &path)
+            .with_context(|| format!("Failed to replace config: {}", path.display()))?;
+        Ok(())
+    })();
+    let _ = fs::remove_file(&lock_path);
+    result
 }
 
+#[cfg(test)]
 fn serialize_config(cfg: &AppConfig) -> Result<String> {
     Ok(serde_json::to_string_pretty(cfg)?)
 }
@@ -1411,12 +1463,23 @@ pub fn provider_slot_account(provider_id: &str, slot: &str) -> String {
     }
 }
 
-fn read_keyring_password(service: &str, account: &str) -> Option<String> {
+fn read_legacy_keyring_password(service: &str, account: &str) -> Option<String> {
     let entry = keyring::Entry::new(service, account).ok()?;
     entry
         .get_password()
         .ok()
         .and_then(|value| non_blank(&value))
+}
+
+fn read_keyring_password(service: &str, account: &str) -> Option<String> {
+    #[cfg(target_os = "macos")]
+    if service == KEYRING_SERVICE && crate::macos_keychain::shared_access_group().is_some() {
+        return crate::macos_keychain::get_shared_password(service, account)
+            .ok()
+            .flatten()
+            .and_then(|value| non_blank(&value));
+    }
+    read_legacy_keyring_password(service, account)
 }
 
 /// Reads an external keyring entry referenced by `apiKeyKeyring` or a `credentials` slot.
@@ -1426,6 +1489,14 @@ pub fn read_external_keyring_secret(service: &str, account: &str) -> Option<Stri
 
 /// Writes an internal keyring account; a blank value deletes the entry.
 pub fn save_provider_secret(account: &str, secret: &str) -> Result<()> {
+    #[cfg(target_os = "macos")]
+    if crate::macos_keychain::shared_access_group().is_some() {
+        crate::macos_keychain::delete_shared_password(KEYRING_SERVICE, account)?;
+        if !secret.trim().is_empty() {
+            crate::macos_keychain::add_shared_password(KEYRING_SERVICE, account, secret.trim())?;
+        }
+        return Ok(());
+    }
     let entry = keyring_entry_for_account(account)?;
     if secret.trim().is_empty() {
         match entry.delete_password() {
@@ -1442,6 +1513,11 @@ pub fn save_provider_secret(account: &str, secret: &str) -> Result<()> {
 }
 
 pub fn remove_provider_secret(account: &str) -> Result<()> {
+    #[cfg(target_os = "macos")]
+    if crate::macos_keychain::shared_access_group().is_some() {
+        crate::macos_keychain::delete_shared_password(KEYRING_SERVICE, account)?;
+        return Ok(());
+    }
     let entry = keyring_entry_for_account(account)?;
     match entry.delete_password() {
         Ok(_) | Err(keyring::Error::NoEntry) => Ok(()),

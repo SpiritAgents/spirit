@@ -67,6 +67,32 @@ pub enum ConfigCommand {
     ClearVideoModel,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RemoteCommand {
+    Enable {
+        host: Option<String>,
+        port: Option<u16>,
+    },
+    Disable,
+    Status,
+    Config {
+        host: Option<String>,
+        port: Option<u16>,
+    },
+    Pair {
+        name: Option<String>,
+        origin: Option<String>,
+    },
+    List,
+    Rename {
+        device_id: String,
+        name: String,
+    },
+    Revoke {
+        device_id: String,
+    },
+}
+
 pub enum McpCommand {
     List,
     Show,

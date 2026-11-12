@@ -143,6 +143,9 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   updateConfig(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "updateConfig", { request });
   },
+  remoteControlInvoke(method: string, params: unknown) {
+    return ipcRenderer.invoke("desktop:remote-control", method, params);
+  },
   addModel(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "addModel", { request });
   },
@@ -354,15 +357,6 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
     ipcRenderer.on("desktop:automations-updated", onAutomationsUpdate);
     return () => {
       ipcRenderer.removeListener("desktop:automations-updated", onAutomationsUpdate);
-    };
-  },
-  sessionListSubscribe(callback: () => void) {
-    const onSessionListUpdate = () => {
-      callback();
-    };
-    ipcRenderer.on("desktop:session-list-updated", onSessionListUpdate);
-    return () => {
-      ipcRenderer.removeListener("desktop:session-list-updated", onSessionListUpdate);
     };
   },
   replyPendingApproval(request: unknown) {

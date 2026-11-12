@@ -3901,6 +3901,7 @@ dependencies = [
  "core-foundation",
  "core-foundation-sys",
  "libc",
+ "num-bigint",
  "security-framework-sys",
 ]
 
@@ -4151,6 +4152,8 @@ dependencies = [
  "base64",
  "clap",
  "comrak",
+ "core-foundation",
+ "core-foundation-sys",
  "crossterm 0.28.1",
  "fixed_decimal",
  "icu_experimental",
@@ -4163,6 +4166,8 @@ dependencies = [
  "reqwest",
  "rpassword",
  "rust-i18n",
+ "security-framework",
+ "security-framework-sys",
  "semver",
  "serde",
  "serde_json",

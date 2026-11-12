@@ -62,14 +62,9 @@ import {
   type LocalHostToolService,
   type LspHostBindings,
 } from "@spiritagent/agent-core/host-bridge";
+import { LspService, appendLspDiagnosticsAfterWriteIfNeeded } from "@spiritagent/lsp";
 import {
-  LspService,
   NodeHostToolService,
-  appendLspDiagnosticsAfterWriteIfNeeded,
-  collectEnabledExtensionInstructionContributions,
-  collectHostExtensionContributedTools,
-  extensionExposesModelContext,
-  createHostExtensionManager,
   createHostMcpService,
   createHookRunner,
   createNoopMcpAdapter,
@@ -85,12 +80,8 @@ import {
   createSessionId,
   bindSessionStorageKey,
   readSessionStorageKey,
-  ensureBuiltInExtensions,
-  ensureBuiltInSkills,
-  ensurePersonalMarketplace,
   ensureTranscriptSessionDir,
   loadHostInstructionMetadata,
-  overlayEnabledExtensionRulesAndSkills,
   persistSessionTranscript,
   persistSubagentTranscript,
   persistToolOutputArchive,
@@ -108,6 +99,16 @@ import {
   type ModelRef,
   type BackgroundTaskOwner,
 } from "@spiritagent/host-internal";
+import {
+  collectEnabledExtensionInstructionContributions,
+  collectHostExtensionContributedTools,
+  extensionExposesModelContext,
+  createHostExtensionManager,
+  ensureBuiltInExtensions,
+  ensureBuiltInSkills,
+  ensurePersonalMarketplace,
+  overlayEnabledExtensionRulesAndSkills,
+} from "@spiritagent/extensions";
 
 import { joinHostPromptSections, normalizeHostUiPromptSection } from "./host-ui-prompt.js";
 import { createExtensionMcpExtraConfigs } from "./mcp-registry.js";

@@ -49,11 +49,10 @@ Conclusion:
 
 ### 2. Host-Internal Library
 
-The host-internal library is the shared implementation of the Host / UI layer. It is in a transitional role: it currently still owns the shared host config and credentials, and its recorded endgame direction is to be gradually hollowed out into `agent-core`. That hollowing is **not** done in the current change — only the presets and the wizard/catalog materialization core moved to `agent-core`; the rest follows opportunistically.
+The host-internal library is the shared implementation of low-level Host capabilities. It is in a transitional role and must keep shrinking; it no longer owns Workbench configuration storage, GitHub, LSP, code completion, extensions, or Automation definitions.
 
 It owns:
 
-- `config.json` schema, fail-fast validation, load/save (the v1 declarative provider contract)
 - Credential channel resolution and the OS keyring (account scheme `provider::{id}` / `provider::{id}::{slot}`)
 - Discovery logic for `rules`, `skills`, `plan`
 - Enabling, disabling, state persistence, and parsing of this metadata
@@ -75,7 +74,21 @@ It does not own:
 
 Conclusion:
 
-The host-internal library is the implementation-side companion of `agent-core`, not a second Agent Core — and over time it shrinks into it.
+The host-internal library is the implementation-side companion of `agent-core`, not a second Agent Core or a dumping ground for Workbench domains.
+
+### 2a. Workbench Packages
+
+- `api` owns runtime-neutral Snapshot, Command, Event, and HostApi contracts.
+- `config` owns the v1 schema, atomic configuration I/O, section updates, and the cross-process write lock.
+- `i18n` owns shared locale resources and the Node Host translation instance.
+- `github`, `lsp`, and `code-completion` own their respective technical domains.
+- `extensions` owns extensions, marketplace, Tasks, Rules, Skills, and MCP integration.
+- `workspace` owns workspace, Git, worktree, and file services; native shell actions are injected.
+- `sessions` owns Workbench conversation persistence and orchestration, not a second Agent Runtime.
+- `automations` owns Automation definitions and triggers; Workbench composes scheduling and Dreams.
+- `workbench` is the thin application composition root and standalone process entry.
+- `http` owns authenticated HTTP, NDJSON, static, and loopback transport adapters.
+- `web` owns the single Workbench renderer and static application used by Electron and standalone hosts.
 
 ### 3. apps
 
@@ -242,12 +255,12 @@ Under this boundary, the current repo should be understood as:
 
 - `packages/agent-core` carries the runtime, MCP, system prompts, tool contracts, transports, and the materialization zone (`provider-presets/`, `model-catalog/`, `model-knowledge/`).
 - `packages/agent-core` carries dream tool contracts and the collector system prompt, but not Desktop session scanning or file storage.
-- `packages/host-internal` carries the `config.json` v1 schema and credential resolution, dream tool execution, the dream store, log directories, and other host capabilities.
-- `packages/host-internal/src/lsp/` carries the LSP host implementation (multi-language server processes, `LspOrchestrator` routing by extension, provider discovery, post-write diagnostic append, workspace cache).
+- `packages/config` carries the `config.json` v1 schema, section store, write lock, and keyring primitives; Provider credential resolution remains shared through the existing Host contracts.
+- `packages/lsp` carries the LSP host implementation (multi-language server processes, `LspOrchestrator` routing by extension, provider discovery, post-write diagnostic append, workspace cache).
 - `packages/agent-core/src/lsp/` keeps only the LSP tool contract (`get_diagnostics` auto-routed by path extension), supported-extension constants, and LLM-visible diagnostic formatting.
 - `packages/server` carries the shared daemon: single source of truth for sessions/turns/approvals, WS transport, and instance registry; CLI and Desktop main sessions, Automation, and Dream Collector all have no in-process fallback
-- `packages/host-internal/src/credentials/` carries shared config and credential reading (`config.json` + OS keyring, with `provider::{id}` / `provider::{id}::{slot}` as the canonical account scheme), used by server and acp-server to resolve transports in-process.
-- `apps/desktop` carries dreams settings, background scheduling, and Commit consumption.
+- `packages/github`, `packages/extensions`, `packages/workspace`, `packages/sessions`, `packages/automations`, and `packages/code-completion` carry their named Host domains and are composed only by `packages/workbench`.
+- `apps/desktop` is an Electron native shell: windows, preload, native menus, notifications, PTY, and platform adapters. It does not own the Workbench renderer or an in-process Web Host.
 - Host tool implementations and rules / skills / plan discovery and management currently duplicated between CLI and Desktop should converge into the host-internal library — and the host-internal library itself shrinks into `agent-core` over time.
 
 ## Design Rationale

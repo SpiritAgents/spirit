@@ -44,8 +44,9 @@ silently spawn a replacement after a product mismatch.
 
 Desktop packaging loads `apps/desktop/electron-builder.config.mjs` over its
 platform-only YAML settings. Both the packaged app and the development app
-bundle declare the baked URL scheme. CLI packaging deploys the complete server
-production dependency graph rather than copying selected workspace packages.
+bundle declare the baked URL scheme. CLI packaging deploys the complete Workbench
+production dependency graph, including the shared server and Web static application,
+rather than copying selected workspace packages.
 For offline packaging, pass `--node-runtime-dir <distribution>` and
 `--node-version <version>` to `scripts/release/bundle-cli.mjs`, together with
 `--offline`. `--binary` and `--output-dir` select controlled local inputs and
@@ -57,7 +58,7 @@ dependencies in the credential-bearing publishing job.
 Site documentation and bundled resources keep a single source at their original
 `.mdx`, `.md`, or `.json` path. `pnpm product:content` renders Site content into
 `apps/site/.generated/product/docs` and bundled resources into
-`packages/host-internal/dist/resources/built-in`. These outputs are ignored by
+`packages/extensions/dist/resources/built-in`. These outputs are ignored by
 Git; Site compilation and host packaging consume only the rendered resources.
 The Site development command watches the documentation sources and regenerates
 changed content.

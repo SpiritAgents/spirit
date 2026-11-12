@@ -101,14 +101,6 @@
       "types": "./dist/shell-tool-result.d.ts",
       "default": "./dist/shell-tool-result.js"
     },
-    "./code-completion-to-monaco": {
-      "types": "./dist/code-completion/to-monaco.d.ts",
-      "default": "./dist/code-completion/to-monaco.js"
-    },
-    "./code-completion-delete-diff": {
-      "types": "./dist/code-completion/delete-diff-preview.d.ts",
-      "default": "./dist/code-completion/delete-diff-preview.js"
-    },
     "./azure-resource": {
       "types": "./dist/azure-resource.d.ts",
       "default": "./dist/azure-resource.js"
@@ -138,7 +130,7 @@
     "smoke:contract": "npm run build && node dist/smoke/contract/ai-sdk-openai-smoke.js && node dist/smoke/contract/ai-sdk-openai-json-schema-smoke.js && node dist/smoke/contract/ai-sdk-openai-streaming-smoke.js && node dist/smoke/contract/ai-sdk-openai-stream-reasoning-only-smoke.js && node dist/smoke/contract/ai-sdk-deepseek-streaming-smoke.js && node dist/smoke/contract/ai-sdk-deepseek-responses-smoke.js && node dist/smoke/contract/ai-sdk-anthropic-streaming-smoke.js && node dist/smoke/contract/ai-sdk-bedrock-streaming-smoke.js && node dist/smoke/contract/ai-sdk-google-streaming-smoke.js && node dist/smoke/contract/ai-sdk-google-vertex-streaming-smoke.js && node dist/smoke/contract/ai-sdk-open-responses-smoke.js && node dist/smoke/contract/ai-sdk-openai-responses-smoke.js && node dist/smoke/contract/ai-sdk-openai-responses-incremental-smoke.js && node dist/smoke/contract/ai-sdk-openai-apply-patch-smoke.js && node dist/smoke/contract/ai-sdk-gateway-apply-patch-smoke.js && node dist/smoke/contract/ai-sdk-gateway-web-search-smoke.js && node dist/smoke/contract/ai-sdk-openrouter-apply-patch-smoke.js && node dist/smoke/contract/ai-sdk-open-responses-streaming-smoke.js && node dist/smoke/contract/ai-sdk-alibaba-built-in-tools-smoke.js",
     "smoke:runtime": "npm run build && node dist/smoke/runtime/ai-sdk-openai-runtime-smoke.js && node dist/smoke/runtime/runtime-parity-smoke.js",
     "smoke:host-config": "npm run build && node dist/smoke/host-config/mcp-missing-env-smoke.js && node dist/smoke/host-config/mcp-stdio-cwd-smoke.js",
-    "smoke:lsp": "pnpm --filter @spiritagent/host-internal run smoke:lsp",
+    "smoke:lsp": "pnpm --filter @spiritagent/lsp run smoke:lsp",
     "smoke:offline": "npm run smoke:contract && npm run smoke:runtime && npm run smoke:host-config",
     "smoke:live": "npm run smoke:live:openai-compatible",
     "smoke:live:anthropic": "npm run build && node dist/smoke/live/ai-sdk-anthropic-live-smoke.js",

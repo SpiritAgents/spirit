@@ -1,0 +1,37 @@
+{
+  "name": "@spiritagent/remote-control",
+  "version": "1.0.0-alpha.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./presentation": {
+      "types": "./dist/presentation.d.ts",
+      "default": "./dist/presentation.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@spiritagent/config": "workspace:*",
+    "@spiritagent/host-internal": "workspace:*",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "@types/qrcode": "^1.5.6",
+    "typescript": "7.0.2",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": "26.13.0"
+  }
+}

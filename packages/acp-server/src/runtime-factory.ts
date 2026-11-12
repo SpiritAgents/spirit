@@ -41,14 +41,16 @@ import type { LocalHostToolService } from "@spiritagent/agent-core/host-bridge";
 import { HostToolExecutorProxy } from "@spiritagent/agent-core/host-bridge";
 
 import {
-  NodeHostToolService,
   createHostExtensionManager,
-  createNoopMcpAdapter,
-  createHostMcpService,
   ensureBuiltInSkills,
   ensurePersonalMarketplace,
-  loadHostInstructionMetadata,
   overlayEnabledExtensionRulesAndSkills,
+} from "@spiritagent/extensions";
+import {
+  NodeHostToolService,
+  createNoopMcpAdapter,
+  createHostMcpService,
+  loadHostInstructionMetadata,
   ensureTranscriptSessionDir,
   persistSessionTranscript,
   persistSubagentTranscript,

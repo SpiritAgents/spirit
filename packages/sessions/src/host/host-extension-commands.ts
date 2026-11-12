@@ -1,0 +1,639 @@
+import {
+  buildActiveSkillPayload,
+  buildActivateSkillUserTurn,
+  createSkillFile,
+  deleteSkillDir,
+} from "./skills.js";
+import { buildRuleDiscoveryContext, createRuleFile, deleteRuleFile } from "./rules.js";
+import {
+  addDesktopMcpServer,
+  deleteDesktopMcpServer,
+  inspectDesktopMcpServer,
+} from "./service-mcp.js";
+import { deleteDesktopHookEntry, saveDesktopHookEntry } from "./hooks.js";
+import { spiritDataDir } from "./storage.js";
+import { invalidateSharedUserMcpToolingCache } from "@spiritagent/agent-core";
+import i18n from "../lib/i18n-host.js";
+import type {
+  AddMarketplaceSourceRequest,
+  AddMcpServerRequest,
+  CreateRuleRequest,
+  CreateSkillRequest,
+  DeleteExtensionRequest,
+  DeleteMcpServerRequest,
+  DeleteHookEntryRequest,
+  DeleteRuleRequest,
+  DeleteSkillRequest,
+  DesktopMcpServerInspection,
+  DesktopSnapshot,
+  MarketplaceInstallCommandResult,
+  MarketplaceSourceCommandResult,
+  MarketplaceUpdateCommandResult,
+  ImportExtensionRequest,
+  InstallBuiltInExtensionRequest,
+  InstallMarketplaceExtensionRequest,
+  RemoveMarketplaceSourceRequest,
+  RunExtensionRequest,
+  SaveHookEntryRequest,
+  SetExtensionEnabledRequest,
+  SubmitSkillSlashRequest,
+  UpdateExtensionRequest,
+  UpdateExtensionSecretRequest,
+  UpdateExtensionSettingsRequest,
+} from "../types.js";
+import type { HostExtensionEvent } from "@spiritagent/extensions";
+import {
+  addMarketplaceSource,
+  installBuiltInExtension,
+  installMarketplaceExtensionByName,
+  MarketplaceReviewAcknowledgementRequiredError,
+  removeMarketplaceSource,
+  updateExtensionById,
+} from "@spiritagent/extensions";
+import type { LlmActiveSkill } from "@spiritagent/agent-core";
+import type { DesktopExtensionHostAdapter } from "./extension-host-adapter.js";
+import type { DesktopConfigFile, DesktopWorkspaceBinding, HostMetadataSummary } from "./storage.js";
+import type { DesktopGitSnapshot } from "../types.js";
+
+interface HostExtensionState {
+  workspaceRoot: string;
+  workspaceBinding: DesktopWorkspaceBinding;
+  config: DesktopConfigFile;
+  git: DesktopGitSnapshot;
+  metadata: HostMetadataSummary;
+}
+
+type HostExtensionManager = {
+  importArchive(input: { archiveBase64: string; fileName?: string }): Promise<{
+    id: string;
+    manifest: { name: string; version: string };
+  }>;
+  remove(id: string): Promise<void>;
+  setEnabled(id: string, enabled: boolean): Promise<void>;
+  run(input: { id: string; host: DesktopExtensionHostAdapter; logger: Console }): Promise<void>;
+  setSettingsValues(input: {
+    id: string;
+    values: UpdateExtensionSettingsRequest["values"];
+  }): Promise<unknown>;
+  setSecretValue(input: { id: string; key: string; value?: string }): Promise<unknown>;
+};
+
+type McpRefreshable = {
+  startBackgroundRefreshInBackground(force: boolean): void;
+};
+
+type McpInspectable = {
+  inspectMcpServer(name: string): Promise<unknown>;
+};
+
+type McpBackgroundRefreshable = {
+  startMcpBackgroundRefresh(): void;
+};
+
+export interface HostExtensionCommandContext {
+  runSerialized<T>(work: () => Promise<T>, label?: string): Promise<T>;
+  ensureInitialized(
+    workspaceRootOverride?: string,
+    options?: { fastPath?: boolean },
+  ): Promise<void>;
+  isInitialized(): boolean;
+  requireState(): HostExtensionState;
+  isRuntimeBusy(): boolean;
+  requireRuntime(): { isBusy(): boolean };
+  requireToolExecutor(): McpInspectable;
+  toolExecutor(): McpBackgroundRefreshable | undefined;
+  sharedMcpServiceForWorkspace(
+    workspaceRoot: string,
+    workspaceBinding: DesktopWorkspaceBinding,
+  ): McpRefreshable;
+  extensionManager(): HostExtensionManager;
+  requireExtensionHostAdapter(): DesktopExtensionHostAdapter;
+  refreshExtensionsList(): Promise<void>;
+  refreshRuntime(): Promise<void>;
+  refreshRuntimeAfterExtensionMutation(): Promise<void>;
+  persistCurrentSessionIfNeeded(): Promise<void>;
+  dispatchExtensionEvent(
+    event: HostExtensionEvent,
+    options?: { targetExtensionIds?: readonly string[] },
+  ): Promise<void>;
+  requireEnabledSkillEntry(skillName: string): {
+    source: {
+      id: string;
+      scope: LlmActiveSkill["scope"];
+      name: string;
+      description: string;
+      path: string;
+    };
+    content: string;
+  };
+  submitUserTurnAfterInitialized(
+    text: string,
+    options?: {
+      displayText?: string;
+      turnSkills?: LlmActiveSkill[];
+    },
+  ): Promise<DesktopSnapshot>;
+  appendInlineAssistantReply(displayText: string, assistantText: string): Promise<DesktopSnapshot>;
+  setLastRuntimeError(error: string): void;
+  /** Invalidates the snapshot-side list cache after the MCP / hooks config is written to disk. */
+  invalidateConfigListCaches(): void;
+  buildSnapshot(): DesktopSnapshot;
+}
+
+export async function createRuleCommand(
+  ctx: HostExtensionCommandContext,
+  request: CreateRuleRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    if (ctx.isRuntimeBusy()) {
+      throw new Error(i18n.t("error.runtimeBusyRule"));
+    }
+    const state = ctx.requireState();
+    const rootKind = request.rootKind ?? "workspaceSpirit";
+    if (
+      state.workspaceBinding === "none" &&
+      (rootKind === "workspaceSpirit" || rootKind === "workspaceAgents")
+    ) {
+      throw new Error(i18n.t("error.workspaceRulesUnavailable"));
+    }
+    await createRuleFile(state.workspaceRoot, request);
+
+    await ctx.refreshRuntime();
+    ctx.setLastRuntimeError("");
+    await ctx.persistCurrentSessionIfNeeded();
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function deleteRuleCommand(
+  ctx: HostExtensionCommandContext,
+  request: DeleteRuleRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    if (ctx.isRuntimeBusy()) {
+      throw new Error(i18n.t("error.runtimeBusyDeleteRule"));
+    }
+    const state = ctx.requireState();
+    await deleteRuleFile(
+      state.workspaceRoot,
+      request,
+      buildRuleDiscoveryContext(state.workspaceRoot, state.workspaceBinding),
+    );
+
+    await ctx.refreshRuntime();
+    ctx.setLastRuntimeError("");
+    await ctx.persistCurrentSessionIfNeeded();
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function createSkillCommand(
+  ctx: HostExtensionCommandContext,
+  request: CreateSkillRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    if (ctx.isRuntimeBusy()) {
+      throw new Error(i18n.t("error.runtimeBusySkill"));
+    }
+    const state = ctx.requireState();
+    const rootKind = request.rootKind ?? "workspaceSpirit";
+    if (
+      state.workspaceBinding === "none" &&
+      (rootKind === "workspaceSpirit" || rootKind === "workspaceAgents")
+    ) {
+      throw new Error(
+        "Workspace-scoped skills are unavailable when workspace binding is disabled.",
+      );
+    }
+    await createSkillFile(state.workspaceRoot, request);
+
+    await ctx.refreshRuntime();
+    ctx.setLastRuntimeError("");
+    await ctx.persistCurrentSessionIfNeeded();
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function addMcpServerCommand(
+  ctx: HostExtensionCommandContext,
+  request: AddMcpServerRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const state = ctx.requireState();
+
+    const { scope } = await addDesktopMcpServer({
+      request,
+      workspaceRoot: state.workspaceRoot,
+      workspaceBinding: state.workspaceBinding,
+    });
+    ctx.invalidateConfigListCaches();
+    if (scope === "user") {
+      invalidateSharedUserMcpToolingCache();
+    }
+    ctx
+      .sharedMcpServiceForWorkspace(state.workspaceRoot, state.workspaceBinding)
+      .startBackgroundRefreshInBackground(true);
+    ctx.toolExecutor()?.startMcpBackgroundRefresh();
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function deleteMcpServerCommand(
+  ctx: HostExtensionCommandContext,
+  request: DeleteMcpServerRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const state = ctx.requireState();
+
+    const { scope } = await deleteDesktopMcpServer({
+      request,
+      workspaceRoot: state.workspaceRoot,
+    });
+    ctx.invalidateConfigListCaches();
+    if (scope === "user") {
+      invalidateSharedUserMcpToolingCache();
+    }
+    ctx
+      .sharedMcpServiceForWorkspace(state.workspaceRoot, state.workspaceBinding)
+      .startBackgroundRefreshInBackground(true);
+    ctx.toolExecutor()?.startMcpBackgroundRefresh();
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function inspectMcpServerCommand(
+  ctx: HostExtensionCommandContext,
+  name: string,
+): Promise<DesktopMcpServerInspection> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    return inspectDesktopMcpServer({
+      name,
+      inspect: (serverName) => ctx.requireToolExecutor().inspectMcpServer(serverName),
+    });
+  });
+}
+
+export async function importExtensionCommand(
+  ctx: HostExtensionCommandContext,
+  request: ImportExtensionRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const archiveBase64 = request.archiveBase64.trim();
+    if (!archiveBase64) {
+      throw new Error(i18n.t("error.extensionZipRequired"));
+    }
+
+    const installed = await ctx.extensionManager().importArchive({
+      archiveBase64,
+      ...(request.fileName?.trim() ? { fileName: request.fileName.trim() } : {}),
+    });
+    await ctx.refreshRuntimeAfterExtensionMutation();
+    await ctx.dispatchExtensionEvent(
+      {
+        type: "onExtensionInstalled",
+        detail: {
+          extensionId: installed.id,
+          name: installed.manifest.name,
+          version: installed.manifest.version,
+        },
+      },
+      { targetExtensionIds: [installed.id] },
+    );
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function installBuiltInExtensionCommand(
+  ctx: HostExtensionCommandContext,
+  request: InstallBuiltInExtensionRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const id = request.id.trim();
+    if (!id) {
+      throw new Error(i18n.t("error.extensionIdRequired"));
+    }
+
+    const installed = await installBuiltInExtension({
+      spiritDataDir: spiritDataDir(),
+      hostKind: "desktop",
+      extensionId: id,
+    });
+    await ctx.refreshRuntimeAfterExtensionMutation();
+    await ctx.dispatchExtensionEvent(
+      {
+        type: "onExtensionInstalled",
+        detail: {
+          extensionId: installed.id,
+          name: installed.manifest.name,
+          version: installed.manifest.version,
+        },
+      },
+      { targetExtensionIds: [installed.id] },
+    );
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function addMarketplaceSourceCommand(
+  ctx: HostExtensionCommandContext,
+  request: AddMarketplaceSourceRequest,
+): Promise<MarketplaceSourceCommandResult> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const locator = request.locator.trim();
+    if (!locator) {
+      throw new Error(i18n.t("error.marketplaceSourceRequired"));
+    }
+    const record = await addMarketplaceSource(
+      { spiritDataDir: spiritDataDir() },
+      locator,
+      request.ref?.trim() ? { ref: request.ref.trim() } : undefined,
+    );
+    await ctx.refreshExtensionsList();
+    return { snapshot: ctx.buildSnapshot(), sourceId: record.id };
+  });
+}
+
+export async function removeMarketplaceSourceCommand(
+  ctx: HostExtensionCommandContext,
+  request: RemoveMarketplaceSourceRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const name = request.name.trim();
+    if (!name) {
+      throw new Error(i18n.t("error.marketplaceSourceRequired"));
+    }
+    await removeMarketplaceSource({ spiritDataDir: spiritDataDir() }, name);
+    await ctx.refreshExtensionsList();
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function installMarketplaceExtensionCommand(
+  ctx: HostExtensionCommandContext,
+  request: InstallMarketplaceExtensionRequest,
+): Promise<MarketplaceInstallCommandResult> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const name = request.name.trim();
+    if (!name) {
+      throw new Error(i18n.t("error.extensionIdRequired"));
+    }
+    try {
+      const installed = await installMarketplaceExtensionByName(
+        { spiritDataDir: spiritDataDir(), hostKind: "desktop" },
+        name,
+        {
+          ...(request.marketplace?.trim() ? { marketplace: request.marketplace.trim() } : {}),
+          reviewAcknowledged: request.reviewAcknowledged === true,
+        },
+      );
+      await ctx.refreshRuntimeAfterExtensionMutation();
+      await ctx.dispatchExtensionEvent(
+        {
+          type: "onExtensionInstalled",
+          detail: {
+            extensionId: installed.id,
+            name: installed.manifest.name,
+            version: installed.manifest.version,
+          },
+        },
+        { targetExtensionIds: [installed.id] },
+      );
+      return { status: "installed", snapshot: ctx.buildSnapshot() };
+    } catch (error) {
+      if (error instanceof MarketplaceReviewAcknowledgementRequiredError) {
+        return {
+          status: "review-required",
+          extensionId: error.extensionId,
+          reviewStatus: error.reviewStatus,
+        };
+      }
+      throw error;
+    }
+  });
+}
+
+export async function updateExtensionCommand(
+  ctx: HostExtensionCommandContext,
+  request: UpdateExtensionRequest,
+): Promise<MarketplaceUpdateCommandResult> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const id = request.id.trim();
+    if (!id) {
+      throw new Error(i18n.t("error.extensionIdRequired"));
+    }
+    try {
+      const updated = await updateExtensionById(
+        { spiritDataDir: spiritDataDir(), hostKind: "desktop" },
+        id,
+        { reviewAcknowledged: request.reviewAcknowledged === true },
+      );
+      if (!updated) {
+        return { status: "up-to-date" };
+      }
+      await ctx.refreshRuntimeAfterExtensionMutation();
+      return { status: "updated", snapshot: ctx.buildSnapshot() };
+    } catch (error) {
+      if (error instanceof MarketplaceReviewAcknowledgementRequiredError) {
+        return {
+          status: "review-required",
+          extensionId: error.extensionId,
+          reviewStatus: error.reviewStatus,
+        };
+      }
+      throw error;
+    }
+  });
+}
+
+export async function deleteExtensionCommand(
+  ctx: HostExtensionCommandContext,
+  request: DeleteExtensionRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const id = request.id.trim();
+    if (!id) {
+      throw new Error(i18n.t("error.extensionIdRequired"));
+    }
+
+    await ctx.extensionManager().remove(id);
+    await ctx.refreshRuntimeAfterExtensionMutation();
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function setExtensionEnabledCommand(
+  ctx: HostExtensionCommandContext,
+  request: SetExtensionEnabledRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const id = request.id.trim();
+    if (!id) {
+      throw new Error(i18n.t("error.extensionIdRequired"));
+    }
+
+    await ctx.extensionManager().setEnabled(id, request.enabled);
+    await ctx.refreshRuntimeAfterExtensionMutation();
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function runExtensionCommand(
+  ctx: HostExtensionCommandContext,
+  request: RunExtensionRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const id = request.id.trim();
+    if (!id) {
+      throw new Error(i18n.t("error.extensionIdRequired"));
+    }
+
+    await ctx.extensionManager().run({
+      id,
+      host: ctx.requireExtensionHostAdapter(),
+      logger: console,
+    });
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function updateExtensionSettingsCommand(
+  ctx: HostExtensionCommandContext,
+  request: UpdateExtensionSettingsRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const id = request.id.trim();
+    if (!id) {
+      throw new Error(i18n.t("error.extensionIdRequired"));
+    }
+
+    await ctx.extensionManager().setSettingsValues({
+      id,
+      values: request.values,
+    });
+    await ctx.refreshRuntimeAfterExtensionMutation();
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function updateExtensionSecretCommand(
+  ctx: HostExtensionCommandContext,
+  request: UpdateExtensionSecretRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const id = request.id.trim();
+    const key = request.key.trim();
+    if (!id) {
+      throw new Error(i18n.t("error.extensionIdRequired"));
+    }
+    if (!key) {
+      throw new Error(i18n.t("error.secretKeyRequired"));
+    }
+
+    await ctx.extensionManager().setSecretValue({
+      id,
+      key,
+      ...(request.value !== undefined ? { value: request.value } : {}),
+    });
+    await ctx.refreshRuntimeAfterExtensionMutation();
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function deleteSkillCommand(
+  ctx: HostExtensionCommandContext,
+  request: DeleteSkillRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    if (ctx.isRuntimeBusy()) {
+      throw new Error(i18n.t("error.runtimeBusyDeleteSkill"));
+    }
+    const state = ctx.requireState();
+    await deleteSkillDir(state.workspaceRoot, request);
+
+    await ctx.refreshRuntime();
+    ctx.setLastRuntimeError("");
+    await ctx.persistCurrentSessionIfNeeded();
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function submitSkillSlashCommand(
+  ctx: HostExtensionCommandContext,
+  request: SubmitSkillSlashRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized(undefined, { fastPath: true });
+    const runtime = ctx.requireRuntime();
+    if (runtime.isBusy()) {
+      throw new Error(i18n.t("error.runtimeBusy"));
+    }
+
+    const skillName = request.skillName.trim();
+    if (!skillName) {
+      throw new Error(i18n.t("error.skillNameRequired"));
+    }
+
+    const skill = ctx.requireEnabledSkillEntry(skillName);
+    const payload = await buildActiveSkillPayload(skill);
+
+    return ctx.submitUserTurnAfterInitialized(
+      buildActivateSkillUserTurn(skillName, request.extraNote ?? ""),
+      {
+        displayText: request.rawText,
+        turnSkills: [payload],
+      },
+    );
+  });
+}
+
+export async function saveHookEntryCommand(
+  ctx: HostExtensionCommandContext,
+  request: SaveHookEntryRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const state = ctx.requireState();
+    await saveDesktopHookEntry({
+      request,
+      workspaceRoot: state.workspaceRoot,
+      workspaceBinding: state.workspaceBinding,
+    });
+    ctx.invalidateConfigListCaches();
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function deleteHookEntryCommand(
+  ctx: HostExtensionCommandContext,
+  request: DeleteHookEntryRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const state = ctx.requireState();
+    await deleteDesktopHookEntry({
+      request,
+      workspaceRoot: state.workspaceRoot,
+      workspaceBinding: state.workspaceBinding,
+    });
+    ctx.invalidateConfigListCaches();
+    return ctx.buildSnapshot();
+  });
+}

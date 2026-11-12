@@ -125,6 +125,10 @@ pub enum BottomFormKind {
     Skills,
     Extensions,
     HookAdd,
+    RemotePair {
+        pairing_id: String,
+        awaiting_approval: bool,
+    },
 }
 
 #[derive(Clone, Debug)]

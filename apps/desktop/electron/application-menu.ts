@@ -9,7 +9,7 @@ import {
   type EditCommandState,
 } from "../src/lib/edit-command-state.js";
 import i18nHost from "../src/lib/i18n-host.js";
-import { isHttpUrl } from "./local-listeners.js";
+import { isHttpUrl } from "@spiritagent/http/local-listeners";
 import { setStartDictationMenuEnabled } from "./macos-appkit.js";
 import { PRODUCT_DISPLAY_NAME } from "./product-display-name.js";
 

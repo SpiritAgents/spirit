@@ -98,6 +98,7 @@ impl TuiShell {
             BottomFormKind::Extensions => self.save_extensions_bottom_form(),
             BottomFormKind::Rules => self.save_rules_bottom_form(),
             BottomFormKind::Skills => self.save_skills_bottom_form(),
+            BottomFormKind::RemotePair { .. } => self.dismiss_remote_pair_form(),
         }
     }
 
@@ -308,7 +309,95 @@ impl TuiShell {
                     bottom_form::activate(form);
                 }
             }
+            BottomFormKind::RemotePair { .. } => self.save_remote_pair_form(),
         }
+    }
+
+    pub fn sync_remote_control_confirmation(&mut self) {
+        let Some(request) = self.runtime.take_remote_control_confirmation() else {
+            return;
+        };
+        let Some(form) = self.forms.active.as_mut() else {
+            return;
+        };
+        let matches_pairing = matches!(
+            &form.kind,
+            crate::view::BottomFormKind::RemotePair { pairing_id, .. }
+                if pairing_id == request["id"].as_str().unwrap_or("")
+        );
+        if matches_pairing {
+            crate::shell::bottom_form::remote_pair_form_apply_request(form, &request);
+        }
+    }
+
+    fn save_remote_pair_form(&mut self) {
+        let Some(form) = self.forms.active.as_ref() else {
+            return;
+        };
+        let BottomFormKind::RemotePair {
+            pairing_id,
+            awaiting_approval,
+        } = &form.kind
+        else {
+            return;
+        };
+        let selected = form.fields.last().and_then(|field| match &field.editor {
+            crate::view::BottomFormFieldEditorView::Choice { selected, .. } => Some(*selected),
+            _ => None,
+        });
+        let owner = format!("cli-{}", std::process::id());
+        if !awaiting_approval {
+            match self.runtime.call_remote_control(
+                "remote.cancelPairing",
+                serde_json::json!({ "pairingId": pairing_id, "ownerClientId": owner }),
+            ) {
+                Ok(_) => self.forms.active = None,
+                Err(err) => self.push_agent_message(err.to_string()),
+            }
+            return;
+        }
+        if selected == Some(1) {
+            match self.runtime.call_remote_control(
+                "remote.approvePairing",
+                serde_json::json!({ "pairingId": pairing_id, "ownerClientId": owner }),
+            ) {
+                Ok(_) => self.forms.active = None,
+                Err(err) => self.push_agent_message(err.to_string()),
+            }
+        } else {
+            match self.runtime.call_remote_control(
+                "remote.rejectPairing",
+                serde_json::json!({
+                    "pairingId": pairing_id,
+                    "ownerClientId": owner,
+                    "output": "terminal",
+                }),
+            ) {
+                Ok(enrollment) => {
+                    self.forms.active =
+                        Some(crate::shell::bottom_form::new_remote_pair_form(&enrollment));
+                }
+                Err(err) => self.push_agent_message(err.to_string()),
+            }
+        }
+    }
+
+    fn dismiss_remote_pair_form(&mut self) {
+        let Some(form) = self.forms.active.as_ref() else {
+            return;
+        };
+        let BottomFormKind::RemotePair { pairing_id, .. } = &form.kind else {
+            return;
+        };
+        let owner = format!("cli-{}", std::process::id());
+        let result = self.runtime.call_remote_control(
+            "remote.cancelPairing",
+            serde_json::json!({ "pairingId": pairing_id, "ownerClientId": owner }),
+        );
+        if let Err(err) = result {
+            self.push_agent_message(err.to_string());
+        }
+        self.forms.active = None;
     }
 
     pub fn save_bottom_form(&mut self) {

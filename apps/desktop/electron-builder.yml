@@ -6,7 +6,6 @@ directories:
 beforeBuild: scripts/electron-builder-before-build.mjs
 files:
   - package.json
-  - dist/**/*
   - dist-electron/**/*
   - build/tray/**/*
   - "!**/target/**/*"

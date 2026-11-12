@@ -1,0 +1,145 @@
+import assert from "node:assert/strict";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { test } from "vitest";
+
+import { RemoteControlManager } from "./manager.js";
+
+async function fixture() {
+  const dataDir = await mkdtemp(join(tmpdir(), "remote-control-manager-"));
+  const confirmations: unknown[] = [];
+  const manager = new RemoteControlManager({
+    dataDir,
+    onConfirmationRequested: (pairing) => confirmations.push(pairing),
+  });
+  await manager.registerHost("test-instance", process.pid, "127.0.0.1", 7788);
+  await manager.enable();
+  return { dataDir, manager, confirmations };
+}
+
+test("requires approval before a pending token becomes an active device", async () => {
+  const { dataDir, manager, confirmations } = await fixture();
+  try {
+    const enrollment = await manager.pair({
+      ownerClientId: "desktop-owner",
+      origin: "http://127.0.0.1:7788",
+      output: "svg",
+    });
+    const pending = await manager.requestAccess(enrollment.token, {
+      userAgent: "Example Browser",
+      ip: "127.0.0.1",
+    });
+    assert.equal(pending.code, "DEVICE_APPROVAL_REQUIRED");
+    await manager.requestAccess(enrollment.token, { userAgent: "Example Browser" });
+    assert.equal(confirmations.length, 1);
+
+    const pendingState = await manager.getState();
+    const pendingProjection = pendingState.pendingPairing;
+    assert.ok(pendingProjection);
+    assert.equal("tokenHash" in pendingProjection, false);
+    assert.equal("token" in pendingProjection, false);
+    await assert.rejects(manager.approvePairing(enrollment.pairingId, "other-owner"));
+
+    const approved = await manager.approvePairing(enrollment.pairingId, "desktop-owner");
+    assert.equal(approved.devices.length, 1);
+    assert.equal(approved.hasCompletedPairing, true);
+    const access = await manager.requestAccess(enrollment.token, { recordConnection: true });
+    assert.equal(access.code, "OK");
+    const renamed = await manager.renameDevice(approved.devices[0]!.id, "My Device");
+    assert.equal(renamed.devices[0]!.name, "My Device");
+    assert.equal(renamed.devices[0]!.customName, true);
+  } finally {
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+test("rejection rotates enrollment and startup removes stale pending state", async () => {
+  const { dataDir, manager } = await fixture();
+  try {
+    const first = await manager.pair({
+      ownerClientId: "cli-owner",
+      origin: "http://127.0.0.1:7788",
+      output: "terminal",
+    });
+    await manager.requestAccess(first.token, {});
+    const replacement = await manager.rejectPairing(first.pairingId, "cli-owner", "terminal");
+    assert.ok(first.token !== replacement.token);
+    assert.equal((await manager.requestAccess(first.token, {})).code, "TOKEN_REQUIRED");
+
+    const restarted = new RemoteControlManager({ dataDir });
+    await restarted.initialize();
+    assert.equal((await restarted.getState()).pendingPairing, undefined);
+  } finally {
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+test("enable persists desired state before a Workbench Host attaches", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "remote-control-no-host-"));
+  const manager = new RemoteControlManager({ dataDir });
+  try {
+    await manager.enable();
+    assert.equal((await manager.getState()).enabled, true);
+  } finally {
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+test("same-instance host heartbeats refresh the lease without broadcasting updates", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "remote-control-heartbeat-"));
+  let notifications = 0;
+  const manager = new RemoteControlManager({
+    dataDir,
+    onStateChanged: () => {
+      notifications += 1;
+    },
+  });
+  try {
+    await manager.registerHost("workbench-test", process.pid, "127.0.0.1", 7788);
+    assert.equal(notifications, 1);
+    const firstLease = JSON.parse(
+      await readFile(join(dataDir, "server", "remote-control-host.json"), "utf8"),
+    ) as { startedAt: number; heartbeatAt: number };
+
+    await manager.registerHost("workbench-test", process.pid, "127.0.0.1", 7788);
+
+    assert.equal(notifications, 1);
+    const secondLease = JSON.parse(
+      await readFile(join(dataDir, "server", "remote-control-host.json"), "utf8"),
+    ) as { startedAt: number; heartbeatAt: number };
+    assert.equal(secondLease.startedAt, firstLease.startedAt);
+    assert.ok(secondLease.heartbeatAt >= firstLease.heartbeatAt);
+    assert.equal((await manager.getState()).hostAvailable, true);
+  } finally {
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+test("a stale lease becoming available again emits one recovery update", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "remote-control-stale-heartbeat-"));
+  let notifications = 0;
+  const manager = new RemoteControlManager({
+    dataDir,
+    onStateChanged: () => {
+      notifications += 1;
+    },
+  });
+  try {
+    await manager.registerHost("workbench-test", process.pid, "127.0.0.1", 7788);
+    assert.equal(notifications, 1);
+    const path = join(dataDir, "server", "remote-control-host.json");
+    const stale = JSON.parse(await readFile(path, "utf8")) as { heartbeatAt: number };
+    stale.heartbeatAt = Date.now() - 31_000;
+    await writeFile(path, JSON.stringify(stale));
+
+    await manager.registerHost("workbench-test", process.pid, "127.0.0.1", 7788);
+
+    assert.equal(notifications, 2);
+    assert.equal((await manager.getState()).hostAvailable, true);
+    await manager.registerHost("workbench-test", process.pid, "127.0.0.1", 7788);
+    assert.equal(notifications, 2);
+  } finally {
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});

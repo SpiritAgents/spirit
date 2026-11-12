@@ -42,6 +42,22 @@ test("all twelve release artifacts map to the same object keys and URLs as the s
 test("publish inventory includes workspace runtime dependencies in dependency order", async () => {
   const packages = await readNpmPackages();
   const indices = new Map(packages.map(({ name }, index) => [name, index]));
+  const deployOnly = new Set([
+    "@spiritagent/api",
+    "@spiritagent/automations",
+    "@spiritagent/code-completion",
+    "@spiritagent/config",
+    "@spiritagent/extensions",
+    "@spiritagent/github",
+    "@spiritagent/http",
+    "@spiritagent/i18n",
+    "@spiritagent/lsp",
+    "@spiritagent/remote-control",
+    "@spiritagent/sessions",
+    "@spiritagent/web",
+    "@spiritagent/workbench",
+    "@spiritagent/workspace",
+  ]);
   assert.equal(packages[0].name, "@spiritagent/product");
   assert.ok(indices.has("@spiritagent/server"));
   const publicationGroup = new Set([
@@ -54,6 +70,9 @@ test("publish inventory includes workspace runtime dependencies in dependency or
     );
     for (const [name, range] of Object.entries(manifest.dependencies ?? {})) {
       if (!range.startsWith("workspace:")) continue;
+      // Private domain packages are embedded into CLI/Desktop production deploys;
+      // they are intentionally not part of the public npm publication inventory.
+      if (deployOnly.has(name)) continue;
       assert.ok(indices.has(name), `${item.name} requires unpublished ${name}`);
       if (publicationGroup.has(item.name) && publicationGroup.has(name)) continue;
       assert.ok(indices.get(name) < index, `${name} must be staged before ${item.name}`);

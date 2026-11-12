@@ -4,7 +4,7 @@
 # Configure GitHub Environment "release" with Required reviewers (and Cloudflare secrets) before publishing.
 # Configure GitHub Environment "signing" WITHOUT reviewers (build jobs must not sit behind the approval gate):
 #   APPLE_CSC_LINK / APPLE_CSC_PASSWORD      base64 Developer ID .p12 and its password
-#   APPLE_TEAM_ID                            expected TeamIdentifier, asserted by the signature checks
+#   APPLE_TEAM_ID                            expected TeamIdentifier; also renders the shared keychain group
 #   APPLE_API_KEY_P8 / APPLE_API_KEY_ID / APPLE_API_ISSUER  App Store Connect key used by the notarize job
 name: Release
 
@@ -167,6 +167,8 @@ jobs:
           echo "SPIRIT_MACOS_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
 
       - name: Bundle CLI
+        env:
+          SPIRIT_MACOS_TEAM_ID: ${{ matrix.apple && secrets.APPLE_TEAM_ID || '' }}
         run: pnpm run release:cli:bundle -- --target ${{ matrix.rust_target }} --version "$RELEASE_VERSION"
         shell: bash
 
@@ -200,12 +202,19 @@ jobs:
               echo "::error::$relative is missing the Hardened Runtime flag."
               exit 1
             fi
+            entitlements="$(codesign --display --entitlements :- "$binary" 2>/dev/null)"
+            if ! grep -q "<string>$APPLE_TEAM_ID.dev.spirit.shared</string>" <<<"$entitlements"; then
+              echo "::error::$relative is missing the Spirit keychain access group."
+              exit 1
+            fi
             echo "verified $relative"
           done
           # A valid signature does not prove the binary still runs: re-signing stock Node with our
           # own entitlements is the one change here that can kill V8 at startup.
           "$root/node/bin/node" --version
           "$root/bin/spirit" --version
+          SPIRIT_KEYRING_CONFIG_ENTRY="$root/packages/workbench/node_modules/@spiritagent/config/dist/keyring-secret.js" \
+            "$root/node/bin/node" scripts/release/smoke-macos-keychain-sharing.mjs
 
       - name: Remove signing keychain
         if: always() && matrix.apple
@@ -294,7 +303,14 @@ jobs:
         env:
           CSC_LINK: ${{ secrets.APPLE_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.APPLE_CSC_PASSWORD }}
-        run: pnpm exec electron-builder --config electron-builder.config.mjs --${{ matrix.platform }} --${{ matrix.arch }} --publish never
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          SPIRIT_MACOS_ENTITLEMENTS: ${{ runner.temp }}/spirit-desktop-entitlements.plist
+        run: |
+          node ../../scripts/release/macos-keychain-sharing.mjs \
+            --team-id "$APPLE_TEAM_ID" \
+            --base build/entitlements.mac.plist \
+            --output "$SPIRIT_MACOS_ENTITLEMENTS"
+          pnpm exec electron-builder --config electron-builder.config.mjs --${{ matrix.platform }} --${{ matrix.arch }} --publish never
 
       - name: Package Desktop
         if: matrix.platform != 'mac'
@@ -329,6 +345,15 @@ jobs:
             echo "::error::Hardened Runtime flag is missing from the signature."
             exit 1
           fi
+          entitlements="$(codesign --display --entitlements :- "$app" 2>/dev/null)"
+          if ! grep -q "<string>$APPLE_TEAM_ID.dev.spirit.shared</string>" <<<"$entitlements"; then
+            echo "::error::Desktop is missing the Spirit keychain access group."
+            exit 1
+          fi
+          executable="$(find "$app/Contents/MacOS" -type f -perm -111 -print -quit)"
+          ELECTRON_RUN_AS_NODE=1 \
+            SPIRIT_KEYRING_CONFIG_ENTRY="$app/Contents/Resources/app.asar/node_modules/@spiritagent/config/dist/keyring-secret.js" \
+            "$executable" "$GITHUB_WORKSPACE/scripts/release/smoke-macos-keychain-sharing.mjs"
 
       # macOS output is not releasable yet, so it is staged under a name the release jobs ignore.
       - name: Upload Desktop artifact (awaiting notarization)

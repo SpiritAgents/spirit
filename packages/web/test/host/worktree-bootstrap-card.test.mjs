@@ -1,0 +1,50 @@
+import assert from "node:assert/strict";
+import { test } from "vitest";
+
+import { isSessionBundleBusy } from "../../../../packages/sessions/dist/host/direct-media-turn.js";
+import {
+  buildWorktreeBootstrapToolSnapshot,
+  isWorktreeBootstrapInFlight,
+  worktreeBootstrapToolCallId,
+  WORKTREE_BOOTSTRAP_TOOL_NAME,
+} from "../../../../packages/sessions/dist/host/worktree-bootstrap-card.js";
+import { toolCallPhaseShowsShimmer } from "../../../../packages/sessions/dist/lib/tool-call-shimmer.js";
+import i18n from "../../../../packages/sessions/dist/lib/i18n-host.js";
+
+test("worktreeBootstrapToolCallId is stable per session key", () => {
+  assert.equal(worktreeBootstrapToolCallId("draft-1"), "worktree-bootstrap:draft-1");
+});
+
+test("buildWorktreeBootstrapToolSnapshot uses create verb and Worktree detail", () => {
+  const running = buildWorktreeBootstrapToolSnapshot("running");
+  assert.equal(running.toolName, WORKTREE_BOOTSTRAP_TOOL_NAME);
+  assert.equal(running.phase, "running");
+  assert.equal(running.headline, i18n.t("tool.create", { context: "running" }));
+  assert.equal(running.headlineDetail, "Worktree");
+  assert.equal(toolCallPhaseShowsShimmer(running.phase), true);
+
+  const succeeded = buildWorktreeBootstrapToolSnapshot("succeeded");
+  assert.equal(succeeded.headline, i18n.t("tool.create", { context: "succeeded" }));
+  assert.equal(toolCallPhaseShowsShimmer(succeeded.phase), false);
+  assert.equal(succeeded.headlineDetail, "Worktree");
+});
+
+test("isWorktreeBootstrapInFlight and isSessionBundleBusy", () => {
+  assert.equal(isWorktreeBootstrapInFlight(undefined), false);
+  assert.equal(isWorktreeBootstrapInFlight({ phase: "running" }), true);
+  assert.equal(isWorktreeBootstrapInFlight({ phase: "succeeded" }), false);
+
+  assert.equal(
+    isSessionBundleBusy({
+      pendingWorktreeBootstrap: { phase: "running" },
+    }),
+    true,
+  );
+  assert.equal(
+    isSessionBundleBusy({
+      pendingWorktreeBootstrap: { phase: "failed" },
+      runtime: { isBusy: () => false },
+    }),
+    false,
+  );
+});

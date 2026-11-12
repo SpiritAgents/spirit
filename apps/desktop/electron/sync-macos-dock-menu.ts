@@ -1,6 +1,6 @@
 import { Menu, app } from "electron";
 
-import { invokeDesktopHostCommand } from "../src/host/service.js";
+import { invokeDesktopHostCommand } from "@spiritagent/workbench/host/service";
 import type { SessionListItem } from "../src/types.js";
 
 import { buildRecentSessionMenuItems } from "./session-menu-items.js";

@@ -44,6 +44,9 @@ export async function deployProductionPackage({
     `--cpu=${arch}`,
     `--os=${platform}`,
     ...(offline ? ["--offline"] : []),
+    // The workspace lockfile has already passed the repository policy check;
+    // trusting its deployed projection avoids metadata lookups that offline mode forbids.
+    ...(offline ? ["--trust-lockfile"] : []),
     ...(ignoreScripts ? ["--ignore-scripts"] : []),
     destination,
   ];

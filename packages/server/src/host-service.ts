@@ -9,33 +9,35 @@ import {
   ALL_MARKETPLACE_SOURCE_ID,
   checkExtensionUpdate,
   createHostExtensionManager,
+  getMarketplaceExtensionDetail,
+  installMarketplaceExtensionByName,
+  listAllMarketplaceSources,
+  listMarketplaceCatalog,
+  MarketplaceReviewAcknowledgementRequiredError,
+  readMarketplaceCatalog,
+  readMarketplaceCatalogForSource,
+  removeMarketplaceSource,
+  updateExtensionById,
+  collectEnabledExtensionInstructionContributions,
+  installBuiltInExtension,
+  type MarketplaceHostContext,
+} from "@spiritagent/extensions";
+import {
   createHostTodoStore,
   deleteHookEntry,
   discoverRuleEntries,
   discoverSkillEntries,
   evaluateReadFilePermission,
   evaluateShellPermission,
-  getMarketplaceExtensionDetail,
-  installMarketplaceExtensionByName,
-  listAllMarketplaceSources,
   listCachedWorkspaceFileReferenceSuggestions,
   listHookListItems,
-  listMarketplaceCatalog,
   loadPermissionConfig,
-  MarketplaceReviewAcknowledgementRequiredError,
   planMetadataSnapshot,
   primeWorkspaceFileReferenceIndexCache,
-  readMarketplaceCatalog,
-  readMarketplaceCatalogForSource,
-  removeMarketplaceSource,
   resolveInstructionPaths,
   saveHookEntry,
   saveToggleState,
-  updateExtensionById,
   validateHooksConfig,
-  collectEnabledExtensionInstructionContributions,
-  installBuiltInExtension,
-  type MarketplaceHostContext,
   type PermissionEvalResult,
 } from "@spiritagent/host-internal";
 
@@ -46,6 +48,7 @@ import {
   serializeMarketplaceSource,
 } from "./host-serializers.js";
 import type { SessionManager } from "./session-manager.js";
+import { RemoteControlManager } from "@spiritagent/remote-control";
 
 /**
  * Workspace/config management RPC surface (`host.*`) — the daemon-side home
@@ -54,10 +57,28 @@ import type { SessionManager } from "./session-manager.js";
  * is involved (todo stores are session-scoped by key).
  */
 export class HostService {
+  private readonly remoteControl: RemoteControlManager;
+
   constructor(
     private readonly spiritDataDir: string,
     private readonly sessions: SessionManager,
-  ) {}
+    private readonly remoteEvent?: (method: string, params: unknown) => void,
+  ) {
+    this.remoteControl = new RemoteControlManager({
+      dataDir: spiritDataDir,
+      onStateChanged: (state) => this.remoteEvent?.("remote.updated", state),
+      onConfirmationRequested: (pairing) =>
+        this.remoteEvent?.("remote.confirmationRequested", pairing),
+    });
+  }
+
+  async initializeRemoteControl(): Promise<void> {
+    await this.remoteControl.initialize();
+  }
+
+  async cancelRemoteControlOwner(ownerClientId: string): Promise<void> {
+    await this.remoteControl.cancelOwnerPairing(ownerClientId);
+  }
 
   private extensionManager(hostKind: "cli" | "desktop") {
     return createHostExtensionManager({ spiritDataDir: this.spiritDataDir, hostKind });
@@ -89,6 +110,72 @@ export class HostService {
   async handle(method: string, rawParams: unknown): Promise<unknown> {
     const params = (rawParams ?? {}) as Record<string, unknown>;
     switch (method) {
+      case "remote.getState":
+        return this.remoteControl.getState();
+      case "remote.enable":
+        return this.remoteControl.enable();
+      case "remote.disable":
+        return this.remoteControl.disable();
+      case "remote.configure":
+        return this.remoteControl.configure({
+          ...(typeof params["host"] === "string" ? { host: params["host"] } : {}),
+          ...(typeof params["port"] === "number" ? { port: params["port"] } : {}),
+        });
+      case "remote.pair":
+        return this.remoteControl.pair({
+          ownerClientId: requiredOwnerClientId(params),
+          origin: requiredString(params, "origin"),
+          ...(typeof params["name"] === "string" ? { name: params["name"] } : {}),
+          ...(params["output"] === "svg" || params["output"] === "terminal"
+            ? { output: params["output"] }
+            : {}),
+        });
+      case "remote.approvePairing":
+        return this.remoteControl.approvePairing(
+          requiredString(params, "pairingId"),
+          requiredOwnerClientId(params),
+        );
+      case "remote.rejectPairing":
+        return this.remoteControl.rejectPairing(
+          requiredString(params, "pairingId"),
+          requiredOwnerClientId(params),
+          params["output"] === "svg" || params["output"] === "terminal"
+            ? params["output"]
+            : undefined,
+        );
+      case "remote.cancelPairing":
+        await this.remoteControl.cancelPairing(
+          requiredString(params, "pairingId"),
+          requiredOwnerClientId(params),
+        );
+        return { ok: true };
+      case "remote.renameDevice":
+        return this.remoteControl.renameDevice(
+          requiredString(params, "deviceId"),
+          requiredString(params, "name"),
+        );
+      case "remote.revokeDevice":
+        return this.remoteControl.revokeDevice(requiredString(params, "deviceId"));
+      case "remote.requestAccess":
+        return this.remoteControl.requestAccess(requiredString(params, "token"), {
+          ...(typeof params["userAgent"] === "string" ? { userAgent: params["userAgent"] } : {}),
+          ...(typeof params["ip"] === "string" ? { ip: params["ip"] } : {}),
+          recordConnection: params["recordConnection"] === true,
+        });
+      case "remote.registerHost":
+        await this.remoteControl.registerHost(
+          requiredString(params, "instanceId"),
+          requiredNumber(params, "pid"),
+          requiredString(params, "host"),
+          requiredNumber(params, "port"),
+        );
+        return { ok: true };
+      case "remote.unregisterHost":
+        await this.remoteControl.unregisterHost(requiredString(params, "instanceId"));
+        return { ok: true };
+      case "remote.cancelOwnerPairing":
+        await this.remoteControl.cancelOwnerPairing(requiredOwnerClientId(params));
+        return { ok: true };
       // ------------------------------------------------ instructions (rules/skills/plan)
       case "host.loadCliMetadata": {
         const context = this.context(params);
@@ -515,6 +602,22 @@ export class HostService {
   }
 }
 
+function requiredString(params: Record<string, unknown>, key: string): string {
+  const value = params[key];
+  if (typeof value !== "string" || !value.trim()) throw new Error(`missing ${key}`);
+  return value.trim();
+}
+
+function requiredNumber(params: Record<string, unknown>, key: string): number {
+  const value = params[key];
+  if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`missing ${key}`);
+  return value;
+}
+
+function requiredOwnerClientId(params: Record<string, unknown>): string {
+  return requiredString(params, "ownerClientId");
+}
+
 export type HostCheckPermissionResult = PermissionEvalResult & { warnings: string[] };
 
 /**
@@ -539,6 +642,20 @@ function normalizeReadFileCheckPath(value: string, workspaceRoot: string | undef
 }
 
 export const HOST_METHODS = new Set([
+  "remote.getState",
+  "remote.enable",
+  "remote.disable",
+  "remote.configure",
+  "remote.pair",
+  "remote.approvePairing",
+  "remote.rejectPairing",
+  "remote.cancelPairing",
+  "remote.renameDevice",
+  "remote.revokeDevice",
+  "remote.requestAccess",
+  "remote.registerHost",
+  "remote.unregisterHost",
+  "remote.cancelOwnerPairing",
   "host.loadCliMetadata",
   "host.loadPlanMetadata",
   "host.writeRuleState",

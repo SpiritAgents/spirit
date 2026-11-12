@@ -75,6 +75,8 @@ const versions = [
   ['host-internal', 'packages/host-internal/package.json', await readJsonVersion('packages/host-internal/package.json')],
   ['acp-server', 'packages/acp-server/package.json', await readJsonVersion('packages/acp-server/package.json')],
   ['server', 'packages/server/package.json', await readJsonVersion('packages/server/package.json')],
+  ['workbench', 'packages/workbench/package.json', await readJsonVersion('packages/workbench/package.json')],
+  ['web', 'packages/web/package.json', await readJsonVersion('packages/web/package.json')],
   ['cli', 'apps/cli/Cargo.toml', await readCargoVersion('apps/cli/Cargo.toml')],
   ['mcp-client-info', 'packages/agent-core/src/mcp/config.ts', await readMcpClientVersion('packages/agent-core/src/mcp/config.ts')],
   ['acp-agent-info', 'packages/acp-server/src/acp-agent.ts', await readAcpAgentVersion('packages/acp-server/src/acp-agent.ts')],

@@ -1,0 +1,877 @@
+import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import { mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import path from "node:path";
+
+import type { ModelEffortSelection } from "@spiritagent/agent-core/model-effort";
+
+import { parseModelRef, type ModelRef } from "@spiritagent/config";
+import type { ModelReasoningEffort } from "@spiritagent/agent-core/reasoning-effort";
+
+type ApprovalLevel = "default" | "auto-approval" | "bypass-approval";
+
+function normalizeApprovalLevel(value: unknown): ApprovalLevel {
+  return value === "auto-approval" || value === "bypass-approval" ? value : "default";
+}
+
+export type HostAutomationWeekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+/** @deprecated Use HostAutomationTimeSchedule via HostAutomationTrigger.kind === 'time'. */
+export type HostAutomationSchedule =
+  | { kind: "hourly" }
+  | { kind: "daily"; hour: number; minute: number }
+  | { kind: "weekly"; weekday: HostAutomationWeekday; hour: number; minute: number };
+
+export type HostAutomationTimeSchedule = HostAutomationSchedule;
+
+export type HostAutomationGitHubEvent = "pull_request_created" | "issue_created";
+
+export type HostAutomationTrigger =
+  | { kind: "time"; schedule: HostAutomationTimeSchedule }
+  | {
+      kind: "github";
+      owner: string;
+      repo: string;
+      event: HostAutomationGitHubEvent;
+      poll?: { lastSeenNumber: number };
+    };
+
+export interface HostAutomationDefinition {
+  id: string;
+  title: string;
+  overview: string;
+  trigger: HostAutomationTrigger;
+  workspaceRoot: string;
+  modelRef: ModelRef;
+  reasoningEffort?: ModelReasoningEffort;
+  effort?: ModelEffortSelection;
+  approvalLevel: ApprovalLevel;
+  enabled: boolean;
+  createdAtUnixMs: number;
+  updatedAtUnixMs: number;
+  lastFiredAtUnixMs?: number;
+  /** Set when GitHub issue/PR polling fails for this automation's repository. */
+  githubPollError?: string;
+}
+
+export type HostAutomationRunStatus = "running" | "blocked" | "completed" | "failed";
+
+export interface HostAutomationRun {
+  id: string;
+  automationId: string;
+  sessionPath: string;
+  status: HostAutomationRunStatus;
+  startedAtUnixMs: number;
+  completedAtUnixMs?: number;
+  error?: string;
+}
+
+export interface HostAutomationListItem {
+  id: string;
+  title: string;
+  scheduleLabel: string;
+  trigger: HostAutomationTrigger;
+  enabled: boolean;
+  githubPollError?: string;
+  lastRunAtUnixMs?: number;
+  updatedAtUnixMs: number;
+}
+
+export interface HostAutomationCreateInput {
+  title: string;
+  overview: string;
+  trigger: HostAutomationTrigger;
+  workspaceRoot: string;
+  modelRef: ModelRef;
+  reasoningEffort?: ModelReasoningEffort;
+  effort?: ModelEffortSelection;
+  approvalLevel: ApprovalLevel;
+  enabled?: boolean;
+}
+
+export interface HostAutomationUpdateInput {
+  title?: string;
+  overview?: string;
+  trigger?: HostAutomationTrigger;
+  workspaceRoot?: string;
+  modelRef?: ModelRef;
+  reasoningEffort?: ModelReasoningEffort;
+  effort?: ModelEffortSelection;
+  approvalLevel?: ApprovalLevel;
+  enabled?: boolean;
+}
+
+interface HostAutomationFile {
+  version: 1;
+  definition: HostAutomationDefinition;
+  runs: HostAutomationRun[];
+}
+
+const AUTOMATIONS_DIR_NAME = "automations";
+
+export function automationsDirPath(spiritDataDir: string): string {
+  return path.join(spiritDataDir, AUTOMATIONS_DIR_NAME);
+}
+
+export function automationFilePath(spiritDataDir: string, automationId: string): string {
+  return path.join(automationsDirPath(spiritDataDir), `${automationId}.json`);
+}
+
+export function createHostAutomationStore(spiritDataDir: string): HostAutomationStore {
+  return new HostAutomationStore(spiritDataDir);
+}
+
+export function normalizeAutomationSchedule(
+  value: unknown,
+): HostAutomationTimeSchedule | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+  const schedule = value as Partial<HostAutomationTimeSchedule>;
+  if (schedule.kind === "hourly") {
+    return { kind: "hourly" };
+  }
+  if (schedule.kind === "daily") {
+    const hour = normalizeHour(schedule.hour);
+    const minute = normalizeMinute(schedule.minute);
+    if (hour === undefined || minute === undefined) {
+      return undefined;
+    }
+    return { kind: "daily", hour, minute };
+  }
+  if (schedule.kind === "weekly") {
+    const weekday = normalizeWeekday(schedule.weekday);
+    const hour = normalizeHour(schedule.hour);
+    const minute = normalizeMinute(schedule.minute);
+    if (weekday === undefined || hour === undefined || minute === undefined) {
+      return undefined;
+    }
+    return { kind: "weekly", weekday, hour, minute };
+  }
+  return undefined;
+}
+
+export function normalizeAutomationTrigger(value: unknown): HostAutomationTrigger | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+  const record = value as Partial<HostAutomationTrigger> & { schedule?: unknown };
+  if (record.kind === "time") {
+    const schedule = normalizeAutomationSchedule(record.schedule);
+    if (!schedule) {
+      return undefined;
+    }
+    return { kind: "time", schedule };
+  }
+  if (record.kind === "github") {
+    const owner = typeof record.owner === "string" ? record.owner.trim() : "";
+    const repo = typeof record.repo === "string" ? record.repo.trim() : "";
+    if (!owner || !repo) {
+      return undefined;
+    }
+    const event = normalizeGitHubEvent(record.event);
+    if (!event) {
+      return undefined;
+    }
+    const poll = normalizeGitHubPoll(record.poll);
+    return {
+      kind: "github",
+      owner,
+      repo,
+      event,
+      ...(poll ? { poll } : {}),
+    };
+  }
+  return undefined;
+}
+
+export function reconcileGitHubTriggerPollState(
+  previous: HostAutomationTrigger,
+  next: HostAutomationTrigger,
+): HostAutomationTrigger {
+  if (next.kind !== "github") {
+    return next;
+  }
+  if (previous.kind !== "github") {
+    return {
+      kind: "github",
+      owner: next.owner,
+      repo: next.repo,
+      event: next.event,
+    };
+  }
+  if (
+    previous.owner !== next.owner ||
+    previous.repo !== next.repo ||
+    previous.event !== next.event
+  ) {
+    return {
+      kind: "github",
+      owner: next.owner,
+      repo: next.repo,
+      event: next.event,
+    };
+  }
+  return next;
+}
+
+export function automationTimeScheduleFromTrigger(
+  trigger: HostAutomationTrigger,
+): HostAutomationTimeSchedule | undefined {
+  return trigger.kind === "time" ? trigger.schedule : undefined;
+}
+
+export interface TriggerFormatLabels extends ScheduleFormatLabels {
+  githubPrefix: string;
+  githubPullRequestCreated: string;
+  githubIssueCreated: string;
+}
+
+function defaultTriggerFormatLabels(): TriggerFormatLabels {
+  return {
+    ...defaultScheduleFormatLabels(),
+    githubPrefix: "GitHub",
+    githubPullRequestCreated: "PR created",
+    githubIssueCreated: "Issue created",
+  };
+}
+
+export function formatTriggerLabel(
+  trigger: HostAutomationTrigger,
+  labels?: Partial<TriggerFormatLabels>,
+): string {
+  const l = { ...defaultTriggerFormatLabels(), ...labels };
+  if (trigger.kind === "time") {
+    return formatScheduleLabel(trigger.schedule, l);
+  }
+  const eventLabel =
+    trigger.event === "pull_request_created" ? l.githubPullRequestCreated : l.githubIssueCreated;
+  return `${l.githubPrefix} · ${trigger.owner}/${trigger.repo} · ${eventLabel}`;
+}
+
+export function formatScheduleLabel(
+  schedule: HostAutomationTimeSchedule,
+  labels?: Partial<ScheduleFormatLabels>,
+): string {
+  const l = { ...defaultScheduleFormatLabels(), ...labels };
+  if (schedule.kind === "hourly") {
+    return l.hourly;
+  }
+  const time = formatTimeOfDay(schedule.hour, schedule.minute);
+  if (schedule.kind === "daily") {
+    return `${l.dailyPrefix} ${time}`;
+  }
+  const weekday = l.weekdays[schedule.weekday] ?? String(schedule.weekday);
+  if (l.formatWeekly) {
+    return l.formatWeekly(weekday, time);
+  }
+  return `${l.weeklyPrefix} ${weekday} ${time}`;
+}
+
+export interface ScheduleFormatLabels {
+  hourly: string;
+  dailyPrefix: string;
+  weeklyPrefix: string;
+  weekdays: readonly string[];
+  formatWeekly?(weekday: string, time: string): string;
+}
+
+function defaultScheduleFormatLabels(): ScheduleFormatLabels {
+  return {
+    hourly: "Hourly",
+    dailyPrefix: "Daily",
+    weeklyPrefix: "Weekly",
+    weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    formatWeekly: (weekday, time) => `Weekly ${weekday} ${time}`,
+  };
+}
+
+export function computeNextRunAt(schedule: HostAutomationTimeSchedule, afterMs: number): number {
+  const after = new Date(afterMs);
+  if (schedule.kind === "hourly") {
+    const next = new Date(after);
+    next.setSeconds(0, 0);
+    next.setMinutes(0);
+    next.setHours(next.getHours() + 1);
+    return next.getTime();
+  }
+  if (schedule.kind === "daily") {
+    return nextDailyOrWeeklyRun(after, schedule.hour, schedule.minute, undefined);
+  }
+  return nextDailyOrWeeklyRun(after, schedule.hour, schedule.minute, schedule.weekday);
+}
+
+/** The most recent due time (<= nowMs). Computed in local time; DST is handled by Date semantics. */
+export function mostRecentDueAt(schedule: HostAutomationTimeSchedule, nowMs: number): number {
+  const candidate = new Date(nowMs);
+  candidate.setSeconds(0, 0);
+  if (schedule.kind === "hourly") {
+    candidate.setMinutes(0);
+    return candidate.getTime();
+  }
+  candidate.setHours(schedule.hour, schedule.minute, 0, 0);
+  if (schedule.kind === "daily") {
+    if (candidate.getTime() > nowMs) {
+      candidate.setDate(candidate.getDate() - 1);
+    }
+    return candidate.getTime();
+  }
+  const dayDelta = (candidate.getDay() - schedule.weekday + 7) % 7;
+  candidate.setDate(candidate.getDate() - dayDelta);
+  if (candidate.getTime() > nowMs) {
+    candidate.setDate(candidate.getDate() - 7);
+  }
+  return candidate.getTime();
+}
+
+/**
+ * Fires when the last due time is <= now and later than lastFiredMs (including catch-up after sleep or clock jumps).
+ * When lastFiredMs is undefined it is treated as never fired and the most recent due time is caught up immediately;
+ * callers should pass the creation time as the baseline so a new automation does not catch up historical slots.
+ */
+export function shouldFireNow(
+  schedule: HostAutomationTimeSchedule,
+  lastFiredMs: number | undefined,
+  nowMs: number,
+): boolean {
+  const dueAt = mostRecentDueAt(schedule, nowMs);
+  if (lastFiredMs === undefined) {
+    return true;
+  }
+  return floorToMinute(lastFiredMs) < dueAt;
+}
+
+// Serialize load-modify-save per file path to avoid losing updates from concurrent
+// in-process writes. Store instances are created and discarded at each call site,
+// so the queue must live at module level rather than on the instance.
+const automationFileTaskQueues = new Map<string, Promise<unknown>>();
+
+function enqueueAutomationFileTask<T>(filePath: string, task: () => Promise<T>): Promise<T> {
+  const previous = automationFileTaskQueues.get(filePath) ?? Promise.resolve();
+  const run = previous.then(task, task);
+  const tail = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  automationFileTaskQueues.set(filePath, tail);
+  void tail.then(() => {
+    if (automationFileTaskQueues.get(filePath) === tail) {
+      automationFileTaskQueues.delete(filePath);
+    }
+  });
+  return run;
+}
+
+export class HostAutomationStore {
+  constructor(private readonly spiritDataDir: string) {}
+
+  async listSummaries(): Promise<HostAutomationListItem[]> {
+    const files = await this.listAutomationFiles();
+    const summaries: HostAutomationListItem[] = [];
+    for (const filePath of files) {
+      const file = await this.loadFileAt(filePath);
+      if (!file) {
+        continue;
+      }
+      const lastRun = file.runs
+        .slice()
+        .sort((left, right) => right.startedAtUnixMs - left.startedAtUnixMs)[0];
+      summaries.push({
+        id: file.definition.id,
+        title: file.definition.title,
+        scheduleLabel: formatTriggerLabel(file.definition.trigger),
+        trigger: file.definition.trigger,
+        enabled: file.definition.enabled,
+        ...(file.definition.githubPollError
+          ? { githubPollError: file.definition.githubPollError }
+          : {}),
+        ...(lastRun ? { lastRunAtUnixMs: lastRun.startedAtUnixMs } : {}),
+        updatedAtUnixMs: file.definition.updatedAtUnixMs,
+      });
+    }
+    return summaries.sort((left, right) => right.updatedAtUnixMs - left.updatedAtUnixMs);
+  }
+
+  async get(
+    automationId: string,
+  ): Promise<{ definition: HostAutomationDefinition; runs: HostAutomationRun[] } | undefined> {
+    const file = await this.loadFile(automationId);
+    if (!file) {
+      return undefined;
+    }
+    return {
+      definition: { ...file.definition },
+      runs: [...file.runs],
+    };
+  }
+
+  async create(input: HostAutomationCreateInput): Promise<HostAutomationDefinition> {
+    const now = Date.now();
+    const trigger = normalizeAutomationTrigger(input.trigger);
+    if (!trigger) {
+      throw new Error("Invalid automation trigger.");
+    }
+    const definition: HostAutomationDefinition = {
+      id: randomUUID(),
+      title: normalizeNonEmpty(input.title, "title"),
+      overview: normalizeNonEmpty(input.overview, "overview"),
+      trigger,
+      workspaceRoot: path.resolve(normalizeNonEmpty(input.workspaceRoot, "workspaceRoot")),
+      modelRef: normalizeAutomationModelRef(input.modelRef, "modelRef"),
+      ...(input.reasoningEffort ? { reasoningEffort: input.reasoningEffort } : {}),
+      ...(input.effort ? { effort: input.effort } : {}),
+      approvalLevel: normalizeApprovalLevel(input.approvalLevel),
+      enabled: input.enabled !== false,
+      createdAtUnixMs: now,
+      updatedAtUnixMs: now,
+    };
+    const file: HostAutomationFile = { version: 1, definition, runs: [] };
+    await enqueueAutomationFileTask(automationFilePath(this.spiritDataDir, definition.id), () =>
+      this.saveFile(definition.id, file),
+    );
+    return { ...definition };
+  }
+
+  async ensureGitHubTriggerBaseline(
+    automationId: string,
+    lastSeenNumber: number,
+  ): Promise<HostAutomationDefinition> {
+    return this.mutateFile(automationId, (file) => {
+      if (file.definition.trigger.kind !== "github") {
+        throw new Error("Automation trigger is not GitHub.");
+      }
+      file.definition.trigger = {
+        ...file.definition.trigger,
+        poll: { lastSeenNumber },
+      };
+      file.definition.updatedAtUnixMs = Date.now();
+      return { ...file.definition };
+    });
+  }
+
+  async update(
+    automationId: string,
+    patch: HostAutomationUpdateInput,
+  ): Promise<HostAutomationDefinition> {
+    return this.mutateFile(automationId, (file) => {
+      const now = Date.now();
+      if (patch.title !== undefined) {
+        file.definition.title = normalizeNonEmpty(patch.title, "title");
+      }
+      if (patch.overview !== undefined) {
+        file.definition.overview = normalizeNonEmpty(patch.overview, "overview");
+      }
+      if (patch.trigger !== undefined) {
+        const trigger = normalizeAutomationTrigger(patch.trigger);
+        if (!trigger) {
+          throw new Error("Invalid automation trigger.");
+        }
+        file.definition.trigger = reconcileGitHubTriggerPollState(file.definition.trigger, trigger);
+      }
+      if (patch.workspaceRoot !== undefined) {
+        file.definition.workspaceRoot = path.resolve(
+          normalizeNonEmpty(patch.workspaceRoot, "workspaceRoot"),
+        );
+      }
+      if (patch.modelRef !== undefined) {
+        file.definition.modelRef = normalizeAutomationModelRef(patch.modelRef, "modelRef");
+        delete file.definition.reasoningEffort;
+        delete file.definition.effort;
+      }
+      if (patch.reasoningEffort !== undefined) {
+        file.definition.reasoningEffort = patch.reasoningEffort;
+        delete file.definition.effort;
+      }
+      if (patch.effort !== undefined) {
+        file.definition.effort = patch.effort;
+        delete file.definition.reasoningEffort;
+      }
+      if (patch.approvalLevel !== undefined) {
+        file.definition.approvalLevel = normalizeApprovalLevel(patch.approvalLevel);
+      }
+      if (patch.enabled !== undefined) {
+        file.definition.enabled = patch.enabled;
+      }
+      file.definition.updatedAtUnixMs = now;
+      return { ...file.definition };
+    });
+  }
+
+  async delete(automationId: string): Promise<void> {
+    const filePath = automationFilePath(this.spiritDataDir, automationId);
+    await enqueueAutomationFileTask(filePath, async () => {
+      if (existsSync(filePath)) {
+        await unlink(filePath);
+      }
+    });
+  }
+
+  async setEnabled(automationId: string, enabled: boolean): Promise<HostAutomationDefinition> {
+    return this.update(automationId, { enabled });
+  }
+
+  async listEnabledDefinitions(): Promise<HostAutomationDefinition[]> {
+    const files = await this.listAutomationFiles();
+    const definitions: HostAutomationDefinition[] = [];
+    for (const filePath of files) {
+      const file = await this.loadFileAt(filePath);
+      if (file?.definition.enabled) {
+        definitions.push({ ...file.definition });
+      }
+    }
+    return definitions;
+  }
+
+  async updateGitHubPollState(
+    automationId: string,
+    lastSeenNumber: number,
+  ): Promise<HostAutomationDefinition> {
+    return this.mutateFile(automationId, (file) => {
+      if (file.definition.trigger.kind !== "github") {
+        throw new Error("Automation trigger is not GitHub.");
+      }
+      file.definition.trigger = {
+        ...file.definition.trigger,
+        poll: { lastSeenNumber },
+      };
+      delete file.definition.githubPollError;
+      file.definition.updatedAtUnixMs = Date.now();
+      return { ...file.definition };
+    });
+  }
+
+  async setGitHubPollError(
+    automationId: string,
+    error: string | undefined,
+  ): Promise<HostAutomationDefinition> {
+    return this.mutateFile(automationId, (file) => {
+      if (file.definition.trigger.kind !== "github") {
+        throw new Error("Automation trigger is not GitHub.");
+      }
+      if (error?.trim()) {
+        file.definition.githubPollError = error.trim();
+      } else {
+        delete file.definition.githubPollError;
+      }
+      file.definition.updatedAtUnixMs = Date.now();
+      return { ...file.definition };
+    });
+  }
+
+  async markFired(automationId: string, firedAtUnixMs: number): Promise<void> {
+    await this.mutateFile(automationId, (file) => {
+      file.definition.lastFiredAtUnixMs = firedAtUnixMs;
+      file.definition.updatedAtUnixMs = firedAtUnixMs;
+    });
+  }
+
+  async addRun(automationId: string, run: HostAutomationRun): Promise<HostAutomationRun> {
+    return this.mutateFile(automationId, (file) => {
+      const normalized = normalizeAutomationRun(run);
+      if (!normalized) {
+        throw new Error("Invalid automation run.");
+      }
+      file.runs.push(normalized);
+      file.definition.updatedAtUnixMs = Date.now();
+      return { ...normalized };
+    });
+  }
+
+  async updateRun(
+    automationId: string,
+    runId: string,
+    patch: Partial<
+      Pick<HostAutomationRun, "status" | "completedAtUnixMs" | "error" | "sessionPath">
+    >,
+  ): Promise<HostAutomationRun> {
+    return this.mutateFile(automationId, (file) => {
+      const index = file.runs.findIndex((run) => run.id === runId);
+      if (index < 0) {
+        throw new Error(`Automation run not found: ${runId}`);
+      }
+      const current = file.runs[index]!;
+      const next: HostAutomationRun = {
+        ...current,
+        ...(patch.sessionPath !== undefined ? { sessionPath: patch.sessionPath } : {}),
+        ...(patch.status !== undefined ? { status: patch.status } : {}),
+        ...(patch.completedAtUnixMs !== undefined
+          ? { completedAtUnixMs: patch.completedAtUnixMs }
+          : {}),
+        ...(patch.error !== undefined ? { error: patch.error } : {}),
+      };
+      file.runs[index] = next;
+      file.definition.updatedAtUnixMs = Date.now();
+      return { ...next };
+    });
+  }
+
+  async getActiveRun(automationId: string): Promise<HostAutomationRun | undefined> {
+    const file = await this.loadFile(automationId);
+    if (!file) {
+      return undefined;
+    }
+    return file.runs.find((run) => run.status === "running");
+  }
+
+  private async mutateFile<T>(
+    automationId: string,
+    mutate: (file: HostAutomationFile) => T,
+  ): Promise<T> {
+    return enqueueAutomationFileTask(
+      automationFilePath(this.spiritDataDir, automationId),
+      async () => {
+        const file = await this.requireFile(automationId);
+        const result = mutate(file);
+        await this.saveFile(automationId, file);
+        return result;
+      },
+    );
+  }
+
+  private async listAutomationFiles(): Promise<string[]> {
+    const dirPath = automationsDirPath(this.spiritDataDir);
+    if (!existsSync(dirPath)) {
+      return [];
+    }
+    const entries = await readdir(dirPath, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .map((entry) => path.join(dirPath, entry.name));
+  }
+
+  private async loadFile(automationId: string): Promise<HostAutomationFile | undefined> {
+    return this.loadFileAt(automationFilePath(this.spiritDataDir, automationId));
+  }
+
+  private async requireFile(automationId: string): Promise<HostAutomationFile> {
+    const file = await this.loadFile(automationId);
+    if (!file) {
+      throw new Error(`Automation not found: ${automationId}`);
+    }
+    return file;
+  }
+
+  private async loadFileAt(filePath: string): Promise<HostAutomationFile | undefined> {
+    if (!existsSync(filePath)) {
+      return undefined;
+    }
+    const raw = await readFile(filePath, "utf8");
+    let parsed: Partial<HostAutomationFile>;
+    try {
+      parsed = JSON.parse(raw) as Partial<HostAutomationFile>;
+    } catch {
+      return undefined;
+    }
+    const definition = normalizeAutomationDefinition(parsed.definition);
+    if (!definition) {
+      return undefined;
+    }
+    return {
+      version: 1,
+      definition,
+      runs: Array.isArray(parsed.runs)
+        ? parsed.runs
+            .map((run) => normalizeAutomationRun(run))
+            .filter((run): run is HostAutomationRun => run !== undefined)
+        : [],
+    };
+  }
+
+  private async saveFile(automationId: string, file: HostAutomationFile): Promise<void> {
+    const filePath = automationFilePath(this.spiritDataDir, automationId);
+    await mkdir(path.dirname(filePath), { recursive: true });
+    // tmp+rename atomic write avoids leaving truncated JSON after a crash; writes are
+    // already serialized per file, so the fixed tmp name cannot be reused concurrently
+    // (its suffix is not .json, so listAutomationFiles will not pick it up).
+    const tmpPath = `${filePath}.tmp`;
+    await writeFile(tmpPath, `${JSON.stringify(file, null, 2)}\n`, "utf8");
+    await rename(tmpPath, filePath);
+  }
+}
+
+function normalizeAutomationDefinition(value: unknown): HostAutomationDefinition | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+  const record = value as Partial<HostAutomationDefinition>;
+  if (typeof record.id !== "string" || !record.id.trim()) {
+    return undefined;
+  }
+  const trigger = normalizeAutomationTrigger(record.trigger);
+  if (!trigger) {
+    return undefined;
+  }
+  if (typeof record.title !== "string" || !record.title.trim()) {
+    return undefined;
+  }
+  if (typeof record.overview !== "string" || !record.overview.trim()) {
+    return undefined;
+  }
+  if (typeof record.workspaceRoot !== "string" || !record.workspaceRoot.trim()) {
+    return undefined;
+  }
+  const modelRef = parseModelRef(record.modelRef);
+  if (!modelRef) {
+    return undefined;
+  }
+  const createdAtUnixMs =
+    typeof record.createdAtUnixMs === "number" ? record.createdAtUnixMs : Date.now();
+  const updatedAtUnixMs =
+    typeof record.updatedAtUnixMs === "number" ? record.updatedAtUnixMs : createdAtUnixMs;
+  return {
+    id: record.id.trim(),
+    title: record.title.trim(),
+    overview: record.overview.trim(),
+    trigger,
+    workspaceRoot: path.resolve(record.workspaceRoot.trim()),
+    modelRef,
+    ...(record.reasoningEffort ? { reasoningEffort: record.reasoningEffort } : {}),
+    approvalLevel: normalizeApprovalLevel(record.approvalLevel),
+    enabled: record.enabled !== false,
+    createdAtUnixMs,
+    updatedAtUnixMs,
+    ...(typeof record.lastFiredAtUnixMs === "number"
+      ? { lastFiredAtUnixMs: record.lastFiredAtUnixMs }
+      : {}),
+    ...(typeof record.githubPollError === "string" && record.githubPollError.trim()
+      ? { githubPollError: record.githubPollError.trim() }
+      : {}),
+  };
+}
+
+function normalizeAutomationRun(value: unknown): HostAutomationRun | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+  const record = value as Partial<HostAutomationRun>;
+  if (typeof record.id !== "string" || !record.id.trim()) {
+    return undefined;
+  }
+  if (typeof record.automationId !== "string" || !record.automationId.trim()) {
+    return undefined;
+  }
+  if (typeof record.sessionPath !== "string" || !record.sessionPath.trim()) {
+    return undefined;
+  }
+  const status =
+    record.status === "running" ||
+    record.status === "blocked" ||
+    record.status === "completed" ||
+    record.status === "failed"
+      ? record.status
+      : undefined;
+  if (!status) {
+    return undefined;
+  }
+  if (typeof record.startedAtUnixMs !== "number") {
+    return undefined;
+  }
+  return {
+    id: record.id.trim(),
+    automationId: record.automationId.trim(),
+    sessionPath: record.sessionPath.trim(),
+    status,
+    startedAtUnixMs: record.startedAtUnixMs,
+    ...(typeof record.completedAtUnixMs === "number"
+      ? { completedAtUnixMs: record.completedAtUnixMs }
+      : {}),
+    ...(typeof record.error === "string" && record.error.trim()
+      ? { error: record.error.trim() }
+      : {}),
+  };
+}
+
+function normalizeAutomationModelRef(value: ModelRef, field: string): ModelRef {
+  const modelRef = parseModelRef(value);
+  if (!modelRef) {
+    throw new Error(`${field} must be a valid modelRef.`);
+  }
+  return modelRef;
+}
+
+function normalizeNonEmpty(value: string, field: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error(`${field} must be a non-empty string.`);
+  }
+  return trimmed;
+}
+
+function normalizeHour(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 23) {
+    return undefined;
+  }
+  return value;
+}
+
+function normalizeMinute(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 59) {
+    return undefined;
+  }
+  return value;
+}
+
+function normalizeWeekday(value: unknown): HostAutomationWeekday | undefined {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 6) {
+    return undefined;
+  }
+  return value as HostAutomationWeekday;
+}
+
+function normalizeGitHubEvent(value: unknown): HostAutomationGitHubEvent | undefined {
+  if (value === "pull_request_created" || value === "issue_created") {
+    return value;
+  }
+  return undefined;
+}
+
+function normalizeGitHubPoll(value: unknown): { lastSeenNumber: number } | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+  const record = value as { lastSeenNumber?: unknown };
+  if (
+    typeof record.lastSeenNumber !== "number" ||
+    !Number.isInteger(record.lastSeenNumber) ||
+    record.lastSeenNumber < 0
+  ) {
+    return undefined;
+  }
+  return { lastSeenNumber: record.lastSeenNumber };
+}
+
+function formatTimeOfDay(hour: number, minute: number): string {
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function floorToMinute(ms: number): number {
+  const date = new Date(ms);
+  date.setSeconds(0, 0);
+  return date.getTime();
+}
+
+function nextDailyOrWeeklyRun(
+  after: Date,
+  hour: number,
+  minute: number,
+  weekday: HostAutomationWeekday | undefined,
+): number {
+  const candidate = new Date(after);
+  candidate.setSeconds(0, 0);
+  candidate.setMilliseconds(0);
+  candidate.setHours(hour, minute, 0, 0);
+
+  if (weekday === undefined) {
+    if (candidate.getTime() <= after.getTime()) {
+      candidate.setDate(candidate.getDate() + 1);
+    }
+    return candidate.getTime();
+  }
+
+  const dayDelta = (weekday - candidate.getDay() + 7) % 7;
+  candidate.setDate(candidate.getDate() + dayDelta);
+  if (candidate.getTime() <= after.getTime()) {
+    candidate.setDate(candidate.getDate() + 7);
+  }
+  return candidate.getTime();
+}

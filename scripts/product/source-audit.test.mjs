@@ -9,9 +9,14 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 const keyringFiles = new Set([
   "apps/cli/src/adapters.rs",
   "apps/cli/src/model_registry.rs",
-  "apps/desktop/src/host/storage.ts",
-  "apps/desktop/src/host/github-auth-storage.ts",
+  "packages/sessions/src/host/storage.ts",
+  "packages/github/src/auth-storage.ts",
+  "packages/host-internal/src/credentials/provider-key-channels.ts",
+  "packages/sessions/src/host/host-model-commands.ts",
+  "packages/sessions/src/host/model-config.ts",
   "packages/host-internal/src/credentials/provider-accounts.ts",
+  "packages/config/src/keyring-secret.ts",
+  "scripts/release/smoke-macos-keychain-sharing.mjs",
 ]);
 const pattern =
   /https?:\/\/(?:download\.)?spirit\.dev|spirit:\/\/|["'`]\.spirit(?:["'`/])|["'`]Spirit(?:["'`]| [A-Za-z])/u;

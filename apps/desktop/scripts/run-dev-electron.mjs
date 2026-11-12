@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 import { brandedMacExecutable, devElectronDir } from "./dev-electron-bundle.mjs";
 import { stopRegisteredDaemons } from "./dev-daemon-lifecycle.mjs";
+import { developmentRestartWatchDirs } from "./dev-reload-graph.mjs";
 import { resolveSpiritDataDir } from "../../../packages/host-internal/dist/data-paths.js";
 
 const desktopRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -18,12 +19,7 @@ const repoRoot = path.resolve(desktopRoot, "..", "..");
  * when their outputs change. Renderer-only packages (ui/icons/brand) are
  * deliberately excluded: the Vite dev server serves their sources directly.
  */
-const RESTART_WATCH_DIRS = [
-  path.join(desktopRoot, "dist-electron"),
-  ...["host-internal", "agent-core", "server", "extension-toolkit"].map((pkg) =>
-    path.join(repoRoot, "packages", pkg, "dist"),
-  ),
-];
+const RESTART_WATCH_DIRS = developmentRestartWatchDirs(desktopRoot, repoRoot);
 const RESTART_DEBOUNCE_MS = 500;
 
 function resolveElectronExec() {

@@ -232,6 +232,7 @@ async function main() {
   const agentCorePackage = await readJson('packages/agent-core/package.json');
   const hostInternalPackage = await readJson('packages/host-internal/package.json');
   const serverPackage = await readJson('packages/server/package.json');
+  const workbenchPackage = await readJson('packages/workbench/package.json');
   const productPackage = await readJson('packages/product/package.json');
   const version = parseReleaseVersion(
     readArg('--version') ?? process.env.RELEASE_VERSION ?? desktopPackage.version,
@@ -272,16 +273,16 @@ async function main() {
     recursive: true,
     verbatimSymlinks: true,
   });
-  const serverRoot = path.join(bundleRoot, 'packages', 'server');
+  const workbenchRoot = path.join(bundleRoot, 'packages', 'workbench');
   await deployProductionPackage({
-    packageName: '@spiritagent/server',
-    destination: serverRoot,
+    packageName: '@spiritagent/workbench',
+    destination: workbenchRoot,
     arch: targetInfo.nodeArch,
     platform: targetInfo.nodePlatform === 'win' ? 'win32' : targetInfo.nodePlatform,
     offline: process.argv.includes('--offline') || process.env.npm_config_offline === 'true',
     ignoreScripts: process.argv.includes('--ignore-scripts'),
   });
-  const require = createRequire(path.join(serverRoot, 'package.json'));
+  const require = createRequire(path.join(workbenchRoot, 'package.json'));
   const deployedProduct = await import(pathToFileURL(require.resolve('@spiritagent/product')).href);
   if (deployedProduct.PRODUCT_BUILD_ID !== PRODUCT_BUILD_ID) {
     throw new Error('Deployed product build does not match the release build');
@@ -308,6 +309,7 @@ async function main() {
           agentCore: agentCorePackage.version,
           hostInternal: hostInternalPackage.version,
           server: serverPackage.version,
+          workbench: workbenchPackage.version,
           product: productPackage.version,
         },
       },

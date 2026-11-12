@@ -271,6 +271,7 @@ pub(in crate::ui) fn suggestion_summary(suggestion: &InputSuggestion) -> String 
         "/log" => t!("ui.suggestion.summary.log").into_owned(),
         "/language" => t!("ui.suggestion.summary.language").into_owned(),
         "/approval" => t!("ui.suggestion.summary.approval").into_owned(),
+        "/remote" => t!("ui.suggestion.summary.remote").into_owned(),
         "/tui" => t!("ui.suggestion.summary.tui").into_owned(),
         "/start-implementing" => t!("ui.suggestion.summary.start_implementing").into_owned(),
         _ => String::new(),
@@ -402,6 +403,10 @@ pub(in crate::ui) fn suggestion_usage_lines(suggestion: &InputSuggestion) -> Vec
             "    /approval".to_string(),
             "    /approval default".to_string(),
             "    /approval bypass-approval".to_string(),
+        ],
+        "/remote" => vec![
+            t!("ui.suggestion.usage.heading").into_owned(),
+            "    /remote enable|disable|status|config|pair|list|rename|revoke".to_string(),
         ],
         "/tui" => vec![
             t!("ui.suggestion.usage.heading").into_owned(),

@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("../../", import.meta.url));
 for (const entry of [
   "packages/server/dist/src/daemon.js",
-  "apps/desktop/dist-electron/src/host/storage.js",
+  "packages/workbench/dist/entry.js",
+  "packages/web/dist/index.html",
 ]) {
   try {
     await access(path.join(root, entry));
@@ -51,7 +52,9 @@ try {
       "scripts/product/generate-content.test.mjs",
       "scripts/product/acceptance.test.mjs",
       "scripts/product/source-audit.test.mjs",
+      "scripts/product/workbench-boundaries.test.mjs",
       "scripts/release/product-release.test.mjs",
+      "scripts/release/macos-keychain-sharing.test.mjs",
     ],
     { cwd: root, env, stdio: "inherit" },
   );
