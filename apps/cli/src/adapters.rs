@@ -117,7 +117,11 @@ impl ChatRepository for JsonChatRepository {
         let value = call_config_rpc(
             &workspace_root,
             "session.saveStored",
-            serde_json::json!({ "path": path, "archive": archive }),
+            serde_json::json!({
+                "path": path,
+                "archive": archive,
+                "workspaceRoot": workspace_root.to_string_lossy(),
+            }),
         )?;
         let path = value
             .get("path")

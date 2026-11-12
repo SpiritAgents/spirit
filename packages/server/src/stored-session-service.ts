@@ -19,6 +19,8 @@ import {
   restoreHostFileChanges,
   type HostRecordedFileChange,
 } from "@spiritagent/workspace/file-rewind";
+import { readCurrentGitBranch } from "@spiritagent/workspace/git-workspace";
+import type { StoredDesktopSession } from "@spiritagent/sessions/host/contracts";
 
 export async function executeStoredSessionCommand(
   method: string,
@@ -42,8 +44,15 @@ async function executeStoredSessionCommandInScope(
       return loadStoredSession(requiredPath(params));
     case "session.saveStored": {
       const archive = params["archive"] as Record<string, unknown> | undefined;
+      const requestedPath = typeof params["path"] === "string" ? params["path"] : undefined;
+      const existing = await loadExistingStoredSession(requestedPath);
+      const requestedWorkspaceRoot = optionalString(params["workspaceRoot"]);
+      const workspaceRoot = requestedWorkspaceRoot ?? existing?.workspaceRoot;
+      const gitBranch = requestedWorkspaceRoot
+        ? await readCurrentGitBranch(requestedWorkspaceRoot)
+        : existing?.gitBranch;
       const path = await saveStoredSession(
-        typeof params["path"] === "string" ? params["path"] : undefined,
+        requestedPath,
         archive
           ? ({
               chatSchemaVersion: 2,
@@ -56,7 +65,10 @@ async function executeStoredSessionCommandInScope(
               sessionDisplayName: archive["sessionDisplayName"],
               sessionTitleSource: archive["sessionTitleSource"],
               rewind: archive["rewind"],
-            } as never)
+              ...(existing?.pinnedAtUnixMs ? { pinnedAtUnixMs: existing.pinnedAtUnixMs } : {}),
+              ...(workspaceRoot ? { workspaceRoot } : {}),
+              ...(gitBranch ? { gitBranch } : {}),
+            } as StoredDesktopSession)
           : (params["session"] as never),
       );
       return { path };
@@ -124,4 +136,24 @@ function requiredPath(params: Record<string, unknown>): string {
     throw new Error("missing path");
   }
   return value;
+}
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+async function loadExistingStoredSession(
+  filePath: string | undefined,
+): Promise<StoredDesktopSession | undefined> {
+  if (!filePath?.trim()) {
+    return undefined;
+  }
+  try {
+    return await loadStoredSession(filePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return undefined;
+    }
+    throw error;
+  }
 }

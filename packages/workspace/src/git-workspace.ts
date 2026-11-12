@@ -201,6 +201,15 @@ async function readBranchName(workspaceRoot: string): Promise<string | undefined
   return branch || undefined;
 }
 
+/** Current branch for session metadata; non-Git workspaces and detached HEAD have no label. */
+export async function readCurrentGitBranch(workspaceRoot: string): Promise<string | undefined> {
+  try {
+    return await readBranchName(workspaceRoot);
+  } catch {
+    return undefined;
+  }
+}
+
 export const NOT_A_GIT_REPOSITORY_BASIC_INFO_LABEL = "Current workspace is not a Git repository";
 
 export const DETACHED_GIT_HEAD_BASIC_INFO_LABEL = "detached HEAD";
