@@ -49,6 +49,20 @@ test("HOST_METHODS whitelists host.checkPermission", () => {
   assert.ok(HOST_METHODS.has("host.checkPermission"));
 });
 
+test("HOST_METHODS does not expose keyring secrets or mutations", async () => {
+  const service = makeService("/unused");
+  for (const method of [
+    "host.readKeyringSecret",
+    "host.writeKeyringSecret",
+    "host.deleteKeyringSecret",
+    "host.writeProviderSecret",
+    "host.deleteProviderSecret",
+  ]) {
+    assert.equal(HOST_METHODS.has(method), false, method);
+    await assert.rejects(service.handle(method, {}), new RegExp(`unknown host method: ${method}`));
+  }
+});
+
 test("HOST_METHODS whitelists shared model skill and stored-session contracts", () => {
   for (const method of [
     "host.getConfig",

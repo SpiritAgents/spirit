@@ -1,9 +1,6 @@
 use anyhow::Result;
 use serde_json::Value;
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::path::{Path, PathBuf};
 
 use crate::{
     ask_questions::AskQuestionsResult,
@@ -23,7 +20,7 @@ use crate::{
     plan::PlanMetadata,
     ports::{
         AssistantAuxArchiveEntry, AttachChatSessionOutcome, ChatArchive, McpStatusSnapshot,
-        SecretStore, SubagentSessionArchiveEntry, SubagentSessionSummary,
+        SubagentSessionArchiveEntry, SubagentSessionSummary,
     },
     rewind::{DesktopRewindCheckpointSnapshot, RewindRestoreOutcome},
     session::SessionModel,
@@ -44,13 +41,9 @@ pub struct RuntimeHandle {
 }
 
 impl RuntimeHandle {
-    pub fn new(
-        config: AppConfig,
-        secret_store: Arc<dyn SecretStore>,
-        workspace_root: PathBuf,
-    ) -> Result<Self> {
+    pub fn new(config: AppConfig, workspace_root: PathBuf) -> Result<Self> {
         Ok(Self {
-            backend: DaemonRuntime::new(config, secret_store, workspace_root)?,
+            backend: DaemonRuntime::new(config, workspace_root)?,
         })
     }
 

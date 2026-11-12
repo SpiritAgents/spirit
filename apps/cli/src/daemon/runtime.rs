@@ -6,12 +6,10 @@ use serde_json::{Value, json};
 use std::{
     collections::HashSet,
     path::{Path, PathBuf},
-    sync::Arc,
     time::Duration,
 };
 
 use crate::{
-    adapters::KeyringSecretStore,
     chat_archive::chat_archive_to_bridge_json,
     host_protocol::{
         BridgeChatArchive, BridgeExportState, BridgeManualToolCommandStartResult,
@@ -27,7 +25,7 @@ use crate::{
     plan::{self, PlanMetadata, bootstrap_plan_metadata},
     ports::{
         AssistantAuxArchiveEntry, AttachChatSessionOutcome, ChatArchive, McpStatusSnapshot,
-        SecretStore, SubagentSessionArchiveEntry, SubagentSessionSummary, normalize_approval_level,
+        SubagentSessionArchiveEntry, SubagentSessionSummary, normalize_approval_level,
     },
     rewind::{self, DesktopRewindCheckpointSnapshot, RewindRestoreOutcome},
     runtime_sync::RuntimeSyncState,
@@ -69,12 +67,8 @@ pub(crate) struct DaemonRuntime {
 }
 
 impl DaemonRuntime {
-    pub fn new(
-        config: AppConfig,
-        _secret_store: Arc<dyn SecretStore>,
-        workspace_root: PathBuf,
-    ) -> Result<Self> {
-        let mut runtime = Self::connect(config, _secret_store, workspace_root)?;
+    pub fn new(config: AppConfig, workspace_root: PathBuf) -> Result<Self> {
+        let mut runtime = Self::connect(config, workspace_root)?;
 
         let rewind = rewind::create_desktop_rewind_metadata();
         let created = runtime.client.call(
@@ -107,18 +101,10 @@ impl DaemonRuntime {
     /// Management-only connection (hooks/mcp/extension subcommands): no
     /// session, only `host.*` RPCs.
     pub fn new_host_only(workspace_root: PathBuf) -> Result<Self> {
-        Self::connect(
-            AppConfig::default(),
-            Arc::new(KeyringSecretStore),
-            workspace_root,
-        )
+        Self::connect(AppConfig::default(), workspace_root)
     }
 
-    fn connect(
-        config: AppConfig,
-        _secret_store: Arc<dyn SecretStore>,
-        workspace_root: PathBuf,
-    ) -> Result<Self> {
+    fn connect(config: AppConfig, workspace_root: PathBuf) -> Result<Self> {
         let (instance, token) = ensure_daemon(&workspace_root)?;
         if !is_loopback_host(&instance.host) {
             return Err(anyhow!("daemon host must be loopback: {}", instance.host));

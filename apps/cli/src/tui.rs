@@ -11,7 +11,7 @@ use std::{
 };
 
 use crate::{
-    adapters::{DefaultAppPaths, JsonChatRepository, JsonConfigStore, KeyringSecretStore},
+    adapters::{DefaultAppPaths, JsonChatRepository, JsonConfigStore},
     ask_questions::AskQuestionsResult,
     chat_timeline::project_live_chat_from_llm_history,
     host_protocol::{
@@ -25,8 +25,7 @@ use crate::{
     plan::PlanMetadata,
     ports::{
         AppPaths, AssistantAuxArchiveEntry, AttachChatSessionOutcome, ChatArchive, ChatRepository,
-        ChatSessionListItem, ConfigStore, SecretStore, SubagentSessionArchiveEntry,
-        SubagentSessionSummary,
+        ChatSessionListItem, ConfigStore, SubagentSessionArchiveEntry, SubagentSessionSummary,
     },
     rewind::{self, ConversationMessageSnapshot, DesktopRewindCheckpointSnapshot},
     rules::RuleEntry,
@@ -151,7 +150,6 @@ impl TuiShell {
 
     fn create(inline_mode: bool) -> Result<Self> {
         let app_paths: Arc<dyn AppPaths> = Arc::new(DefaultAppPaths::new());
-        let secret_store: Arc<dyn SecretStore> = Arc::new(KeyringSecretStore);
         let config_store: Box<dyn ConfigStore> = Box::new(JsonConfigStore);
         let chat_repository: Box<dyn ChatRepository> = Box::new(JsonChatRepository);
         let config_path = app_paths.config_file();
@@ -160,12 +158,8 @@ impl TuiShell {
         })?;
         locale::apply_ui_locale(&config);
         let workspace_root = app_paths.workspace_root();
-        let mut runtime = RuntimeHandle::new(
-            config.clone(),
-            Arc::clone(&secret_store),
-            workspace_root.clone(),
-        )
-        .context("Failed to initialize TypeScript runtime bridge")?;
+        let mut runtime = RuntimeHandle::new(config.clone(), workspace_root.clone())
+            .context("Failed to initialize TypeScript runtime bridge")?;
         let cli_metadata = runtime
             .load_cli_host_metadata("agent")
             .context("Failed to read shared host metadata")?;

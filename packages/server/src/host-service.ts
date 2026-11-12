@@ -170,18 +170,13 @@ export class HostService {
       method === "host.listProviderPresets" ||
       method === "host.buildModelDisplayTitles" ||
       method === "host.hasProviderCredential" ||
-      method === "host.readKeyringSecret" ||
-      method === "host.writeKeyringSecret" ||
-      method === "host.deleteKeyringSecret" ||
       method === "host.previewModels" ||
       method === "host.updateConfig" ||
       method === "host.addModel" ||
       method === "host.addProviderModels" ||
       method === "host.removeModel" ||
       method === "host.removeProviderModels" ||
-      method === "host.removeProviderGroup" ||
-      method === "host.writeProviderSecret" ||
-      method === "host.deleteProviderSecret"
+      method === "host.removeProviderGroup"
     ) {
       return executeHostModelCommand(method, params, this.spiritDataDir);
     }
@@ -798,9 +793,6 @@ export const HOST_METHODS = new Set([
   "host.listProviderPresets",
   "host.buildModelDisplayTitles",
   "host.hasProviderCredential",
-  "host.readKeyringSecret",
-  "host.writeKeyringSecret",
-  "host.deleteKeyringSecret",
   "host.previewModels",
   "host.updateConfig",
   "host.addModel",
@@ -808,8 +800,6 @@ export const HOST_METHODS = new Set([
   "host.removeModel",
   "host.removeProviderModels",
   "host.removeProviderGroup",
-  "host.writeProviderSecret",
-  "host.deleteProviderSecret",
   "session.listStored",
   "session.loadStored",
   "session.saveStored",

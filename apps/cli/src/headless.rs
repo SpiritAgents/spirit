@@ -1,17 +1,16 @@
 use anyhow::{Result, anyhow};
 use rust_i18n::t;
 use std::{
-    sync::Arc,
     thread,
     time::{Duration, Instant},
 };
 
 use crate::{
-    adapters::{DefaultAppPaths, JsonConfigStore, KeyringSecretStore},
+    adapters::{DefaultAppPaths, JsonConfigStore},
     cli_bootstrap::GlobalCliOptions,
     daemon::DaemonRuntime,
     host_runtime::RuntimeEvent,
-    ports::{AppPaths, ConfigStore, SecretStore},
+    ports::{AppPaths, ConfigStore},
     view::MessageRole,
 };
 
@@ -30,10 +29,9 @@ pub fn run_headless_prompt(
     }
 
     let app_paths = DefaultAppPaths::new();
-    let secret_store: Arc<dyn SecretStore> = Arc::new(KeyringSecretStore);
     let workspace_root = app_paths.workspace_root();
     let config = JsonConfigStore.load()?;
-    let mut runtime = DaemonRuntime::new(config, secret_store, workspace_root)?;
+    let mut runtime = DaemonRuntime::new(config, workspace_root)?;
 
     if let Some(approval) = options.approval.as_deref() {
         let level = crate::cli_bootstrap::parse_cli_approval_level(approval)?;

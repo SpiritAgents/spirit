@@ -5,7 +5,7 @@ use crate::{
     daemon::config::call_config_rpc,
     logging,
     model_registry::{AppConfig, config_file_path},
-    ports::{AppPaths, ChatArchive, ChatRepository, ConfigStore, SecretStore},
+    ports::{AppPaths, ChatArchive, ChatRepository, ConfigStore},
     session_paths,
 };
 
@@ -60,43 +60,6 @@ impl ConfigStore for JsonConfigStore {
             &workspace_root,
             "host.replaceConfig",
             serde_json::json!({ "config": config }),
-        )?;
-        Ok(())
-    }
-}
-
-pub struct KeyringSecretStore;
-
-impl SecretStore for KeyringSecretStore {
-    fn read_keyring_secret(&self, service: &str, account: &str) -> Result<Option<String>> {
-        let workspace_root = env::current_dir()?;
-        let value = call_config_rpc(
-            &workspace_root,
-            "host.readKeyringSecret",
-            serde_json::json!({ "service": service, "account": account }),
-        )?;
-        Ok(value
-            .get("value")
-            .and_then(serde_json::Value::as_str)
-            .map(ToOwned::to_owned))
-    }
-
-    fn save_provider_secret(&self, account: &str, secret: &str) -> Result<()> {
-        let workspace_root = env::current_dir()?;
-        call_config_rpc(
-            &workspace_root,
-            "host.writeKeyringSecret",
-            serde_json::json!({ "service": crate::product::NAME, "account": account, "value": secret }),
-        )?;
-        Ok(())
-    }
-
-    fn remove_provider_secret(&self, account: &str) -> Result<()> {
-        let workspace_root = env::current_dir()?;
-        call_config_rpc(
-            &workspace_root,
-            "host.deleteKeyringSecret",
-            serde_json::json!({ "service": crate::product::NAME, "account": account }),
         )?;
         Ok(())
     }

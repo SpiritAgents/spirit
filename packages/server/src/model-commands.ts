@@ -1,12 +1,7 @@
 import { listProviderPresets } from "@spiritagent/agent-core/provider-presets";
 import { buildFormattedDisplayTitlesFromIds } from "@spiritagent/agent-core/model-catalog/id-display-title";
 import type { DesktopSnapshot } from "@spiritagent/api/types";
-import {
-  KEYRING_SERVICE,
-  keyringStore,
-  providerInternalSlotAccount,
-  resolveProviderApiKeyResolution,
-} from "@spiritagent/config/credentials";
+import { resolveProviderApiKeyResolution } from "@spiritagent/config/credentials";
 import {
   addModelCommand,
   addProviderModelsCommand,
@@ -111,40 +106,8 @@ async function executeHostModelCommandInScope(
       }).value !== undefined
     );
   }
-  if (method === "host.readKeyringSecret") {
-    return {
-      value: keyringStore().getPassword(
-        String(params["service"] ?? ""),
-        String(params["account"] ?? ""),
-      ),
-    };
-  }
-  if (method === "host.writeKeyringSecret" || method === "host.deleteKeyringSecret") {
-    const service = String(params["service"] ?? "");
-    const account = String(params["account"] ?? "");
-    if (method === "host.deleteKeyringSecret") {
-      keyringStore().deletePassword(service, account);
-    } else {
-      keyringStore().setPassword(service, account, String(params["value"] ?? ""));
-    }
-    return null;
-  }
   if (method === "host.previewModels") {
     return previewModelsCommand(params["request"] as never);
-  }
-  if (method === "host.writeProviderSecret" || method === "host.deleteProviderSecret") {
-    const providerId = String(params["providerId"] ?? "").trim();
-    const slot = String(params["slot"] ?? "apiKey").trim() || "apiKey";
-    if (!providerId) {
-      throw new Error("missing providerId");
-    }
-    const account = providerInternalSlotAccount(providerId, slot);
-    if (method === "host.deleteProviderSecret") {
-      keyringStore().deletePassword(KEYRING_SERVICE, account);
-    } else {
-      keyringStore().setPassword(KEYRING_SERVICE, account, String(params["value"] ?? "").trim());
-    }
-    return null;
   }
 
   const workspaceRoot = String(params["workspaceRoot"] ?? "").trim();
