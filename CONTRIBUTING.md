@@ -36,13 +36,13 @@ Agents can speed up implementation; they cannot replace your judgment.
 
 Spirit has a clear layering model. Before touching multiple packages, read [`.github/instructions/agent-core-host-boundary.instructions.md`](.github/instructions/agent-core-host-boundary.instructions.md):
 
-| Layer             | Path                                                                              | Role                                                        |
-| ----------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Agent semantics   | `packages/agent-core`                                                             | Runtime, prompts, tool contracts, MCP, transports           |
-| Shared host logic | `packages/host-internal`                                                          | Discovery, extensions, workspace helpers, LSP orchestration |
-| Hosts / adapters  | `apps/desktop`, `apps/cli`, `apps/site`, `packages/server`, `packages/acp-server` | Thin platform-specific UI and execution                     |
+| Layer             | Path                                                                              | Role                                                           |
+| ----------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Agent semantics   | `packages/agent-core`                                                             | Runtime, prompts, tool contracts, MCP, transports              |
+| Shared host logic | `packages/{config,instructions,sessions,tools,workspace}`                         | Focused TypeScript domain implementations used by every client |
+| Hosts / adapters  | `apps/desktop`, `apps/cli`, `apps/site`, `packages/server`, `packages/acp-server` | Thin platform-specific UI and execution                        |
 
-Do not duplicate tool definitions or prompts across CLI and Desktop. New tool contracts belong in `agent-core`; execution belongs in the host.
+Do not duplicate tool definitions or prompts across CLI and Desktop. New tool contracts belong in `agent-core`; execution belongs in the owning TypeScript domain package.
 
 ## Development setup
 

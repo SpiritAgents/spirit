@@ -3,7 +3,6 @@ pub mod ask_questions;
 mod background_task_display;
 pub mod bedrock_mantle;
 pub mod chat_archive;
-pub mod chat_store;
 pub mod chat_timeline;
 pub mod cli;
 pub mod cli_bootstrap;
@@ -21,15 +20,12 @@ pub mod llm_types;
 #[cfg(feature = "tui")]
 pub mod locale;
 pub mod logging;
-#[cfg(target_os = "macos")]
-pub(crate) mod macos_keychain;
 pub mod mcp;
 pub mod mcp_types;
-pub mod model_catalog_display;
+pub mod model_display;
 pub mod model_registry;
 #[cfg(feature = "tui")]
 mod move_background;
-pub mod openai_models_list;
 pub mod permissions;
 pub mod permissions_types;
 pub mod plan;
@@ -45,6 +41,7 @@ pub mod runtime_handle;
 pub mod runtime_sync;
 pub mod serve;
 pub mod session;
+pub mod session_paths;
 #[cfg(feature = "tui")]
 pub mod shell;
 pub mod skills;
@@ -52,18 +49,16 @@ pub mod subagent_display;
 #[cfg(test)]
 pub(crate) mod test_support;
 pub mod tool_ui;
-pub mod transport_config;
 #[cfg(feature = "tui")]
 pub mod tui;
 #[cfg(feature = "tui")]
 pub mod ui;
-pub mod vertex_models_list;
 pub mod view;
 #[cfg(feature = "tui")]
 mod word_wrap;
 
 #[cfg(feature = "tui")]
-rust_i18n::i18n!("locales", fallback = "en");
+rust_i18n::i18n!("target/i18n", fallback = "en");
 
 pub use cli::{
     ConfigCommand, ExtensionCommand, ExtensionMarketplaceCommand, HookCommand, McpCommand,

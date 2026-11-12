@@ -9,8 +9,9 @@ import { buildAuthMethods, buildTerminalAuthMethod } from "../src/auth/build-aut
 import { TERMINAL_AUTH_ARGS, TERMINAL_AUTH_METHOD_ID } from "../src/auth/constants.js";
 import { canCreateSession, createInitialAuthState } from "../src/auth/session-auth.js";
 import { loadBaseConfig } from "../src/config.js";
-import { hasResolvableCredentials, setKeyringStoreForTests } from "@spiritagent/host-internal";
-import { providerInternalKeyAccount, resolveTransportConfig } from "@spiritagent/host-internal";
+import { hasResolvableCredentials, setKeyringStoreForTests } from "@spiritagent/config/credentials";
+import { providerInternalKeyAccount } from "@spiritagent/config/credentials";
+import { resolveTransportConfig } from "@spiritagent/config/resolve-transport";
 import {
   validateAzureSetup,
   validateBedrockCredentials,

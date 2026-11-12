@@ -39,7 +39,7 @@ Spirit에는 명확한 계층 모델이 있습니다. 여러 패키지를 건드
 | 계층             | 경로                                                                              | 역할                                              |
 | ---------------- | --------------------------------------------------------------------------------- | ------------------------------------------------- |
 | 에이전트 의미론  | `packages/agent-core`                                                             | 런타임, 프롬프트, 도구 계약, MCP, 트랜스포트      |
-| 공유 호스트 로직 | `packages/host-internal`                                                          | 탐색, 확장, 워크스페이스 보조, LSP 오케스트레이션 |
+| 공유 호스트 로직 | `packages/{config,instructions,sessions,tools,workspace,extensions,lsp}`          | 탐색, 확장, 워크스페이스 보조, LSP 오케스트레이션 |
 | 호스트 / 어댑터  | `apps/desktop`, `apps/cli`, `apps/site`, `packages/server`, `packages/acp-server` | 얇은, 플랫폼별 UI와 실행                          |
 
 도구 정의나 프롬프트를 CLI와 Desktop에 중복해서 두지 마세요. 새 도구 계약은 `agent-core`에 두고, 실행은 호스트에 둡니다.

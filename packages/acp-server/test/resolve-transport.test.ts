@@ -5,9 +5,9 @@ import { join } from "node:path";
 import { test } from "vitest";
 
 import { loadBaseConfig } from "../src/config.js";
-import { providerInternalSlotAccount } from "@spiritagent/host-internal";
-import { setKeyringStoreForTests } from "@spiritagent/host-internal";
-import { resolveTransportConfig } from "@spiritagent/host-internal";
+import { providerInternalSlotAccount } from "@spiritagent/config/credentials";
+import { setKeyringStoreForTests } from "@spiritagent/config/credentials";
+import { resolveTransportConfig } from "@spiritagent/config/resolve-transport";
 import { v1ConfigFixture } from "./fixtures/v1-config.js";
 
 test("resolveTransportConfig builds bedrock transport from IAM credentials", () => {

@@ -16,7 +16,7 @@ import {
   modelRefsEqual,
   type ModelRef,
   type ProviderEntry,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/config";
 
 export interface BedrockProviderCredentials {
   apiKey?: string;

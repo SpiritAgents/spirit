@@ -1,4 +1,4 @@
-/** Renderer-safe: no host-internal / host/storage imports. */
+/** Renderer-safe: no host service or storage imports. */
 
 export function parseModelContextLength(value: unknown): number | undefined {
   if (

@@ -39,7 +39,7 @@ Spirit 有清晰的分層模型。在改動多個套件之前，請先閱讀 [`.
 | 層級          | 路徑                                                                              | 職責                                  |
 | ------------- | --------------------------------------------------------------------------------- | ------------------------------------- |
 | 智能體語義    | `packages/agent-core`                                                             | 執行時、提示詞、工具契約、MCP、傳輸層 |
-| 共享宿主邏輯  | `packages/host-internal`                                                          | 探索、擴充、工作區輔助、LSP 編排      |
+| 共享宿主邏輯  | `packages/{config,instructions,sessions,tools,workspace,extensions,lsp}`          | 探索、擴充、工作區輔助、LSP 編排      |
 | 宿主 / 適配器 | `apps/desktop`、`apps/cli`、`apps/site`、`packages/server`、`packages/acp-server` | 薄的、平台相關的 UI 與執行            |
 
 不要在 CLI 與 Desktop 之間重複工具定義或提示詞。新的工具契約屬於 `agent-core`；執行屬於宿主。

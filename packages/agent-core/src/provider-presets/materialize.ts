@@ -106,7 +106,7 @@ export interface MaterializeProviderPresetInput {
 
 /**
  * The wizard-time write shape: a config `providers[]` entry (structurally compatible with the
- * host-internal schema's provider entry; agent-core must not import the host package).
+ * configuration schema's provider entry; agent-core must not import the config package).
  * Credential channels (`apiKey*` / `credentials`) are written by the caller from the wizard's
  * key flow, not by this materializer.
  */

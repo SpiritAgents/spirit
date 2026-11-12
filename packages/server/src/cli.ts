@@ -65,6 +65,8 @@ async function runServe(args: string[]): Promise<void> {
   });
   const flags = parseServeFlags(args);
   const dataDir = resolveSpiritDataDir();
+  // Session-domain storage uses the same process data root as the daemon RPC state.
+  process.env.SPIRIT_DATA_DIR = dataDir;
   const version = resolveServerVersion();
   const daemon = await startDaemon({
     dataDir,

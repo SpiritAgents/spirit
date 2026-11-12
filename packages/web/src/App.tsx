@@ -75,7 +75,7 @@ import { initTaskRunService, runTaskByKey } from "@/lib/task-run-service";
 import {
   isWorkspaceReferenceDirectoryPath,
   normalizeWorkspaceReferenceDirectoryPath,
-} from "@spiritagent/host-internal/workspace-file-reference-query";
+} from "@spiritagent/api/workspace-file-reference-query";
 import { tryHandleDesktopWorkspaceLink } from "@/lib/workspace-navigation-link";
 import { tryHandleMarkdownWorkspaceLink } from "@/lib/markdown-workspace-link";
 import { applyUiLayoutScale, UI_LAYOUT_SCALE_ROOT_ID } from "@/lib/ui-layout-scale";

@@ -88,6 +88,22 @@ pub(crate) fn chat_archive_to_bridge_json(archive: &crate::ports::ChatArchive) -
     {
         object.insert("rewind".to_string(), rewind.clone());
     }
+    if let Some(display_name) = &archive.session_display_name
+        && let Some(object) = value.as_object_mut()
+    {
+        object.insert(
+            "sessionDisplayName".to_string(),
+            serde_json::Value::String(display_name.clone()),
+        );
+    }
+    if let Some(title_source) = &archive.session_title_source
+        && let Some(object) = value.as_object_mut()
+    {
+        object.insert(
+            "sessionTitleSource".to_string(),
+            serde_json::Value::String(title_source.clone()),
+        );
+    }
 
     value
 }

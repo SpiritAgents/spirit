@@ -4,11 +4,13 @@ import {
   hooksConfigPathsSummary,
   listHookListItems,
   saveHookEntry,
-  type DeleteHookEntryRequest as HostDeleteHookEntryRequest,
-  type HookListItem,
-  type SaveHookEntryRequest as HostSaveHookEntryRequest,
-} from "@spiritagent/host-internal";
-import { hooksUserConfigPath, hooksWorkspaceConfigPath } from "@spiritagent/host-internal";
+} from "@spiritagent/hooks";
+import type {
+  DeleteHookEntryRequest as HostDeleteHookEntryRequest,
+  HookListItem,
+  SaveHookEntryRequest as HostSaveHookEntryRequest,
+} from "@spiritagent/hooks/config-crud";
+import { hooksUserConfigPath, hooksWorkspaceConfigPath } from "@spiritagent/config/data-paths";
 
 import type {
   DeleteHookEntryRequest,

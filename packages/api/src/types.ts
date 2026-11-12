@@ -8,7 +8,7 @@ import type {
   SpiritServiceTiersDeclaration,
   SpiritTransportKind,
   ThinkingSwitchDeclaration,
-} from "@spiritagent/host-internal/config";
+} from "@spiritagent/config";
 import type { ModelReasoningEffort } from "@spiritagent/agent-core/reasoning-effort";
 import type { RemoteControlPendingPairing } from "@spiritagent/remote-control";
 import type {
@@ -36,17 +36,17 @@ import type { DesktopAutomationTrigger } from "./lib/automation-trigger.js";
 import type { TranslucencyPreference } from "./lib/translucency.js";
 
 export type { DesktopAgentMode };
-import type { WorkspaceFileReferenceSuggestionsResult as HostWorkspaceFileReferenceSuggestionsResult } from "@spiritagent/host-internal/workspace-file-reference-query";
-import type { ApprovalLevel } from "@spiritagent/host-internal/approval-level";
-import type { WorkLocationKind } from "@spiritagent/host-internal/work-location";
-import type { LocalFileComposerRoute } from "@spiritagent/host-internal/local-file-composer-route";
-import type { DesktopGitSnapshot } from "@spiritagent/github/types";
+export type { WorkspaceFileReferenceSuggestionsResult } from "./workspace-file-reference-query.js";
+import type { WorkspaceFileReferenceSuggestionsResult } from "./workspace-file-reference-query.js";
+import type { ApprovalLevel } from "./approval-level.js";
+import type { WorkLocationKind } from "./work-location.js";
+import type { LocalFileComposerRoute } from "./local-file-composer-route.js";
+import type { DesktopGitSnapshot } from "./github.js";
 import type {
   WorkspaceCapabilityTrustDecision,
   WorkspaceCapabilityTrustRequest,
-} from "@spiritagent/host-internal/hooks/trust";
-import type { ResolvedTask, TaskMenuItem } from "@spiritagent/extensions/tasks";
-import type { TaskShellDefinition } from "@spiritagent/extensions/tasks-runtime";
+} from "./workspace-trust.js";
+import type { ResolvedTask, TaskMenuItem, TaskShellDefinition } from "./tasks.js";
 
 export type {
   ApprovalLevel,
@@ -391,6 +391,8 @@ export interface AddModelRequest {
   /** Absent means the entry's materialized default transport. */
   provider?: string;
   transportKind?: DesktopTransportKind;
+  reasoningEffort?: ModelEntry["reasoningEffort"];
+  effort?: ModelEntry["effort"];
   /** The wizard credential form; `apiKey` on a non-apiKey preset materializes the express base. */
   credentialKind?: DesktopProviderCredentialKind;
   capabilities?: DesktopModelCapability[];
@@ -1074,7 +1076,6 @@ export interface QueryWorkspaceFileReferenceSuggestionsRequest {
   cursorChars: number;
 }
 
-export type WorkspaceFileReferenceSuggestionsResult = HostWorkspaceFileReferenceSuggestionsResult;
 export type WorkspaceFileReferenceSuggestionsResponse =
   WorkspaceFileReferenceSuggestionsResult | null;
 
@@ -1416,7 +1417,7 @@ export type {
   SearchGitHubAutomationRepositoriesRequest,
   GitHubAutomationRepositoriesSnapshot,
   SearchGitHubAutomationRepositoriesSnapshot,
-} from "@spiritagent/github/types";
+} from "./github.js";
 
 export type DesktopAutomationRunStatus = "running" | "blocked" | "completed" | "failed";
 
@@ -1484,7 +1485,7 @@ export interface WorkspaceContentInvalidation {
   reason: WorkspaceContentInvalidationReason;
 }
 
-export type { DesktopGitSnapshot } from "@spiritagent/github/types";
+export type { DesktopGitSnapshot } from "./github.js";
 
 export interface GitWorkingTreeChange {
   path: string;
@@ -1573,19 +1574,16 @@ export type {
   GitHubPullRequestTabCounts,
   GitHubPullRequestTaskListProgress,
   GitHubRepositoryRef,
-} from "@spiritagent/github/types";
+} from "./github.js";
 
 export type {
   ListGitHubPullRequestsRequest,
   GetGitHubPullRequestTabCountsRequest,
   GetGitHubPullRequestDetailRequest,
   MergeGitHubPullRequestRequest,
-} from "@spiritagent/github/types";
+} from "./github.js";
 
-export type {
-  GitHubPullRequestMergeMethod,
-  GitHubPullRequestMergeResult,
-} from "@spiritagent/github/types";
+export type { GitHubPullRequestMergeMethod, GitHubPullRequestMergeResult } from "./github.js";
 
 export interface ModelProfileSnapshot {
   /** Provider entry id (`providers[].id` in config.json). */

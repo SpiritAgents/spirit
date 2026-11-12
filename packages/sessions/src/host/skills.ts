@@ -5,11 +5,9 @@ import path from "node:path";
 import i18n from "../lib/i18n-host.js";
 import type { OpenAiActiveSkill, OpenAiActiveSkillResourceEntry } from "@spiritagent/agent-core";
 import { isBuiltInSkillName, noteBuiltInSkillRemoved } from "@spiritagent/extensions";
-import {
-  resolveInstructionPaths,
-  SKILL_FILE_NAME,
-  validateSkillName,
-} from "@spiritagent/host-internal";
+import { resolveInstructionPaths } from "@spiritagent/instructions/storage";
+import { SKILL_FILE_NAME } from "@spiritagent/instructions/skill-paths";
+import { validateSkillName } from "@spiritagent/instructions";
 
 import type { CreateSkillRequest, DeleteSkillRequest, DesktopSkillRootKind } from "../types.js";
 import { spiritDataDir } from "./storage.js";

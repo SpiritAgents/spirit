@@ -4,14 +4,13 @@ import {
   isEmptyModelRef,
   modelRefsEqual,
   providerCredentialSlotNames,
-  providerInternalSlotAccount,
   resolveProviderTransportKind,
-  saveProviderSetup,
   type ModelEntry,
   type ModelRef,
   type ProviderEntry,
   type ProviderOptions,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/config";
+import { providerInternalSlotAccount, saveProviderSetup } from "@spiritagent/config/credentials";
 import {
   findProviderPreset,
   materializeProviderPreset,
@@ -126,7 +125,7 @@ export interface HostModelCommandContext {
   refreshLspSnapshot(): Promise<void>;
 }
 
-/** Matches the keyring naming in host-internal (`provider::{id}[::{slot}]`). */
+/** Matches the keyring naming in config (`provider::{id}[::{slot}]`). */
 const KEYRING_SERVICE = "Spirit";
 
 /** Cloudflare AI Gateway's gateway id materializes into a literal request header (see .spec/config.md). */
@@ -1142,6 +1141,9 @@ export async function addModelCommand(
       throw new Error(i18n.t("error.modelNameRequired"));
     }
     const provider = request.provider?.trim() || "custom";
+    if (request.reasoningEffort !== undefined && request.effort !== undefined) {
+      throw new Error("reasoningEffort and effort cannot be used together.");
+    }
     if (
       provider === "azure" &&
       request.transportKind !== undefined &&
@@ -1230,6 +1232,13 @@ export async function addModelCommand(
     const requestedCapabilities = normalizeModelCapabilities(request.capabilities);
 
     const modelEntry: ModelEntry = catalogEntryToModelEntry(name, catalogEntry);
+    if (request.reasoningEffort !== undefined) {
+      modelEntry.reasoningEffort = request.reasoningEffort;
+    }
+    if (request.effort !== undefined) {
+      modelEntry.effortSemantics = "output";
+      modelEntry.effort = request.effort;
+    }
     const capabilities = resolveAddedModelCapabilities({
       providerId: provider,
       requestedCapabilities,

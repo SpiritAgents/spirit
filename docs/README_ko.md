@@ -56,8 +56,8 @@ pnpm run dev:cli    # cargo run -p spirit
 │    sessions, streaming, approvals       │             │
 │                  │                      │             │
 │                  ▼                      │             │
-│        packages/host-internal           │             │
-│     discovery, tools, workspace  ◀──────┘             │
+│       TS host domain packages           │             │
+│ config, sessions, tools, workspace ◀────┘             │
 │                  │                                    │
 │                  ▼                                    │
 │         packages/agent-core                           │
@@ -116,7 +116,7 @@ Agent Core가 모델이 보는 프로젝트 컨텍스트를 결정합니다:
 - **Smoke 스위트** — `packages/agent-core/src/smoke`의 계약, 런타임, 라이브 프로바이더 검사.
 - **Eval 하네스** — 프롬프트 또는 도구 정의 변경에 대한 시나리오 비교(저장소 루트에서 `pnpm run eval:compare`).
 
-`@spiritagent/agent-core`는 npm에 게시됩니다. [`packages/host-internal`](../packages/host-internal)은 Desktop 공유 호스트 탐색, 확장, 마켓플레이스, 워크스페이스 헬퍼, LSP 오케스트레이션을 담당합니다.
+`@spiritagent/agent-core`는 npm에 게시됩니다. [TypeScript Host domain packages](../packages)은 Desktop 공유 호스트 탐색, 확장, 마켓플레이스, 워크스페이스 헬퍼, LSP 오케스트레이션을 담당합니다.
 
 ## Server
 
@@ -182,15 +182,15 @@ pnpm run dev:site
 
 **요구 사항:** Node.js 26.13.0, pnpm 12.4.2(`npm install --global pnpm@12.4.2`로 설치). CLI 빌드에는 Rust 툴체인 필요.
 
-| 명령                       | 설명                                                                       |
-| -------------------------- | -------------------------------------------------------------------------- |
-| `pnpm install`             | workspace 의존성 설치(저장소 루트에서 한 번)                               |
-| `pnpm run dev:desktop`     | 공유 패키지 빌드 후 Desktop 시작(Vite + Electron)                          |
-| `pnpm run dev:desktop:web` | Desktop 렌더러 + 브라우저 Web 호스트                                       |
-| `pnpm run dev:site`        | 마케팅/문서 사이트 시작(Next.js)                                           |
-| `pnpm run dev:cli`         | TUI 포함 CLI                                                               |
-| `pnpm run build`           | agent-core, host-internal, server, acp-server, Desktop, site 프로덕션 빌드 |
-| `pnpm run eval:compare`    | agent-core 변경 후 eval 비교 실행                                          |
+| 명령                       | 설명                                                                   |
+| -------------------------- | ---------------------------------------------------------------------- |
+| `pnpm install`             | workspace 의존성 설치(저장소 루트에서 한 번)                           |
+| `pnpm run dev:desktop`     | 공유 패키지 빌드 후 Desktop 시작(Vite + Electron)                      |
+| `pnpm run dev:desktop:web` | Desktop 렌더러 + 브라우저 Web 호스트                                   |
+| `pnpm run dev:site`        | 마케팅/문서 사이트 시작(Next.js)                                       |
+| `pnpm run dev:cli`         | TUI 포함 CLI                                                           |
+| `pnpm run build`           | agent-core, workbench, server, acp-server, Desktop, site 프로덕션 빌드 |
+| `pnpm run eval:compare`    | agent-core 변경 후 eval 비교 실행                                      |
 
 ### 저장소 구조
 
@@ -201,7 +201,11 @@ apps/
   cli/               Rust CLI 및 TUI
 packages/
   agent-core/        에이전트 런타임, 프롬프트, 도구 정의, 트랜스포트, MCP, eval
-  host-internal/     공유 호스트 탐색, 도구, 확장, LSP 헬퍼
+  config/            Configuration and credentials
+  sessions/          Session persistence and orchestration
+  tools/             Built-in Host tool execution
+  workbench/         Shared Workbench composition root
+  web/               Shared renderer and static application
   server/            CLI / Desktop / Web용 공유 데몬 백엔드 (WebSocket + JSON-RPC)
   acp-server/        에디터 통합용 ACP 서버 어댑터
 scripts/             릴리스, eval, 저장소 자동화

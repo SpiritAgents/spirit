@@ -376,9 +376,10 @@ impl TuiShell {
                     && profile.name == self.runtime.config().active_model.name
             })
             .unwrap_or(0);
-        self.model_display_titles = crate::model_catalog_display::build_model_display_titles(
-            &self.runtime.config().flatten_models(),
-        );
+        self.model_display_titles = self
+            .runtime
+            .build_model_display_titles(&self.runtime.config().flatten_models())
+            .unwrap_or_default();
         self.reset_primary_picker_overlay();
         self.model_picker_active = true;
     }

@@ -1,12 +1,14 @@
 import {
   findProviderEntry,
   GOOGLE_VERTEX_SDK_PACKAGE_NAME,
-  resolveProviderApiKey,
-  resolveProviderCredentialSlot,
   resolveProviderTransportKind,
   type ModelEntry,
   type ProviderEntry,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/config";
+import {
+  resolveProviderApiKey,
+  resolveProviderCredentialSlot,
+} from "@spiritagent/config/credentials";
 
 import type { DesktopModelReasoningEffort, PreviewModelCatalogEntry } from "../types.js";
 import {

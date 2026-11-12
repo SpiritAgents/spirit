@@ -39,7 +39,7 @@ Spirit tiene un modelo de capas claro. Antes de tocar varios paquetes, lee [`.gi
 | Capa                      | Ruta                                                                              | Rol                                                                |
 | ------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | Semántica del agente      | `packages/agent-core`                                                             | Runtime, prompts, contratos de herramientas, MCP, transports       |
-| Lógica de host compartida | `packages/host-internal`                                                          | Descubrimiento, extensiones, ayudas de workspace, orquestación LSP |
+| Lógica de host compartida | `packages/{config,instructions,sessions,tools,workspace,extensions,lsp}`          | Descubrimiento, extensiones, ayudas de workspace, orquestación LSP |
 | Hosts / adaptadores       | `apps/desktop`, `apps/cli`, `apps/site`, `packages/server`, `packages/acp-server` | UI y ejecución delgadas, específicas de la plataforma              |
 
 No dupliques definiciones de herramientas ni prompts entre la CLI y Desktop. Los contratos de herramientas nuevos pertenecen a `agent-core`; la ejecución pertenece al host.

@@ -2,11 +2,8 @@ import { existsSync } from "node:fs";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import {
-  discoverRuleEntries,
-  resolveInstructionPaths,
-  type InstructionDiscoveryContext,
-} from "@spiritagent/host-internal";
+import { discoverRuleEntries, type InstructionDiscoveryContext } from "@spiritagent/instructions";
+import { resolveInstructionPaths } from "@spiritagent/instructions/storage";
 
 import i18n from "../lib/i18n-host.js";
 import type { CreateRuleRequest, DeleteRuleRequest, DesktopSkillRootKind } from "../types.js";

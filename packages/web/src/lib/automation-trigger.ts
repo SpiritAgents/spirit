@@ -1,4 +1,4 @@
-/** Renderer-safe automation trigger types and labels. Do not import host-internal here. */
+/** Renderer-safe automation trigger types and labels. Keep host services out of this module. */
 
 export type {
   DesktopAutomationSchedule,

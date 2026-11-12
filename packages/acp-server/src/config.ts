@@ -1,4 +1,4 @@
-import { resolveSpiritDataDir as resolveSharedSpiritDataDir } from "@spiritagent/host-internal";
+import { resolveSpiritDataDir as resolveSharedSpiritDataDir } from "@spiritagent/config/data-paths";
 
 import type { AcpServerConfig } from "./types.js";
 

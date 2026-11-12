@@ -5,7 +5,7 @@ import path from "node:path";
 import { test } from "vitest";
 
 import { startOpenAiToolAgentState } from "@spiritagent/agent-core";
-import { createHostDreamStore } from "@spiritagent/host-internal";
+import { createHostDreamStore } from "@spiritagent/automations";
 
 import {
   buildDreamCollectorPlanMetadata,

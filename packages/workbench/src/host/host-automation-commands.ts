@@ -5,7 +5,7 @@ import {
   type HostAutomationDefinition,
   type HostAutomationRun,
   type HostAutomationUpdateInput,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/automations";
 
 import type { DesktopAutomationDetail, DesktopAutomationListItem } from "@spiritagent/api/types";
 import { spiritDataDir } from "@spiritagent/sessions/host/storage";

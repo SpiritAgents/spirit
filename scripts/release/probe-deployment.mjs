@@ -45,7 +45,7 @@ let client;
 try {
   const { product, PRODUCT_BUILD_ID } = await load(require.resolve("@spiritagent/product"));
   assert.equal(PRODUCT_BUILD_ID, expectedBuildId);
-  const { resolveSpiritDataDir } = await load(require.resolve("@spiritagent/host-internal"));
+  const { resolveSpiritDataDir } = await load(require.resolve("@spiritagent/config/data-paths"));
   const { startDaemon } = await load(path.join(root, "dist/src/daemon.js"));
   const { readCurrentToken } = await load(path.join(root, "dist/src/auth-token.js"));
   const { ServerRpcClient } = await load(path.join(root, "dist/src/client.js"));

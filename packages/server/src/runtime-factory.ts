@@ -63,12 +63,19 @@ import {
   type LspHostBindings,
 } from "@spiritagent/agent-core/host-bridge";
 import { LspService, appendLspDiagnosticsAfterWriteIfNeeded } from "@spiritagent/lsp";
+import { createHostTodoStore } from "@spiritagent/sessions/todo-store";
 import {
   NodeHostToolService,
-  createHostMcpService,
-  createHookRunner,
   createNoopMcpAdapter,
+  persistToolOutputArchive,
+} from "@spiritagent/tools";
+import { createHostMcpService } from "@spiritagent/mcp";
+import { createHookRunner } from "@spiritagent/hooks";
+import {
   createSubagentWorkspaceBootstrap,
+  readGitBranchLabelForBasicInfo,
+} from "@spiritagent/workspace";
+import {
   createBackgroundTaskOwner,
   isBackgroundTaskOwnerAlive,
   FileBackgroundTaskStore,
@@ -81,24 +88,26 @@ import {
   bindSessionStorageKey,
   readSessionStorageKey,
   ensureTranscriptSessionDir,
-  loadHostInstructionMetadata,
   persistSessionTranscript,
   persistSubagentTranscript,
-  persistToolOutputArchive,
-  readGitBranchLabelForBasicInfo,
   resolveSubagentTranscriptFilePath,
   resolveTranscriptSessionDir,
-  tryResolveTransportConfig,
+  type BackgroundTaskOwner,
+} from "@spiritagent/sessions";
+import {
   extractActivePlanPathFromLlmHistory,
+  loadHostInstructionMetadata,
   parseCreatePlanPathFromToolOutput,
   planMetadataSnapshot,
+  overlayExtensionRulesAndSkills,
+} from "@spiritagent/instructions";
+import {
+  tryResolveTransportConfig,
   unconfiguredTransportConfig,
-  type ApprovalLevel,
-  type HostDreamScope,
-  type HostDreamSourceSessionRef,
   type ModelRef,
-  type BackgroundTaskOwner,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/config";
+import type { ApprovalLevel } from "@spiritagent/api/approval-level";
+import type { HostDreamScope, HostDreamSourceSessionRef } from "@spiritagent/automations/dreams";
 import {
   collectEnabledExtensionInstructionContributions,
   collectHostExtensionContributedTools,
@@ -107,7 +116,6 @@ import {
   ensureBuiltInExtensions,
   ensureBuiltInSkills,
   ensurePersonalMarketplace,
-  overlayEnabledExtensionRulesAndSkills,
 } from "@spiritagent/extensions";
 
 import { joinHostPromptSections, normalizeHostUiPromptSection } from "./host-ui-prompt.js";
@@ -145,7 +153,7 @@ export interface ServerRuntimeOptions {
   sessionKind?: ServerSessionKind;
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
   subagentSessionDelegate?: import("@spiritagent/agent-core").SubagentSessionDelegate;
-  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  workLocation?: import("@spiritagent/api/work-location").WorkLocationKind;
   worktreePath?: string;
   worktreeBranch?: string;
   dreamScope?: HostDreamScope;
@@ -243,7 +251,7 @@ export interface ServerRuntimeResult extends ServerRuntimeBindings {
   workspaceRoot: string;
   sessionKind?: ServerSessionKind;
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
-  workLocation: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  workLocation: import("@spiritagent/api/work-location").WorkLocationKind;
   worktreePath?: string;
   worktreeBranch?: string;
   restoredFromDisk: boolean;
@@ -548,6 +556,9 @@ async function prepareServerRuntime(
       { workspaceRoot, spiritDataDir },
       {
         mcp: createNoopMcpAdapter(),
+        stores: {
+          createTodoStore: (scope) => createHostTodoStore({ spiritDataDir, scope }),
+        },
         ...(isDreamCollector
           ? {
               dreamScope: options.dreamScope!,
@@ -654,10 +665,10 @@ async function prepareServerRuntime(
         enabledSkillCatalog.push(...baseEnabledSkillCatalog);
         return;
       }
-      const overlay = await overlayEnabledExtensionRulesAndSkills(
-        await extensionManager.list(),
+      const overlay = overlayExtensionRulesAndSkills(
         baseEnabledRules,
         baseEnabledSkillCatalog,
+        await collectEnabledExtensionInstructionContributions(await extensionManager.list()),
         (message: string) => log(message),
       );
       enabledRules.length = 0;

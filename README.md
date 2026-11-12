@@ -56,8 +56,8 @@ pnpm run dev:cli    # cargo run -p spirit
 │    sessions, streaming, approvals       │             │
 │                  │                      │             │
 │                  ▼                      │             │
-│        packages/host-internal           │             │
-│     discovery, tools, workspace  ◀──────┘             │
+│       TS host domain packages           │             │
+│ config, sessions, tools, workspace ◀────┘             │
 │                  │                                    │
 │                  ▼                                    │
 │         packages/agent-core                           │
@@ -116,7 +116,7 @@ Agent Core owns how the model sees project context:
 - **Smoke suites** — contract, runtime, and live provider checks under `packages/agent-core/src/smoke`.
 - **Eval harness** — scenario comparison and judging for prompt or tool-definition changes (`pnpm run eval:compare` from the repo root).
 
-`@spiritagent/agent-core` is published to npm; [`packages/host-internal`](packages/host-internal) holds shared host-side discovery, extensions, workspace helpers, and LSP orchestration used by Desktop.
+`@spiritagent/agent-core` is published to npm. Host behavior lives in focused packages such as [`packages/config`](packages/config), [`packages/sessions`](packages/sessions), and [`packages/tools`](packages/tools); [`packages/workbench`](packages/workbench) composes them for Desktop and the standalone Host.
 
 ## Server
 
@@ -182,26 +182,30 @@ See [apps/site/README.md](apps/site/README.md) for local development and the Ver
 
 **Requirements:** Node.js 26.13.0, pnpm 12.4.2 (install with `npm install --global pnpm@12.4.2`). Rust toolchain required for CLI builds.
 
-| Command                    | Description                                                                          |
-| -------------------------- | ------------------------------------------------------------------------------------ |
-| `pnpm install`             | Install workspace dependencies (run once at repo root)                               |
-| `pnpm run dev:desktop`     | Build shared packages and start Desktop (Vite + Electron)                            |
-| `pnpm run dev:desktop:web` | Desktop renderer with browser web host                                               |
-| `pnpm run dev:site`        | Start the marketing/docs site (Next.js)                                              |
-| `pnpm run dev:cli`         | CLI with TUI                                                                         |
-| `pnpm run build`           | Production build of agent-core, host-internal, server, acp-server, Desktop, and site |
-| `pnpm run eval:compare`    | Run eval comparison after agent-core changes                                         |
+| Command                    | Description                                               |
+| -------------------------- | --------------------------------------------------------- |
+| `pnpm install`             | Install workspace dependencies (run once at repo root)    |
+| `pnpm run dev:desktop`     | Build shared packages and start Desktop (Vite + Electron) |
+| `pnpm run dev:desktop:web` | Desktop renderer with browser web host                    |
+| `pnpm run dev:site`        | Start the marketing/docs site (Next.js)                   |
+| `pnpm run dev:cli`         | CLI with TUI                                              |
+| `pnpm run build`           | Production build of all workspace packages and apps       |
+| `pnpm run eval:compare`    | Run eval comparison after agent-core changes              |
 
 ### Repository layout
 
 ```
 apps/
-  desktop/           Electron + React host
+  desktop/           Electron native shell
   site/              Marketing and docs site (Next.js, Vercel)
   cli/               Rust CLI and TUI
 packages/
   agent-core/        Agent runtime, prompts, tool definitions, transports, MCP, eval
-  host-internal/     Shared host discovery, tools, extensions, LSP helpers
+  config/            Configuration, credentials, and transport resolution
+  sessions/          Session persistence and orchestration
+  tools/             Built-in Host tool execution
+  workbench/         Shared Workbench composition root
+  web/               Shared renderer and static application
   server/            Shared daemon backend (WebSocket + JSON-RPC) for CLI / Desktop / Web
   acp-server/        ACP (Agent Client Protocol) server adapter for editor integration
 scripts/             Release, eval, and repo automation

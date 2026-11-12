@@ -33,7 +33,9 @@ Setup writes to the shared Spirit data directory (`config.json` + OS keyring —
 ## Related packages
 
 - [`@spiritagent/agent-core`](https://www.npmjs.com/package/@spiritagent/agent-core) — agent runtime and tool contracts.
-- [`@spiritagent/host-internal`](https://www.npmjs.com/package/@spiritagent/host-internal) — local tool execution and discovery.
+- [`@spiritagent/sessions`](../sessions) — shared runtime session persistence and orchestration.
+- [`@spiritagent/tools`](../tools) — local tool execution and output archives.
+- [`@spiritagent/instructions`](../instructions) — Rules, Skills, and Plans.
 
 ## License
 

@@ -13,7 +13,7 @@ test("resolveBuiltInSkillsRoot finds the shared template directory", async () =>
 });
 
 test("ensureBuiltInSkills seeds shared built-in skills without overwriting", async () => {
-  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-host-internal-built-in-skills-"));
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-domain-built-in-skills-"));
   try {
     await ensureBuiltInSkills(spiritDataDir);
     for (const name of BUILT_IN_SKILL_NAMES) {

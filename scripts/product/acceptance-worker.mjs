@@ -116,7 +116,18 @@ syncBuiltinESMExports();
 const load = (relative) => import(pathToFileURL(path.join(repo, relative)).href);
 let daemon;
 try {
-  const host = await load("packages/host-internal/dist/index.js");
+  const host = Object.assign(
+    {},
+    await load("packages/config/dist/index.js"),
+    await load("packages/instructions/dist/index.js"),
+    await load("packages/mcp/dist/index.js"),
+    await load("packages/hooks/dist/index.js"),
+    await load("packages/sessions/dist/index.js"),
+    await load("packages/automations/dist/index.js"),
+    await load("packages/tasks/dist/index.js"),
+    await load("packages/extensions/dist/storage.js"),
+    await load("packages/tools/dist/index.js"),
+  );
   const extensions = await load("packages/extensions/dist/index.js");
   const { startDaemon } = await load("packages/server/dist/src/daemon.js");
   const { ServerRpcClient, ProductBuildMismatchError } = await load(
@@ -161,7 +172,7 @@ try {
   assert.equal(configs.workspace.servers.fixture.transport.command, "workspace-command");
   assert.equal(host.listHookListItems({ ...context, workspaceBinding: "project" }).length, 2);
   assert.deepEqual(
-    (await extensions.loadTaskFiles(context)).map((file) => file.path),
+    (await host.loadTaskFiles(context)).map((file) => file.path),
     [path.join(workspaceData, "tasks.json")],
   );
   const config = {

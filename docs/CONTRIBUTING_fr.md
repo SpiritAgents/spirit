@@ -39,7 +39,7 @@ Spirit a un modèle de couches clair. Avant de toucher à plusieurs packages, li
 | Couche                  | Chemin                                                                            | Rôle                                                                 |
 | ----------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | Sémantique de l’agent   | `packages/agent-core`                                                             | Runtime, prompts, contrats d’outils, MCP, transports                 |
-| Logique d’hôte partagée | `packages/host-internal`                                                          | Découverte, extensions, aides d’espace de travail, orchestration LSP |
+| Logique d’hôte partagée | `packages/{config,instructions,sessions,tools,workspace,extensions,lsp}`          | Découverte, extensions, aides d’espace de travail, orchestration LSP |
 | Hôtes / adaptateurs     | `apps/desktop`, `apps/cli`, `apps/site`, `packages/server`, `packages/acp-server` | UI et exécution fines, spécifiques à la plateforme                   |
 
 Ne dupliquez pas les définitions d’outils ni les prompts entre le CLI et Desktop. Les nouveaux contrats d’outils vont dans `agent-core` ; l’exécution va dans l’hôte.

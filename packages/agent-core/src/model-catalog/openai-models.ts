@@ -2115,7 +2115,7 @@ export async function listHuggingFaceModels(
   try {
     chatModels = await fetchHuggingFaceRouterModels(options);
   } catch (error) {
-    console.error("[host-internal][list-models] hugging-face.router.failed", {
+    console.error("[config][list-models] hugging-face.router.failed", {
       error: error instanceof Error ? error.message : String(error),
     });
   }

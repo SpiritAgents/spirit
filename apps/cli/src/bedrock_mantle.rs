@@ -1,4 +1,4 @@
-//! Bedrock Mantle helpers (aligned with `host-internal/resolve-transport`).
+//! Bedrock Mantle helpers (aligned with `config/resolve-transport`).
 
 /// SigV4 signing region for `options.auth: "aws-sigv4"` (Bedrock Mantle): the wizard
 /// materializes the region into the apiBase host, so the runtime parses it back off the URL

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { createServer, type Server as HttpServer } from "node:http";
 import type { Socket } from "node:net";
 import { PRODUCT_BUILD_ID } from "@spiritagent/product";
+import { domainErrorPayload } from "@spiritagent/api/errors";
 
 import { configureLlmClientVersion } from "@spiritagent/agent-core";
 
@@ -944,12 +945,14 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
           );
       }
     } catch (err) {
+      const domainError = domainErrorPayload(err);
       conn.send(
         JSON.stringify(
           errorResponse(
             parsed.id,
             JSON_RPC_INTERNAL_ERROR,
             err instanceof Error ? err.message : String(err),
+            domainError ? { domainError } : undefined,
           ),
         ),
       );

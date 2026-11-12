@@ -18,7 +18,7 @@ import {
   normalizeGeneratedWorktreeNames as normalizeGeneratedWorktreeNamesInternal,
   parseGeneratedWorktreeNamingResponse as parseGeneratedWorktreeNamingResponseInternal,
   resolveWorkspaceGroupingRoot,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/workspace";
 import type { GeneratedWorktreeNames } from "./worktree-naming.js";
 import {
   type DesktopConfigFile,

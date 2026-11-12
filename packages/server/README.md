@@ -126,7 +126,7 @@ Remote access is **off by default**: the daemon binds loopback and requires the 
 
 ## Relationship to acp-server
 
-`@spiritagent/acp-server` stays a separate stdio/ndJSON adapter for ACP editors. Spirit Server is the native hub for first-party clients; the two share `@spiritagent/agent-core` + `@spiritagent/host-internal` but no transport code.
+`@spiritagent/acp-server` stays a separate stdio/ndJSON adapter for ACP editors. Spirit Server is the native hub for first-party clients; the two share `@spiritagent/agent-core` and the TypeScript Host domain packages but no transport code.
 
 ## Requirements
 
@@ -135,7 +135,9 @@ Remote access is **off by default**: the daemon binds loopback and requires the 
 ## Related packages
 
 - [`@spiritagent/agent-core`](https://www.npmjs.com/package/@spiritagent/agent-core) — agent runtime and tool contracts.
-- [`@spiritagent/host-internal`](https://www.npmjs.com/package/@spiritagent/host-internal) — local tool execution and discovery.
+- [`@spiritagent/sessions`](../sessions) — session persistence, transcripts, background tasks, and orchestration.
+- [`@spiritagent/tools`](../tools) — local tool execution and output archives.
+- [`@spiritagent/instructions`](../instructions) — Rules, Skills, and Plans.
 - [`@spiritagent/acp-server`](https://www.npmjs.com/package/@spiritagent/acp-server) — ACP adapter for external editors.
 
 ## License

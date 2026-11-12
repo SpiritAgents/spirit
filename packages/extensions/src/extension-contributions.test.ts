@@ -6,9 +6,9 @@ import { test } from "vitest";
 
 import {
   collectEnabledExtensionInstructionContributions,
-  overlayExtensionRulesAndSkills,
   summarizeDeclaredExtensionContributionPoints,
 } from "./extension-contributions.js";
+import { overlayExtensionRulesAndSkills } from "@spiritagent/instructions/contributions";
 import { createHostExtensionManager, installPreparedExtensionDirectory } from "./extensions.js";
 
 const VALID_MCP_JSON = `${JSON.stringify(

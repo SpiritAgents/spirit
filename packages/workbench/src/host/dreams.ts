@@ -9,9 +9,11 @@ import {
   createHostDreamStore,
   DREAM_RETENTION_MS as HOST_DREAM_RETENTION_MS,
   dreamLogsDirPath,
+} from "@spiritagent/automations";
+import {
   type HostDreamRecord,
   type HostDreamSessionProgress,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/automations/dreams";
 
 import type {
   ConversationMessageSnapshot,

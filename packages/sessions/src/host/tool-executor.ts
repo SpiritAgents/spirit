@@ -59,32 +59,38 @@ import {
 } from "@spiritagent/agent-core";
 import { LspService, appendLspDiagnosticsAfterWriteIfNeeded } from "@spiritagent/lsp";
 import {
-  CREATE_AUTOMATION_CONTRIBUTED_TOOL,
   CREATE_AUTOMATION_TOOL_NAME,
-  previewCreateAutomationFromArguments,
   toBuiltInLazyToolIndexEntry,
-  type HostAutomationCreateDefaults,
+} from "@spiritagent/automations/automation-host-tool";
+import { normalizeApprovalLevel } from "@spiritagent/permissions/approval-level";
+import {
+  CREATE_AUTOMATION_CONTRIBUTED_TOOL,
+  previewCreateAutomationFromArguments,
   type HostAutomationDefinition,
+} from "@spiritagent/automations";
+import { type HostAutomationCreateDefaults } from "@spiritagent/tools/tools";
+import {
   type HostDreamScope,
   type HostDreamSourceSessionRef,
+} from "@spiritagent/automations/dreams";
+import {
   type HostTodoScope,
   type HostExtensionRuntimeBinding,
-  type HostFileChangeObserver,
   type HostGeneratedImageFile,
   type HostGeneratedImageSaveRequest,
   type HostGeneratedVideoFile,
   type HostGeneratedVideoSaveRequest,
   type HostBuiltinToolDefinitionEnvironment,
   type HostOperatingSystemInfo,
-  type ApprovalLevel,
-  NodeHostToolService,
-  normalizeApprovalLevel,
-  createNoopMcpAdapter,
-  createHostMcpService,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/api/tools";
+import { type HostFileChangeObserver } from "@spiritagent/workspace";
+import { type ApprovalLevel } from "@spiritagent/api/approval-level";
+import { NodeHostToolService, createNoopMcpAdapter } from "@spiritagent/tools";
+import { createHostMcpService } from "@spiritagent/mcp/mcp-config-source";
 
 import type { AskQuestionsQuestionSpec } from "../types.js";
 import { spiritDataDir } from "./storage.js";
+import { createHostTodoStore } from "../todo-store.js";
 import type { DesktopAgentMode } from "@spiritagent/ui/composer";
 import type { DesktopToolRequest } from "./contracts.js";
 
@@ -169,6 +175,10 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
       },
       {
         mcp: createNoopMcpAdapter(),
+        stores: {
+          createTodoStore: (scope) =>
+            createHostTodoStore({ spiritDataDir: spiritDataDir(), scope }),
+        },
         getModelCompatibilityProfile: () => this.activeModelCompatibilityProfile,
         getApprovalLevel: () => this.approvalLevel,
         ...(options.fileChangeObserver ? { fileChangeObserver: options.fileChangeObserver } : {}),

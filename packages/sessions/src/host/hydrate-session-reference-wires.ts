@@ -1,7 +1,7 @@
 import { open } from "node:fs/promises";
 import path from "node:path";
 
-import { resolveTranscriptsDir } from "@spiritagent/host-internal";
+import { resolveTranscriptsDir } from "@spiritagent/config/data-paths";
 
 import {
   scanSessionReferenceWireBlocks,

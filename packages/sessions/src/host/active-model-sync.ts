@@ -1,4 +1,4 @@
-import { modelRefsEqual } from "@spiritagent/host-internal";
+import { modelRefsEqual } from "@spiritagent/config";
 
 import type { ModelRef } from "../types.js";
 import type { DesktopConfigFile } from "./storage.js";

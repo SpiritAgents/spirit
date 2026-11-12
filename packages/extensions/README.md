@@ -1,7 +1,8 @@
 # @spiritagent/extensions
 
-Spirit extension management and runtime integration, including marketplaces,
-built-in extensions, Tasks, Rules, Skills, and contributed capabilities.
+Spirit extension installation, marketplace, lifecycle, and runtime integration.
+Rules, Skills, MCP, Hooks, and Tasks are owned by their domain packages; this
+package only collects contributions from installed extensions.
 
 ## License
 

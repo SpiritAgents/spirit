@@ -1,5 +1,5 @@
 /* Path helpers for composer chips. The directory-predicate pair mirrors
- * `@spiritagent/host-internal/workspace-file-reference-query` (the write-time source of truth);
+ * `@spiritagent/api/workspace-file-reference-query` (the write-time source of truth);
  * keep the suffix semantics aligned with it. */
 
 /** Directory references carry a trailing `/` (the workspace reference query convention). */
@@ -17,7 +17,7 @@ export function workspaceFileBasename(relativePath: string): string {
   return segments[segments.length - 1] || normalized;
 }
 
-/* Code-point ↔ UTF-16 code-unit conversion; mirrors host-internal's workspace-file-reference-query
+/* Code-point ↔ UTF-16 code-unit conversion; mirrors the shared workspace file-reference query
  * (the slash/@ query wire format counts code points, DOM carets count code units). */
 
 export function charCountToCodeUnitIndex(input: string, cursorChars: number): number {

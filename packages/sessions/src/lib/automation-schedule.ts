@@ -1,4 +1,4 @@
-/** Renderer-safe automation schedule types and labels. Do not import host-internal here. */
+/** Renderer-safe automation schedule types and labels. Keep host services out of this module. */
 
 export type DesktopAutomationWeekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 

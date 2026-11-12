@@ -4,10 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import {
-  assertSpiritConfigSchemaVersion,
-  SPIRIT_CONFIG_SCHEMA_VERSION,
-} from "@spiritagent/host-internal";
+import { assertSpiritConfigSchemaVersion, SPIRIT_CONFIG_SCHEMA_VERSION } from "@spiritagent/config";
 import {
   ConfigSchemaError,
   loadConfig,

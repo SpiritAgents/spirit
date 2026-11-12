@@ -24,11 +24,18 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@spiritagent/agent-core": "workspace:*",
     "@spiritagent/api": "workspace:*",
-    "@spiritagent/host-internal": "workspace:*",
-    "@spiritagent/i18n": "workspace:*"
+    "@spiritagent/i18n": "workspace:*",
+    "@spiritagent/product": "workspace:*",
+    "fast-glob": "3.3.3",
+    "ignore": "5.3.2"
   },
   "devDependencies": {
+    "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/api": "workspace:*",
+    "@spiritagent/i18n": "workspace:*",
+    "@spiritagent/product": "workspace:*",
     "@types/node": "26.6.6",
     "typescript": "7.0.2",
     "vitest": "^4.1.11"

@@ -44,18 +44,22 @@ import {
   createHostExtensionManager,
   ensureBuiltInSkills,
   ensurePersonalMarketplace,
-  overlayEnabledExtensionRulesAndSkills,
+  collectEnabledExtensionInstructionContributions,
 } from "@spiritagent/extensions";
 import {
   NodeHostToolService,
   createNoopMcpAdapter,
-  createHostMcpService,
+  persistToolOutputArchive,
+} from "@spiritagent/tools";
+import { createHostMcpService } from "@spiritagent/mcp";
+import {
   loadHostInstructionMetadata,
+  overlayExtensionRulesAndSkills,
+} from "@spiritagent/instructions";
+import {
   ensureTranscriptSessionDir,
   persistSessionTranscript,
   persistSubagentTranscript,
-  persistToolOutputArchive,
-  readGitBranchLabelForBasicInfo,
   resolveSubagentTranscriptFilePath,
   resolveTranscriptSessionDir,
   createBackgroundTaskOwner,
@@ -68,11 +72,14 @@ import {
   RuntimeSessionStore,
   acquireRuntimeSessionLease,
   type RuntimeSessionLease,
+} from "@spiritagent/sessions";
+import {
   createSubagentWorkspaceBootstrap,
-} from "@spiritagent/host-internal";
+  readGitBranchLabelForBasicInfo,
+} from "@spiritagent/workspace";
 
 import { createNoopPeer } from "./noop-peer.js";
-import { tryResolveTransportConfig } from "@spiritagent/host-internal";
+import { tryResolveTransportConfig } from "@spiritagent/config/resolve-transport";
 import type { AcpServerConfig } from "./types.js";
 
 export type AcpHostRuntime = AgentRuntime<LlmTransportConfig, LlmToolAgentState, JsonValue>;
@@ -84,7 +91,7 @@ export interface AcpRuntimeResult {
   workspaceRoot: string;
   sessionKind?: "default" | "dream-collector" | "subagent";
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
-  workLocation: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  workLocation: import("@spiritagent/api/work-location").WorkLocationKind;
   worktreePath?: string;
   worktreeBranch?: string;
   enabledRules: LlmEnabledRule[];
@@ -113,7 +120,7 @@ export async function createAcpRuntime(
     sessionKind?: "default" | "dream-collector" | "subagent";
     subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
     subagentSessionDelegate?: import("@spiritagent/agent-core").SubagentSessionDelegate;
-    workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+    workLocation?: import("@spiritagent/api/work-location").WorkLocationKind;
     worktreePath?: string;
     worktreeBranch?: string;
     adoptStoredWorkspace?: boolean;
@@ -322,7 +329,7 @@ interface PreparedAcpRuntime extends Pick<
  *
  * Key differences from the daemon-backed server runtime:
  * - No WebSocket session attach (ACP uses ndJSON on stdio)
- * - host-internal is loaded directly as a dependency (not via env-var dynamic import)
+ * - Host services are loaded directly as dependencies (not via env-var dynamic import)
  * - No LSP, extensions, todos, or image/video generation
  */
 async function prepareAcpRuntime(
@@ -368,7 +375,7 @@ async function prepareAcpRuntime(
   toolExecutor.setTransportConfigForToolDefinitions(transportConfig);
   await toolExecutor.refreshCaches();
 
-  // 3. Load rules/skills via host-internal discovery
+  // 3. Load rules/skills via instructions discovery
   const metadata = await loadHostInstructionMetadata(
     { workspaceRoot, spiritDataDir },
     { planMode: initialMode === "plan", agentMode: initialMode },
@@ -379,10 +386,10 @@ async function prepareAcpRuntime(
   ];
   try {
     const extensionManager = createHostExtensionManager({ spiritDataDir, hostKind: "cli" });
-    const overlay = await overlayEnabledExtensionRulesAndSkills(
-      await extensionManager.list(),
+    const overlay = overlayExtensionRulesAndSkills(
       enabledRules,
       enabledSkillCatalog,
+      await collectEnabledExtensionInstructionContributions(await extensionManager.list()),
     );
     enabledRules.length = 0;
     enabledRules.push(...overlay.rules);

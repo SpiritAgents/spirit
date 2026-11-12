@@ -1,8 +1,8 @@
 import {
   codeUnitIndexToCharCount,
   currentWorkspaceFileReferenceQuery,
-} from "@spiritagent/host-internal/workspace-file-reference-query";
-import type { ActiveWorkspaceFileReferenceQuery } from "@spiritagent/host-internal/workspace-file-reference-query";
+} from "@spiritagent/api/workspace-file-reference-query";
+import type { ActiveWorkspaceFileReferenceQuery } from "@spiritagent/api/workspace-file-reference-query";
 
 import {
   mergeAdjacentTextSegments,

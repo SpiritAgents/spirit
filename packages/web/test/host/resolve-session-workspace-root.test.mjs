@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { test } from "vitest";
 
-import { addGitWorktree, buildWorktreeRootPath } from "@spiritagent/host-internal";
+import { addGitWorktree, buildWorktreeRootPath } from "@spiritagent/workspace";
 
 import { resolveStoredSessionWorkspaceRoot } from "../../../../packages/sessions/dist/host/resolve-session-workspace-root.js";
 

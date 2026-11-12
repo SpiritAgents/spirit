@@ -9,11 +9,11 @@ import type {
   ProviderOptions,
   ProviderSetupResult,
   SpiritTransportKind,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/config";
 import {
   isValidCloudflareAccountId,
   isValidCloudflareGatewayId,
-} from "@spiritagent/host-internal/cloudflare-ai-gateway-resource";
+} from "@spiritagent/agent-core/cloudflare-ai-gateway-resource";
 
 export function validateModelName(modelName: string): string | undefined {
   const trimmed = modelName.trim();
@@ -202,7 +202,7 @@ function buildSetupOptions(input: WizardSetupInput): ProviderOptions | undefined
 }
 
 /**
- * Builds the setup payload for host-internal `saveProviderSetup`: materialization input, wizard
+ * Builds the setup payload for config `saveProviderSetup`: materialization input, wizard
  * transport options, the first model entry, and the active model ref. Credential secrets are
  * attached by the caller (`credentials`).
  */

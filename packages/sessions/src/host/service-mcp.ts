@@ -1,7 +1,7 @@
 import path from "node:path";
 
 import type { McpService, McpExtraConfigProvider } from "@spiritagent/agent-core";
-import { createHostMcpService } from "@spiritagent/host-internal";
+import { createHostMcpService } from "@spiritagent/mcp/mcp-config-source";
 
 import i18n from "../lib/i18n-host.js";
 import type {

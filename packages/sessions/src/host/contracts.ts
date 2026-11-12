@@ -1,5 +1,5 @@
 import type { ChatArchive } from "@spiritagent/agent-core";
-import type { ApprovalLevel } from "@spiritagent/host-internal";
+import type { ApprovalLevel } from "@spiritagent/api/approval-level";
 import type { ConversationContextUsageSnapshot } from "../types.js";
 import type { PersistedDesktopTimelineTurnSnapshot } from "./chat-schema.js";
 import type { StoredDesktopRewindMetadata } from "./rewind.js";
@@ -26,7 +26,7 @@ export interface StoredDesktopSession {
   pinnedAtUnixMs?: number;
   workspaceRoot?: string;
   gitBranch?: string;
-  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  workLocation?: import("@spiritagent/api/work-location").WorkLocationKind;
   worktreePath?: string;
   worktreeBranch?: string;
   activePlanPath?: string;

@@ -4,7 +4,7 @@ import {
   type ModelEntry,
   type ModelRef,
   type ProviderEntry,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/config";
 
 import type { ModelProfileSnapshot } from "../types.js";
 import type { DesktopConfigFile } from "./storage.js";
@@ -28,7 +28,7 @@ export function flattenProviders(
 
 /**
  * Snapshot projection of one config model entry: connection facts come from the provider entry;
- * model-level fields are the effective (post-inheritance) values per host-internal
+ * model-level fields are the effective (post-inheritance) values per config
  * `resolveModelEntry`. Vendor-free by construction.
  */
 export function resolveModelProfileFromParts(

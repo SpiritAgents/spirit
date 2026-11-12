@@ -1,11 +1,10 @@
-import path from "node:path";
-
-import type { McpService, McpExtraConfigProvider } from "@spiritagent/agent-core";
+import type { McpExtraConfigProvider } from "@spiritagent/agent-core";
 import {
   collectEnabledExtensionInstructionContributions,
   createHostExtensionManager,
 } from "@spiritagent/extensions";
-import { createHostMcpService } from "@spiritagent/host-internal";
+
+export { McpRegistry } from "@spiritagent/mcp/registry";
 
 /**
  * Per-workspace shared McpService cache (same pattern as Desktop's
@@ -34,39 +33,4 @@ export function createExtensionMcpExtraConfigs(
     }
     return { servers, extensionServerOwnership };
   };
-}
-
-export class McpRegistry {
-  private readonly cache = new Map<string, McpService>();
-
-  constructor(
-    private readonly spiritDataDir: string,
-    private readonly extraConfigs?: McpExtraConfigProvider,
-  ) {}
-
-  forWorkspace(workspaceRoot: string): McpService {
-    const key = path.resolve(workspaceRoot);
-    let service = this.cache.get(key);
-    if (!service) {
-      service = createHostMcpService(
-        key,
-        this.spiritDataDir,
-        true,
-        this.extraConfigs ? { extraConfigs: this.extraConfigs } : {},
-      );
-      // Refresh after ensureBuiltIn in createServerRuntime. Starting here
-      // races recopy: the child `node server.mjs` loses its cwd (uv_cwd).
-      this.cache.set(key, service);
-    }
-    return service;
-  }
-
-  async refreshAllConfigs(): Promise<void> {
-    await Promise.all(
-      [...this.cache.values()].map(async (service) => {
-        await service.refreshConfig();
-        service.startBackgroundRefreshInBackground(true);
-      }),
-    );
-  }
 }

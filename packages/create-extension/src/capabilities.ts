@@ -1,7 +1,7 @@
 /**
  * The init capability catalog: each capability maps to the files it scaffolds
  * and the manifest fragments it contributes. The layouts mirror the host's
- * install-time validation and runtime loading contracts (host-internal
+ * install-time validation and runtime loading contracts (host services
  * extensions.ts); do not invent new layouts here.
  */
 

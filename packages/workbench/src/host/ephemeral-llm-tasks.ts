@@ -3,7 +3,8 @@ import {
   type LlmExtensionSystemPrompt,
   type LlmToolAgentBasicInfo,
 } from "@spiritagent/agent-core";
-import { generateWorktreeNamesFromTask, resolveTransportConfig } from "@spiritagent/host-internal";
+import { generateWorktreeNamesFromTask } from "@spiritagent/workspace";
+import { resolveTransportConfig } from "@spiritagent/config/resolve-transport";
 
 import i18n from "@spiritagent/i18n/host";
 import type { ModelRef } from "@spiritagent/api/types";
@@ -15,7 +16,7 @@ import type { GeneratedWorktreeNames } from "@spiritagent/workspace/worktree-nam
 interface BackgroundLlmTaskContext {
   workspaceRoot: string;
   gitBranch?: string;
-  /** The task model; transport resolution (credentials, declarations) happens via host-internal. */
+  /** The task model; transport resolution uses the shared configuration domain. */
   taskModelRef: ModelRef;
   metadata: HostMetadataSummary;
   extensionSystemPrompts: LlmExtensionSystemPrompt[];

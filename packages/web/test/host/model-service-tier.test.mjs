@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test, vi } from "vitest";
 
-import { SPIRIT_CONFIG_SCHEMA_VERSION } from "@spiritagent/host-internal";
+import { SPIRIT_CONFIG_SCHEMA_VERSION } from "@spiritagent/config";
 
 import { updateConfigCommand } from "../../../../packages/sessions/dist/host/host-model-commands.js";
 import {
@@ -17,6 +17,10 @@ import {
 } from "../../../../packages/sessions/dist/host/model-catalog-cache.js";
 import { createEmptySessionBundle } from "../../../../packages/sessions/dist/host/session-bundle.js";
 import { attachRemoteDesktopRuntime } from "../../../../packages/sessions/dist/host/remote-runtime.js";
+import { configureServerConnector } from "../../../../packages/sessions/dist/host/server-connector.js";
+import { connectOrSpawnServer } from "../../../../packages/server/dist/src/client.js";
+
+configureServerConnector(connectOrSpawnServer);
 
 // ---------------------------------------------------------------------------
 // Model catalog cache: entry round-trip and sparse entries

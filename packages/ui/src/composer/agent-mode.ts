@@ -1,4 +1,4 @@
-/** Renderer-safe agent mode types and labels. Do not import agent-core / host-internal here. */
+/** Renderer-safe agent mode types and labels. Keep host services out of this module. */
 
 export type DesktopAgentMode = "agent" | "plan" | "ask" | "debug";
 

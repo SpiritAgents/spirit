@@ -178,14 +178,17 @@
     "@ai-sdk/openai-compatible": "3.0.67",
     "@ai-sdk/togetherai": "3.0.68",
     "@ai-sdk/xai": "5.0.20",
+    "@aws-sdk/client-bedrock": "3.1103.0",
     "@aws/bedrock-token-generator": "1.1.0",
     "@huggingface/inference": "4.13.32",
     "@modelcontextprotocol/sdk": "1.32.1",
     "@spiritagent/product": "workspace:*",
     "ai": "7.0.137",
+    "google-auth-library": "10.9.1",
     "undici": "8.11.2"
   },
   "devDependencies": {
+    "@spiritagent/product": "workspace:*",
     "@types/node": "26.6.6",
     "typescript": "7.0.2",
     "vitest": "^5.0.3"

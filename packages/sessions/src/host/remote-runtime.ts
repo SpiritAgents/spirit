@@ -21,20 +21,20 @@ import type { BridgeRuntimeSnapshot } from "@spiritagent/agent-core/host-bridge"
 import type {
   WorkspaceCapabilityTrustDecision,
   WorkspaceCapabilityTrustRequest,
+} from "@spiritagent/api/workspace-trust";
+import type {
   RuntimePresentationEntry,
   RuntimePresentationState,
-} from "@spiritagent/host-internal";
-import type {
-  ModelRef,
-  HostDreamScope,
-  HostDreamSourceSessionRef,
-} from "@spiritagent/host-internal";
-import { isSessionId, loadModelProfile } from "@spiritagent/host-internal";
+} from "../runtime-session-store.js";
+import type { ModelRef } from "@spiritagent/config";
+import type { HostDreamScope, HostDreamSourceSessionRef } from "@spiritagent/automations/dreams";
+import { isSessionId } from "../session-storage-identity.js";
+import { loadModelProfile } from "@spiritagent/config/credentials";
 import {
-  connectOrSpawnServer,
+  requireServerConnector,
   type ServerNotificationListener,
   type ServerRpcClient,
-} from "@spiritagent/server/client";
+} from "./server-connector.js";
 
 import {
   parsePendingSubagentStatusText,
@@ -77,7 +77,7 @@ interface RemoteDesktopRuntimeInput {
   /** Resolved chat file path for multi-host session identity. */
   conversationKey?: string;
   title?: string;
-  workLocation?: import("@spiritagent/host-internal/work-location").WorkLocationKind;
+  workLocation?: import("@spiritagent/api/work-location").WorkLocationKind;
   worktreePath?: string;
   worktreeBranch?: string;
   /**
@@ -164,7 +164,7 @@ let sharedClientPromise: Promise<ServerRpcClient> | undefined;
 
 export async function sharedDesktopServerClient(dataDir: string): Promise<ServerRpcClient> {
   if (!sharedClientPromise) {
-    const connecting = connectOrSpawnServer({
+    const connecting = requireServerConnector()({
       dataDir,
       forwardStderr: Boolean(process.env.VITE_DEV_SERVER_URL?.trim()),
     })

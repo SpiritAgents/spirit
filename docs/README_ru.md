@@ -56,8 +56,8 @@ pnpm run dev:cli    # cargo run -p spirit
 │    sessions, streaming, approvals       │             │
 │                  │                      │             │
 │                  ▼                      │             │
-│        packages/host-internal           │             │
-│     discovery, tools, workspace  ◀──────┘             │
+│       TS host domain packages           │             │
+│ config, sessions, tools, workspace ◀────┘             │
 │                  │                                    │
 │                  ▼                                    │
 │         packages/agent-core                           │
@@ -116,7 +116,7 @@ Agent Core определяет, как модель видит контекст
 - **Smoke-наборы** — проверки контракта, runtime и live-провайдера в `packages/agent-core/src/smoke`.
 - **Eval harness** — сравнение сценариев при изменении prompts или определений инструментов (`pnpm run eval:compare` из корня репозитория).
 
-`@spiritagent/agent-core` публикуется в npm; [`packages/host-internal`](../packages/host-internal) содержит общий host discovery, extensions, workspace helpers и оркестрацию LSP для Desktop.
+`@spiritagent/agent-core` публикуется в npm; [TypeScript Host domain packages](../packages) содержит общий host discovery, extensions, workspace helpers и оркестрацию LSP для Desktop.
 
 ## Server
 
@@ -182,15 +182,15 @@ pnpm run dev:site
 
 **Требования:** Node.js 26.13.0, pnpm 12.4.2 (установить через `npm install --global pnpm@12.4.2`). Для сборки CLI нужен Rust toolchain.
 
-| Команда                    | Описание                                                                       |
-| -------------------------- | ------------------------------------------------------------------------------ |
-| `pnpm install`             | Установить зависимости workspace (один раз в корне репозитория)                |
-| `pnpm run dev:desktop`     | Сборка shared packages и запуск Desktop (Vite + Electron)                      |
-| `pnpm run dev:desktop:web` | Desktop renderer с browser web host                                            |
-| `pnpm run dev:site`        | Запуск маркетингового/документационного сайта (Next.js)                        |
-| `pnpm run dev:cli`         | CLI с TUI                                                                      |
-| `pnpm run build`           | Production build agent-core, host-internal, server, acp-server, Desktop и site |
-| `pnpm run eval:compare`    | Eval-сравнение после изменений agent-core                                      |
+| Команда                    | Описание                                                                   |
+| -------------------------- | -------------------------------------------------------------------------- |
+| `pnpm install`             | Установить зависимости workspace (один раз в корне репозитория)            |
+| `pnpm run dev:desktop`     | Сборка shared packages и запуск Desktop (Vite + Electron)                  |
+| `pnpm run dev:desktop:web` | Desktop renderer с browser web host                                        |
+| `pnpm run dev:site`        | Запуск маркетингового/документационного сайта (Next.js)                    |
+| `pnpm run dev:cli`         | CLI с TUI                                                                  |
+| `pnpm run build`           | Production build agent-core, workbench, server, acp-server, Desktop и site |
+| `pnpm run eval:compare`    | Eval-сравнение после изменений agent-core                                  |
 
 ### Структура репозитория
 
@@ -201,7 +201,11 @@ apps/
   cli/               Rust CLI и TUI
 packages/
   agent-core/        Agent runtime, prompts, tool definitions, transports, MCP, eval
-  host-internal/     Shared host discovery, tools, extensions, LSP helpers
+  config/            Configuration and credentials
+  sessions/          Session persistence and orchestration
+  tools/             Built-in Host tool execution
+  workbench/         Shared Workbench composition root
+  web/               Shared renderer and static application
   server/            Общий daemon-бэкенд (WebSocket + JSON-RPC) для CLI / Desktop / Web
   acp-server/        ACP server adapter для интеграции с редакторами
 scripts/             Release, eval и автоматизация репозитория

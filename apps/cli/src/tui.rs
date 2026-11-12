@@ -11,9 +11,8 @@ use std::{
 };
 
 use crate::{
-    adapters::{DefaultAppPaths, JsonChatRepository, JsonConfigStore, KeyringSecretStore},
+    adapters::{DefaultAppPaths, JsonChatRepository, JsonConfigStore},
     ask_questions::AskQuestionsResult,
-    chat_store,
     chat_timeline::project_live_chat_from_llm_history,
     host_protocol::{
         CliExtensionCliUiHookEntry, CliExtensionEntry, CliExtensionSkillSlashEntry,
@@ -22,18 +21,16 @@ use crate::{
     host_runtime::{RuntimeEvent, ToolUiRequest, build_tool_result_block, format_tool_ui_message},
     locale, logging,
     mcp_types::{ManagedMcpServer, McpDiscoveredPrompt},
-    model_registry::ModelTransportKind,
     move_background::{MoveBackgroundHintState, first_moveable_background_tool_call_id},
-    openai_models_list,
     plan::PlanMetadata,
     ports::{
         AppPaths, AssistantAuxArchiveEntry, AttachChatSessionOutcome, ChatArchive, ChatRepository,
-        ChatSessionListItem, ConfigStore, SecretStore, SubagentSessionArchiveEntry,
-        SubagentSessionSummary,
+        ChatSessionListItem, ConfigStore, SubagentSessionArchiveEntry, SubagentSessionSummary,
     },
     rewind::{self, ConversationMessageSnapshot, DesktopRewindCheckpointSnapshot},
     rules::RuleEntry,
     runtime_handle::RuntimeHandle,
+    session_paths,
     shell::{
         ask_questions, bottom_form, file_reference, manual_shell, slash,
         workspace_trust as workspace_trust_form,
@@ -123,7 +120,6 @@ pub struct TuiShell {
     runtime: RuntimeHandle,
     config_store: Box<dyn ConfigStore>,
     chat_repository: Box<dyn ChatRepository>,
-    secret_store: Arc<dyn SecretStore>,
     app_paths: Arc<dyn AppPaths>,
     plan_metadata: PlanMetadata,
     rule_entries: Vec<RuleEntry>,
@@ -143,24 +139,6 @@ pub struct TuiShell {
     pending_tui_mode: Option<String>,
 }
 
-pub(crate) struct ApplyModelAddParams<'a> {
-    pub name: &'a str,
-    pub api_base: &'a str,
-    pub api_key: &'a str,
-    /// Preset id from the presets manifest, or `custom`.
-    pub provider_id: &'a str,
-    pub transport_kind: ModelTransportKind,
-    pub context_length: Option<u64>,
-    /// Materializes into the literal `cf-aig-gateway-id` header on the provider entry.
-    pub cloudflare_gateway_id: Option<&'a str>,
-    /// Selected preset site; per-site templates (e.g. fileUpload overrides) resolve against it.
-    pub site_id: Option<&'a str>,
-    /// Transport `options` declarations (awsRegion / project / location).
-    pub options: &'a std::collections::BTreeMap<String, String>,
-    /// Non-apiKey credential slots stored in the internal keyring (`provider::{id}::{slot}`).
-    pub credential_slots: &'a [(String, String)],
-}
-
 impl TuiShell {
     pub fn apply_cli_approval_level(&mut self, raw: &str) -> Result<()> {
         crate::cli_bootstrap::apply_approval_level(&mut self.runtime, raw)
@@ -172,7 +150,6 @@ impl TuiShell {
 
     fn create(inline_mode: bool) -> Result<Self> {
         let app_paths: Arc<dyn AppPaths> = Arc::new(DefaultAppPaths::new());
-        let secret_store: Arc<dyn SecretStore> = Arc::new(KeyringSecretStore);
         let config_store: Box<dyn ConfigStore> = Box::new(JsonConfigStore);
         let chat_repository: Box<dyn ChatRepository> = Box::new(JsonChatRepository);
         let config_path = app_paths.config_file();
@@ -181,12 +158,8 @@ impl TuiShell {
         })?;
         locale::apply_ui_locale(&config);
         let workspace_root = app_paths.workspace_root();
-        let mut runtime = RuntimeHandle::new(
-            config.clone(),
-            Arc::clone(&secret_store),
-            workspace_root.clone(),
-        )
-        .context("Failed to initialize TypeScript runtime bridge")?;
+        let mut runtime = RuntimeHandle::new(config.clone(), workspace_root.clone())
+            .context("Failed to initialize TypeScript runtime bridge")?;
         let cli_metadata = runtime
             .load_cli_host_metadata("agent")
             .context("Failed to read shared host metadata")?;
@@ -252,7 +225,6 @@ impl TuiShell {
             runtime,
             config_store,
             chat_repository,
-            secret_store,
             app_paths,
             plan_metadata,
             rule_entries,
@@ -609,131 +581,63 @@ impl TuiShell {
         slash::handle_command(self, message);
     }
 
-    /// Adds a model, saves API key, sets it as `active_model`, and persists config.
     fn apply_model_add_and_switch(
         &mut self,
-        params: ApplyModelAddParams<'_>,
+        name: &str,
+        parsed: &bottom_form::ParsedModelAddForm,
     ) -> Result<(), String> {
-        let ApplyModelAddParams {
-            name,
-            api_base,
-            api_key,
-            provider_id,
-            transport_kind,
-            context_length,
-            cloudflare_gateway_id,
-            site_id,
-            options,
-            credential_slots,
-        } = params;
-        let mut config = self.runtime.config().clone();
-        if config.has_model_name(name) {
+        if self.runtime.config().has_model_name(name) {
             return Err(t!("tui.model_add.duplicate", name = name).into_owned());
         }
-
-        let provider_id = if provider_id.trim().is_empty() {
-            crate::provider_presets::CUSTOM_PROVIDER_PRESET_ID
-        } else {
-            provider_id
-        };
-        // Sites, workspace ids, and `{placeholder}` template values were already materialized
-        // into `api_base` by the connect form; the Cloudflare gateway id materializes into a
-        // literal header (`cf-aig-gateway-id`).
-        let mut connect =
-            crate::provider_presets::preset_connect_draft(provider_id, transport_kind, site_id);
-        if let Some(gateway_id) = cloudflare_gateway_id
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-        {
-            connect.headers = Some(std::collections::BTreeMap::from([(
-                "cf-aig-gateway-id".to_string(),
-                gateway_id.to_string(),
-            )]));
+        let mut request = forms::provider_request(parsed);
+        request["name"] = serde_json::Value::String(name.to_string());
+        if let Some(context_length) = parsed.context_length {
+            request["contextLength"] = serde_json::Value::from(context_length);
         }
-        if !options.is_empty() {
-            // Wizard input wins per key over the preset's mechanism-option template.
-            let wizard_options: serde_json::Map<String, serde_json::Value> = options
-                .iter()
-                .map(|(key, value)| (key.clone(), serde_json::Value::String(value.clone())))
-                .collect();
-            connect.options = Some(match connect.options {
-                Some(mut template) => {
-                    template.extend(wizard_options);
-                    template
-                }
-                None => wizard_options,
-            });
-        }
-        config.add_model_to_provider(
-            provider_id,
-            api_base.to_string(),
-            connect,
-            crate::model_registry::ModelEntry {
-                name: name.to_string(),
-                context_length,
-                ..Default::default()
-            },
-        );
-        config.active_model = crate::model_registry::ModelRef {
-            provider_id: provider_id.to_string(),
-            name: name.to_string(),
-        };
-
-        if let Err(err) = self.runtime.validate_config_change(&config) {
-            return Err(err.to_string());
-        }
-
-        if !api_key.trim().is_empty()
-            && let Err(err) = self.secret_store.save_provider_secret(
-                &crate::model_registry::provider_key_account(provider_id),
-                api_key,
-            )
-        {
-            return Err(t!("tui.model_add.key_save_failed", err = err.to_string()).into_owned());
-        }
-        for (slot, value) in credential_slots {
-            if let Err(err) = self.secret_store.save_provider_secret(
-                &crate::model_registry::provider_slot_account(provider_id, slot),
-                value,
-            ) {
-                return Err(t!("tui.model_add.key_save_failed", err = err.to_string()).into_owned());
-            }
-        }
-
-        if let Err(err) = self.config_store.save(&config) {
-            return Err(t!("tui.model_add.config_save_failed", err = err).into_owned());
-        }
-
-        self.runtime.replace_config(config);
+        let updated = self
+            .runtime
+            .add_model(request)
+            .map_err(|err| err.to_string())?;
+        self.runtime.replace_config(updated);
         self.apply_runtime_events();
         Ok(())
     }
 
     fn switch_ui_locale(&mut self, locale_code: &str) {
         let normalized = locale::normalize_ui_locale(locale_code);
-        let mut config = self.runtime.config().clone();
-        config.ui_locale = Some(normalized.clone());
-        locale::apply_ui_locale(&config);
-        self.runtime.replace_config(config.clone());
         let locale_name = locale::language_display_name(&normalized);
-
-        if let Err(err) = self.config_store.save(&config) {
-            self.messages.push(ChatMessage {
-                role: MessageRole::Agent,
-                content: t!(
-                    "tui.language.switch_saved_fail",
-                    locale_name = locale_name,
-                    err = err
-                )
-                .into_owned(),
-                tool_block: None,
-            });
-        } else {
-            self.messages.push(ChatMessage {
-                role: MessageRole::Agent,
-                content: t!("tui.language.switch_success", locale_name = locale_name).into_owned(),
-                tool_block: None,
-            });
+        let current = self.runtime.config().clone();
+        let request = serde_json::json!({
+            "activeModel": current.active_model,
+            "apiBase": current
+                .active_model_profile()
+                .map(|profile| profile.api_base)
+                .unwrap_or_default(),
+            "uiLocale": normalized,
+        });
+        match self.runtime.update_config(request) {
+            Ok(updated) => {
+                locale::apply_ui_locale(&updated);
+                self.runtime.replace_config(updated);
+                self.messages.push(ChatMessage {
+                    role: MessageRole::Agent,
+                    content: t!("tui.language.switch_success", locale_name = locale_name)
+                        .into_owned(),
+                    tool_block: None,
+                });
+            }
+            Err(err) => {
+                self.messages.push(ChatMessage {
+                    role: MessageRole::Agent,
+                    content: t!(
+                        "tui.language.switch_saved_fail",
+                        locale_name = locale_name,
+                        err = err
+                    )
+                    .into_owned(),
+                    tool_block: None,
+                });
+            }
         }
     }
 
@@ -741,7 +645,7 @@ impl TuiShell {
         match self.export_chat_archive_for_message_count(self.messages.len()) {
             Ok(archive) => match self.chat_repository.save(path, &archive) {
                 Ok(saved_path) => {
-                    let conversation_key = chat_store::conversation_key_for_path(&saved_path);
+                    let conversation_key = session_paths::conversation_key_for_path(&saved_path);
                     if let Err(err) = self.runtime.migrate_conversation_key(&conversation_key) {
                         logging::log_event(&format!(
                             "[tui-session] migrateConversationKey failed path={conversation_key} err={err:#}"
@@ -845,7 +749,7 @@ impl TuiShell {
     }
 
     fn load_chat_by_path(&mut self, path: &str) {
-        let resolved_path = match chat_store::resolve_chat_file_path(path) {
+        let resolved_path = match session_paths::resolve_chat_file_path(path) {
             Ok(resolved) => resolved,
             Err(err) => {
                 self.push_session_notice(t!("tui.session.load_failed", err = err).into_owned());
@@ -1164,16 +1068,15 @@ impl TuiShell {
         let source_display_name = self
             .session_display_name
             .clone()
-            .unwrap_or_else(|| chat_store::fallback_session_display_name(&snapshots));
+            .unwrap_or_else(|| session_paths::fallback_session_display_name(&snapshots));
         let fork_display_name =
             crate::fork::derive_forked_session_display_name(&source_display_name);
 
         let full_archive = self.export_chat_archive_for_message_count(self.messages.len())?;
-        let mut fork_archive = crate::fork::build_truncated_chat_archive_for_fork(
-            &full_archive,
-            &snapshots,
-            anchor_index,
-        );
+        let (mut fork_archive, truncated, rewind) =
+            self.runtime
+                .fork_archive(&full_archive, &snapshots, anchor_index)?;
+        fork_archive.rewind = Some(rewind);
         fork_archive.session_display_name = Some(fork_display_name.clone());
         fork_archive.session_title_source = Some("seed".to_string());
 

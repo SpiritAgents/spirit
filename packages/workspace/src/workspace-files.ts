@@ -2,11 +2,8 @@ import { Buffer } from "node:buffer";
 import { lstat, readFile, readdir, realpath, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { resolveWorkspaceExplorerIgnoreFlags } from "@spiritagent/host-internal";
-import {
-  detectSupportedImageFile,
-  hasSupportedImageExtension,
-} from "@spiritagent/host-internal/image-file-support";
+import { resolveWorkspaceExplorerIgnoreFlags } from "./workspace-ignore.js";
+import { detectSupportedImageFile, hasSupportedImageExtension } from "./image-file-support.js";
 
 import i18n from "@spiritagent/i18n/host";
 import type {

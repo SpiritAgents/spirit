@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { shell } from "electron";
 
-import { defaultShellForPty } from "@spiritagent/host-internal/default-terminal-shell";
+import { defaultShellForPty } from "@spiritagent/process/default-terminal-shell";
 
 function assertDirectory(cwd: string): string {
   const resolved = path.resolve(cwd);

@@ -56,8 +56,8 @@ pnpm run dev:cli    # cargo run -p spirit
 │    sessions, streaming, approvals       │             │
 │                  │                      │             │
 │                  ▼                      │             │
-│        packages/host-internal           │             │
-│     discovery, tools, workspace  ◀──────┘             │
+│       TS host domain packages           │             │
+│ config, sessions, tools, workspace ◀────┘             │
 │                  │                                    │
 │                  ▼                                    │
 │         packages/agent-core                           │
@@ -116,7 +116,7 @@ Agent Core 決定模型如何「看見」專案上下文：
 - **Smoke 套件** — 位於 `packages/agent-core/src/smoke` 的契約、執行時與線上提供商檢查。
 - **Eval 框架** — 針對提示詞或工具定義變更的情境對比與評判（在儲存庫根目錄執行 `pnpm run eval:compare`）。
 
-`@spiritagent/agent-core` 發布至 npm；[`packages/host-internal`](../packages/host-internal) 承載 Desktop 共用的宿主側探索、擴充、市集、工作區輔助與 LSP 編排。
+`@spiritagent/agent-core` 發布至 npm；[TypeScript Host domain packages](../packages) 承載 Desktop 共用的宿主側探索、擴充、市集、工作區輔助與 LSP 編排。
 
 ## Server
 
@@ -182,15 +182,15 @@ pnpm run dev:site
 
 **環境需求：** Node.js 26.13.0、pnpm 12.4.2（透過 `npm install --global pnpm@12.4.2` 安裝）。建置 CLI 需要 Rust 工具鏈。
 
-| 命令                       | 說明                                                                    |
-| -------------------------- | ----------------------------------------------------------------------- |
-| `pnpm install`             | 安裝 workspace 依賴（在儲存庫根目錄執行一次）                           |
-| `pnpm run dev:desktop`     | 建置共享套件並啟動 Desktop（Vite + Electron）                           |
-| `pnpm run dev:desktop:web` | Desktop 渲染器 + 瀏覽器 Web 宿主                                        |
-| `pnpm run dev:site`        | 啟動行銷/文件站（Next.js）                                              |
-| `pnpm run dev:cli`         | 含 TUI 的 CLI                                                           |
-| `pnpm run build`           | 生產建置 agent-core、host-internal、server、acp-server、Desktop 與 site |
-| `pnpm run eval:compare`    | 在 agent-core 變更後執行 eval 對比                                      |
+| 命令                       | 說明                                                                |
+| -------------------------- | ------------------------------------------------------------------- |
+| `pnpm install`             | 安裝 workspace 依賴（在儲存庫根目錄執行一次）                       |
+| `pnpm run dev:desktop`     | 建置共享套件並啟動 Desktop（Vite + Electron）                       |
+| `pnpm run dev:desktop:web` | Desktop 渲染器 + 瀏覽器 Web 宿主                                    |
+| `pnpm run dev:site`        | 啟動行銷/文件站（Next.js）                                          |
+| `pnpm run dev:cli`         | 含 TUI 的 CLI                                                       |
+| `pnpm run build`           | 生產建置 agent-core、workbench、server、acp-server、Desktop 與 site |
+| `pnpm run eval:compare`    | 在 agent-core 變更後執行 eval 對比                                  |
 
 ### 儲存庫結構
 
@@ -201,7 +201,11 @@ apps/
   cli/               Rust CLI 與 TUI
 packages/
   agent-core/        智能體執行時、提示詞、工具定義、傳輸層、MCP、eval
-  host-internal/     共享宿主探索、工具、擴充、LSP 輔助
+  config/            Configuration and credentials
+  sessions/          Session persistence and orchestration
+  tools/             Built-in Host tool execution
+  workbench/         Shared Workbench composition root
+  web/               Shared renderer and static application
   server/            共享 daemon 後端（WebSocket + JSON-RPC），面向 CLI / Desktop / Web
   acp-server/        ACP (Agent Client Protocol) 伺服器適配器，用於編輯器整合
 scripts/             發布、eval 與儲存庫自動化

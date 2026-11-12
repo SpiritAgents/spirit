@@ -1,10 +1,6 @@
 import { existsSync, watch, type FSWatcher } from "node:fs";
 import path from "node:path";
-import {
-  workspaceTasksFilePath,
-  userTasksFilePath,
-  vscodeTasksFilePath,
-} from "@spiritagent/extensions";
+import { workspaceTasksFilePath, userTasksFilePath, vscodeTasksFilePath } from "@spiritagent/tasks";
 
 const TASKS_WATCH_DEBOUNCE_MS = 150;
 

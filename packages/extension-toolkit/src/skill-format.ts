@@ -1,7 +1,7 @@
 /**
  * Skill markdown format helpers (SKILL.md frontmatter parsing and skill-name
  * rules). Single source of truth for the extension package layout contract;
- * host-internal re-exports these for its discovery code paths.
+ * instructions re-exports these for its discovery code paths.
  *
  * Pure string utilities: no Node built-ins, safe for any consumer.
  */

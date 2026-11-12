@@ -1,7 +1,7 @@
 import {
   isWorkspaceReferenceDirectoryPath,
   normalizeWorkspaceReferenceDirectoryPath,
-} from "@spiritagent/host-internal/workspace-file-reference-query";
+} from "@spiritagent/api/workspace-file-reference-query";
 import {
   DESKTOP_COMMAND_PALETTE_ITEM_TONE,
   DESKTOP_OVERLAY_LIST_ITEM_PRIMARY,

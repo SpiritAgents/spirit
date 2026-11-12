@@ -67,8 +67,7 @@ export function createExampleEvalRunSpec(): EvalRunSpec {
     ],
     isolation: {
       kind: "host-provided-workspace",
-      description:
-        "agent-core declares the contract only; host-internal/apps provide isolated execution.",
+      description: "agent-core declares the contract only; host apps provide isolated execution.",
     },
     artifactPolicy: {
       collect: ["transcript", "workspace-diff", "screenshot", "log", "metadata"],

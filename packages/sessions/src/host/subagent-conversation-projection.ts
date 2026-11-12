@@ -4,7 +4,7 @@ import type {
   SubagentSessionStatus,
 } from "@spiritagent/agent-core";
 import { llmMessageTextContent } from "@spiritagent/agent-core";
-import { stripSubagentUserMessageTimestamp } from "@spiritagent/host-internal";
+import { stripSubagentUserMessageTimestamp } from "../subagent-viewer.js";
 
 import type { ConversationMessageSnapshot } from "../types.js";
 import { DesktopAssistantMessageStateMachine } from "./assistant-message-state.js";

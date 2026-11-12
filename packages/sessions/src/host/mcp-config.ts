@@ -12,7 +12,7 @@ import {
   type McpConfigFile,
   type McpServerConfig,
 } from "@spiritagent/agent-core";
-import { mcpUserConfigPath, mcpWorkspaceConfigPath } from "@spiritagent/host-internal";
+import { mcpUserConfigPath, mcpWorkspaceConfigPath } from "@spiritagent/config/data-paths";
 
 import type {
   AddMcpServerRequest,

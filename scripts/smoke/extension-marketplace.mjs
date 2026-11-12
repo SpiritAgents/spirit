@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Headless smoke test for the extension marketplace: drives the real CLI
- * command face (CLI → daemon `host.*` RPC → host-internal) against local-only
+ * command face (CLI → daemon `host.*` RPC → shared domain services) against local-only
  * fixtures. Fully offline; npm artifact paths are covered by unit tests.
  *
  * Fixture: `<repoRoot>/.marketplace/` in the spec registry layout

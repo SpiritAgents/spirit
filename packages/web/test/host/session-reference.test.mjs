@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import { bindSessionStorageKey } from "@spiritagent/host-internal";
+import { bindSessionStorageKey } from "@spiritagent/sessions";
 import {
   messageContentToRichSegments,
   scanSessionReferenceWireBlocks,

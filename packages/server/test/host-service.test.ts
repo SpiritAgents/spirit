@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
 
-import { SPIRIT_CONFIG_SCHEMA_VERSION, configFilePath } from "@spiritagent/host-internal";
+import { SPIRIT_CONFIG_SCHEMA_VERSION } from "@spiritagent/config";
+import { configFilePath } from "@spiritagent/config/credentials";
+import { installPreparedExtensionDirectory } from "@spiritagent/extensions";
 
 import { HOST_METHODS, HostService, type HostCheckPermissionResult } from "../src/host-service.js";
 import type { SessionManager } from "../src/session-manager.js";
@@ -45,6 +47,285 @@ async function check(
 
 test("HOST_METHODS whitelists host.checkPermission", () => {
   assert.ok(HOST_METHODS.has("host.checkPermission"));
+});
+
+test("HOST_METHODS does not expose keyring secrets or mutations", async () => {
+  const service = makeService("/unused");
+  for (const method of [
+    "host.readKeyringSecret",
+    "host.writeKeyringSecret",
+    "host.deleteKeyringSecret",
+    "host.writeProviderSecret",
+    "host.deleteProviderSecret",
+  ]) {
+    assert.equal(HOST_METHODS.has(method), false, method);
+    await assert.rejects(service.handle(method, {}), new RegExp(`unknown host method: ${method}`));
+  }
+});
+
+test("HOST_METHODS whitelists shared model skill and stored-session contracts", () => {
+  for (const method of [
+    "host.getConfig",
+    "host.updateConfig",
+    "host.addModel",
+    "host.resolveActiveSkill",
+    "session.listStored",
+    "session.loadStored",
+    "session.saveStored",
+    "session.rewind",
+    "session.fork",
+  ]) {
+    assert.ok(HOST_METHODS.has(method), method);
+  }
+});
+
+test("host.getConfig initializes the shared schema in the daemon data dir", async () => {
+  await withTempDir(async (dir) => {
+    const previous = process.env.SPIRIT_DATA_DIR;
+    process.env.SPIRIT_DATA_DIR = dir;
+    try {
+      const service = makeService(dir);
+      const config = (await service.handle("host.getConfig", {})) as {
+        schemaVersion: number;
+        providers: unknown[];
+      };
+      assert.equal(config.schemaVersion, SPIRIT_CONFIG_SCHEMA_VERSION);
+      assert.deepEqual(config.providers, []);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.SPIRIT_DATA_DIR;
+      } else {
+        process.env.SPIRIT_DATA_DIR = previous;
+      }
+    }
+  });
+});
+
+test("host config and stored sessions stay isolated to each daemon data dir", async () => {
+  await withTempDir(async (dir) => {
+    const firstDir = join(dir, "first");
+    const secondDir = join(dir, "second");
+    const processDir = join(dir, "process");
+    const previous = process.env.SPIRIT_DATA_DIR;
+    process.env.SPIRIT_DATA_DIR = processDir;
+    try {
+      const first = makeService(firstDir);
+      const second = makeService(secondDir);
+      await Promise.all([first.handle("host.getConfig", {}), second.handle("host.getConfig", {})]);
+      assert.equal(
+        JSON.parse(await readFile(join(firstDir, "config.json"), "utf8")).schemaVersion,
+        SPIRIT_CONFIG_SCHEMA_VERSION,
+      );
+      assert.equal(
+        JSON.parse(await readFile(join(secondDir, "config.json"), "utf8")).schemaVersion,
+        SPIRIT_CONFIG_SCHEMA_VERSION,
+      );
+      await assert.rejects(readFile(join(processDir, "config.json"), "utf8"), {
+        code: "ENOENT",
+      });
+
+      const timeline = [
+        {
+          turnId: 1,
+          createdOrder: 1,
+          userRow: {
+            rowId: "user-1",
+            messageId: 1,
+            turnId: 1,
+            kind: "user",
+            createdOrder: 1,
+            content: "Daemon chat",
+            pending: false,
+          },
+          segments: [],
+        },
+      ];
+      await mkdir(join(firstDir, "chats"), { recursive: true });
+      await mkdir(join(processDir, "chats"), { recursive: true });
+      const storedSession = (displayName: string) => ({
+        chatSchemaVersion: 2,
+        llmHistory: [],
+        subagentSessions: [],
+        desktopMessageTimeline: timeline,
+        savedAtUnixMs: 1,
+        sessionDisplayName: displayName,
+      });
+      await writeFile(
+        join(firstDir, "chats", "chat.json"),
+        JSON.stringify(storedSession("Daemon chat")),
+      );
+      await writeFile(
+        join(processDir, "chats", "chat.json"),
+        JSON.stringify(storedSession("Process chat")),
+      );
+      const stored = (await first.handle("session.listStored", {})) as Array<{
+        displayName: string;
+      }>;
+      assert.deepEqual(
+        stored.map((entry) => entry.displayName),
+        ["Daemon chat"],
+      );
+    } finally {
+      if (previous === undefined) {
+        delete process.env.SPIRIT_DATA_DIR;
+      } else {
+        process.env.SPIRIT_DATA_DIR = previous;
+      }
+    }
+  });
+});
+
+test("host.resolveActiveSkill uses the TypeScript payload builder", async () => {
+  await withTempDir(async (dir) => {
+    const workspaceRoot = join(dir, "workspace");
+    const skillDir = join(workspaceRoot, ".spirit", "skills", "fixture");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      join(skillDir, "SKILL.md"),
+      "---\nname: fixture\ndescription: Fixture skill\n---\nUse the fixture.\n",
+    );
+    const service = makeService(dir);
+    const skill = (await service.handle("host.resolveActiveSkill", {
+      workspaceRoot,
+      skill: { name: "fixture" },
+    })) as { name: string; content: string; resources: unknown[] };
+    assert.equal(skill.name, "fixture");
+    assert.equal(skill.content, "Use the fixture.");
+    assert.deepEqual(skill.resources, []);
+  });
+});
+
+test("host.resolveActiveSkill resolves extension skills with base-name precedence", async () => {
+  await withTempDir(async (dir) => {
+    const spiritDataDir = join(dir, "data");
+    const workspaceRoot = join(dir, "workspace");
+    const preparedDirectoryPath = join(dir, "prepared");
+    const baseSkillDir = join(workspaceRoot, ".spirit", "skills", "shared");
+    await mkdir(baseSkillDir, { recursive: true });
+    await writeFile(
+      join(baseSkillDir, "SKILL.md"),
+      "---\nname: shared\ndescription: Base skill\n---\nUse the base skill.\n",
+    );
+    await mkdir(join(preparedDirectoryPath, ".spirit"), { recursive: true });
+    await writeFile(
+      join(preparedDirectoryPath, "package.json"),
+      JSON.stringify({ name: "fixture-skills", version: "0.0.1" }),
+    );
+    await writeFile(
+      join(preparedDirectoryPath, ".spirit", "extension.json"),
+      JSON.stringify({
+        schemaVersion: 1,
+        name: "fixture-skills",
+        version: "0.0.1",
+        sourceId: "personal",
+        displayName: "Fixture Skills",
+        description: "Fixture extension skills.",
+        manifest: {
+          supportedHosts: ["cli"],
+          requestedCapabilities: ["skills"],
+          contributes: { skills: true },
+        },
+      }),
+    );
+    for (const [name, description] of [
+      ["shared", "Extension shadow"],
+      ["extension-only", "Extension skill"],
+    ] as const) {
+      const skillDir = join(preparedDirectoryPath, "skills", name);
+      await mkdir(skillDir, { recursive: true });
+      await writeFile(
+        join(skillDir, "SKILL.md"),
+        `---\nname: ${name}\ndescription: ${description}\n---\nUse ${description}.\n`,
+      );
+    }
+    await installPreparedExtensionDirectory(
+      { spiritDataDir, hostKind: "cli" },
+      { preparedDirectoryPath },
+    );
+
+    const service = makeService(spiritDataDir);
+    const metadata = (await service.handle("host.loadCliMetadata", {
+      workspaceRoot,
+      hostKind: "cli",
+    })) as { extensionSkillEntries: Array<{ name: string }> };
+    assert.deepEqual(
+      metadata.extensionSkillEntries.map((entry) => entry.name),
+      ["extension-only"],
+    );
+    const shared = (await service.handle("host.resolveActiveSkill", {
+      workspaceRoot,
+      skill: { name: "shared" },
+    })) as { scope: string; content: string };
+    assert.equal(shared.scope, "workspace");
+    assert.equal(shared.content, "Use the base skill.");
+    const extension = (await service.handle("host.resolveActiveSkill", {
+      workspaceRoot,
+      skill: { name: "extension-only" },
+    })) as { scope: string; content: string };
+    assert.equal(extension.scope, "extension");
+    assert.equal(extension.content, "Use Extension skill.");
+  });
+});
+
+test("host.mcp infers workspace scope and prefers a same-named user server", async () => {
+  await withTempDir(async (dir) => {
+    const workspaceRoot = join(dir, "workspace");
+    const workspaceConfigPath = join(workspaceRoot, ".spirit", "mcp.json");
+    await mkdir(join(workspaceRoot, ".spirit"), { recursive: true });
+    const server = {
+      enabled: true,
+      transport: { type: "stdio", command: "fixture" },
+    };
+    await writeFile(workspaceConfigPath, JSON.stringify({ servers: { fixture: server } }));
+    const service = new HostService(dir, {
+      mcpRegistry: {
+        forWorkspace: () => ({}),
+        refreshAllConfigs: async () => {},
+      },
+    } as unknown as SessionManager);
+
+    const workspaceToggle = (await service.handle("host.mcp", {
+      workspaceRoot,
+      action: "setMcpServerEnabled",
+      params: { name: "fixture", enabled: false },
+    })) as { path: string };
+    assert.equal(workspaceToggle.path, workspaceConfigPath);
+    assert.equal(
+      JSON.parse(await readFile(workspaceConfigPath, "utf8")).servers.fixture.enabled,
+      false,
+    );
+
+    const userConfigPath = join(dir, "mcp.json");
+    await writeFile(userConfigPath, JSON.stringify({ servers: { fixture: server } }));
+    const userToggle = (await service.handle("host.mcp", {
+      workspaceRoot,
+      action: "setMcpServerEnabled",
+      params: { name: "fixture", enabled: true },
+    })) as { path: string };
+    assert.equal(userToggle.path, userConfigPath);
+    assert.equal(JSON.parse(await readFile(userConfigPath, "utf8")).servers.fixture.enabled, true);
+    assert.equal(
+      JSON.parse(await readFile(workspaceConfigPath, "utf8")).servers.fixture.enabled,
+      false,
+    );
+  });
+});
+
+test("session.listStored reads only the daemon data dir", async () => {
+  await withTempDir(async (dir) => {
+    const previous = process.env.SPIRIT_DATA_DIR;
+    process.env.SPIRIT_DATA_DIR = dir;
+    try {
+      const service = makeService(dir);
+      assert.deepEqual(await service.handle("session.listStored", {}), []);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.SPIRIT_DATA_DIR;
+      } else {
+        process.env.SPIRIT_DATA_DIR = previous;
+      }
+    }
+  });
 });
 
 test("host.checkPermission rejects an unknown or missing domain", async () => {

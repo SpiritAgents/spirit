@@ -8,7 +8,7 @@ import type { PendingQuestionsSnapshot } from "@/types";
 
 /**
  * UI-only demo: one structured approval per tool, mirroring the descriptors the executors
- * produce at runtime (host-internal authorize / the lazy tool gateway), including the
+ * produce at runtime (tool authorization / the lazy tool gateway), including the
  * `fileDiffPreview` / `fileContentPreview` payloads attached to file approvals. Display strings
  * and preview frames are derived by the same builders the real cards use
  * (`buildApprovalPromptView` and the approval-file-previews mappers), so the demo always

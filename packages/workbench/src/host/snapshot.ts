@@ -15,7 +15,7 @@ import type {
   DesktopSnapshot,
   McpStatusSnapshot,
 } from "@spiritagent/api/types";
-import type { ProviderEntry } from "@spiritagent/host-internal";
+import type { ProviderEntry } from "@spiritagent/config";
 import { listProviderPresets } from "@spiritagent/agent-core/provider-presets";
 
 import { buildModelCatalogHints } from "@spiritagent/sessions/host/model-config";

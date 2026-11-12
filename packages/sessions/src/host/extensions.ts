@@ -188,7 +188,7 @@ function isMarketplaceCatalogInstalled(item: HostInstalledExtension): boolean {
 }
 
 /**
- * Map host-internal catalog rows to renderer entries. Icons from local/git
+ * Map extension catalog rows to renderer entries. Icons from local/git
  * registries are read into data URLs (the renderer cannot fetch file paths);
  * index direct-links keep their https URL. Contribution summaries are computed
  * when the content is locally readable (installed, or a local/git registry).

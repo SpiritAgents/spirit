@@ -14,10 +14,7 @@ import type {
   DesktopTransportKind,
   PreviewModelCatalogEntry,
 } from "../types.js";
-import type {
-  SpiritServiceTiersDeclaration,
-  ThinkingSwitchDeclaration,
-} from "@spiritagent/host-internal/config";
+import type { SpiritServiceTiersDeclaration, ThinkingSwitchDeclaration } from "@spiritagent/config";
 
 /**
  * The catalog parser (API shape) driving a provider entry's listing: the materialized preset's

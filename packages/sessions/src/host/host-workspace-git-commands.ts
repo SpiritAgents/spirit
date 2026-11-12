@@ -1,15 +1,17 @@
 import path from "node:path";
 
+import { createHostDreamStore } from "@spiritagent/automations";
 import {
-  createHostDreamStore,
   getWorkspaceFileReferenceIndexSnapshot,
   listWorkspaceFileReferenceSuggestions as listWorkspaceFileReferenceSuggestionsFromHostInternal,
   primeWorkspaceFileReferenceIndexCache,
+  type WorkspaceFileReferenceIndexSnapshot,
+} from "@spiritagent/workspace";
+import {
   runRipgrepSearch,
   WORKSPACE_CONTENT_SEARCH_MAX_MATCHES,
-  type WorkLocationKind,
-  type WorkspaceFileReferenceIndexSnapshot,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/tools/ripgrep-search";
+import { type WorkLocationKind } from "@spiritagent/api/work-location";
 
 import i18n from "../lib/i18n-host.js";
 import type {

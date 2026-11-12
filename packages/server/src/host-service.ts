@@ -22,24 +22,40 @@ import {
   installBuiltInExtension,
   type MarketplaceHostContext,
 } from "@spiritagent/extensions";
+import { createHostTodoStore } from "@spiritagent/sessions";
 import {
-  createHostTodoStore,
   deleteHookEntry,
+  listHookListItems,
+  saveHookEntry,
+  validateHooksConfig,
+} from "@spiritagent/hooks";
+import {
   discoverRuleEntries,
   discoverSkillEntries,
+  planMetadataSnapshot,
+  resolveInstructionPaths,
+} from "@spiritagent/instructions";
+import {
   evaluateReadFilePermission,
   evaluateShellPermission,
-  listCachedWorkspaceFileReferenceSuggestions,
-  listHookListItems,
   loadPermissionConfig,
-  planMetadataSnapshot,
-  primeWorkspaceFileReferenceIndexCache,
-  resolveInstructionPaths,
-  saveHookEntry,
-  saveToggleState,
-  validateHooksConfig,
   type PermissionEvalResult,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/permissions";
+import {
+  listCachedWorkspaceFileReferenceSuggestions,
+  primeWorkspaceFileReferenceIndexCache,
+} from "@spiritagent/workspace";
+import { saveToggleState } from "@spiritagent/config/toggle-state";
+import { buildActiveSkillPayload } from "@spiritagent/sessions/host/skills";
+import {
+  addMcpServer,
+  deleteMcpServer,
+  initializeMcpConfig,
+  readMcpConfigFiles,
+  setMcpServerEnabled,
+} from "@spiritagent/mcp/config-files";
+import { executeHostModelCommand } from "./model-commands.js";
+import { executeStoredSessionCommand } from "./stored-session-service.js";
 
 import {
   serializeListedHostExtension,
@@ -88,6 +104,41 @@ export class HostService {
     return { spiritDataDir: this.spiritDataDir, hostKind };
   }
 
+  private async cliSkillState(params: Record<string, unknown>) {
+    const context = this.context(params);
+    const hostKind = HostService.readHostKind(params);
+    const [discovered, contributions] = await Promise.all([
+      discoverSkillEntries(context),
+      this.extensionManager(hostKind)
+        .list()
+        .then((extensions) => collectEnabledExtensionInstructionContributions(extensions)),
+    ]);
+    const enabledBaseEntries = discovered.filter((entry) => entry.enabled);
+    const claimedNames = new Set(enabledBaseEntries.map((entry) => entry.source.name));
+    const extensionSkills = contributions.skills.filter((skill) => {
+      if (claimedNames.has(skill.name)) {
+        return false;
+      }
+      claimedNames.add(skill.name);
+      return true;
+    });
+    const extensionEntries = extensionSkills.map((skill) => ({
+      source: {
+        id: skill.id,
+        scope: skill.scope,
+        name: skill.name,
+        description: skill.description,
+        path: skill.path,
+      },
+      content: skill.content,
+    }));
+    return {
+      discovered,
+      extensionSkills,
+      candidates: [...enabledBaseEntries, ...extensionEntries] as const,
+    };
+  }
+
   private static readWorkspaceRoot(params: Record<string, unknown>): string {
     const workspaceRoot = params["workspaceRoot"];
     if (typeof workspaceRoot !== "string" || !workspaceRoot.trim()) {
@@ -109,6 +160,26 @@ export class HostService {
 
   async handle(method: string, rawParams: unknown): Promise<unknown> {
     const params = (rawParams ?? {}) as Record<string, unknown>;
+    if (method.startsWith("session.")) {
+      return executeStoredSessionCommand(method, params, this.spiritDataDir);
+    }
+    if (
+      method === "host.getConfig" ||
+      method === "host.validateConfig" ||
+      method === "host.replaceConfig" ||
+      method === "host.listProviderPresets" ||
+      method === "host.buildModelDisplayTitles" ||
+      method === "host.hasProviderCredential" ||
+      method === "host.previewModels" ||
+      method === "host.updateConfig" ||
+      method === "host.addModel" ||
+      method === "host.addProviderModels" ||
+      method === "host.removeModel" ||
+      method === "host.removeProviderModels" ||
+      method === "host.removeProviderGroup"
+    ) {
+      return executeHostModelCommand(method, params, this.spiritDataDir);
+    }
     switch (method) {
       case "remote.getState":
         return this.remoteControl.getState();
@@ -184,14 +255,11 @@ export class HostService {
         ) as AgentMode;
         const activePlanPath =
           typeof params["activePlanPath"] === "string" ? params["activePlanPath"] : undefined;
-        const hostKind = HostService.readHostKind(params);
-        const contributions = await collectEnabledExtensionInstructionContributions(
-          await this.extensionManager(hostKind).list(),
-        );
+        const skills = await this.cliSkillState(params);
         return {
           ruleEntries: await discoverRuleEntries(context),
-          skillEntries: await discoverSkillEntries(context),
-          extensionSkillEntries: contributions.skills.map((skill) => ({
+          skillEntries: skills.discovered,
+          extensionSkillEntries: skills.extensionSkills.map((skill) => ({
             id: skill.id,
             name: skill.name,
             description: skill.description,
@@ -231,6 +299,21 @@ export class HostService {
         const enabledOverrides = (params["enabledOverrides"] ?? {}) as Record<string, boolean>;
         await saveToggleState(filePath, { enabledOverrides });
         return filePath;
+      }
+
+      case "host.resolveActiveSkill": {
+        const selector = (params["skill"] ?? {}) as Record<string, unknown>;
+        const { candidates } = await this.cliSkillState(params);
+        const entry = candidates.find(
+          (candidate) =>
+            candidate.source.id === selector["id"] ||
+            candidate.source.path === selector["path"] ||
+            candidate.source.name === selector["name"],
+        );
+        if (!entry) {
+          throw new Error("Skill not found.");
+        }
+        return buildActiveSkillPayload(entry);
       }
 
       // ------------------------------------------------ workspace file references
@@ -552,6 +635,8 @@ export class HostService {
         const action = String(params["action"] ?? "");
         const inner = (params["params"] ?? {}) as Record<string, unknown>;
         switch (action) {
+          case "readMcpConfig":
+            return readMcpConfigFiles({ spiritDataDir: this.spiritDataDir, workspaceRoot });
           case "listMcpServers":
             return service.listServers();
           case "inspectMcpServer":
@@ -583,6 +668,49 @@ export class HostService {
           case "startMcpBackgroundRefresh":
             service.startBackgroundRefreshInBackground(true);
             return service.statusSnapshot();
+          case "initializeMcpConfig": {
+            const result = await initializeMcpConfig({
+              scope: inner["scope"] === "workspace" ? "workspace" : "user",
+              spiritDataDir: this.spiritDataDir,
+              workspaceRoot,
+              force: inner["force"] === true,
+              config: inner["config"] as never,
+            });
+            await this.sessions.mcpRegistry.refreshAllConfigs();
+            return { path: result };
+          }
+          case "addMcpServer": {
+            const result = await addMcpServer({
+              scope: inner["scope"] === "workspace" ? "workspace" : "user",
+              spiritDataDir: this.spiritDataDir,
+              workspaceRoot,
+              name: String(inner["name"] ?? ""),
+              config: inner["config"] as never,
+            });
+            await this.sessions.mcpRegistry.refreshAllConfigs();
+            return { path: result };
+          }
+          case "deleteMcpServer":
+            await deleteMcpServer({
+              scope: inner["scope"] === "workspace" ? "workspace" : "user",
+              spiritDataDir: this.spiritDataDir,
+              workspaceRoot,
+              name: String(inner["name"] ?? ""),
+            });
+            await this.sessions.mcpRegistry.refreshAllConfigs();
+            return null;
+          case "setMcpServerEnabled":
+            const result = await setMcpServerEnabled({
+              ...(inner["scope"] === "workspace" || inner["scope"] === "user"
+                ? { scope: inner["scope"] }
+                : {}),
+              spiritDataDir: this.spiritDataDir,
+              workspaceRoot,
+              name: String(inner["name"] ?? ""),
+              enabled: inner["enabled"] === true,
+            });
+            await this.sessions.mcpRegistry.refreshAllConfigs();
+            return { path: result };
           default:
             throw new Error(`unknown mcp action: ${action}`);
         }
@@ -658,6 +786,29 @@ export const HOST_METHODS = new Set([
   "remote.cancelOwnerPairing",
   "host.loadCliMetadata",
   "host.loadPlanMetadata",
+  "host.resolveActiveSkill",
+  "host.getConfig",
+  "host.validateConfig",
+  "host.replaceConfig",
+  "host.listProviderPresets",
+  "host.buildModelDisplayTitles",
+  "host.hasProviderCredential",
+  "host.previewModels",
+  "host.updateConfig",
+  "host.addModel",
+  "host.addProviderModels",
+  "host.removeModel",
+  "host.removeProviderModels",
+  "host.removeProviderGroup",
+  "session.listStored",
+  "session.loadStored",
+  "session.saveStored",
+  "session.rewind",
+  "session.saveRewindCheckpoint",
+  "session.loadRewindCheckpoint",
+  "session.saveRewindFileChange",
+  "session.loadRewindFileChange",
+  "session.fork",
   "host.writeRuleState",
   "host.writeSkillState",
   "host.listWorkspaceFileReferenceSuggestions",

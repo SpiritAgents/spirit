@@ -2,7 +2,7 @@
 /** Focused Smoke #8 repro: disconnect while an approval is parked. */
 import { spawn } from "node:child_process";
 import { readFileSync, readdirSync, openSync } from "node:fs";
-import { resolveSpiritDataDir } from "@spiritagent/host-internal";
+import { resolveSpiritDataDir } from "@spiritagent/config/data-paths";
 import { join } from "node:path";
 
 const DATA_DIR = process.env.SPIRIT_SERVER_DATA_DIR?.trim() || resolveSpiritDataDir();

@@ -1,4 +1,4 @@
-/** Browser-safe mirror of host-internal resolveWorkspaceGroupingRoot (avoid barrel import in renderer). */
+/** Browser-safe mirror of the workspace grouping resolver (avoid service imports in the renderer). */
 export function resolveWorkspaceGroupingRoot(workspaceRoot: string): string {
   const trimmed = workspaceRoot.trim();
   const asPosix = trimmed.replace(/\\/g, "/").replace(/\/+$/g, "");

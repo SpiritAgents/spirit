@@ -219,7 +219,7 @@ export class McpService {
   }
 
   lazyToolGatewayBackgroundStatusText(value: JsonValue): string | undefined {
-    // Status is shown on the tool card; do not write it into thinking aux (consistent with host-internal shell/web_fetch).
+    // Status is shown on the tool card; do not write it into thinking aux (consistent with the shared shell/web_fetch tools).
     void value;
     return undefined;
   }

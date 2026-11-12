@@ -65,7 +65,7 @@ pnpm run dev:desktop
 
 This builds the shared packages, starts the `packages/web` Vite renderer on `http://127.0.0.1:1420`, and launches Electron.
 
-While it runs, workspace package edits apply without a manual rebuild: the renderer resolves browser-consumed workspace entry points, including wildcard exports, directly to their TypeScript sources (HMR, see `workspaceSourceAliases` in `packages/web/vite.config.ts`). Electron main-process code and the Workbench runtime dependency graph rebuild via watch tasks and restart the app automatically. The production `web` static bundle is excluded from that background watch because Vite already serves the renderer from source. The exception is `electron/preload.ts`: rerun `pnpm run build:electron` after changing it.
+While it runs, workspace package edits apply without a manual rebuild: the renderer resolves approved browser-safe workspace entry points, including wildcard exports, directly to their TypeScript sources (HMR, see `workspaceSourceAliases` in `packages/web/vite.config.ts`). Electron main-process code and the Workbench runtime dependency graph rebuild via watch tasks and restart the app automatically. The production `web` static bundle is excluded from that background watch because Vite already serves the renderer from source. The exception is `electron/preload.ts`: rerun `pnpm run build:electron` after changing it.
 
 Runtime initialization and refresh failures are reported in the UI and logged to the host's stderr with `[desktop-host] runtime refresh failed`, the session bundle/workspace context, and the original error stack. In Electron development, these logs appear under the `[electron]` terminal prefix; request payloads and provider configuration are not included.
 
@@ -92,16 +92,20 @@ pnpm run test:host    # Host service tests
 ```
 apps/desktop/
   electron/          # Main process, preload, PTY, notifications, browser views
-  src/               # React renderer (Vite + Tailwind)
+  src/               # Native-shell shared types and platform-neutral helpers
   scripts/           # Build helpers, icon generation
 ```
 
 Shared logic lives in monorepo packages:
 
 - `packages/agent-core` — agent runtime, tool definitions, prompts
-- `packages/host-internal` — host contracts, workspace/git helpers, shared authoring builtin skills
+- `packages/web` — shared React renderer and static application
+- `packages/workbench` — Workbench composition and standalone Host entry
+- `packages/sessions` — session persistence and orchestration
+- `packages/config` — configuration, credentials, and transport resolution
+- `packages/tools` — built-in Host tool execution
 
-Git sidebar actions (Commit / Push / Merge) send inline prompt text from `src/host/git-chip-prompts.ts` as a normal user turn; they do not activate skills.
+Git sidebar actions (Commit / Push / Merge) send inline prompt text from `packages/sessions/src/host/git-chip-prompts.ts` as a normal user turn; they do not activate skills.
 
 ## License
 

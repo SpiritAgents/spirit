@@ -27,11 +27,11 @@ import {
   type MarketplaceRegistryRoot,
   type MarketplaceSourceRecord,
 } from "../marketplace/types.js";
-import type { ExtensionHostKind } from "@spiritagent/host-internal/storage";
+import type { ExtensionHostKind } from "../storage.js";
 import { loadBuiltInState } from "./state.js";
 
 /**
- * The built-in registry root shipped inside the host-internal package:
+ * The built-in registry root shipped inside the extensions package:
  * `dist/resources/built-in/<workspaceDataFolderName>/marketplace.json`
  * + `dist/resources/built-in/extensions/<name>/`.
  * Same format as any remote registry; only the artifact backend differs

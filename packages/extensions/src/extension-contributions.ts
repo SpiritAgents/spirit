@@ -8,15 +8,13 @@ import {
   parseHooksConfigFile,
   parseMcpConfigFile,
   type HookEventName,
-  type LlmEnabledRule,
-  type LlmEnabledSkillCatalogEntry,
   type McpConfigFile,
   type McpServerConfig,
   type McpStdioTransportConfig,
   type ResolvedHookDefinition,
 } from "@spiritagent/agent-core";
 
-import { validateSkillName } from "@spiritagent/host-internal/discovery";
+import { validateSkillName } from "@spiritagent/instructions/discovery";
 import {
   EXTENSION_HOOKS_CONFIG_FILE_NAME,
   EXTENSION_MCP_CONFIG_FILE_NAME,
@@ -28,29 +26,14 @@ import {
   parseSkillFrontmatterFields,
   SKILL_FILE_NAME,
   splitSkillFrontmatter,
-} from "@spiritagent/host-internal/skill-paths";
-import { stablePathId } from "@spiritagent/host-internal/storage";
+} from "@spiritagent/instructions/skill-paths";
+import { stablePathId } from "@spiritagent/instructions/storage";
+import type {
+  HostExtensionContributedRule,
+  HostExtensionContributedSkill,
+} from "@spiritagent/instructions/contributions";
 
-export interface HostExtensionContributedSkill {
-  id: string;
-  extensionId: string;
-  extensionName: string;
-  scope: "extension";
-  name: string;
-  description: string;
-  path: string;
-  content: string;
-}
-
-export interface HostExtensionContributedRule {
-  id: string;
-  extensionId: string;
-  extensionName: string;
-  scope: "extension";
-  title: string;
-  path: string;
-  content: string;
-}
+export type { HostExtensionContributedRule, HostExtensionContributedSkill };
 
 export interface HostExtensionContributedHook extends ResolvedHookDefinition {
   event: HookEventName;
@@ -450,58 +433,4 @@ async function collectExtensionRulesContribution(
 
 function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-export async function overlayEnabledExtensionRulesAndSkills(
-  extensions: readonly HostInstalledExtension[],
-  existingRules: readonly LlmEnabledRule[],
-  existingSkills: readonly LlmEnabledSkillCatalogEntry[],
-  log?: (message: string) => void,
-): Promise<{
-  rules: LlmEnabledRule[];
-  skills: LlmEnabledSkillCatalogEntry[];
-}> {
-  const contributions = await collectEnabledExtensionInstructionContributions(extensions, log);
-  return overlayExtensionRulesAndSkills(existingRules, existingSkills, contributions, log);
-}
-
-export function overlayExtensionRulesAndSkills(
-  existingRules: readonly LlmEnabledRule[],
-  existingSkills: readonly LlmEnabledSkillCatalogEntry[],
-  contributions: HostExtensionInstructionContributions,
-  log?: (message: string) => void,
-): {
-  rules: LlmEnabledRule[];
-  skills: LlmEnabledSkillCatalogEntry[];
-} {
-  const claimedSkillNames = new Set(existingSkills.map((skill) => skill.name));
-  const overlaySkills: LlmEnabledSkillCatalogEntry[] = [];
-  for (const skill of contributions.skills) {
-    if (claimedSkillNames.has(skill.name)) {
-      log?.(`[extensions] shadowed skill name=${skill.name} kept=existing ignored=${skill.path}`);
-      continue;
-    }
-    claimedSkillNames.add(skill.name);
-    overlaySkills.push({
-      id: skill.id,
-      scope: "extension",
-      name: skill.name,
-      description: skill.description,
-      path: skill.path,
-    });
-  }
-
-  return {
-    rules: [
-      ...existingRules,
-      ...contributions.rules.map((rule) => ({
-        id: rule.id,
-        scope: "extension" as const,
-        title: rule.title,
-        path: rule.path,
-        content: rule.content,
-      })),
-    ],
-    skills: [...existingSkills, ...overlaySkills],
-  };
 }

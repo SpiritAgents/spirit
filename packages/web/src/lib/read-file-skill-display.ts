@@ -1,11 +1,11 @@
 import {
   isSkillMarkdownPath,
   readFileToolDisplayBase,
-} from "@spiritagent/host-internal/skill-paths";
+} from "@spiritagent/instructions/skill-paths";
 
 import type { ToolBlockSnapshot } from "../types.js";
 
-export { isSkillMarkdownPath } from "@spiritagent/host-internal/skill-paths";
+export { isSkillMarkdownPath } from "@spiritagent/instructions/skill-paths";
 
 export const LEGACY_READ_FILE_HEADLINE =
   /^(?:查看|使用|View(?:ing|ed)?|Read(?:ing|ed)?|Us(?:ing|ed)?)\u002e?\s+(.+)$/u;

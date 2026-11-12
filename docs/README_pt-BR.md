@@ -56,8 +56,8 @@ pnpm run dev:cli    # cargo run -p spirit
 │    sessions, streaming, approvals       │             │
 │                  │                      │             │
 │                  ▼                      │             │
-│        packages/host-internal           │             │
-│     discovery, tools, workspace  ◀──────┘             │
+│       TS host domain packages           │             │
+│ config, sessions, tools, workspace ◀────┘             │
 │                  │                                    │
 │                  ▼                                    │
 │         packages/agent-core                           │
@@ -116,7 +116,7 @@ Agent Core decide como o modelo vê o contexto do projeto:
 - **Suites smoke** — checagens de contrato, runtime e provedor live em `packages/agent-core/src/smoke`.
 - **Harness eval** — comparação de cenários para mudanças de prompts ou definições de ferramentas (`pnpm run eval:compare` na raiz).
 
-`@spiritagent/agent-core` é publicado no npm; [`packages/host-internal`](../packages/host-internal) contém descoberta compartilhada do host, extensões, helpers de workspace e orquestração LSP para Desktop.
+`@spiritagent/agent-core` é publicado no npm; [TypeScript Host domain packages](../packages) contém descoberta compartilhada do host, extensões, helpers de workspace e orquestração LSP para Desktop.
 
 ## Server
 
@@ -182,15 +182,15 @@ Veja [apps/site/README.md](../apps/site/README.md) para desenvolvimento local e 
 
 **Requisitos:** Node.js 26.13.0, pnpm 12.4.2 (instalar com `npm install --global pnpm@12.4.2`). Toolchain Rust necessária para build da CLI.
 
-| Comando                    | Descrição                                                                          |
-| -------------------------- | ---------------------------------------------------------------------------------- |
-| `pnpm install`             | Instalar dependências do workspace (uma vez na raiz)                               |
-| `pnpm run dev:desktop`     | Build dos pacotes compartilhados e iniciar Desktop (Vite + Electron)               |
-| `pnpm run dev:desktop:web` | Renderer Desktop com host web no navegador                                         |
-| `pnpm run dev:site`        | Iniciar o site de marketing/docs (Next.js)                                         |
-| `pnpm run dev:cli`         | CLI com TUI                                                                        |
-| `pnpm run build`           | Build de produção de agent-core, host-internal, server, acp-server, Desktop e site |
-| `pnpm run eval:compare`    | Comparação eval após mudanças no agent-core                                        |
+| Comando                    | Descrição                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------ |
+| `pnpm install`             | Instalar dependências do workspace (uma vez na raiz)                           |
+| `pnpm run dev:desktop`     | Build dos pacotes compartilhados e iniciar Desktop (Vite + Electron)           |
+| `pnpm run dev:desktop:web` | Renderer Desktop com host web no navegador                                     |
+| `pnpm run dev:site`        | Iniciar o site de marketing/docs (Next.js)                                     |
+| `pnpm run dev:cli`         | CLI com TUI                                                                    |
+| `pnpm run build`           | Build de produção de agent-core, workbench, server, acp-server, Desktop e site |
+| `pnpm run eval:compare`    | Comparação eval após mudanças no agent-core                                    |
 
 ### Estrutura do repositório
 
@@ -201,7 +201,11 @@ apps/
   cli/               CLI Rust e TUI
 packages/
   agent-core/        Runtime do agente, prompts, definições de ferramentas, transports, MCP, eval
-  host-internal/     Descoberta compartilhada do host, ferramentas, extensões, helpers LSP
+  config/            Configuration and credentials
+  sessions/          Session persistence and orchestration
+  tools/             Built-in Host tool execution
+  workbench/         Shared Workbench composition root
+  web/               Shared renderer and static application
   server/            Backend daemon compartilhado (WebSocket + JSON-RPC) para CLI / Desktop / Web
   acp-server/        Adaptador de servidor ACP para integração com editores
 scripts/             Release, eval e automação do repo

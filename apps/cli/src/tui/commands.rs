@@ -36,7 +36,7 @@ impl TuiShell {
                 });
             }
             ["use", model] => {
-                let mut config = self.runtime.config().clone();
+                let config = self.runtime.config().clone();
                 let model_ref = match config.parse_model_ref_selector(model) {
                     Ok(model_ref) => model_ref,
                     Err(message) => {
@@ -48,29 +48,35 @@ impl TuiShell {
                         return;
                     }
                 };
-                config.active_model = model_ref;
-                if let Err(err) = self.runtime.validate_config_change(&config) {
+                let Some(profile) = config.resolve_model_profile(&model_ref) else {
                     self.messages.push(ChatMessage {
                         role: MessageRole::Agent,
-                        content: err.to_string(),
+                        content: t!("tui.model.not_found", model = model).into_owned(),
                         tool_block: None,
                     });
                     return;
-                }
-                if let Err(err) = self.config_store.save(&config) {
-                    self.messages.push(ChatMessage {
-                        role: MessageRole::Agent,
-                        content: t!("tui.model.switch_save_failed", err = err).into_owned(),
-                        tool_block: None,
-                    });
-                } else {
-                    self.runtime.replace_config(config);
-                    self.apply_runtime_events();
-                    self.messages.push(ChatMessage {
-                        role: MessageRole::Agent,
-                        content: t!("tui.model_picker.switch_success", model = model).into_owned(),
-                        tool_block: None,
-                    });
+                };
+                match self.runtime.update_config(serde_json::json!({
+                    "activeModel": model_ref,
+                    "apiBase": profile.api_base,
+                })) {
+                    Ok(updated) => {
+                        self.runtime.replace_config(updated);
+                        self.apply_runtime_events();
+                        self.messages.push(ChatMessage {
+                            role: MessageRole::Agent,
+                            content: t!("tui.model_picker.switch_success", model = model)
+                                .into_owned(),
+                            tool_block: None,
+                        });
+                    }
+                    Err(err) => {
+                        self.messages.push(ChatMessage {
+                            role: MessageRole::Agent,
+                            content: err.to_string(),
+                            tool_block: None,
+                        });
+                    }
                 }
             }
             ["add"] => {
@@ -82,19 +88,16 @@ impl TuiShell {
                 });
             }
             ["add", model, api_base, api_key] => {
-                match self.apply_model_add_and_switch(ApplyModelAddParams {
-                    name: model,
-                    api_base,
-                    api_key,
-                    provider_id: crate::provider_presets::CUSTOM_PROVIDER_PRESET_ID,
-                    transport_kind: crate::model_registry::ModelTransportKind::OpenAiCompatible,
-                    context_length: None,
-                    cloudflare_gateway_id: None,
-                    site_id: None,
-                    options: &Default::default(),
-                    credential_slots: &[],
-                }) {
-                    Ok(()) => {
+                match self.runtime.add_model(serde_json::json!({
+                    "name": model,
+                    "apiBase": api_base,
+                    "apiKey": api_key,
+                    "provider": "custom",
+                    "transportKind": "openai-compatible",
+                })) {
+                    Ok(updated) => {
+                        self.runtime.replace_config(updated);
+                        self.apply_runtime_events();
                         self.messages.push(ChatMessage {
                             role: MessageRole::Agent,
                             content: t!("tui.model_add.saved", name = model).into_owned(),
@@ -104,7 +107,7 @@ impl TuiShell {
                     Err(err) => {
                         self.messages.push(ChatMessage {
                             role: MessageRole::Agent,
-                            content: err,
+                            content: err.to_string(),
                             tool_block: None,
                         });
                     }
@@ -118,7 +121,7 @@ impl TuiShell {
                 });
             }
             ["remove", model] => {
-                let mut config = self.runtime.config().clone();
+                let config = self.runtime.config().clone();
                 let model_ref = match config.parse_model_ref_selector(model) {
                     Ok(model_ref) => model_ref,
                     Err(message) => {
@@ -130,7 +133,7 @@ impl TuiShell {
                         return;
                     }
                 };
-                if !config.remove_model(&model_ref) {
+                if config.resolve_model_profile(&model_ref).is_none() {
                     self.messages.push(ChatMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.model.not_found", model = model).into_owned(),
@@ -138,43 +141,22 @@ impl TuiShell {
                     });
                     return;
                 }
-                if crate::model_registry::model_refs_equal(&config.active_model, &model_ref) {
-                    config.active_model = config.first_model_ref();
-                }
-                if config
-                    .image_generation_model
-                    .as_ref()
-                    .is_some_and(|slot| crate::model_registry::model_refs_equal(slot, &model_ref))
-                {
-                    config.image_generation_model = None;
-                }
-                if config
-                    .video_generation_model
-                    .as_ref()
-                    .is_some_and(|slot| crate::model_registry::model_refs_equal(slot, &model_ref))
-                {
-                    config.video_generation_model = None;
-                }
-                if let Err(err) = self.config_store.save(&config) {
-                    self.messages.push(ChatMessage {
-                        role: MessageRole::Agent,
-                        content: t!("tui.model.remove_save_failed", err = err).into_owned(),
-                        tool_block: None,
-                    });
-                } else {
-                    // When the removal emptied the provider entry, drop its internal
-                    // keyring account (`provider::{id}`).
-                    if config.find_provider_entry(&model_ref.provider_id).is_none() {
-                        let _ = self.secret_store.remove_provider_secret(
-                            &crate::model_registry::provider_key_account(&model_ref.provider_id),
-                        );
+                match self.runtime.remove_model(&model_ref) {
+                    Ok(updated) => {
+                        self.runtime.replace_config(updated);
+                        self.messages.push(ChatMessage {
+                            role: MessageRole::Agent,
+                            content: t!("tui.model.removed", model = model).into_owned(),
+                            tool_block: None,
+                        });
                     }
-                    self.runtime.replace_config(config);
-                    self.messages.push(ChatMessage {
-                        role: MessageRole::Agent,
-                        content: t!("tui.model.removed", model = model).into_owned(),
-                        tool_block: None,
-                    });
+                    Err(err) => {
+                        self.messages.push(ChatMessage {
+                            role: MessageRole::Agent,
+                            content: err.to_string(),
+                            tool_block: None,
+                        });
+                    }
                 }
             }
             _ => {
@@ -1104,7 +1086,7 @@ impl TuiShell {
             return;
         }
 
-        let payload = match skills::build_active_skill_payload(skill) {
+        let payload = match self.runtime.resolve_active_skill(&skill.clone()) {
             Ok(payload) => payload,
             Err(err) => {
                 self.push_agent_message(t!("tui.skills.activate_failed", err = err).into_owned());

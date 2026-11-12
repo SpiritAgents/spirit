@@ -300,17 +300,8 @@ pub trait ConfigStore: Send + Sync {
     fn save(&self, config: &AppConfig) -> Result<()>;
 }
 
-pub trait SecretStore: Send + Sync {
-    /// Reads an arbitrary keyring entry — internal `Spirit` accounts (`provider::{id}[::{slot}]`)
-    /// and external `apiKeyKeyring` / `credentials` slot references alike; missing or blank
-    /// values resolve to `None`.
-    fn read_keyring_secret(&self, service: &str, account: &str) -> Result<Option<String>>;
-    /// Writes an internal keyring account (a blank value clears the entry).
-    fn save_provider_secret(&self, account: &str, secret: &str) -> Result<()>;
-    fn remove_provider_secret(&self, account: &str) -> Result<()>;
-}
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChatSessionListItem {
     pub path: String,
     pub display_name: String,

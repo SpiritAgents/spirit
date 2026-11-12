@@ -1,5 +1,5 @@
 import { readFileHeadlineDetailForPath, readFileVerbKey } from "./read-file-skill-display.js";
-import { backgroundTaskOutputKind } from "@spiritagent/host-internal/background-task-path";
+import { backgroundTaskOutputKind } from "@spiritagent/sessions/background-task-path";
 import {
   isToolOutputArchivePath,
   toolOutputArchiveHeadlineDetail,

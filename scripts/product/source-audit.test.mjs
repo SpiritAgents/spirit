@@ -11,10 +11,10 @@ const keyringFiles = new Set([
   "apps/cli/src/model_registry.rs",
   "packages/sessions/src/host/storage.ts",
   "packages/github/src/auth-storage.ts",
-  "packages/host-internal/src/credentials/provider-key-channels.ts",
+  "packages/config/src/credentials/provider-key-channels.ts",
   "packages/sessions/src/host/host-model-commands.ts",
   "packages/sessions/src/host/model-config.ts",
-  "packages/host-internal/src/credentials/provider-accounts.ts",
+  "packages/config/src/credentials/provider-accounts.ts",
   "packages/config/src/keyring-secret.ts",
   "scripts/release/smoke-macos-keychain-sharing.mjs",
 ]);

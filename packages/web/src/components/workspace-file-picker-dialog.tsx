@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ListTodo } from "lucide-react";
 
-import { mergeRecentIntoSuggestions } from "@spiritagent/host-internal/workspace-file-reference-query";
+import { mergeRecentIntoSuggestions } from "@spiritagent/api/workspace-file-reference-query";
 
 import { WorkspaceFilePickerRow } from "@/components/workspace-file-picker-row";
 import {

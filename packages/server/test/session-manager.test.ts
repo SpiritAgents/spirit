@@ -5,8 +5,11 @@ import { join } from "node:path";
 import { describe, it } from "vitest";
 
 import { setLlmFetchTransportOverrideForTests } from "@spiritagent/agent-core";
-import { setKeyringStoreForTests, providerInternalKeyAccount } from "@spiritagent/host-internal";
-import { isSessionId, readSessionStorageKey } from "@spiritagent/host-internal";
+import {
+  setKeyringStoreForTests,
+  providerInternalKeyAccount,
+} from "@spiritagent/config/credentials";
+import { isSessionId, readSessionStorageKey } from "@spiritagent/sessions";
 
 import { SessionManager } from "../src/session-manager.js";
 

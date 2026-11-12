@@ -123,11 +123,11 @@ const presetIdPatterns = presetIds
   .map((id) => new RegExp(`(?<![A-Za-z0-9@/._-])${escapeRegExp(id)}(?![A-Za-z0-9_-])`));
 
 const scanRoots = [join(agentCoreRoot, "src")];
-const hostInternalSrc = join(repoRoot, "packages/host-internal/src");
-const hostInternalTargets = [join(hostInternalSrc, "resolve-transport.ts")];
-const hostInternalCredentials = join(hostInternalSrc, "credentials");
-for (const file of collectSourceFiles(hostInternalCredentials)) {
-  hostInternalTargets.push(file);
+const configSrc = join(repoRoot, "packages/config/src");
+const configTargets = [join(configSrc, "resolve-transport.ts")];
+const configCredentials = join(configSrc, "credentials");
+for (const file of collectSourceFiles(configCredentials)) {
+  configTargets.push(file);
 }
 
 const hits = [];
@@ -159,7 +159,7 @@ function scanFile(filePath) {
 for (const file of collectSourceFiles(scanRoots[0])) {
   scanFile(file);
 }
-for (const file of hostInternalTargets) {
+for (const file of configTargets) {
   scanFile(file);
 }
 

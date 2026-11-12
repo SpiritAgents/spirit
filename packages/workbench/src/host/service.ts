@@ -1,6 +1,8 @@
 import { lstat, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { configureServerConnector } from "@spiritagent/sessions/host/server-connector";
+import { connectOrSpawnServer } from "@spiritagent/server/client";
 import {
   hydrateTimelineSnapshotFromPersistence,
   normalizeTimelineSnapshotForPersistence,
@@ -37,41 +39,45 @@ import {
   type McpUiOpenRequest,
   type McpUiOpenResult,
 } from "@spiritagent/agent-core";
+import { extractActivePlanPathFromLlmHistory } from "@spiritagent/instructions/plans";
 import {
-  extractActivePlanPathFromLlmHistory,
   localFileAttachmentFromPath,
   workspaceFileReferenceAttachmentFromPath,
   classifyLocalFileComposerRoute as resolveLocalFileComposerRoute,
-  type LocalFileComposerRoute,
   restoreHostFileChanges,
-  type HostDreamScope,
-  type HostTodoRecord,
-  type HostTodoScope,
   type HostRecordedFileChange,
-  type ApprovalLevel,
-  normalizeApprovalLevel,
-  normalizeWorkLocationKind,
   gitBranchLabelForBasicInfo,
-  applyWorkspaceTasksTrustDecision,
-  canonicalizeWorkspaceRoot,
-  type WorkLocationKind,
+} from "@spiritagent/workspace";
+import { type LocalFileComposerRoute } from "@spiritagent/api/local-file-composer-route";
+import { type HostDreamScope } from "@spiritagent/automations/dreams";
+import { type HostTodoRecord } from "@spiritagent/sessions/todo-store";
+import { type HostTodoScope } from "@spiritagent/api/tools";
+import { type ApprovalLevel } from "@spiritagent/api/approval-level";
+import { normalizeApprovalLevel } from "@spiritagent/permissions/approval-level";
+import { normalizeWorkLocationKind } from "@spiritagent/workspace/git-workspace";
+import { applyWorkspaceTasksTrustDecision } from "@spiritagent/tasks/trust";
+import { canonicalizeWorkspaceRoot } from "@spiritagent/hooks";
+import { type WorkLocationKind } from "@spiritagent/api/work-location";
+import {
   type WorkspaceCapabilityTrustDecision,
   type WorkspaceCapabilityTrustRequest,
-} from "@spiritagent/host-internal";
+} from "@spiritagent/api/workspace-trust";
 import {
   createHostExtensionManager,
   collectEnabledExtensionInstructionContributions,
-  overlayExtensionRulesAndSkills,
   ensureBuiltInExtensions,
   listAllMarketplaceSources,
   compareMarketplaceDisplayOrder,
   readMarketplaceCatalogForSource,
   type HostExtensionEvent,
+  type HostExtensionInstructionContributions,
+} from "@spiritagent/extensions";
+import {
   computeWorkspaceTasksContentHash,
   loadTaskFiles,
   type LoadedTaskFile,
-  type HostExtensionInstructionContributions,
-} from "@spiritagent/extensions";
+} from "@spiritagent/tasks";
+import { overlayExtensionRulesAndSkills } from "@spiritagent/instructions/contributions";
 
 import type {
   AddModelRequest,
@@ -363,12 +369,8 @@ import {
   deleteSessionCommand,
   type SessionDeleteContext,
 } from "@spiritagent/sessions/host/session-delete";
-import {
-  findProviderEntry,
-  modelRefKey,
-  modelRefsEqual,
-  tryResolveTransportConfig,
-} from "@spiritagent/host-internal";
+import { findProviderEntry, modelRefKey, modelRefsEqual } from "@spiritagent/config";
+import { tryResolveTransportConfig } from "@spiritagent/config/resolve-transport";
 import { findProviderPreset } from "@spiritagent/agent-core/provider-presets";
 import type { ModelRef } from "@spiritagent/api/types";
 import {
@@ -665,6 +667,10 @@ async function loadDesktopPlanSnapshot(
 }
 
 export class DesktopHostService {
+  constructor() {
+    configureServerConnector(connectOrSpawnServer);
+  }
+
   private readonly invokeDispatch = createHostInvokeDispatch(this);
   private runtimeTransport: SpiritLlmTransport = createLlmTransport();
   private readonly extensionStateStore = createDesktopExtensionStateStore({
@@ -976,7 +982,9 @@ export class DesktopHostService {
     const state = this.requireState();
     return {
       workspaceRoot: state.workspaceRoot,
+      spiritDataDir: spiritDataDir(),
       config: state.config,
+      resolveSecondaryLanguageModelProfile,
     };
   }
 
@@ -2522,7 +2530,7 @@ export class DesktopHostService {
   }
 
   /**
-   * A config-scope remembered approval is written to config.json inside the host-internal tool
+   * A config-scope remembered approval is written to config.json inside the built-in tool
    * service (`savePermissionRule`), bypassing desktop storage. Reload the in-memory config so
    * later desktop saves do not clobber the new rule.
    */

@@ -4,7 +4,7 @@ import type {
   PendingToolApprovalSnapshot,
 } from "../types.js";
 import type { PermissionMemoryTarget, ToolApprovalPrompt } from "@spiritagent/agent-core";
-import type { ApprovalLevel } from "@spiritagent/host-internal/approval-level";
+import type { ApprovalLevel } from "@spiritagent/api/approval-level";
 import type { DesktopToolRequest } from "./contracts.js";
 import {
   fileContentPreviewForApprovalRequest,

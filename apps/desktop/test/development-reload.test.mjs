@@ -21,11 +21,18 @@ test("runtime restart watches cover the Workbench domain graph", () => {
     "@spiritagent/config",
     "@spiritagent/extensions",
     "@spiritagent/github",
+    "@spiritagent/hooks",
     "@spiritagent/http",
     "@spiritagent/i18n",
+    "@spiritagent/instructions",
     "@spiritagent/lsp",
+    "@spiritagent/mcp",
+    "@spiritagent/permissions",
+    "@spiritagent/process",
     "@spiritagent/remote-control",
     "@spiritagent/sessions",
+    "@spiritagent/tasks",
+    "@spiritagent/tools",
     "@spiritagent/workbench",
     "@spiritagent/workspace",
   ]) {
@@ -44,6 +51,9 @@ test("runtime restart watches cover the Workbench domain graph", () => {
   const dirs = developmentRestartWatchDirs(desktopRoot, repoRoot);
   assert.ok(dirs.includes(path.join(desktopRoot, "dist-electron")));
   assert.ok(dirs.includes(path.join(repoRoot, "packages", "github", "dist")));
+  assert.ok(dirs.includes(path.join(repoRoot, "packages", "instructions", "dist")));
+  assert.ok(dirs.includes(path.join(repoRoot, "packages", "tasks", "dist")));
+  assert.ok(dirs.includes(path.join(repoRoot, "packages", "tools", "dist")));
   assert.ok(dirs.includes(path.join(repoRoot, "packages", "workbench", "dist")));
 });
 
