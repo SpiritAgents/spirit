@@ -23,7 +23,7 @@ export function renderProductHtml(html: string): string {
  * (dist/X.js -> src/X), which also covers subpaths whose file layout differs
  * from the subpath name. Production builds keep resolving to dist.
  */
-function workspaceSourceAliases() {
+export function workspaceSourceAliases() {
   const aliases: { find: RegExp; replacement: string }[] = [];
   for (const pkgName of [
     "ui",
@@ -32,6 +32,7 @@ function workspaceSourceAliases() {
     "i18n",
     "agent-core",
     "host-internal",
+    "github",
     "code-completion",
     "extensions",
     "remote-control",
@@ -53,13 +54,15 @@ function workspaceSourceAliases() {
       if (!srcFile) {
         continue;
       }
-      const find =
-        subpath === "."
-          ? new RegExp(`^@spiritagent/${pkgName}$`)
-          : new RegExp(
-              `^@spiritagent/${pkgName}/${subpath.slice(2).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
-            );
-      aliases.push({ find, replacement: path.join(pkgRoot, "src", srcFile) });
+      const importPath =
+        subpath === "." ? `@spiritagent/${pkgName}` : `@spiritagent/${pkgName}/${subpath.slice(2)}`;
+      const find = new RegExp(
+        `^${importPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replaceAll("\\*", "(.+)")}$`,
+      );
+      aliases.push({
+        find,
+        replacement: path.join(pkgRoot, "src", srcFile).replaceAll("*", "$1"),
+      });
     }
   }
   return aliases;

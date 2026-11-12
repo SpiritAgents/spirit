@@ -22,7 +22,7 @@
     "dev": "node ../../packages/product/scripts/run-quality.mjs dev pnpm run dev:run",
     "dev:run": "pnpm run ensure:dev-built && concurrently -k --success command-electron -n electron,renderer,packages,tsc-electron,extension-ui \"pnpm run dev:electron:run\" \"pnpm run dev:renderer\" \"pnpm run watch:packages\" \"pnpm run watch:electron\" \"pnpm run dev:extension-ui\"",
     "dev:renderer": "pnpm --filter @spiritagent/web dev",
-    "watch:packages": "pnpm exec turbo watch build --filter=@spiritagent/workbench...",
+    "watch:packages": "pnpm exec turbo watch build --filter=@spiritagent/workbench... --filter=!@spiritagent/web",
     "watch:electron": "tsc -p tsconfig.electron.json --watch --preserveWatchOutput",
     "dev:electron": "pnpm run ensure:dev-built && wait-on tcp:127.0.0.1:1420 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:1420 node scripts/run-dev-electron.mjs dist-electron/electron/main.js",
     "dev:electron:run": "cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:1420 node scripts/run-dev-electron.mjs dist-electron/electron/main.js",

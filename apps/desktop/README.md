@@ -63,9 +63,9 @@ pnpm install
 pnpm run dev:desktop
 ```
 
-This builds shared packages (`agent-core`, `host-internal`, `server`), starts the Vite renderer on `http://127.0.0.1:1420`, and launches Electron.
+This builds the shared packages, starts the `packages/web` Vite renderer on `http://127.0.0.1:1420`, and launches Electron.
 
-While it runs, workspace package edits apply without a manual rebuild: the renderer resolves `@spiritagent/ui`, `@spiritagent/icons`, and the renderer-consumed subpaths of `agent-core`/`host-internal` directly to their TypeScript sources (HMR, see `workspaceSourceAliases` in `apps/desktop/vite.config.ts`), while Electron main-process code (`electron/`, `src/host/`) and the main-process packages rebuild via watch tasks and restart the app automatically. The exception is `electron/preload.ts`: rerun `pnpm run build:electron` after changing it.
+While it runs, workspace package edits apply without a manual rebuild: the renderer resolves browser-consumed workspace entry points, including wildcard exports, directly to their TypeScript sources (HMR, see `workspaceSourceAliases` in `packages/web/vite.config.ts`). Electron main-process code and the Workbench runtime dependency graph rebuild via watch tasks and restart the app automatically. The production `web` static bundle is excluded from that background watch because Vite already serves the renderer from source. The exception is `electron/preload.ts`: rerun `pnpm run build:electron` after changing it.
 
 Runtime initialization and refresh failures are reported in the UI and logged to the host's stderr with `[desktop-host] runtime refresh failed`, the session bundle/workspace context, and the original error stack. In Electron development, these logs appear under the `[electron]` terminal prefix; request payloads and provider configuration are not included.
 
