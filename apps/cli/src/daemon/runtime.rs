@@ -44,6 +44,11 @@ use super::resolve::{ensure_daemon, is_loopback_host};
 /// Buffer window for draining daemon notifications without blocking.
 const NOTIFICATION_DRAIN_TIMEOUT: Duration = Duration::from_millis(5);
 
+fn parse_rewind_checkpoint_snapshot(value: Value) -> Result<DesktopRewindCheckpointSnapshot> {
+    serde_json::from_value::<Option<DesktopRewindCheckpointSnapshot>>(value)?
+        .ok_or_else(|| anyhow!("The rewind checkpoint file does not exist; cannot rewind."))
+}
+
 pub(crate) struct DaemonRuntime {
     client: DaemonClient,
     /// None for host-only connections (management subcommands, no session).
@@ -1337,7 +1342,7 @@ impl DaemonRuntime {
             .checkpoint_for_message_id(message_id)
             .cloned()
             .ok_or_else(|| anyhow!("This message has no rewind checkpoint available."))?;
-        let snapshot: DesktopRewindCheckpointSnapshot = serde_json::from_value(self.client.call(
+        let snapshot = parse_rewind_checkpoint_snapshot(self.client.call(
             "session.loadRewindCheckpoint",
             json!({
                 "sessionId": self.rewind.session_id,
@@ -2171,5 +2176,20 @@ impl DaemonRuntime {
             logging::log_event(&format!("[daemon-runtime] session.detach failed: {err}"));
         }
         self.client.close();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_rewind_checkpoint_snapshot;
+
+    #[test]
+    fn missing_rewind_checkpoint_uses_missing_file_error() {
+        let error = parse_rewind_checkpoint_snapshot(serde_json::Value::Null)
+            .expect_err("missing checkpoint should fail");
+        assert_eq!(
+            error.to_string(),
+            "The rewind checkpoint file does not exist; cannot rewind."
+        );
     }
 }
