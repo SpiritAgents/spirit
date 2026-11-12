@@ -3,7 +3,7 @@ import { copyFile, lstat, mkdir, readFile, realpath, stat, writeFile } from "nod
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 
 import {
@@ -193,6 +193,7 @@ import {
   setDesktopApplicationMenu,
 } from "./application-menu.js";
 import { resolveDesktopWebHostFromEnv } from "@spiritagent/http/http-host";
+import { stopWorkbenchChild, type WorkbenchChildState } from "./workbench-child.js";
 import {
   beginGitHubDeviceLoginInElectron,
   clearPendingGitHubDeviceAuth,
@@ -222,7 +223,7 @@ installMainStderrCapture();
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
 
 let desktopWebHostConfig: DesktopWebHostConfigFile | undefined;
-let desktopWorkbenchChild: ChildProcess | undefined;
+const desktopWorkbenchProcess: WorkbenchChildState = {};
 let unsubscribeDesktopRemoteControl: (() => void) | undefined;
 let quittingAfterDesktopWebHostStop = false;
 let unsubscribeDesktopDreamUpdates: (() => void) | undefined;
@@ -458,7 +459,7 @@ async function ensureDesktopWorkbenchProcess(config: DesktopWebHostConfigFile): 
   );
   if (available.hostAvailable) return;
 
-  if (!desktopWorkbenchChild) {
+  if (!desktopWorkbenchProcess.child) {
     const require = createRequire(import.meta.url);
     const entry = require.resolve("@spiritagent/workbench/entry");
     const child = spawn(process.execPath, [entry, "serve"], {
@@ -473,9 +474,9 @@ async function ensureDesktopWorkbenchProcess(config: DesktopWebHostConfigFile): 
         SPIRIT_WEB_PORT: String(config.port),
       },
     });
-    desktopWorkbenchChild = child;
+    desktopWorkbenchProcess.child = child;
     child.once("exit", () => {
-      if (desktopWorkbenchChild === child) desktopWorkbenchChild = undefined;
+      if (desktopWorkbenchProcess.child === child) desktopWorkbenchProcess.child = undefined;
     });
     child.unref();
   }
@@ -489,6 +490,7 @@ async function ensureDesktopWorkbenchProcess(config: DesktopWebHostConfigFile): 
     if (current.hostAvailable) return;
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
+  stopWorkbenchChild(desktopWorkbenchProcess);
   throw new Error("Workbench Host startup timed out.");
 }
 
