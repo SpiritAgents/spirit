@@ -25,6 +25,7 @@
     "tsBuildInfoFile": "./.tsbuildinfo"
   },
   "include": [
+    "src/index.ts",
     "src/host/**/*.ts",
     "src/**/*.d.ts",
     "src/types.ts",
