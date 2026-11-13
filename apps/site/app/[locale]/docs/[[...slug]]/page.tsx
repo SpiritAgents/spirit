@@ -7,6 +7,8 @@ import { getMDXComponents } from "@/components/mdx";
 import { DocsTOC, DocsTOCPopover, DocsTOCProvider } from "@/components/docs-toc";
 import { isSupportedLocale } from "@/i18n/config";
 import { FONT_WEIGHT_MEDIUM, FONT_WEIGHT_NORMAL } from "@/lib/typography";
+import { getOgMetadataFields } from "@/lib/og/model";
+import { resolveOgModel } from "@/lib/og/resolver";
 import { source, toRelativeLinkPage } from "@/lib/source";
 
 type PageProps = {
@@ -55,6 +57,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const page = source.getPage(slug, locale);
   if (!page) notFound();
 
+  const ogModel = resolveOgModel(locale, ["docs", ...(slug ?? [])]);
+  const ogFields = ogModel ? getOgMetadataFields(ogModel) : { openGraph: {}, twitter: {} };
+
   return {
     title: page.data.title,
     description: page.data.description,
@@ -66,5 +71,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
           },
         }
       : undefined,
+    openGraph: {
+      type: "article",
+      title: page.data.title,
+      description: page.data.description,
+      url: page.url,
+      ...ogFields.openGraph,
+    },
+    twitter: {
+      card: "summary",
+      title: page.data.title,
+      description: page.data.description,
+      ...ogFields.twitter,
+    },
   };
 }

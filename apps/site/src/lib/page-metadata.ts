@@ -10,6 +10,8 @@ import {
 } from "@/i18n/config";
 import { messagesByLocale, type Messages } from "@/i18n/messages";
 import { getSiteOrigin } from "@/content/site-document";
+import { getRootSectionTitle } from "@/lib/og/content";
+import { getOgMetadataFields } from "@/lib/og/model";
 
 export type SitePage = "home" | "download" | "docs";
 
@@ -58,6 +60,17 @@ export function buildPageMetadata(localeParam: string, page: SitePage): Metadata
     languages[supportedLocale] = `${siteOrigin}${getLocalePath(supportedLocale, pathSuffix)}`;
   }
 
+  const ogModel =
+    page === "home"
+      ? { kind: "home" as const, locale, path: "" as const, alt: messages.meta.title }
+      : {
+          kind: "section" as const,
+          locale,
+          path: page,
+          title: getRootSectionTitle(messages, page) ?? messages.meta.title,
+        };
+  const ogFields = ogModel ? getOgMetadataFields(ogModel) : { openGraph: {}, twitter: {} };
+
   return {
     title,
     description,
@@ -78,11 +91,13 @@ export function buildPageMetadata(localeParam: string, page: SitePage): Metadata
       description,
       url: canonicalUrl,
       locale: getOgLocale(locale),
+      ...ogFields.openGraph,
     },
     twitter: {
       card: "summary",
       title,
       description,
+      ...ogFields.twitter,
     },
   };
 }
