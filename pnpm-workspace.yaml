@@ -30,6 +30,9 @@ overrides:
   # TODO: drop once oxfmt loosens its pinned tinypool 2.1.0 dependency;
   # 2.1.2 fixes the prototype-pollution worker option gadgets.
   tinypool: 2.1.2
+  # TODO: drop once concurrently loosens its pinned shell-quote 1.9.0 dependency;
+  # 1.11.0 rejects line terminators after comment tokens instead of emitting shell input.
+  shell-quote: 1.11.0
 
 peerDependencyRules:
   # i18next / react-i18next declare peer typescript "^5 || ^6" for their own
