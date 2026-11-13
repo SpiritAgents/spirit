@@ -40,7 +40,9 @@ test("Minimatch 11 supports app-builder FileMatcher file enumeration", async () 
     { info: { areNodeModulesHandledExternally: true } },
     false,
   );
-  const files = fileSets.flatMap((fileSet) => fileSet.files).map((file) => relative(appRoot, file));
+  const files = fileSets
+    .flatMap((fileSet) => fileSet.files)
+    .map((file) => relative(appRoot, file).replace(/\\/g, "/"));
 
   assert.deepEqual(files.sort(), ["dist-electron/electron/main.js", "package.json"]);
 });
