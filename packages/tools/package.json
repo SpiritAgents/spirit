@@ -35,7 +35,7 @@
     "@spiritagent/product": "workspace:*",
     "@spiritagent/workspace": "workspace:*",
     "@vscode/ripgrep": "1.18.0",
-    "glob": "13.0.6",
+    "glob": "14.0.2",
     "ignore": "5.3.2",
     "jsdom": "30.0.1",
     "turndown": "7.2.4",
