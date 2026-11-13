@@ -11,11 +11,11 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "dist-electron/**", ".next/**", ".source/**"],
-      "env": ["SITE_URL"]
+      "env": ["SITE_URL", "VERCEL_ENV", "VERCEL_URL"]
     },
     "@spiritagent/site#build": {
       "dependsOn": ["^build"],
-      "env": ["SITE_URL"],
+      "env": ["SITE_URL", "VERCEL_ENV", "VERCEL_URL"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/i18n/src/locales/*.json"],
       "outputs": [".next/**", ".source/**", ".generated/**", "public/**"]
     },

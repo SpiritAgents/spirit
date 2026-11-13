@@ -9,6 +9,7 @@
     "build": "pnpm --filter \"@spiritagent/site^...\" run build && node ../../scripts/product/generate-content.mjs --scope site && node scripts/generate-brand-assets.mjs && node scripts/generate-notice.mjs && node scripts/generate-install-scripts.mjs && tsx scripts/generate-markdown-companions.mjs && next build",
     "start": "next start",
     "test": "node ../../scripts/product/generate-content.mjs --scope site && tsx --test scripts/*.test.ts",
+    "test:og": "node scripts/og-route-smoke.mjs",
     "lint": "oxlint --deny-warnings .",
     "lint:fix": "oxlint --fix .",
     "format": "oxfmt --check .",
@@ -19,9 +20,15 @@
     "markdown-companions": "tsx scripts/generate-markdown-companions.mjs"
   },
   "dependencies": {
+    "@fontsource/inter": "5.3.0",
+    "@fontsource/noto-sans-jp": "5.3.1",
+    "@fontsource/noto-sans-kr": "5.3.1",
+    "@fontsource/noto-sans-sc": "5.3.1",
+    "@fontsource/noto-sans-tc": "5.3.1",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@shikijs/langs": "^4.3.1",
     "@shikijs/themes": "^4.3.1",
+    "@spiritagent/brand": "workspace:*",
     "@spiritagent/icons": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "@spiritagent/ui": "workspace:*",
