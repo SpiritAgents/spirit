@@ -7,9 +7,9 @@ const nextConfig: NextConfig = {
   turbopack: { root: fileURLToPath(new URL("../..", import.meta.url)) },
   outputFileTracingRoot: fileURLToPath(new URL("../..", import.meta.url)),
   outputFileTracingIncludes: {
-    "/og/[...slug]": [
+    "/og/\\[\\.\\.\\.slug\\]": [
       "../../node_modules/@fontsource/*/400.css",
-      "../../node_modules/@fontsource/*/files/*.woff",
+      "../../node_modules/@fontsource/*/files/*-400-normal.woff",
       "../../packages/brand/assets/logo-dark.svg",
     ],
   },

@@ -24,3 +24,12 @@ test("production build builds workspace dependencies before it imports them", ()
   assert.ok(companions > dependencyBuild);
   assert.ok(nextBuild > dependencyBuild);
 });
+
+test("OG route tracing escapes the catch-all route and includes only normal 400 fonts", () => {
+  const config = readFileSync(new URL("../next.config.ts", import.meta.url), "utf8");
+
+  assert.ok(config.includes('"/og/\\\\[\\\\.\\\\.\\\\.slug\\\\]"'));
+  assert.ok(config.includes('"../../node_modules/@fontsource/*/400.css"'));
+  assert.ok(config.includes('"../../node_modules/@fontsource/*/files/*-400-normal.woff"'));
+  assert.ok(!config.includes('"../../node_modules/@fontsource/*/files/*.woff"'));
+});
