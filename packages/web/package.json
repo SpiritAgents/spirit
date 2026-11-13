@@ -24,13 +24,13 @@
     "preview": "vite preview --host 127.0.0.1 --port 4173"
   },
   "dependencies": {
-    "@lexical/clipboard": "0.46.0",
-    "@lexical/headless": "0.46.0",
-    "@lexical/history": "0.46.0",
-    "@lexical/plain-text": "0.46.0",
-    "@lexical/react": "0.46.0",
-    "@lexical/rich-text": "0.46.0",
-    "@lexical/utils": "0.46.0",
+    "@lexical/clipboard": "0.53.0",
+    "@lexical/headless": "0.53.0",
+    "@lexical/history": "0.53.0",
+    "@lexical/plain-text": "0.53.0",
+    "@lexical/react": "0.53.0",
+    "@lexical/rich-text": "0.53.0",
+    "@lexical/utils": "0.53.0",
     "@radix-ui/react-scroll-area": "1.2.18",
     "@shikijs/monaco": "3.23.0",
     "@shikijs/themes": "3.23.0",
@@ -72,8 +72,8 @@
     "gitdiff-parser": "0.3.1",
     "hast-util-sanitize": "5.0.2",
     "i18next": "26.3.0",
-    "katex": "0.17.0",
-    "lexical": "0.46.0",
+    "katex": "0.18.2",
+    "lexical": "0.53.0",
     "lucide-react": "1.28.0",
     "monaco-editor": "0.52.2",
     "radix-ui": "1.6.7",
@@ -125,8 +125,8 @@
     "linkedom": "0.18.13",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
-    "vite": "8.2.0",
-    "vitest": "^4.1.11"
+    "vite": "8.2.4",
+    "vitest": "^4.1.12"
   },
   "engines": {
     "node": "26.13.0"

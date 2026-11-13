@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import glyphBlackUrl from "@spiritagent/brand/assets/glyph-black.svg?url";
 import glyphWhiteUrl from "@spiritagent/brand/assets/glyph-white.svg?url";
 import logoDarkUrl from "@spiritagent/brand/assets/logo-dark.svg?url";
+import { createOpticalLogoSvg } from "@spiritagent/brand";
 import sharp from "sharp";
 import { test } from "vitest";
 import { parseHTML } from "linkedom";
@@ -75,16 +76,18 @@ test("glass title-bar branding stays dark while monochrome glyphs follow the UI 
   assert.equal(spiritAgentBrandIconSrc(true), glyphWhiteUrl);
 });
 
-test("glass brand masters retain opaque canvases and visible details at small sizes", async () => {
+test("optical brand renders retain opaque canvases and visible details at small sizes", async () => {
   const brandAssets = join(desktopRoot, "../../packages/brand/assets");
   const logoFiles = (await readdir(brandAssets)).filter((filename) =>
     ["logo-light.svg", "logo-dark.svg"].includes(filename),
   );
   for (const filename of logoFiles) {
     const source = join(brandAssets, filename);
+    const sourceSvg = await readFile(source, "utf8");
     const background = filename === "logo-light.svg" ? 255 : 0;
     for (const size of [16, 24, 32, 64, 512]) {
-      const { data, info } = await sharp(source)
+      const opticalSvg = createOpticalLogoSvg(sourceSvg, size);
+      const { data, info } = await sharp(Buffer.from(opticalSvg))
         .resize(size, size)
         .ensureAlpha()
         .raw()

@@ -15,19 +15,19 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
 
 - **@electron/rebuild** 4.2.0 — MIT
   - https://github.com/electron/rebuild
-- **@lexical/clipboard** 0.46.0 — MIT
+- **@lexical/clipboard** 0.53.0 — MIT
   - https://github.com/facebook/lexical
-- **@lexical/headless** 0.46.0 — MIT
+- **@lexical/headless** 0.53.0 — MIT
   - https://github.com/facebook/lexical
-- **@lexical/history** 0.46.0 — MIT
+- **@lexical/history** 0.53.0 — MIT
   - https://github.com/facebook/lexical
-- **@lexical/plain-text** 0.46.0 — MIT
+- **@lexical/plain-text** 0.53.0 — MIT
   - https://github.com/facebook/lexical
-- **@lexical/react** 0.46.0 — MIT
+- **@lexical/react** 0.53.0 — MIT
   - https://github.com/facebook/lexical
-- **@lexical/rich-text** 0.46.0 — MIT
+- **@lexical/rich-text** 0.53.0 — MIT
   - https://github.com/facebook/lexical
-- **@lexical/utils** 0.46.0 — MIT
+- **@lexical/utils** 0.53.0 — MIT
   - https://github.com/facebook/lexical
 - **@napi-rs/keyring** 1.3.0 — MIT
   - https://github.com/Brooooooklyn/keyring-node
@@ -83,7 +83,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/kentcdodds/cross-env
 - **diff** 9.0.0 — BSD-3-Clause
   - https://github.com/kpdecker/jsdiff
-- **electron** 43.3.0 — MIT
+- **electron** 43.8.1 — MIT
   - https://github.com/electron/electron
 - **electron-builder** 26.15.3 — MIT
   - https://github.com/electron-userland/electron-builder
@@ -95,11 +95,11 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/i18next/i18next
 - **jsdom** 30.0.1 — MIT
   - https://github.com/jsdom/jsdom
-- **katex** 0.17.0 — MIT
+- **katex** 0.18.2 — MIT
   - https://github.com/KaTeX/KaTeX
 - **koffi** 2.16.3 — MIT
   - https://github.com/Koromix/koffi
-- **lexical** 0.46.0 — MIT
+- **lexical** 0.53.0 — MIT
   - https://github.com/facebook/lexical
 - **linkedom** 0.18.13 — ISC
   - https://github.com/WebReflection/linkedom
@@ -131,7 +131,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - remarkjs/remark-gfm
 - **remark-parse** 11.0.0 — MIT
   - https://github.com/remarkjs/remark/tree/main/packages/remark-parse
-- **sharp** 0.35.4 — Apache-2.0
+- **sharp** 0.35.5 — Apache-2.0
   - https://github.com/lovell/sharp
 - **shiki** 3.23.0 — MIT
   - https://github.com/shikijs/shiki
@@ -149,9 +149,9 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/microsoft/TypeScript
 - **unified** 11.0.5 — MIT
   - unifiedjs/unified
-- **vite** 8.2.0 — MIT
+- **vite** 8.2.4 — MIT
   - https://github.com/vitejs/vite
-- **vitest** 4.1.11 — MIT
+- **vitest** 4.1.12 — MIT
   - https://github.com/vitest-dev/vitest
 - **wait-on** 9.1.0 — MIT
   - http://github.com/jeffbski/wait-on
@@ -386,7 +386,7 @@ limitations under the License.
 
 **Used by:**
 
-- sharp 0.35.4
+- sharp 0.35.5
 
 ```
 Apache License
@@ -794,14 +794,14 @@ SOFTWARE.
 
 **Used by:**
 
-- @lexical/clipboard 0.46.0
-- @lexical/headless 0.46.0
-- @lexical/history 0.46.0
-- @lexical/plain-text 0.46.0
-- @lexical/react 0.46.0
-- @lexical/rich-text 0.46.0
-- @lexical/utils 0.46.0
-- lexical 0.46.0
+- @lexical/clipboard 0.53.0
+- @lexical/headless 0.53.0
+- @lexical/history 0.53.0
+- @lexical/plain-text 0.53.0
+- @lexical/react 0.53.0
+- @lexical/rich-text 0.53.0
+- @lexical/utils 0.53.0
+- lexical 0.53.0
 - react 19.2.8
 - react-dom 19.2.8
 
@@ -1389,7 +1389,7 @@ SOFTWARE.
 
 **Used by:**
 
-- electron 43.3.0
+- electron 43.8.1
 
 ```
 Copyright (c) Electron contributors
@@ -1572,7 +1572,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 **Used by:**
 
-- katex 0.17.0
+- katex 0.18.2
 
 ```
 The MIT License (MIT)
@@ -2047,7 +2047,7 @@ THE SOFTWARE.
 
 **Used by:**
 
-- vite 8.2.0
+- vite 8.2.4
 
 ```
 # Vite core license
@@ -3308,7 +3308,7 @@ Repository: https://github.com/lydell/js-tokens
 
 > The MIT License (MIT)
 >
-> Copyright (c) 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024 Simon Lydell
+> Copyright (c) 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025 Simon Lydell
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
@@ -4378,7 +4378,7 @@ Repository: https://github.com/sveltejs/zimmerframe
 
 **Used by:**
 
-- vitest 4.1.11
+- vitest 4.1.12
 
 ```
 # Vitest core license

@@ -153,8 +153,13 @@ pub(in crate::ui) fn build_suggestion_lines(
     };
 
     let mut lines = Vec::new();
-    for idx in start..end {
-        let suggestion = &app.slash_suggestions[idx];
+    for (idx, suggestion) in app
+        .slash_suggestions
+        .iter()
+        .enumerate()
+        .take(end)
+        .skip(start)
+    {
         let is_selected = idx == selected;
         let command_style = inline_picker_text_style(is_selected);
         let summary_style = inline_picker_meta_style(is_selected);
@@ -216,8 +221,13 @@ pub(in crate::ui) fn build_file_reference_suggestion_lines(
     let (start, end) = inline_picker_bounds(total, selected, max_items);
 
     let mut lines = Vec::new();
-    for idx in start..end {
-        let path = &app.slash_suggestions[idx];
+    for (idx, path) in app
+        .slash_suggestions
+        .iter()
+        .enumerate()
+        .take(end)
+        .skip(start)
+    {
         let is_selected = idx == selected;
         let style = if is_selected {
             selected_style
@@ -489,8 +499,13 @@ pub(in crate::ui) fn build_chat_picker_lines(
         .unwrap_or(0);
     let locale = crate::locale::resolve_ui_locale(&app.config);
     let relative_time = crate::relative_time::RelativeTimeEngine::new(&locale);
-    for idx in start..end {
-        let session = &app.chat_picker_sessions[idx];
+    for (idx, session) in app
+        .chat_picker_sessions
+        .iter()
+        .enumerate()
+        .take(end)
+        .skip(start)
+    {
         let is_selected = idx == selected;
         let row_style = inline_picker_text_style(is_selected);
         let meta_style = inline_picker_meta_style(is_selected);
@@ -520,8 +535,13 @@ pub(in crate::ui) fn build_subagent_picker_lines(
     let (start, end) = inline_picker_bounds(total, selected, max_items);
 
     let mut lines = Vec::new();
-    for idx in start..end {
-        let item = &app.subagent_sessions[idx];
+    for (idx, item) in app
+        .subagent_sessions
+        .iter()
+        .enumerate()
+        .take(end)
+        .skip(start)
+    {
         let is_selected = idx == selected;
         let (status_label, _) = subagent_status_badge(item.status, false);
         let row_style = inline_picker_text_style(is_selected);
@@ -658,8 +678,13 @@ pub(in crate::ui) fn build_image_picker_lines(
     let (start, end) = inline_picker_bounds(total, selected, max_items);
 
     let mut lines = Vec::new();
-    for idx in start..end {
-        let name = &app.image_picker_files[idx];
+    for (idx, name) in app
+        .image_picker_files
+        .iter()
+        .enumerate()
+        .take(end)
+        .skip(start)
+    {
         let is_selected = idx == selected;
         let row_style = inline_picker_text_style(is_selected);
         lines.push(Line::from(vec![

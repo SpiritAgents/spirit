@@ -29,7 +29,7 @@
     "@types/node": "26.6.6",
     "@types/qrcode": "^1.5.6",
     "typescript": "7.0.2",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.12"
   },
   "engines": {
     "node": "26.13.0"
