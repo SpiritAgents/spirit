@@ -12,7 +12,11 @@ import { SPIRIT_GITHUB_REPO_URL, SPIRIT_RELEASES_URL } from "@/lib/github-links"
 export const DEFAULT_SITE_ORIGIN = product.websiteOrigin;
 
 export function getSiteOrigin(): string {
-  return (process.env.SITE_URL ?? DEFAULT_SITE_ORIGIN).replace(/\/$/, "");
+  const vercelPreviewOrigin =
+    process.env.VERCEL_ENV === "preview" && process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : undefined;
+  return (process.env.SITE_URL ?? vercelPreviewOrigin ?? DEFAULT_SITE_ORIGIN).replace(/\/$/, "");
 }
 
 function escapeHtml(value: string): string {
