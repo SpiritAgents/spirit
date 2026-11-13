@@ -33,6 +33,10 @@ overrides:
   # TODO: drop once concurrently loosens its pinned shell-quote 1.9.0 dependency;
   # 1.11.0 rejects line terminators after comment tokens instead of emitting shell input.
   shell-quote: 1.11.0
+  # TODO: drop once electron-builder and @electron/universal support Minimatch 11;
+  # 11.0.1 fixes globparts amplification on their vulnerable 9.x and 10.x branches.
+  "app-builder-lib>minimatch": 11.0.1
+  "@electron/universal>minimatch": 11.0.1
 
 peerDependencyRules:
   # i18next / react-i18next declare peer typescript "^5 || ^6" for their own
