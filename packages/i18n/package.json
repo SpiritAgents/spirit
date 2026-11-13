@@ -44,7 +44,7 @@
     "@spiritagent/product": "workspace:*",
     "@types/node": "26.6.6",
     "typescript": "7.0.2",
-    "vitest": "^4.1.11",
+    "vitest": "^4.1.12",
     "yaml": "^2.9.0"
   },
   "engines": {
