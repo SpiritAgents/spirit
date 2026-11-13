@@ -6,7 +6,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
 
 ## Summary
 
-- MIT: 389 package(s)
+- MIT: 393 package(s)
 - ISC: 44 package(s)
 - Apache-2.0: 9 package(s)
 - BSD-3-Clause: 8 package(s)
@@ -86,15 +86,19 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/jridgewell/resolve-uri
 - **@jridgewell/sourcemap-codec** 1.5.5 — MIT
   - https://github.com/jridgewell/sourcemaps
+- **@jridgewell/sourcemap-codec** 1.6.0 — MIT
+  - https://github.com/jridgewell/sourcemaps
 - **@jridgewell/trace-mapping** 0.3.31 — MIT
   - https://github.com/jridgewell/sourcemaps
 - **@mdx-js/mdx** 3.1.1 — MIT
   - https://github.com/mdx-js/mdx
 - **@mermaid-js/parser** 1.2.0 — MIT
   - https://github.com/mermaid-js/mermaid
-- **@next/env** 16.3.4 — MIT
+- **@next/env** 16.4.6 — MIT
   - https://github.com/vercel/next.js
 - **@oxc-project/types** 0.143.0 — MIT
+  - https://github.com/oxc-project/oxc
+- **@oxc-project/types** 0.156.0 — MIT
   - https://github.com/oxc-project/oxc
 - **@radix-ui/number** 1.1.3 — MIT
   - https://github.com/radix-ui/primitives
@@ -486,7 +490,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/thekashey/detect-node
 - **devlop** 1.1.0 — MIT
   - wooorm/devlop
-- **dompurify** 3.4.13 — (MPL-2.0 OR Apache-2.0)
+- **dompurify** 3.4.17 — (MPL-2.0 OR Apache-2.0)
   - https://github.com/cure53/DOMPurify
 - **electron-to-chromium** 1.5.401 — ISC
   - https://github.com/Kilian/electron-to-chromium
@@ -594,7 +598,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/mathiasbynens/jsesc
 - **json5** 2.2.3 — MIT
   - https://github.com/json5/json5
-- **katex** 0.16.47 — MIT
+- **katex** 0.18.2 — MIT
   - https://github.com/KaTeX/KaTeX
 - **khroma** 2.1.0 — UNKNOWN
   - https://github.com/fabiospampinato/khroma
@@ -738,7 +742,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - vercel/ms
 - **nanoid** 3.3.18 — MIT
   - ai/nanoid
-- **next** 16.3.4 — MIT
+- **next** 16.4.6 — MIT
   - vercel/next.js
 - **next-themes** 0.4.6 — MIT
   - https://github.com/pacocoursey/next-themes
@@ -762,13 +766,15 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - alexeyraspopov/picocolors
 - **picomatch** 4.0.5 — MIT
   - micromatch/picomatch
+- **picomatch** 4.0.7 — MIT
+  - micromatch/picomatch
 - **points-on-curve** 0.2.0 — MIT
   - https://github.com/pshihn/bezier-points
 - **points-on-path** 0.2.1 — MIT
   - https://github.com/pshihn/points-on-path
 - **postcss** 8.5.23 — MIT
   - postcss/postcss
-- **postcss** 8.5.25 — MIT
+- **postcss** 8.5.32 — MIT
   - postcss/postcss
 - **property-information** 7.2.0 — MIT
   - wooorm/property-information
@@ -826,6 +832,8 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/mourner/robust-predicates
 - **rolldown** 1.2.3 — MIT
   - https://github.com/rolldown/rolldown
+- **rolldown** 1.2.19 — MIT
+  - https://github.com/rolldown/rolldown
 - **roughjs** 4.6.6 — MIT
   - https://github.com/pshihn/rough
 - **rw** 1.3.3 — BSD-3-Clause
@@ -840,13 +848,13 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/npm/node-semver
 - **semver** 7.8.5 — ISC
   - https://github.com/npm/node-semver
-- **sharp** 0.35.4 — Apache-2.0
+- **sharp** 0.35.5 — Apache-2.0
   - https://github.com/lovell/sharp
 - **shiki** 4.4.3 — MIT
   - https://github.com/shikijs/shiki
 - **source-map** 0.7.6 — BSD-3-Clause
   - http://github.com/mozilla/source-map
-- **source-map-js** 1.2.1 — BSD-3-Clause
+- **source-map-js** 1.2.2 — BSD-3-Clause
   - 7rulnik/source-map-js
 - **space-separated-tokens** 2.0.2 — MIT
   - wooorm/space-separated-tokens
@@ -930,7 +938,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/yuku-toolchain/yuku
 - **zbsearch** 4.0.0 — Apache-2.0
   - https://github.com/micheleriva/zbsearch
-- **zod** 4.4.3 — MIT
+- **zod** 4.6.6 — MIT
   - https://github.com/colinhacks/zod
 - **zwitch** 2.0.4 — MIT
   - wooorm/zwitch
@@ -963,7 +971,7 @@ PERFORMANCE OF THIS SOFTWARE.
 **Used by:**
 
 - @chevrotain/types 11.1.2
-- dompurify 3.4.13
+- dompurify 3.4.17
 
 ```
 
@@ -2026,7 +2034,7 @@ limitations under the License.
 
 **Used by:**
 
-- sharp 0.35.4
+- sharp 0.35.5
 
 ```
 Apache License
@@ -2485,7 +2493,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **Used by:**
 
 - source-map 0.7.6
-- source-map-js 1.2.1
+- source-map-js 1.2.2
 
 ```
 
@@ -3897,6 +3905,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 - @jridgewell/gen-mapping 0.3.13
 - @jridgewell/remapping 2.3.5
 - @jridgewell/sourcemap-codec 1.5.5
+- @jridgewell/sourcemap-codec 1.6.0
 - @jridgewell/trace-mapping 0.3.31
 
 ```
@@ -4014,6 +4023,7 @@ SOFTWARE.
 **Used by:**
 
 - @oxc-project/types 0.143.0
+- @oxc-project/types 0.156.0
 
 ```
 MIT License
@@ -5916,7 +5926,7 @@ SOFTWARE.
 
 **Used by:**
 
-- katex 0.16.47
+- katex 0.18.2
 
 ```
 The MIT License (MIT)
@@ -6289,7 +6299,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 **Used by:**
 
-- next 16.3.4
+- next 16.4.6
 
 ```
 The MIT License (MIT)
@@ -6577,6 +6587,7 @@ SOFTWARE.
 **Used by:**
 
 - picomatch 4.0.5
+- picomatch 4.0.7
 
 ```
 The MIT License (MIT)
@@ -6637,7 +6648,7 @@ SOFTWARE.
 **Used by:**
 
 - postcss 8.5.23
-- postcss 8.5.25
+- postcss 8.5.32
 
 ```
 The MIT License (MIT)
@@ -6882,6 +6893,7 @@ THE SOFTWARE.
 **Used by:**
 
 - rolldown 1.2.3
+- rolldown 1.2.19
 
 ```
 MIT License
@@ -9837,7 +9849,7 @@ Repository: https://github.com/sveltejs/zimmerframe
 
 **Used by:**
 
-- zod 4.4.3
+- zod 4.6.6
 
 ```
 MIT License
@@ -10308,7 +10320,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 For more information, please refer to <http://unlicense.org>
 ```
 
-### @next/env 16.3.4 — MIT
+### @next/env 16.4.6 — MIT
 
 _(No LICENSE file found under this package in node_modules; verify upstream.)_
 

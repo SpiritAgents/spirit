@@ -19,7 +19,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/DefinitelyTyped/DefinitelyTyped
 - **typescript** 7.0.2 — Apache-2.0
   - https://github.com/microsoft/TypeScript
-- **vitest** 4.1.11 — MIT
+- **vitest** 4.1.12 — MIT
   - https://github.com/vitest-dev/vitest
 
 ## License texts
@@ -353,7 +353,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 **Used by:**
 
-- vitest 4.1.11
+- vitest 4.1.12
 
 ```
 # Vitest core license
