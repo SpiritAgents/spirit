@@ -924,7 +924,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - vfile/vfile-location
 - **vfile-message** 4.0.3 — MIT
   - vfile/vfile-message
-- **vite** 8.2.0 — MIT
+- **vite** 8.2.4 — MIT
   - https://github.com/vitejs/vite
 - **web-namespaces** 2.0.1 — MIT
   - wooorm/web-namespaces
@@ -7518,7 +7518,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 **Used by:**
 
-- vite 8.2.0
+- vite 8.2.4
 
 ```
 # Vite core license
@@ -8779,7 +8779,7 @@ Repository: https://github.com/lydell/js-tokens
 
 > The MIT License (MIT)
 >
-> Copyright (c) 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024 Simon Lydell
+> Copyright (c) 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025 Simon Lydell
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
