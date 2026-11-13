@@ -20,7 +20,7 @@ overrides:
   js-yaml: 4.3.2
   # TODO: drop once @modelcontextprotocol/sdk (1.32.1, already latest) refreshes
   # its snapshot; it declares hono ^4.11.4
-  hono: 4.13.11
+  hono: 4.13.16
   # TODO: drop once wait-on (9.1.0, already latest) refreshes its snapshot;
   # it declares joi ^18.2.3
   joi: 18.3.1
