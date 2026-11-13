@@ -169,6 +169,7 @@ overrides:
   js-yaml: 4.3.2
   hono: 4.13.7
   joi: 18.2.8
+  katex: 0.18.2
 
 importers:
 
@@ -340,8 +341,8 @@ importers:
         specifier: 26.3.0
         version: 26.3.0(typescript@7.0.2)
       katex:
-        specifier: 0.17.0
-        version: 0.17.0
+        specifier: 0.18.2
+        version: 0.18.2
       koffi:
         specifier: 2.16.3
         version: 2.16.3
@@ -1596,8 +1597,8 @@ importers:
         specifier: 26.3.0
         version: 26.3.0(typescript@7.0.2)
       katex:
-        specifier: 0.17.0
-        version: 0.17.0
+        specifier: 0.18.2
+        version: 0.18.2
       lexical:
         specifier: 0.53.0
         version: 0.53.0(typescript@7.0.2)
@@ -6705,12 +6706,8 @@ packages:
   jws@4.0.1:
     resolution: {integrity: sha512-EKI/M/yqPncGUUh44xz0PxSidXFr/+r0pA70+gIYhjv+et7yxM+s29Y+VGDkovRofQem0fs7Uvf4+YmAdyRduA==}
 
-  katex@0.16.47:
-    resolution: {integrity: sha512-Eeo8Ys1doU1z+x8AZsPpQu+p/QcZBI5PeOo7QGQdy2x2m0MU/hYagBbGOmXwr5KVbEfVuWv9LpnQWeehogurjg==}
-    hasBin: true
-
-  katex@0.17.0:
-    resolution: {integrity: sha512-Vdw0ATsQ9V+LuegM/BTwQqV/6cTl5lbGcIrU+BCgLxyf6bo38ybOr372tuSIxir3CN720flu1meYR6XzNMwQnw==}
+  katex@0.18.2:
+    resolution: {integrity: sha512-3snve4y0SXTMequLim1FMiPvLGElySam0blN5xQZBqEY3lOJz1TnuaaiugnBZBqHzlSAGmFTYL7MCQkORuLKCA==}
     hasBin: true
 
   keyv@4.5.4:
@@ -11301,7 +11298,7 @@ snapshots:
 
   '@streamdown/math@1.0.2(react@19.2.8)(supports-color@8.1.1)':
     dependencies:
-      katex: 0.16.47
+      katex: 0.18.2
       react: 19.2.8
       rehype-katex: 7.0.1
       remark-math: 6.0.0(supports-color@8.1.1)
@@ -13721,11 +13718,7 @@ snapshots:
       jwa: 2.0.1
       safe-buffer: 5.2.1
 
-  katex@0.16.47:
-    dependencies:
-      commander: 8.3.0
-
-  katex@0.17.0:
+  katex@0.18.2:
     dependencies:
       commander: 8.3.0
 
@@ -14123,7 +14116,7 @@ snapshots:
       dayjs: 1.11.21
       dompurify: 3.4.17
       es-toolkit: 1.50.0
-      katex: 0.16.47
+      katex: 0.18.2
       khroma: 2.1.0
       marked: 16.4.2
       roughjs: 4.6.6
@@ -14212,7 +14205,7 @@ snapshots:
     dependencies:
       '@types/katex': 0.16.8
       devlop: 1.1.0
-      katex: 0.16.47
+      katex: 0.18.2
       micromark-factory-space: 2.0.1
       micromark-util-character: 2.1.1
       micromark-util-symbol: 2.0.1
@@ -15001,7 +14994,7 @@ snapshots:
       '@types/katex': 0.16.8
       hast-util-from-html-isomorphic: 2.0.0
       hast-util-to-text: 4.0.2
-      katex: 0.16.47
+      katex: 0.18.2
       unist-util-visit-parents: 6.0.2
       vfile: 6.0.3
 

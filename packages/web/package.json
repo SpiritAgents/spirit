@@ -72,7 +72,7 @@
     "gitdiff-parser": "0.3.1",
     "hast-util-sanitize": "5.0.2",
     "i18next": "26.3.0",
-    "katex": "0.17.0",
+    "katex": "0.18.2",
     "lexical": "0.53.0",
     "lucide-react": "1.28.0",
     "monaco-editor": "0.52.2",

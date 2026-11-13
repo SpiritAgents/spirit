@@ -24,6 +24,9 @@ overrides:
   # TODO: drop once wait-on (9.1.0, already latest) refreshes its snapshot;
   # it declares joi ^18.2.3
   joi: 18.2.8
+  # TODO: drop once Streamdown and Mermaid support KaTeX 0.18.x;
+  # 0.18.2 fixes GHSA-238p-pmpm-9mq7 across their shared rendering dependency graph.
+  katex: 0.18.2
 
 peerDependencyRules:
   # i18next / react-i18next declare peer typescript "^5 || ^6" for their own
