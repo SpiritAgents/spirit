@@ -110,7 +110,9 @@ async function loadManifest(packageName: string): Promise<FontRecord[]> {
   if (!pending) {
     const cssPath = PACKAGE_CSS_PATHS[packageName];
     if (!cssPath) throw new Error(`Unknown OG font package: ${packageName}`);
-    pending = fs.readFile(cssPath, "utf8").then((css) => parseFontCss(css, cssPath));
+    pending = fs
+      .readFile(/*turbopackIgnore: true*/ cssPath, "utf8")
+      .then((css) => parseFontCss(css, cssPath));
     manifestCache.set(packageName, pending);
   }
   return pending;
@@ -119,7 +121,7 @@ async function loadManifest(packageName: string): Promise<FontRecord[]> {
 function readFontBuffer(filePath: string): Promise<Buffer> {
   let pending = bufferCache.get(filePath);
   if (!pending) {
-    pending = fs.readFile(filePath);
+    pending = fs.readFile(/*turbopackIgnore: true*/ filePath);
     bufferCache.set(filePath, pending);
   }
   return pending;

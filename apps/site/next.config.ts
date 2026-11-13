@@ -5,6 +5,14 @@ import { fileURLToPath } from "node:url";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   turbopack: { root: fileURLToPath(new URL("../..", import.meta.url)) },
+  outputFileTracingRoot: fileURLToPath(new URL("../..", import.meta.url)),
+  outputFileTracingIncludes: {
+    "/og/[...slug]": [
+      "../../node_modules/@fontsource/*/400.css",
+      "../../node_modules/@fontsource/*/files/*.woff",
+      "../../packages/brand/assets/logo-dark.svg",
+    ],
+  },
   transpilePackages: ["@spiritagent/ui", "@spiritagent/icons"],
   async rewrites() {
     return [
