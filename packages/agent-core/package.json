@@ -185,7 +185,7 @@
     "@spiritagent/product": "workspace:*",
     "ai": "7.0.137",
     "google-auth-library": "10.9.1",
-    "undici": "8.11.2"
+    "undici": "8.12.2"
   },
   "devDependencies": {
     "@spiritagent/product": "workspace:*",
