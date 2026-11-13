@@ -3,6 +3,8 @@ import type { CSSProperties, ReactElement, SVGProps } from "react";
 export const SPIRIT_GLASS_LOGO_PATH: string;
 export const SPIRIT_GLASS_LOGO_VIEWBOX: { width: 142; height: 157 };
 
+export function createOpticalLogoSvg(sourceSvg: string, size: number): string;
+
 /** For the splash shimmer mask: matches the glass glyph outline */
 export function spiritGlassLogoMaskStyle(): CSSProperties;
 

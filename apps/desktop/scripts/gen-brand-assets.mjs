@@ -18,8 +18,9 @@ import {
   SPIRIT_GLASS_LOGO_PATH,
   SPIRIT_GLASS_LOGO_VIEWBOX,
 } from "@spiritagent/brand/src/constants.js";
+import { createOpticalLogoSvg } from "@spiritagent/brand/src/optical-logo.js";
 import { imagesToIco } from "png-to-ico";
-import { readPNG, resize } from "png-to-ico/lib/png.js";
+import { readPNG } from "png-to-ico/lib/png.js";
 import sharp from "sharp";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -29,6 +30,7 @@ const trayDir = path.join(buildDir, "tray");
 
 const brandAssetsDir = path.join(desktopRoot, "..", "..", "packages", "brand", "assets");
 const appIconSvg = path.join(brandAssetsDir, "logo-dark.svg");
+const appIconSvgSource = fs.readFileSync(appIconSvg, "utf8");
 const dmgBackgroundSvg = path.join(brandAssetsDir, "dmg-background.svg");
 
 const ICO_SIZES = [16, 32, 48, 256];
@@ -45,9 +47,13 @@ const MAC_ICONSET_SIZES = [
   ["icon_512x512.png", 512],
   ["icon_512x512@2x.png", 1024],
 ];
-const LOGO_SVG_SIZE = 512;
 /** DMG background bottom white band: content area 380pt + 28pt = window 408pt */
 const BG_BOTTOM_PAD = 28;
+
+function renderAppIconPng(size) {
+  const opticalSvg = createOpticalLogoSvg(appIconSvgSource, size);
+  return sharp(Buffer.from(opticalSvg)).png().toBuffer();
+}
 
 /** Tray icon: scale the glyph to a 0.82 padding ratio and center it (same as the original gen-tray-icons) */
 function buildTraySquareSvg(size) {
@@ -68,11 +74,12 @@ function buildTraySquareSvg(size) {
 
 async function genPackagerIcons() {
   const iconPngPath = path.join(buildDir, "icon.png");
-  await sharp(appIconSvg).png().toFile(iconPngPath);
+  await sharp(await renderAppIconPng(512)).toFile(iconPngPath);
   console.log(`Wrote ${path.relative(desktopRoot, iconPngPath)} (512x512)`);
 
-  const source = await readPNG(iconPngPath);
-  const images = await Promise.all(ICO_SIZES.map((size) => resize(source, size, size)));
+  const images = await Promise.all(
+    ICO_SIZES.map(async (size) => readPNG(await renderAppIconPng(size))),
+  );
   const ico = await imagesToIco(images);
   const iconIcoPath = path.join(buildDir, "icon.ico");
   fs.writeFileSync(iconIcoPath, ico);
@@ -93,10 +100,7 @@ async function genMacIcns() {
   fs.mkdirSync(iconsetDir, { recursive: true });
   try {
     for (const [fileName, size] of MAC_ICONSET_SIZES) {
-      await sharp(appIconSvg, { density: (72 * size) / LOGO_SVG_SIZE })
-        .resize(size, size)
-        .png()
-        .toFile(path.join(iconsetDir, fileName));
+      await sharp(await renderAppIconPng(size)).toFile(path.join(iconsetDir, fileName));
     }
     const icnsPath = path.join(buildDir, "icon.icns");
     execFileSync("iconutil", ["-c", "icns", iconsetDir, "-o", icnsPath], { stdio: "pipe" });
