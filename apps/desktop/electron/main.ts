@@ -1015,7 +1015,7 @@ async function createMainWindow(): Promise<BrowserWindow> {
       preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
       spellcheck: false,
       webviewTag: true,
     },
