@@ -21,7 +21,6 @@ import {
   buildPlanModeHostToolDefinitions,
   buildTodoHostToolDefinitions,
   filterLegacyHostFileToolDefinitions,
-  isOpenResponsesTransportConfig,
   shouldUseApplyPatchFileTools,
   AuthorizationDecision,
   createToolExecutionTextOutput,
@@ -273,7 +272,6 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
 
     if (
       this.activeTransportConfig !== undefined &&
-      isOpenResponsesTransportConfig(this.activeTransportConfig) &&
       shouldUseApplyPatchFileTools(this.activeTransportConfig, { agentMode: this.agentMode })
     ) {
       builtinDefinitions = filterLegacyHostFileToolDefinitions(builtinDefinitions);

@@ -5,6 +5,15 @@ import {
   type AgentMode,
 } from "../ports.js";
 import type { OpenResponsesTransportConfig } from "./responses-compat.js";
+import type { LlmTransportKind } from "../llm-provider-shared.js";
+
+type ApplyPatchTransportConfig = Omit<OpenResponsesTransportConfig, "transportKind"> & {
+  transportKind?: LlmTransportKind;
+};
+type ApplyPatchConfig = Pick<
+  ApplyPatchTransportConfig,
+  "baseUrl" | "transportKind" | "model" | "sdk" | "options" | "agentMode"
+>;
 
 const LEGACY_FILE_TOOL_NAMES = new Set(["create_file", "edit_file", "delete_file"]);
 
@@ -30,14 +39,10 @@ function isSigV4Surface(config: Pick<OpenResponsesTransportConfig, "options">): 
 }
 
 /** Official OpenAI: `@ai-sdk/openai` 3.x `openai.tools.applyPatch`; Gateway/SigV4 go through fetch function_call. */
-export function shouldUseOpenAiSdkApplyPatchTool(
-  config: Pick<
-    OpenResponsesTransportConfig,
-    "baseUrl" | "transportKind" | "model" | "sdk" | "options" | "agentMode"
-  >,
-): boolean {
+export function shouldUseOpenAiSdkApplyPatchTool(config: ApplyPatchConfig): boolean {
   return (
     shouldUseApplyPatchFileTools(config) &&
+    config.transportKind === "open-responses" &&
     config.sdk === "@ai-sdk/openai" &&
     !isSigV4Surface(config)
   );
@@ -47,28 +52,20 @@ export function shouldUseOpenAiSdkApplyPatchTool(
  * The gateway v3 language-model protocol and the SigV4 surface have no built-in
  * `type: apply_patch`; a flat function tool must be registered in tools.
  */
-export function shouldUseApplyPatchFunctionTool(
-  config: Pick<
-    OpenResponsesTransportConfig,
-    "baseUrl" | "transportKind" | "model" | "sdk" | "options" | "agentMode"
-  >,
-): boolean {
+export function shouldUseApplyPatchFunctionTool(config: ApplyPatchConfig): boolean {
   return (
     shouldUseApplyPatchFileTools(config) &&
+    config.transportKind === "open-responses" &&
     !shouldUseOpenAiSdkApplyPatchTool(config) &&
     (config.sdk === "@ai-sdk/gateway" || isSigV4Surface(config))
   );
 }
 
 /** Generic Open Responses endpoints take the built-in apply_patch request-item shape via the fetch bridge. */
-export function shouldUseBuiltInApplyPatchRequestItems(
-  config: Pick<
-    OpenResponsesTransportConfig,
-    "baseUrl" | "transportKind" | "model" | "sdk" | "options" | "agentMode"
-  >,
-): boolean {
+export function shouldUseBuiltInApplyPatchRequestItems(config: ApplyPatchConfig): boolean {
   return (
     shouldUseApplyPatchFileTools(config) &&
+    config.transportKind === "open-responses" &&
     !shouldUseOpenAiSdkApplyPatchTool(config) &&
     !shouldUseApplyPatchFunctionTool(config)
   );
@@ -78,12 +75,10 @@ export function shouldUseBuiltInApplyPatchRequestItems(
  * The gateway v3 language-model uses `prompt`; only the Open Responses fetch omits and
  * stash/reinjects apply_patch rounds via body.input.
  */
-export function shouldOmitApplyPatchFromAiSdkMessages(
-  config: Pick<
-    OpenResponsesTransportConfig,
-    "baseUrl" | "transportKind" | "model" | "sdk" | "options" | "agentMode"
-  >,
-): boolean {
+export function shouldOmitApplyPatchFromAiSdkMessages(config: ApplyPatchConfig): boolean {
+  if (config.transportKind !== "open-responses") {
+    return false;
+  }
   if (!shouldUseApplyPatchFileTools(config)) {
     return false;
   }
@@ -97,10 +92,7 @@ export function shouldOmitApplyPatchFromAiSdkMessages(
 }
 
 export function shouldUseApplyPatchFileTools(
-  config: Pick<
-    OpenResponsesTransportConfig,
-    "transportKind" | "model" | "sdk" | "options" | "agentMode"
-  >,
+  config: ApplyPatchConfig,
   options?: { agentMode?: AgentMode },
 ): boolean {
   const agentMode = options?.agentMode ?? readAgentModeFromTransportConfig(config);
@@ -108,7 +100,11 @@ export function shouldUseApplyPatchFileTools(
     return false;
   }
 
-  if (config.transportKind !== "open-responses") {
+  if (
+    config.transportKind !== undefined &&
+    config.transportKind !== "open-responses" &&
+    config.transportKind !== "openai-compatible"
+  ) {
     return false;
   }
 

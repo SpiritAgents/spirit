@@ -80,6 +80,14 @@ test("Plan edit guidance follows live transport changes", async () => {
   });
   assert.match(JSON.stringify(executor.toolDefinitionsJson()), /revise this plan with apply_patch/);
   assert.ok(!toolNamesFromDefinitions(executor.toolDefinitionsJson()).includes("edit_file"));
+  executor.setTransportConfigForToolDefinitions({
+    transportKind: "openai-compatible",
+    apiKey: "fixture",
+    model: "fixture-model",
+    options: { applyPatch: true },
+  });
+  assert.match(JSON.stringify(executor.toolDefinitionsJson()), /revise this plan with apply_patch/);
+  assert.ok(!toolNamesFromDefinitions(executor.toolDefinitionsJson()).includes("edit_file"));
   executor.setTransportConfigForToolDefinitions({ apiKey: "fixture", model: "fixture-model" });
   assert.match(JSON.stringify(executor.toolDefinitionsJson()), /revise this plan with edit_file/);
 });

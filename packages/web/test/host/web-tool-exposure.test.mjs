@@ -88,3 +88,18 @@ test("DesktopToolExecutor hides web_fetch when webFetchEnabled is false", () => 
   const hidden = new DesktopToolExecutor(process.cwd(), { webFetchEnabled: false });
   assert.ok(!functionToolNames(hidden.toolDefinitionsJson()).includes("web_fetch"));
 });
+
+test("DesktopToolExecutor filters legacy file tools for applyPatch on OpenAI-compatible", () => {
+  const executor = new DesktopToolExecutor(process.cwd(), {});
+  executor.setActiveTransportConfig({
+    transportKind: "openai-compatible",
+    apiKey: "test-key",
+    model: "openai/gpt-5.4",
+    options: { applyPatch: true },
+  });
+  const names = functionToolNames(executor.toolDefinitionsJson());
+
+  assert.equal(names.includes("create_file"), false);
+  assert.equal(names.includes("edit_file"), false);
+  assert.equal(names.includes("delete_file"), false);
+});

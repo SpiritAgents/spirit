@@ -94,6 +94,11 @@ import { createProviderToolsWireFetch } from "../provider-tools/wire-fetch.js";
 import { buildProviderToolPreviewArgumentsJson } from "../provider-tools/spirit-ui.js";
 import { toolNamesFromDefinitions } from "../unknown-tool-error.js";
 import {
+  buildApplyPatchFunctionToolDefinition,
+  isApplyPatchFunctionToolDefinition,
+  shouldUseApplyPatchFileTools,
+} from "../open-responses/apply-patch-eligibility.js";
+import {
   mergeServiceTierProviderOptions,
   resolveServiceTierRequestPlan,
   type ServiceTierRequestPlan,
@@ -304,7 +309,10 @@ export class AiSdkOpenAiCompatibleTransport
       config,
       new Set(toolNamesFromDefinitions(tools)),
     );
-    const normalizedTools = [...normalizeToolDefinitions(tools), ...providerTools.functionTools];
+    const normalizedTools = withDeclaredApplyPatchTool(config, [
+      ...normalizeToolDefinitions(tools),
+      ...providerTools.functionTools,
+    ]);
     const tracedRequest = buildAiSdkRequestTrace(
       config,
       nextState.steps,
@@ -416,7 +424,10 @@ export class AiSdkOpenAiCompatibleTransport
         cancel: () => {},
       };
     }
-    const normalizedTools = [...normalizeToolDefinitions(tools), ...providerTools.functionTools];
+    const normalizedTools = withDeclaredApplyPatchTool(config, [
+      ...normalizeToolDefinitions(tools),
+      ...providerTools.functionTools,
+    ]);
     const requestTrace = buildAiSdkRequestTrace(
       config,
       nextState.steps,
@@ -1171,6 +1182,22 @@ function normalizeToolDefinitions(tools: JsonValue): OpenAiFunctionToolDefinitio
   return tools
     .filter(isFunctionToolDefinition)
     .map((toolDefinition) => cloneJsonValue(toolDefinition) as OpenAiFunctionToolDefinition);
+}
+
+function withDeclaredApplyPatchTool(
+  config: OpenAiTransportConfig,
+  normalizedTools: OpenAiFunctionToolDefinition[],
+): OpenAiFunctionToolDefinition[] {
+  if (
+    !shouldUseApplyPatchFileTools(config) ||
+    normalizedTools.some((toolDefinition) => isApplyPatchFunctionToolDefinition(toolDefinition))
+  ) {
+    return normalizedTools;
+  }
+  return [
+    ...normalizedTools,
+    buildApplyPatchFunctionToolDefinition() as OpenAiFunctionToolDefinition,
+  ];
 }
 
 function buildAiSdkTools(

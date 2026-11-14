@@ -901,9 +901,14 @@ test("model applyPatch is an explicit true-only opt-in", () => {
   assertSchemaError(
     () =>
       validateSpiritConfig(
-        validConfig([validProvider({ models: [{ name: "test-model", applyPatch: true }] })]),
+        validConfig([
+          validProvider({
+            transportKind: "anthropic",
+            models: [{ name: "test-model", applyPatch: true }],
+          }),
+        ]),
       ),
-    '"applyPatch" requires transportKind "open-responses"',
+    '"applyPatch" requires an OpenAI-compatible or open-responses transport',
   );
 });
 

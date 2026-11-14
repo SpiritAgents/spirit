@@ -17,7 +17,6 @@ import {
   filterLegacyHostFileToolDefinitions,
   shouldUseApplyPatchFileTools,
 } from "../open-responses/apply-patch-eligibility.js";
-import { isOpenResponsesTransportConfig } from "../provider-config.js";
 import type { AgentMode } from "../ports.js";
 import {
   applyHostToolDescriptionHints,
@@ -671,7 +670,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
       hostDefinitions = filterToolDefinitionByName(hostDefinitions, "web_fetch");
     }
     const useApplyPatch =
-      isOpenResponsesTransportConfig(this.transportConfigForToolDefinitions) &&
+      this.transportConfigForToolDefinitions !== undefined &&
       shouldUseApplyPatchFileTools(this.transportConfigForToolDefinitions, {
         agentMode: this.agentMode,
       });

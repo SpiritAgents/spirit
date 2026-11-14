@@ -114,6 +114,7 @@ export interface ProviderOptions {
   responsesFileUpload?: true;
   /** openai-compatible: enforce declared inline image and MP4 input constraints. */
   chatMediaValidation?: true;
+  /** openai-compatible / open-responses: use Spirit's apply_patch editing function. */
   applyPatch?: true;
   /** openai-compatible: the upstream rejects function tools with a non-`none` reasoning effort. */
   toolsRejectReasoningEffort?: true;
@@ -158,7 +159,7 @@ export interface ModelInheritableFields {
 
 export interface ModelEntry extends ModelInheritableFields {
   name: string;
-  /** open-responses: opt this model into Spirit's apply_patch editing function. */
+  /** openai-compatible / open-responses: opt this model into Spirit's apply_patch editing function. */
   applyPatch?: true;
   /** Optional per-model connection override; transportKind and sdk must be declared together. */
   transportKind?: SpiritTransportKind;
@@ -356,6 +357,7 @@ const TRANSPORT_OPTION_KEYS: Record<SpiritTransportKind, readonly string[]> = {
     "toolsRejectReasoningEffort",
     "maxInlineMediaBytes",
     "inlineImageInput",
+    "applyPatch",
     "chatMediaValidation",
     "openRouterAnthropicReasoning",
   ],
@@ -1022,10 +1024,12 @@ function validateProviderEntry(entry: unknown, context: string): void {
     if (
       isPlainObject(model) &&
       model["applyPatch"] === true &&
-      (model["transportKind"] ?? transportKind) !== "open-responses"
+      !["openai-compatible", "open-responses"].includes(
+        (model["transportKind"] ?? transportKind) as SpiritTransportKind,
+      )
     ) {
       throw new SpiritConfigSchemaError(
-        `${modelContext}: "applyPatch" requires transportKind "open-responses".`,
+        `${modelContext}: "applyPatch" requires an OpenAI-compatible or open-responses transport.`,
       );
     }
     const effective = mergeRawInheritableFields(entry, model);

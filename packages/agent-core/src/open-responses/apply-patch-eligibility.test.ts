@@ -9,7 +9,7 @@ import {
   shouldUseOpenAiSdkApplyPatchTool,
 } from "./apply-patch-eligibility.js";
 
-test("apply_patch file tools require the options.applyPatch declaration on open-responses", () => {
+test("apply_patch file tools require the options.applyPatch declaration on OpenAI-family transports", () => {
   const declared = {
     transportKind: "open-responses",
     model: "gpt-5.1",
@@ -30,15 +30,41 @@ test("apply_patch file tools require the options.applyPatch declaration on open-
     }),
     false,
   );
-  // Other transports never expose it.
+  // OpenAI-compatible exposes the same host-executed function tool.
   assert.equal(
     shouldUseApplyPatchFileTools({
       transportKind: "openai-compatible",
       model: "gpt-5.1",
       options: { applyPatch: true },
-    } as never),
+    }),
+    true,
+  );
+  assert.equal(
+    shouldUseApplyPatchFileTools({
+      transportKind: "anthropic",
+      model: "claude-sonnet-4.5",
+      options: { applyPatch: true },
+    }),
     false,
   );
+  assert.equal(
+    shouldUseApplyPatchFileTools({ model: "gpt-5.1", options: { applyPatch: true } }),
+    true,
+  );
+});
+
+test("OpenAI-compatible never selects Responses-native apply_patch bridges", () => {
+  const config = {
+    transportKind: "openai-compatible" as const,
+    model: "openai/gpt-5.4",
+    sdk: "@ai-sdk/openai" as const,
+    options: { applyPatch: true },
+  };
+  assert.equal(shouldUseApplyPatchFileTools(config), true);
+  assert.equal(shouldUseOpenAiSdkApplyPatchTool(config), false);
+  assert.equal(shouldUseApplyPatchFunctionTool(config), false);
+  assert.equal(shouldUseBuiltInApplyPatchRequestItems(config), false);
+  assert.equal(shouldOmitApplyPatchFromAiSdkMessages(config), false);
 });
 
 test("apply_patch is hidden in ask mode even when declared", () => {
