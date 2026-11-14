@@ -8,7 +8,7 @@
 
 # Spirit
 
-開源 AI Agent，在同一個 Harness 中編排來自任意提供者的模型。
+開源 AI 智能體，在同一個 Harness 中編排來自任意提供者的模型。
 
 [Desktop 應用](#desktop) · [CLI](#cli) · [架構](#架構) · [Agent Core](#agent-core) · [Server](#server) · [ACP Server](#acp-server) · [Site](#site) · [開發](#開發)
 
@@ -20,7 +20,7 @@
 
 ## 概覽
 
-Spirit 將來自任意提供者的模型帶入一致的 Agent 體驗。無論切換模型，還是在 Desktop 與終端機之間切換，你的工作階段、工具和設定都能延續。
+Spirit 將來自任意提供者的模型帶入一致的智能體體驗。無論切換模型，還是在 Desktop 與終端機之間切換，你的工作階段、工具和設定都能延續。
 
 ## Desktop
 
