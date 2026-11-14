@@ -12,7 +12,11 @@ import {
 import { FileContentPreviewFrame } from "@/components/file-content-preview-frame";
 import { FileDiffPreviewFrame } from "@/components/file-diff-preview-frame";
 import { APPROVAL_LEVEL_ICONS } from "@/components/approval-level-menu";
-import { ComposerSendEnterKbd } from "@spiritagent/ui/composer";
+import {
+  ComposerLabelsProvider,
+  ComposerSendEnterKbd,
+  useComposerLabels,
+} from "@spiritagent/ui/composer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Kbd } from "@/components/ui/kbd";
@@ -53,6 +57,7 @@ export function PendingApprovalCard({
   onSubmitApproval,
 }: PendingApprovalCardProps) {
   const { t } = useTranslation();
+  const composerLabels = useComposerLabels();
   const shellCommand = pendingApproval.shellCommand?.trim() || undefined;
   const mcpToolCallArgumentsJson = pendingApproval.mcpToolCallArgumentsJson?.trim() || undefined;
   const guidanceSendDisabled = approveBusy || approvalGuidance.trim().length === 0;
@@ -249,7 +254,12 @@ export function PendingApprovalCard({
             <Tooltip delayDuration={300} disableHoverableContent>
               <TooltipTrigger asChild>{guidanceSendButton}</TooltipTrigger>
               <TooltipContent side="top" sideOffset={4}>
-                {t("app.send")} <ComposerSendEnterKbd />
+                {() => (
+                  // The shared tooltip host renders outside this card's provider subtree.
+                  <ComposerLabelsProvider value={composerLabels}>
+                    {t("app.send")} <ComposerSendEnterKbd />
+                  </ComposerLabelsProvider>
+                )}
               </TooltipContent>
             </Tooltip>
           )}
