@@ -11,6 +11,7 @@ import {
 import { editorStateToRichSegments } from "../bridge/editor-to-rich-segments.js";
 import { richSegmentsToEditorState } from "../bridge/rich-segments-to-editor.js";
 import { normalizeComposerSegmentsPolicy } from "../composer-lexical-policy.js";
+import { COMPOSER_HOST_SYNC_TAGS } from "../host-sync.js";
 import {
   mergeAdjacentTextSegments,
   segmentsEqual,
@@ -58,7 +59,7 @@ export function AgentModeChipPlugin({
         });
         queueMicrotask(() => {
           skipEditorSyncRef.current = true;
-          richSegmentsToEditorState(next, editor);
+          richSegmentsToEditorState(next, editor, { tag: COMPOSER_HOST_SYNC_TAGS });
           skipEditorSyncRef.current = false;
           onSegmentsNormalized(next);
           onAgentModeChange?.("agent");
@@ -87,7 +88,7 @@ export function AgentModeChipPlugin({
     // makes @lexical/react flushSync synchronously, which React dev-mode flags in effects.
     queueMicrotask(() => {
       skipEditorSyncRef.current = true;
-      richSegmentsToEditorState(next, editor);
+      richSegmentsToEditorState(next, editor, { tag: COMPOSER_HOST_SYNC_TAGS });
       skipEditorSyncRef.current = false;
       dismissedRef.current = false;
       onAgentModeChipDismissChange?.(false);
@@ -116,7 +117,7 @@ export function AgentModeChipPlugin({
     }
     queueMicrotask(() => {
       skipEditorSyncRef.current = true;
-      richSegmentsToEditorState(next, editor);
+      richSegmentsToEditorState(next, editor, { tag: COMPOSER_HOST_SYNC_TAGS });
       skipEditorSyncRef.current = false;
       if (!segmentsEqual(next, segmentsRef.current)) {
         onSegmentsNormalized(next);

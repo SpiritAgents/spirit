@@ -4,6 +4,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { editorStateToRichSegments } from "../bridge/editor-to-rich-segments.js";
 import { richSegmentsToEditorState } from "../bridge/rich-segments-to-editor.js";
 import { normalizeComposerSegmentsPolicy } from "../composer-lexical-policy.js";
+import { COMPOSER_HOST_SYNC_TAGS } from "../host-sync.js";
 import type { DesktopAgentMode } from "../../agent-mode.js";
 import {
   hasLoopSegment,
@@ -52,7 +53,7 @@ export function LoopChipPlugin({
         // makes @lexical/react flushSync synchronously, which React dev-mode flags in effects.
         queueMicrotask(() => {
           skipEditorSyncRef.current = true;
-          richSegmentsToEditorState(stripped, editor);
+          richSegmentsToEditorState(stripped, editor, { tag: COMPOSER_HOST_SYNC_TAGS });
           skipEditorSyncRef.current = false;
           onSegmentsNormalized(stripped);
           onLoopEnabledChange?.(false);
@@ -72,7 +73,7 @@ export function LoopChipPlugin({
       }
       queueMicrotask(() => {
         skipEditorSyncRef.current = true;
-        richSegmentsToEditorState(next, editor);
+        richSegmentsToEditorState(next, editor, { tag: COMPOSER_HOST_SYNC_TAGS });
         skipEditorSyncRef.current = false;
         onSegmentsNormalized(next);
       });

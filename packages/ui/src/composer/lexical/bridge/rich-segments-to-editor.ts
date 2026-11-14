@@ -52,7 +52,7 @@ function appendSegmentToParagraph(
 export function richSegmentsToEditorState(
   segments: readonly RichSegment[],
   editor: LexicalEditor,
-  options?: { tag?: string },
+  options?: { tag?: string | string[] },
 ): void {
   const merged = mergeAdjacentTextSegments(segments.length > 0 ? [...segments] : emptySegments());
 

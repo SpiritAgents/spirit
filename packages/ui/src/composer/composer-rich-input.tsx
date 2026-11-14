@@ -31,12 +31,7 @@ import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import {
-  KEY_DOWN_COMMAND,
-  COMMAND_PRIORITY_HIGH,
-  SKIP_SELECTION_FOCUS_TAG,
-  type LexicalEditor,
-} from "lexical";
+import { KEY_DOWN_COMMAND, COMMAND_PRIORITY_HIGH, type LexicalEditor } from "lexical";
 
 import type { BrowserElementAttachment } from "./browser-element-attachment.js";
 import type { PrDiffAttachment } from "./pr-diff-attachment.js";
@@ -97,6 +92,7 @@ import {
 } from "./lexical/caret.js";
 import { ComposerOnChangePlugin } from "./lexical/plugins/composer-on-change-plugin.js";
 import { ComposerSegmentsHydratePlugin } from "./lexical/plugins/composer-segments-hydrate-plugin.js";
+import { COMPOSER_HOST_SYNC_TAGS } from "./lexical/host-sync.js";
 import { AgentModeChipPlugin } from "./lexical/plugins/agent-mode-chip-plugin.js";
 import { LoopChipPlugin } from "./lexical/plugins/loop-chip-plugin.js";
 import { normalizeComposerSegmentsPolicy } from "./lexical/composer-lexical-policy.js";
@@ -569,13 +565,13 @@ const ComposerLexicalInputCore = forwardRef<ComposerRichInputHandle, ComposerLex
       (
         next: RichSegment[],
         caret: SegmentCaret | null,
-        options?: { skipSelectionFocus?: boolean },
+        options?: { preserveFocusAndScroll?: boolean },
       ) => {
         skipEditorSyncRef.current = true;
         // Host-driven syncs (mount hydrate, controlled-segment updates) must not steal focus:
-        // SKIP_SELECTION_FOCUS_TAG tells Lexical to skip the focus() call after applying the
-        // DOM selection, which would otherwise yank focus + scroll the caret into view.
-        const tag = options?.skipSelectionFocus ? SKIP_SELECTION_FOCUS_TAG : undefined;
+        // these tags tell Lexical to skip both the focus() call and scroll-into-view after
+        // applying the DOM selection, which would otherwise yank the page back to the caret.
+        const tag = options?.preserveFocusAndScroll ? COMPOSER_HOST_SYNC_TAGS : undefined;
         richSegmentsToEditorState(next, editor, tag ? { tag } : undefined);
         if (caret) {
           segmentCaretToLexicalSelection(
@@ -630,8 +626,8 @@ const ComposerLexicalInputCore = forwardRef<ComposerRichInputHandle, ComposerLex
           syncLoop?: boolean;
           syncAgentMode?: boolean;
           pushEditor?: boolean;
-          /** Host-driven sync: content+selection update without stealing DOM focus. */
-          skipSelectionFocus?: boolean;
+          /** Host-driven sync: content+selection update without moving focus or scroll. */
+          preserveFocusAndScroll?: boolean;
         },
       ) => {
         const merged = applyComposerPolicy(next);
@@ -657,7 +653,7 @@ const ComposerLexicalInputCore = forwardRef<ComposerRichInputHandle, ComposerLex
         }
         if (options?.pushEditor !== false) {
           pushSegmentsToEditor(merged, resolvedCaret, {
-            skipSelectionFocus: options?.skipSelectionFocus === true,
+            preserveFocusAndScroll: options?.preserveFocusAndScroll === true,
           });
           pendingCaretRef.current = null;
           reportSelectionChange();
@@ -812,11 +808,11 @@ const ComposerLexicalInputCore = forwardRef<ComposerRichInputHandle, ComposerLex
         next: RichSegment[],
         caret?: SegmentCaret | null,
         notifyParent = true,
-        skipSelectionFocus = false,
+        preserveFocusAndScroll = false,
       ) => {
         commitSegments(next, caret ?? caretAtEnd(mergeAdjacentTextSegments(next)), {
           notifyParent,
-          skipSelectionFocus,
+          preserveFocusAndScroll,
         });
       },
       [commitSegments],

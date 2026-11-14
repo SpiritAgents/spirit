@@ -386,7 +386,7 @@ export function segmentCaretToLexicalSelection(
   editor: LexicalEditor,
   segments: RichSegment[],
   caret: SegmentCaret,
-  options?: { tag?: string },
+  options?: { tag?: string | string[] },
 ): void {
   const resolvedCaret = resolveSegmentCaretForLexical(segments, caret);
   editor.update(
