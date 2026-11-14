@@ -223,11 +223,6 @@ function applyPatchFunctionToolParameters(): JsonObject {
   };
 }
 
-/** Model-visible guidance when legacy file tools are hidden in favor of apply_patch. */
-export function buildApplyPatchFileToolsPromptSection(): string {
-  return "File edits on this transport: use apply_patch with headerless V4A unified diffs only.";
-}
-
 function readFunctionToolName(definition: JsonValue): string | undefined {
   if (typeof definition !== "object" || definition === null || Array.isArray(definition)) {
     return undefined;

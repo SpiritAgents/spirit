@@ -24,6 +24,14 @@ const fixtures = [
     apiBase: "https://api.kimi.com/coding/v1",
     model: "k3",
   },
+  {
+    providerId: "vercel-ai-gateway",
+    sdk: "@ai-sdk/gateway",
+    apiBase: "https://ai-gateway.vercel.sh/v1",
+    defaultTransport: "open-responses",
+    options: { applyPatch: true },
+    model: "openai/gpt-5.4",
+  },
 ] as const;
 
 for (const fixture of fixtures) {
@@ -72,6 +80,9 @@ for (const fixture of fixtures) {
         new RegExp(`The user's model is ${fixture.model} from ${fixture.providerId}\\.`),
       );
       assert.doesNotMatch(prompt, /@ai-sdk\//);
+      if (fixture.providerId === "vercel-ai-gateway") {
+        assert.equal(exported.systemPrompts.applyPatchFileTools, undefined);
+      }
     } finally {
       await result?.dispose();
       setKeyringStoreForTests(undefined);

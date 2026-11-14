@@ -9,7 +9,6 @@ import {
   type AgentRuntimeOptions,
   type McpService,
   buildAgentModeSystemMessage,
-  buildApplyPatchFileToolsPromptSection,
   buildBasicInfoSystemMessage,
   buildContributedHostToolDefinitions,
   buildDreamCollectorSystemMessage,
@@ -118,7 +117,7 @@ import {
   ensurePersonalMarketplace,
 } from "@spiritagent/extensions";
 
-import { joinHostPromptSections, normalizeHostUiPromptSection } from "./host-ui-prompt.js";
+import { normalizeHostUiPromptSection } from "./host-ui-prompt.js";
 import { createExtensionMcpExtraConfigs } from "./mcp-registry.js";
 import { createNoopPeer } from "./noop-peer.js";
 
@@ -738,16 +737,7 @@ async function prepareServerRuntime(
     };
 
     // 5. Prompt sections.
-    const applyPatchPromptSection =
-      transportConfig.transportKind === "open-responses"
-        ? buildApplyPatchFileToolsPromptSection()
-        : undefined;
     const hostUiPromptSection = normalizeHostUiPromptSection(options.hostUiPromptSection);
-    // apply_patch + optional host UI Markdown (Desktop Mermaid) share the trailing plain slot.
-    const trailingHostPromptSection = joinHostPromptSections(
-      applyPatchPromptSection,
-      hostUiPromptSection,
-    );
 
     const activeSkills: LlmActiveSkill[] = [];
     // Mutable: state factory closures capture the binding; setLoopEnabled updates it.
@@ -766,8 +756,7 @@ async function prepareServerRuntime(
         extensionSystemPrompts,
         undefined, // dreamsContextText — Desktop-only product surface, wired in a later phase
         basicInfo,
-        trailingHostPromptSection,
-        undefined,
+        hostUiPromptSection,
         loopEnabled,
         toolExecutor.mcpToolCatalogSnapshot(),
         attribution,
@@ -786,8 +775,7 @@ async function prepareServerRuntime(
         extensionSystemPrompts,
         undefined,
         basicInfo,
-        trailingHostPromptSection,
-        undefined,
+        hostUiPromptSection,
         loopEnabled,
         toolExecutor.mcpToolCatalogSnapshot(),
         attribution,
@@ -848,8 +836,7 @@ async function prepareServerRuntime(
           extensionSystemPrompts,
           undefined,
           basicInfo,
-          trailingHostPromptSection,
-          undefined,
+          hostUiPromptSection,
           loopEnabled,
           toolExecutor.mcpToolCatalogSnapshot(),
           attribution,
@@ -1093,9 +1080,6 @@ async function prepareServerRuntime(
                   ? {}
                   : { basicInfo: basicInfoSystemPrompt }),
                 ...(hostUiPromptSection === undefined ? {} : { hostUi: hostUiPromptSection }),
-                ...(applyPatchPromptSection === undefined
-                  ? {}
-                  : { applyPatchFileTools: applyPatchPromptSection }),
               },
             };
           },

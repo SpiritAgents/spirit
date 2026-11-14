@@ -35,7 +35,6 @@ import {
   type LlmEnabledSkillCatalogEntry,
   type LlmPlanMetadata,
 } from "@spiritagent/agent-core";
-import { buildApplyPatchFileToolsPromptSection } from "@spiritagent/agent-core";
 import type { AgentMode } from "@spiritagent/agent-core";
 import type { LocalHostToolService } from "@spiritagent/agent-core/host-bridge";
 import { HostToolExecutorProxy } from "@spiritagent/agent-core/host-bridge";
@@ -428,16 +427,10 @@ async function prepareAcpRuntime(
     host: { kind: "ACP Server" },
   };
 
-  // 6. Build prompt sections
-  const applyPatchPromptSection =
-    transportConfig.transportKind === "open-responses"
-      ? buildApplyPatchFileToolsPromptSection()
-      : undefined;
-
-  // 7. Mutable active skills array — session bookkeeping for slash activation
+  // 6. Mutable active skills array — session bookkeeping for slash activation
   const activeSkills: LlmActiveSkill[] = [];
 
-  // 8. State factory functions
+  // 7. State factory functions
   const attribution = { commitEnabled: false, prEnabled: false };
 
   const createToolAgentState = (messages: LlmMessage[], userInput: string) =>
@@ -452,8 +445,7 @@ async function prepareAcpRuntime(
       [], // extensionSystemPrompts
       undefined, // dreamsContextText
       basicInfo,
-      applyPatchPromptSection,
-      undefined,
+      undefined, // hostUiPromptSection
       false, // loopEnabled
       undefined, // mcpToolCatalog
       attribution,
@@ -471,8 +463,7 @@ async function prepareAcpRuntime(
       [], // extensionSystemPrompts
       undefined, // dreamsContextText
       basicInfo,
-      applyPatchPromptSection,
-      undefined,
+      undefined, // hostUiPromptSection
       false, // loopEnabled
       undefined, // mcpToolCatalog
       attribution,
@@ -511,8 +502,7 @@ async function prepareAcpRuntime(
         [], // extensionSystemPrompts
         undefined, // dreamsContextText
         basicInfo,
-        applyPatchPromptSection,
-        undefined,
+        undefined, // hostUiPromptSection
         false, // loopEnabled
         undefined, // mcpToolCatalog
         attribution,

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { buildToolAgentHostPrompt } from "./tool-agent.js";
+import { buildToolAgentHostPrompt, buildToolAgentMessages } from "./tool-agent.js";
 
 test("buildToolAgentHostPrompt points product questions at the official site", () => {
   const prompt = buildToolAgentHostPrompt("test-model", "test-provider");
@@ -29,4 +29,19 @@ test("buildToolAgentHostPrompt drops the web_fetch line when web fetch is opted 
   assert.doesNotMatch(prompt, /llms\.txt/);
   assert.doesNotMatch(prompt, /web_fetch/);
   assert.match(prompt, /installed package contents/);
+});
+
+test("buildToolAgentMessages appends host UI guidance without legacy transport sections", () => {
+  const [system] = buildToolAgentMessages({
+    historyMessages: [],
+    model: "test-model",
+    hostUiPromptSection: "Host UI guidance",
+  });
+  const content =
+    typeof system === "object" && system !== null && !Array.isArray(system)
+      ? system.content
+      : undefined;
+  assert.ok(typeof content === "string");
+  assert.ok(content.endsWith("Host UI guidance"));
+  assert.doesNotMatch(content, /File edits on this transport|Web search on this transport/);
 });

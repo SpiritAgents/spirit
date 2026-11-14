@@ -352,8 +352,7 @@ export function buildToolAgentMessages(input: {
   extensionSystemPrompts?: ToolAgentExtensionSystemPrompt[];
   dreamsContextText?: string;
   basicInfo?: ToolAgentBasicInfo;
-  applyPatchFileToolsPromptSection?: string;
-  providerWebSearchPromptSection?: string;
+  hostUiPromptSection?: string;
   loopEnabled?: boolean;
   attribution?: ToolAgentAttributionFlags;
   webFetchEnabled?: boolean;
@@ -386,8 +385,7 @@ export function buildToolAgentMessages(input: {
         extensionsSystemMessage,
         dreamsSystemMessage,
         basicInfoSystemMessage,
-        input.applyPatchFileToolsPromptSection,
-        input.providerWebSearchPromptSection,
+        input.hostUiPromptSection,
       ),
     },
     ...input.historyMessages.map((message) => cloneJsonValue(message)),

@@ -115,7 +115,6 @@ async function runWorktreeNamingToolAgentRounds(input: {
     undefined,
     undefined,
     undefined,
-    undefined,
     input.providerId ?? (isBedrockTransportConfig(input.transport) ? "bedrock" : undefined),
   );
 

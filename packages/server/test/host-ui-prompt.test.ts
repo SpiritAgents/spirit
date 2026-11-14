@@ -4,7 +4,6 @@ import { test } from "vitest";
 import {
   HOST_TOOL_DESCRIPTION_HINT_TEXT_MAX_CHARS,
   HOST_UI_PROMPT_SECTION_MAX_CHARS,
-  joinHostPromptSections,
   normalizeHostToolDescriptionHints,
   normalizeHostUiPromptSection,
 } from "../src/host-ui-prompt.js";
@@ -24,11 +23,6 @@ test("normalizeHostUiPromptSection rejects oversized payload", () => {
     normalizeHostUiPromptSection("x".repeat(HOST_UI_PROMPT_SECTION_MAX_CHARS)),
     "x".repeat(HOST_UI_PROMPT_SECTION_MAX_CHARS),
   );
-});
-
-test("joinHostPromptSections skips blanks and joins with blank line", () => {
-  assert.equal(joinHostPromptSections(undefined, "  ", undefined), undefined);
-  assert.equal(joinHostPromptSections("a", undefined, "b"), "a\n\nb");
 });
 
 test("normalizeHostToolDescriptionHints trims and keeps valid entries", () => {

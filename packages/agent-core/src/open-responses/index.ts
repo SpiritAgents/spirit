@@ -33,7 +33,6 @@ export {
   type ApplyPatchOperation,
   type ApplyPatchOperationType,
   filterBuiltinFileToolsForApplyPatch,
-  buildApplyPatchFileToolsPromptSection,
   shouldUseBuiltInApplyPatchRequestItems,
   shouldUseOpenAiSdkApplyPatchTool,
   filterLegacyHostFileToolDefinitions,

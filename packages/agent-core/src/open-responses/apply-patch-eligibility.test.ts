@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
-  buildApplyPatchFileToolsPromptSection,
   shouldUseApplyPatchFileTools,
   shouldUseApplyPatchFunctionTool,
   shouldUseBuiltInApplyPatchRequestItems,
@@ -108,10 +107,4 @@ test("the generic open-responses adapter patches built-in request items", () => 
   assert.equal(shouldUseOpenAiSdkApplyPatchTool(config), false);
   assert.equal(shouldUseApplyPatchFunctionTool(config), false);
   assert.equal(shouldOmitApplyPatchFromAiSdkMessages(config), true);
-});
-
-test("buildApplyPatchFileToolsPromptSection mentions apply_patch and V4A", () => {
-  const section = buildApplyPatchFileToolsPromptSection();
-  assert.match(section, /apply_patch/);
-  assert.match(section, /V4A/);
 });
