@@ -142,7 +142,6 @@
       "credentials": { "kind": "apiKey" },
       "options": {
         "toolsRejectReasoningEffort": true,
-        "applyPatch": true,
         "reasoningSummary": true
       }
     },
@@ -221,7 +220,6 @@
       },
       "credentials": { "kind": "apiKey" },
       "options": {
-        "applyPatch": true,
         "reasoningSummary": true,
         "openRouterAnthropicReasoning": true
       },

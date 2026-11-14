@@ -3,7 +3,9 @@ import { test } from "vitest";
 
 import {
   loadModelKnowledgeRecords,
+  loadModelKnowledgeSource,
   lookupModelKnowledgeRecord,
+  lookupModelKnowledgeSource,
   ModelKnowledgeLoadError,
   normalizeModelKnowledgeModelId,
   stripModelIdAggregatorPrefix,
@@ -23,6 +25,32 @@ test("stripModelIdAggregatorPrefix strips single-token route prefixes only", () 
   );
   assert.equal(stripModelIdAggregatorPrefix("/leading"), "/leading");
   assert.equal(stripModelIdAggregatorPrefix("  openai/gpt-5.5  "), "gpt-5.5");
+});
+
+test("family defaults cover unmatched members and merge before specific records", () => {
+  const source = loadModelKnowledgeSource({
+    match: "(?:gpt-|o)",
+    defaults: { applyPatch: true },
+    models: [{ match: "gpt-5.4", declare: { serviceTiers: ["default"] } }],
+  });
+
+  assert.deepEqual(lookupModelKnowledgeSource(source, "openai/gpt-5.4"), {
+    applyPatch: true,
+    serviceTiers: ["default"],
+  });
+  assert.deepEqual(lookupModelKnowledgeSource(source, "openai/o4-mini"), { applyPatch: true });
+  assert.equal(lookupModelKnowledgeSource(source, "anthropic/claude-sonnet-4.5"), undefined);
+});
+
+test("family match and defaults must be declared together", () => {
+  assert.throws(
+    () => loadModelKnowledgeSource({ match: "gpt-", models: [] }, "kb.json"),
+    /kb\.json.*must be paired/,
+  );
+  assert.throws(
+    () => loadModelKnowledgeSource({ defaults: { applyPatch: true }, models: [] }, "kb.json"),
+    /kb\.json.*must be paired/,
+  );
 });
 
 test("normalizeModelKnowledgeModelId strips the prefix and folds case", () => {

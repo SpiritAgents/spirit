@@ -80,6 +80,7 @@ test("registry bundles every family file in deterministic alphabetical order", (
 
 test("declare payloads only use config declaration keys", () => {
   const allowedKeys = new Set([
+    "applyPatch",
     "supportedReasoningEfforts",
     "reasoningEffort",
     "effortSemantics",
@@ -93,6 +94,9 @@ test("declare payloads only use config declaration keys", () => {
     "serviceTiers",
   ]);
   for (const entry of MODEL_KNOWLEDGE_SOURCES) {
+    for (const key of Object.keys(entry.defaults?.declare ?? {})) {
+      assert.ok(allowedKeys.has(key), `${entry.source} defaults: unexpected key ${key}`);
+    }
     for (const record of entry.records) {
       for (const key of Object.keys(record.declare)) {
         assert.ok(allowedKeys.has(key), `${entry.source} ${record.match}: unexpected key ${key}`);
@@ -120,6 +124,14 @@ function expectClaudeDeclaration(
     },
     message,
   );
+}
+
+function expectOpenAIDeclaration(
+  actual: unknown,
+  expected: Record<string, unknown>,
+  message = "",
+): void {
+  assert.deepEqual(actual, { applyPatch: true, ...expected }, message);
 }
 
 test("claude opus 5.x resolves adaptive thinking with full efforts across id forms", () => {
@@ -450,9 +462,9 @@ test("gpt-5.6+ exposes the extended effort ladder and pro mode", () => {
     supportedReasoningModes: GPT56_MODES,
     serviceTiers: ["auto", "default", "flex", "fast"],
   };
-  expectClaudeDeclaration(lookupModelKnowledge("gpt-5.6-sol"), expected);
-  expectClaudeDeclaration(lookupModelKnowledge("openai/gpt-5.6-terra"), expected);
-  expectClaudeDeclaration(lookupModelKnowledge("gpt-6"), expected);
+  expectOpenAIDeclaration(lookupModelKnowledge("gpt-5.6-sol"), expected);
+  expectOpenAIDeclaration(lookupModelKnowledge("openai/gpt-5.6-terra"), expected);
+  expectOpenAIDeclaration(lookupModelKnowledge("gpt-6"), expected);
 });
 
 test("pre-5.6 OpenAI reasoning models resolve exact effort and tier declarations", () => {
@@ -490,7 +502,7 @@ test("pre-5.6 OpenAI reasoning models resolve exact effort and tier declarations
     for (const modelId of [id, `openai/${id}`, `${id}-2026-01-15`]) {
       assert.deepEqual(
         lookupModelKnowledge(modelId),
-        { supportedReasoningEfforts: efforts, serviceTiers: tiers },
+        { applyPatch: true, supportedReasoningEfforts: efforts, serviceTiers: tiers },
         modelId,
       );
     }
@@ -515,13 +527,15 @@ test("OpenAI non-reasoning models declare only their service tiers", () => {
       ids: ["gpt-4o", "openai/gpt-4o", "gpt-4o-2024-08-06", "gpt-4o-2024-11-20"],
       tiers: withFast,
     },
-    { ids: ["chat-latest", "openai/chat-latest"], tiers: autoDefault },
   ];
 
   for (const { ids, tiers } of cases) {
     for (const modelId of ids) {
-      expectClaudeDeclaration(lookupModelKnowledge(modelId), { serviceTiers: tiers }, modelId);
+      expectOpenAIDeclaration(lookupModelKnowledge(modelId), { serviceTiers: tiers }, modelId);
     }
+  }
+  for (const modelId of ["chat-latest", "openai/chat-latest"]) {
+    expectClaudeDeclaration(lookupModelKnowledge(modelId), { serviceTiers: autoDefault }, modelId);
   }
 });
 
@@ -551,17 +565,26 @@ test("OpenAI knowledge does not infer effort for non-reasoning or unavailable mo
     "gpt-4o-2024-05-13",
     "gpt-3.5-turbo",
   ]) {
-    assert.equal(lookupModelKnowledge(modelId), undefined, modelId);
+    const declaration = lookupModelKnowledge(modelId);
+    assert.equal(declaration?.["supportedReasoningEfforts"], undefined, modelId);
+    assert.equal(declaration?.["applyPatch"], true, modelId);
   }
 });
 
+test("OpenAI family defaults cover uncatalogued GPT and o-series models", () => {
+  for (const modelId of ["openai/o1", "openai/o4-mini", "openai/gpt-3.5-turbo"]) {
+    assert.deepEqual(lookupModelKnowledge(modelId), { applyPatch: true }, modelId);
+  }
+  assert.equal(lookupModelKnowledge("anthropic/claude-sonnet-4.5")?.["applyPatch"], undefined);
+});
+
 test("gpt-6-astra rejects none and offers ultrafast; gpt-6.1-sol keeps none", () => {
-  expectClaudeDeclaration(lookupModelKnowledge("gpt-6-astra"), {
+  expectOpenAIDeclaration(lookupModelKnowledge("gpt-6-astra"), {
     supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
     supportedReasoningModes: GPT56_MODES,
     serviceTiers: ["auto", "default", "flex", "fast", "ultrafast"],
   });
-  expectClaudeDeclaration(lookupModelKnowledge("openai/gpt-6.1-sol"), {
+  expectOpenAIDeclaration(lookupModelKnowledge("openai/gpt-6.1-sol"), {
     supportedReasoningEfforts: GPT56_EFFORTS,
     supportedReasoningModes: GPT56_MODES,
     serviceTiers: ["auto", "default", "flex", "fast", "ultrafast"],
@@ -574,8 +597,8 @@ test("bedrock mantle gpt ids hit the generic gpt-5.6+ record without astra/ultra
     supportedReasoningModes: GPT56_MODES,
     serviceTiers: ["auto", "default", "flex", "fast"],
   };
-  expectClaudeDeclaration(lookupModelKnowledge("openai.gpt-6-astra"), expected);
-  expectClaudeDeclaration(lookupModelKnowledge("openai.gpt-5.6"), expected);
+  expectOpenAIDeclaration(lookupModelKnowledge("openai.gpt-6-astra"), expected);
+  expectOpenAIDeclaration(lookupModelKnowledge("openai.gpt-5.6"), expected);
 });
 
 test("gemini 2.5 pro withholds none while 2.5 flash keeps it", () => {
@@ -787,6 +810,6 @@ test("grok models declare the default/priority tier ladder", () => {
 
 test("unknown models produce no declarations (safe default)", () => {
   assert.equal(lookupModelKnowledge("qwen3.8-max"), undefined);
-  assert.equal(lookupModelKnowledge("gpt-5.5-codex"), undefined);
+  assert.deepEqual(lookupModelKnowledge("gpt-5.5-codex"), { applyPatch: true });
   assert.equal(lookupModelKnowledge("my-lab-llm"), undefined);
 });

@@ -8,6 +8,10 @@ export interface ModelKnowledgeRecord {
 
 /** Shape of a model-knowledge JSON data file. */
 export interface ModelKnowledgeFile {
+  /** Optional family matcher whose defaults apply even when no specific record matches. */
+  match?: string;
+  /** Declarations merged before the matching record's own declarations. */
+  defaults?: Record<string, unknown>;
   models: ModelKnowledgeRecord[];
 }
 
@@ -16,4 +20,9 @@ export interface CompiledModelKnowledgeRecord {
   match: string;
   regex: RegExp;
   declare: Record<string, unknown>;
+}
+
+export interface CompiledModelKnowledgeSource {
+  readonly records: readonly CompiledModelKnowledgeRecord[];
+  readonly defaults?: CompiledModelKnowledgeRecord;
 }

@@ -1,4 +1,8 @@
 {
+  "match": "(?:gpt-|o)",
+  "defaults": {
+    "applyPatch": true
+  },
   "models": [
     {
       "match": "gpt-6-astra(?:$|[-_])",

@@ -1,4 +1,4 @@
-import type { CompiledModelKnowledgeRecord } from "./types.js";
+import type { CompiledModelKnowledgeRecord, CompiledModelKnowledgeSource } from "./types.js";
 
 export class ModelKnowledgeLoadError extends Error {
   constructor(message: string) {
@@ -45,28 +45,54 @@ export function loadModelKnowledgeRecords(
     throw new ModelKnowledgeLoadError(`${source}: expected an object with a "models" array.`);
   }
 
-  return data.models.map((record: unknown, index: number) => {
-    const context = `${source} models[${index}]`;
-    if (!isRecord(record)) {
-      throw new ModelKnowledgeLoadError(`${context} must be an object.`);
-    }
-    const match = record.match;
-    if (typeof match !== "string" || match.trim().length === 0) {
-      throw new ModelKnowledgeLoadError(`${context} requires a non-empty "match" regex string.`);
-    }
-    if (!isRecord(record.declare)) {
-      throw new ModelKnowledgeLoadError(`${context} requires a "declare" object.`);
-    }
-    let regex: RegExp;
-    try {
-      regex = new RegExp(`^(?:${match})`);
-    } catch (error) {
-      throw new ModelKnowledgeLoadError(
-        `${context} has an invalid "match" regex ${JSON.stringify(match)}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-    return { match, regex, declare: record.declare };
-  });
+  return data.models.map((record: unknown, index: number) =>
+    compileModelKnowledgeRecord(record, `${source} models[${index}]`),
+  );
+}
+
+function compileModelKnowledgeRecord(
+  value: unknown,
+  context: string,
+): CompiledModelKnowledgeRecord {
+  if (!isRecord(value)) {
+    throw new ModelKnowledgeLoadError(`${context} must be an object.`);
+  }
+  const match = value.match;
+  if (typeof match !== "string" || match.trim().length === 0) {
+    throw new ModelKnowledgeLoadError(`${context} requires a non-empty "match" regex string.`);
+  }
+  if (!isRecord(value.declare)) {
+    throw new ModelKnowledgeLoadError(`${context} requires a "declare" object.`);
+  }
+  let regex: RegExp;
+  try {
+    regex = new RegExp(`^(?:${match})`);
+  } catch (error) {
+    throw new ModelKnowledgeLoadError(
+      `${context} has an invalid "match" regex ${JSON.stringify(match)}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  return { match, regex, declare: value.declare };
+}
+
+export function loadModelKnowledgeSource(
+  data: unknown,
+  source = "model-knowledge",
+): CompiledModelKnowledgeSource {
+  const records = loadModelKnowledgeRecords(data, source);
+  if (!isRecord(data) || (data.match === undefined && data.defaults === undefined)) {
+    return { records };
+  }
+  if (data.match === undefined || data.defaults === undefined) {
+    throw new ModelKnowledgeLoadError(`${source}: family "match" and "defaults" must be paired.`);
+  }
+  return {
+    records,
+    defaults: compileModelKnowledgeRecord(
+      { match: data.match, declare: data.defaults },
+      `${source} defaults`,
+    ),
+  };
 }
 
 /** First record whose regex matches at the start of the normalized model ID wins. */
@@ -81,4 +107,18 @@ export function lookupModelKnowledgeRecord(
     }
   }
   return undefined;
+}
+
+/** Family defaults fold first; the more specific record still wins on conflicting keys. */
+export function lookupModelKnowledgeSource(
+  source: CompiledModelKnowledgeSource,
+  modelId: string,
+): Record<string, unknown> | undefined {
+  const specific = lookupModelKnowledgeRecord(source.records, modelId);
+  const normalized = normalizeModelKnowledgeModelId(modelId);
+  const defaults = source.defaults?.regex.test(normalized) ? source.defaults.declare : undefined;
+  if (specific === undefined && defaults === undefined) {
+    return undefined;
+  }
+  return { ...defaults, ...specific };
 }

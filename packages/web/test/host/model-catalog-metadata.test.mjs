@@ -77,18 +77,22 @@ test("meta preview keeps Muse roles, multimodal capabilities, and data policy me
   assert.equal(preview[1].pricing, undefined);
 });
 
-test("catalog preview carries model-level applyPatch declarations", () => {
-  const preview = previewModelCatalogForTransport({
-    providerId: "vercel-ai-gateway",
-    transportKind: "open-responses",
-    listedModels: [
-      { id: "openai/gpt-5.4", applyPatch: true },
-      { id: "anthropic/claude-sonnet-4.5" },
-    ],
-  });
+test("catalog preview folds shared GPT and o-series applyPatch knowledge", () => {
+  for (const providerId of ["vercel-ai-gateway", "openrouter"]) {
+    const preview = previewModelCatalogForTransport({
+      providerId,
+      transportKind: "open-responses",
+      listedModels: [
+        { id: "openai/gpt-5.4" },
+        { id: "openai/o4-mini" },
+        { id: "anthropic/claude-sonnet-4.5" },
+      ],
+    });
 
-  assert.equal(preview[0].applyPatch, true);
-  assert.equal("applyPatch" in preview[1], false);
+    assert.equal(preview[0].applyPatch, true, providerId);
+    assert.equal(preview[1].applyPatch, true, providerId);
+    assert.equal("applyPatch" in preview[2], false, providerId);
+  }
 });
 
 test("siliconflow provider uses listed model catalog metadata", () => {
@@ -502,6 +506,7 @@ test("openrouter provider maps output_modalities to catalog capabilities", () =>
 
   assert.deepEqual(preview, [
     {
+      applyPatch: true,
       id: "openai/gpt-4o",
       capabilities: ["languageModel"],
       serviceTiers: ["auto", "default", "fast"],
@@ -536,6 +541,7 @@ test("vercel-ai-gateway provider maps language and image model types to catalog 
 
   assert.deepEqual(preview, [
     {
+      applyPatch: true,
       id: "openai/gpt-5",
       capabilities: ["languageModel"],
       supportedReasoningEfforts: GPT5_EFFORTS,
@@ -584,6 +590,7 @@ test("vercel-ai-gateway folds anthropic claude knowledge declarations into catal
       },
     },
     {
+      applyPatch: true,
       id: "openai/gpt-5",
       capabilities: ["languageModel"],
       supportedReasoningEfforts: GPT5_EFFORTS,
@@ -624,6 +631,7 @@ test("openrouter folds anthropic claude knowledge declarations into catalog entr
       },
     },
     {
+      applyPatch: true,
       id: "openai/gpt-5",
       capabilities: ["languageModel"],
       supportedReasoningEfforts: GPT5_EFFORTS,
@@ -1146,6 +1154,7 @@ test("aggregator providers preserve upstreamProvider through preview and catalog
 
   assert.deepEqual(preview, [
     {
+      applyPatch: true,
       id: "openai/gpt-5.4",
       capabilities: ["languageModel"],
       supportedReasoningEfforts: ["none", "low", "medium", "high", "xhigh"],

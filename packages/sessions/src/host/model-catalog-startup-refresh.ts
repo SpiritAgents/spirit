@@ -18,6 +18,7 @@ import {
 } from "./model-config.js";
 import {
   catalogParserNameForProvider,
+  lookupCatalogModelKnowledge,
   previewCatalogMapForTransport,
 } from "./model-catalog-metadata.js";
 import {
@@ -173,11 +174,14 @@ export function catalogEntryToModelEntry(
   catalogEntry: PreviewModelCatalogEntry | undefined,
 ): ModelEntry {
   const entry: ModelEntry = { name };
+  if (
+    catalogEntry?.applyPatch === true ||
+    lookupCatalogModelKnowledge(name)?.["applyPatch"] === true
+  ) {
+    entry.applyPatch = true;
+  }
   if (!catalogEntry) {
     return entry;
-  }
-  if (catalogEntry.applyPatch === true) {
-    entry.applyPatch = true;
   }
   if (catalogEntry.capabilities !== undefined) {
     const capabilities = normalizeModelCapabilities(catalogEntry.capabilities);

@@ -347,7 +347,6 @@ function basePreviewEntryFields(
 ): PreviewModelCatalogEntry {
   return {
     id: entry.id,
-    ...(entry.applyPatch === true ? { applyPatch: true } : {}),
     ...(entry.transportOverride !== undefined
       ? { transportOverride: { ...entry.transportOverride } }
       : {}),
@@ -414,7 +413,6 @@ function previewEntryFromListedEntry(
   entry: ProviderListedModelEntry,
   transportKind?: DesktopTransportKind,
 ): PreviewModelCatalogEntry {
-  const base = basePreviewEntryFields(parserName, entry, transportKind);
   // Nebius has no per-model reasoning declarations. Modal looks up only its library id; its
   // deployment-specific runtime hostname never participates in model-knowledge lookup.
   const knowledgeLookupId =
@@ -424,6 +422,10 @@ function previewEntryFromListedEntry(
         ? entry.baseModelId
         : entry.id;
   const knowledge = knowledgeLookupId ? lookupCatalogModelKnowledge(knowledgeLookupId) : undefined;
+  const base = {
+    ...basePreviewEntryFields(parserName, entry, transportKind),
+    ...(knowledge?.["applyPatch"] === true ? { applyPatch: true as const } : {}),
+  };
   const knowledgeEfforts = knowledge ? knowledgeDeclaredReasoningEfforts(knowledge) : undefined;
   const knowledgeModes = knowledge ? knowledgeDeclaredReasoningModes(knowledge) : undefined;
   const knowledgeTiers =

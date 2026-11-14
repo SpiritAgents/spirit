@@ -555,7 +555,7 @@ test("mechanism options templates materialize scoped to the selected transport",
     presetId: "cloudflare-ai-gateway",
     templateValues: { accountId: "acc-1" },
   });
-  assert.deepEqual(cloudflare.options, { toolsRejectReasoningEffort: true, applyPatch: true });
+  assert.deepEqual(cloudflare.options, { toolsRejectReasoningEffort: true });
 
   const volcengineResponses = materializeProviderPreset({
     presetId: "volcengine",
@@ -582,8 +582,8 @@ test("mechanism options templates materialize scoped to the selected transport",
   const xiaomi = materializeProviderPreset({ presetId: "xiaomi" });
   assert.deepEqual(xiaomi.options, { maxInlineMediaBytes: 52428800 });
 
-  // apply_patch declarations: openai opts in provider-wide; vercel opts in per GPT/o-series model
-  // through its catalog; both router defaults use the custom function on OpenAI-compatible.
+  // apply_patch declarations: openai opts in provider-wide; GPT/o-series models opt in through
+  // shared model knowledge across Vercel, OpenRouter, and Cloudflare rather than provider options.
   assert.deepEqual(materializeProviderPreset({ presetId: "openai" }).options, {
     applyPatch: true,
     reasoningSummary: true,
@@ -594,12 +594,11 @@ test("mechanism options templates materialize scoped to the selected transport",
   // openrouter's unified anthropic-route reasoning shape spans both OpenAI-family surfaces; the
   // open-responses-scoped keys still drop on the default chat transport.
   assert.deepEqual(materializeProviderPreset({ presetId: "openrouter" }).options, {
-    applyPatch: true,
     openRouterAnthropicReasoning: true,
   });
   assert.deepEqual(
     materializeProviderPreset({ presetId: "openrouter", transportKind: "open-responses" }).options,
-    { applyPatch: true, reasoningSummary: true, openRouterAnthropicReasoning: true },
+    { reasoningSummary: true, openRouterAnthropicReasoning: true },
   );
   // The anthropic transport speaks native Messages: every OpenAI-surface key drops.
   assert.equal(
@@ -611,7 +610,7 @@ test("mechanism options templates materialize scoped to the selected transport",
       presetId: "cloudflare-ai-gateway",
       templateValues: { accountId: "acc-1" },
     }).options,
-    { toolsRejectReasoningEffort: true, applyPatch: true },
+    { toolsRejectReasoningEffort: true },
   );
   assert.deepEqual(
     materializeProviderPreset({
@@ -619,7 +618,7 @@ test("mechanism options templates materialize scoped to the selected transport",
       transportKind: "open-responses",
       templateValues: { accountId: "acc-1" },
     }).options,
-    { applyPatch: true, reasoningSummary: true },
+    { reasoningSummary: true },
   );
 
   // reasoning.summary declarations: the Responses surfaces that honor OpenAI-style

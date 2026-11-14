@@ -258,6 +258,7 @@ test("syncExistingModelsFromCatalog returns zero when catalog matches stored pro
   const provider = gatewayProvider([
     {
       name: "openai/gpt-4.1",
+      applyPatch: true,
       capabilities: ["languageModel"],
       supportedReasoningEfforts: ["low", "high"],
       serviceTiers: ["auto", "default", "fast"],
@@ -673,4 +674,15 @@ test("applyCatalogEntryToStoredModel syncs and clears model-level applyPatch", (
   assert.equal(model.applyPatch, true);
   assert.equal(applyCatalogEntryToStoredModel(model, { id: model.name }), true);
   assert.equal("applyPatch" in model, false);
+});
+
+test("catalogEntryToModelEntry applies shared model knowledge when Cloudflare has no catalog entry", () => {
+  for (const name of ["openai/gpt-5.4", "openai/o4-mini"]) {
+    const entry = catalogEntryToModelEntry(name, undefined);
+    assert.equal(entry.name, name);
+    assert.equal(entry.applyPatch, true);
+  }
+
+  const claude = catalogEntryToModelEntry("anthropic/claude-sonnet-4.5", undefined);
+  assert.equal("applyPatch" in claude, false);
 });
