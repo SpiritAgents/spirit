@@ -37,6 +37,8 @@ export interface SpiritModelProfile {
   headers?: Record<string, string>;
   body?: JsonObject;
   options?: ProviderOptions;
+  /** Model-level opt-in for Spirit's apply_patch editing function. */
+  applyPatch?: true;
   providerTools?: ProviderToolEntry[];
   fileUpload?: FileUploadConfig;
   imageApi?: string;

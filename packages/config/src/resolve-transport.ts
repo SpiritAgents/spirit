@@ -100,13 +100,17 @@ function transportDeclarationFields(
   options?: { includeSdk?: boolean },
 ): TransportDeclarationFields {
   const includeSdk = options?.includeSdk !== false;
+  const resolvedOptions = {
+    ...profile.options,
+    ...(profile.applyPatch === true ? { applyPatch: true as const } : {}),
+  };
   return {
     ...(includeSdk && profile.sdk !== undefined ? { sdk: profile.sdk } : {}),
     ...(profile.headers !== undefined ? { headers: profile.headers } : {}),
     ...(profile.body !== undefined ? { body: profile.body } : {}),
     ...(profile.providerTools !== undefined ? { providerTools: profile.providerTools } : {}),
     ...(profile.fileUpload !== undefined ? { fileUpload: profile.fileUpload } : {}),
-    ...(profile.options !== undefined ? { options: { ...profile.options } } : {}),
+    ...(Object.keys(resolvedOptions).length > 0 ? { options: resolvedOptions } : {}),
     ...(profile.outputLimit !== undefined ? { outputLimit: profile.outputLimit } : {}),
     ...(profile.reasoningMode !== undefined ? { reasoningMode: profile.reasoningMode } : {}),
     ...(profile.supportedReasoningModes !== undefined

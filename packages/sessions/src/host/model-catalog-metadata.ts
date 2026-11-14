@@ -347,6 +347,7 @@ function basePreviewEntryFields(
 ): PreviewModelCatalogEntry {
   return {
     id: entry.id,
+    ...(entry.applyPatch === true ? { applyPatch: true } : {}),
     ...(entry.transportOverride !== undefined
       ? { transportOverride: { ...entry.transportOverride } }
       : {}),

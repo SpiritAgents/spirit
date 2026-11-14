@@ -176,6 +176,9 @@ export function catalogEntryToModelEntry(
   if (!catalogEntry) {
     return entry;
   }
+  if (catalogEntry.applyPatch === true) {
+    entry.applyPatch = true;
+  }
   if (catalogEntry.capabilities !== undefined) {
     const capabilities = normalizeModelCapabilities(catalogEntry.capabilities);
     if (capabilities !== undefined) {
@@ -333,6 +336,16 @@ export function applyCatalogEntryToStoredModel(
   catalogEntry: PreviewModelCatalogEntry,
 ): boolean {
   let changed = false;
+
+  if (catalogEntry.applyPatch === true) {
+    if (model.applyPatch !== true) {
+      model.applyPatch = true;
+      changed = true;
+    }
+  } else if (model.applyPatch !== undefined) {
+    delete model.applyPatch;
+    changed = true;
+  }
 
   if (catalogEntry.capabilities !== undefined) {
     const nextCapabilities = normalizeModelCapabilities(catalogEntry.capabilities);

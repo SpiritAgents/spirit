@@ -725,6 +725,38 @@ test("modelRef selects a non-active model", () => {
   }
 });
 
+test("model-level applyPatch opts into open-responses independently", () => {
+  useMemoryKeyring(internalKeyEntry("acme"));
+  const spiritDataDir = configDir({
+    providers: [
+      {
+        id: "acme",
+        apiBase: "https://acme.test/v1",
+        transportKind: "open-responses",
+        sdk: "@ai-sdk/gateway",
+        options: { reasoningSummary: true },
+        models: [
+          { name: "anthropic/claude-sonnet-4.5" },
+          { name: "openai/gpt-5.4", applyPatch: true },
+        ],
+      },
+    ],
+    activeModel: { providerId: "acme", name: "anthropic/claude-sonnet-4.5" },
+  });
+
+  const withoutApplyPatch = resolveTransportConfig({ workspaceRoot: tmpdir(), spiritDataDir });
+  assert.equal(withoutApplyPatch.options?.applyPatch, undefined);
+  assert.equal(withoutApplyPatch.options?.reasoningSummary, true);
+
+  const withApplyPatch = resolveTransportConfig({
+    workspaceRoot: tmpdir(),
+    spiritDataDir,
+    modelRef: { providerId: "acme", name: "openai/gpt-5.4" },
+  });
+  assert.equal(withApplyPatch.options?.applyPatch, true);
+  assert.equal(withApplyPatch.options?.reasoningSummary, true);
+});
+
 test("tryResolveTransportConfig returns the selected provider id as host-only metadata", () => {
   useMemoryKeyring(internalKeyEntry("acme"));
   const spiritDataDir = configDir({

@@ -245,6 +245,8 @@ export interface PreviewModelCatalogPricing {
 
 export interface PreviewModelCatalogEntry {
   id: string;
+  /** Spirit's apply_patch editing function, declared for this specific model. */
+  applyPatch?: true;
   transportOverride?: { transportKind: "anthropic"; sdk: "@ai-sdk/anthropic" };
   /** Library model id used only for catalog knowledge lookup; inference keeps `id`. */
   baseModelId?: string;

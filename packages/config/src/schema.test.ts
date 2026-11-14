@@ -880,6 +880,33 @@ test("preset mechanism options round trip through save/load", async () => {
   assert.deepEqual(byId.get("cerebras")?.options, { inlineImageInput: true });
 });
 
+test("model applyPatch is an explicit true-only opt-in", () => {
+  assert.doesNotThrow(() =>
+    validateSpiritConfig(
+      validConfig([
+        validProvider({
+          transportKind: "open-responses",
+          models: [{ name: "test-model", applyPatch: true }],
+        }),
+      ]),
+    ),
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([validProvider({ models: [{ name: "test-model", applyPatch: false }] })]),
+      ),
+    '"applyPatch" must be true when declared',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([validProvider({ models: [{ name: "test-model", applyPatch: true }] })]),
+      ),
+    '"applyPatch" requires transportKind "open-responses"',
+  );
+});
+
 test("credentials slots are scoped by mechanism and conflict with flat keys", () => {
   assert.deepEqual(providerCredentialSlotNames("openai-compatible", undefined), ["apiKey"]);
   assert.deepEqual(providerCredentialSlotNames("bedrock", undefined), [

@@ -552,6 +552,7 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
         ? record.dataPolicy
         : undefined;
     const audioInputSupport = record.audioInputSupport === "partial" ? "partial" : undefined;
+    const applyPatch = record.applyPatch === true ? true : undefined;
     const transportOverride = normalizeCachedTransportOverride(record.transportOverride);
     const baseModelId = normalizeCachedString(record.baseModelId);
     const inputModalities = normalizeCachedStringArray(record.inputModalities);
@@ -559,6 +560,7 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
     const reasoningField = normalizeCachedString(record.reasoningField);
     normalized.push({
       id,
+      ...(applyPatch !== undefined ? { applyPatch } : {}),
       ...(transportOverride !== undefined ? { transportOverride } : {}),
       ...(baseModelId !== undefined ? { baseModelId } : {}),
       ...(displayName !== undefined ? { displayName } : {}),
@@ -886,6 +888,7 @@ function clonePreviewModelCatalog(
     ...(entry.serviceTiers !== undefined
       ? { serviceTiers: cloneServiceTiersDeclaration(entry.serviceTiers) }
       : {}),
+    ...(entry.applyPatch === true ? { applyPatch: true } : {}),
     ...(entry.supportsThinkingType !== undefined
       ? { supportsThinkingType: entry.supportsThinkingType }
       : {}),

@@ -275,6 +275,7 @@ test("parseVercelAiGatewayModelEntriesPayload infers max effort for gpt-5.6 open
 
   assert.deepEqual(entries, [
     {
+      applyPatch: true,
       id: "openai/gpt-5.6-sol",
       supportedReasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
       serviceTiers: VERCEL_OPENAI_TIERS,
@@ -320,6 +321,7 @@ test("parseVercelAiGatewayModelEntriesPayload omits none effort for openai/gpt-6
 
   assert.deepEqual(entries, [
     {
+      applyPatch: true,
       id: "openai/gpt-6-astra",
       supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
       serviceTiers: VERCEL_OPENAI_TIERS_ULTRAFAST,
@@ -532,6 +534,7 @@ test("parseVercelAiGatewayModelEntriesPayload maps language and image types", ()
 
   assert.deepEqual(entries, [
     {
+      applyPatch: true,
       id: "openai/gpt-5",
       contextLength: 128000,
       supportsImageInput: true,
@@ -576,6 +579,7 @@ test("parseVercelAiGatewayModelEntriesPayload maps vision tag to supportsImageIn
 
   assert.deepEqual(entries, [
     {
+      applyPatch: true,
       id: "openai/gpt-4o",
       supportsImageInput: true,
       serviceTiers: VERCEL_OPENAI_FAST_TIERS,
@@ -624,6 +628,7 @@ test("parseVercelAiGatewayModelEntriesPayload infers supportedReasoningEfforts f
       serviceTiers: NO_SERVICE_TIERS,
     },
     {
+      applyPatch: true,
       id: "openai/gpt-5",
       supportedReasoningEfforts: GPT5_EFFORTS,
       serviceTiers: VERCEL_OPENAI_TIERS,
@@ -700,6 +705,7 @@ test("parseOpenAiCompatibleModelEntriesPayload routes vercel-ai-gateway to typed
 
   assert.deepEqual(entries, [
     {
+      applyPatch: true,
       id: "openai/gpt-5",
       supportedReasoningEfforts: GPT5_EFFORTS,
       serviceTiers: VERCEL_OPENAI_TIERS,
@@ -760,6 +766,7 @@ test("parseVercelAiGatewayModelEntriesPayload extracts display metadata and pric
 
   assert.deepEqual(entries, [
     {
+      applyPatch: true,
       id: "openai/gpt-5",
       displayName: "GPT-5",
       description: "General-purpose language model.",
@@ -2532,6 +2539,29 @@ test("parseVercelAiGatewayModelEntriesPayload extracts owned_by as upstreamProvi
   const legacy = entries.find((entry) => entry.id === "meta/llama-4-scout");
   assert.ok(legacy);
   assert.equal("upstreamProvider" in legacy, false);
+});
+
+test("parseVercelAiGatewayModelEntriesPayload opts GPT and o-series language models into apply_patch", () => {
+  const entries = parseVercelAiGatewayModelEntriesPayload({
+    data: [
+      { id: "openai/gpt-5.4", type: "language", owned_by: "OpenAI" },
+      { id: "openai/o3", type: "language", owned_by: "OpenAI" },
+      { id: "openai/o4-mini", type: "language", owned_by: "OpenAI" },
+      { id: "openai/o1", type: "language", owned_by: "OpenAI" },
+      { id: "anthropic/claude-sonnet-4.5", type: "language", owned_by: "Anthropic" },
+      { id: "google/gemini-3-pro", type: "language", owned_by: "Google" },
+      { id: "openai/gpt-image-1", type: "image", owned_by: "OpenAI" },
+    ],
+  });
+  const byId = new Map(entries.map((entry) => [entry.id, entry]));
+
+  assert.equal(byId.get("openai/gpt-5.4")?.applyPatch, true);
+  assert.equal(byId.get("openai/o3")?.applyPatch, true);
+  assert.equal(byId.get("openai/o4-mini")?.applyPatch, true);
+  assert.equal(byId.get("openai/o1")?.applyPatch, true);
+  assert.equal(byId.get("anthropic/claude-sonnet-4.5")?.applyPatch, undefined);
+  assert.equal(byId.get("google/gemini-3-pro")?.applyPatch, undefined);
+  assert.equal(byId.get("openai/gpt-image-1")?.applyPatch, undefined);
 });
 
 test("parseOpenRouterModelEntriesPayload extracts canonical_slug author as upstreamProvider", () => {

@@ -40,6 +40,7 @@ const PROFILE_PROVIDER_KEYS = [
 ] as const;
 
 const PROFILE_MODEL_KEYS = [
+  "applyPatch",
   "transportKind",
   "sdk",
   "capabilities",

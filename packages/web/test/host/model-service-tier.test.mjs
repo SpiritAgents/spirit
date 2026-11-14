@@ -66,6 +66,25 @@ test("model catalog cache round-trips upstreamProvider display metadata", async 
   });
 });
 
+test("model catalog cache round-trips model-level applyPatch declarations", async () => {
+  await withCatalogCacheDir(async () => {
+    const apiBase = "https://ai-gateway.vercel.sh/v1";
+    await writeModelCatalogCache(
+      apiBase,
+      ["openai/gpt-5.4", "anthropic/claude-sonnet-4.5"],
+      "test-key",
+      [{ id: "openai/gpt-5.4", applyPatch: true }, { id: "anthropic/claude-sonnet-4.5" }],
+      "vercel-ai-gateway",
+    );
+
+    const entry = await readModelCatalogCache(apiBase, "test-key", "vercel-ai-gateway");
+    assert.ok(entry);
+    const [gpt, claude] = entry.modelCatalog;
+    assert.equal(gpt.applyPatch, true);
+    assert.equal("applyPatch" in claude, false);
+  });
+});
+
 test("model catalog cache round-trips deployment and technical catalog metadata", async () => {
   await withCatalogCacheDir(async () => {
     const apiBase = "https://inference.us-west.modal.direct/v1";

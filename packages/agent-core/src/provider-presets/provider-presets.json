@@ -124,7 +124,7 @@
           ]
         }
       ],
-      "options": { "applyPatch": true, "reasoningSummary": true },
+      "options": { "reasoningSummary": true },
       "imageApi": "vercel-gateway-images",
       "videoApi": "vercel-gateway-videos",
       "catalog": { "parser": "vercel-gateway-models", "endpoint": "/models" }

@@ -77,6 +77,20 @@ test("meta preview keeps Muse roles, multimodal capabilities, and data policy me
   assert.equal(preview[1].pricing, undefined);
 });
 
+test("catalog preview carries model-level applyPatch declarations", () => {
+  const preview = previewModelCatalogForTransport({
+    providerId: "vercel-ai-gateway",
+    transportKind: "open-responses",
+    listedModels: [
+      { id: "openai/gpt-5.4", applyPatch: true },
+      { id: "anthropic/claude-sonnet-4.5" },
+    ],
+  });
+
+  assert.equal(preview[0].applyPatch, true);
+  assert.equal("applyPatch" in preview[1], false);
+});
+
 test("siliconflow provider uses listed model catalog metadata", () => {
   assert.equal(
     usesProviderListedModelCatalogMetadata({

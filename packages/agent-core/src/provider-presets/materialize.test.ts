@@ -582,14 +582,13 @@ test("mechanism options templates materialize scoped to the selected transport",
   const xiaomi = materializeProviderPreset({ presetId: "xiaomi" });
   assert.deepEqual(xiaomi.options, { maxInlineMediaBytes: 52428800 });
 
-  // apply_patch declarations: openai / vercel-ai-gateway are pinned to open-responses and always
-  // carry the key; openrouter / cloudflare-ai-gateway only over the open-responses transport.
+  // apply_patch declarations: openai opts in provider-wide; vercel opts in per GPT/o-series model
+  // through its catalog; openrouter / cloudflare-ai-gateway opt in only over open-responses.
   assert.deepEqual(materializeProviderPreset({ presetId: "openai" }).options, {
     applyPatch: true,
     reasoningSummary: true,
   });
   assert.deepEqual(materializeProviderPreset({ presetId: "vercel-ai-gateway" }).options, {
-    applyPatch: true,
     reasoningSummary: true,
   });
   // openrouter's unified anthropic-route reasoning shape spans both OpenAI-family surfaces; the

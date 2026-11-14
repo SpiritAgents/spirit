@@ -13,7 +13,7 @@ import {
   type ModelServiceTier,
   type ModelServiceTiersDeclaration,
 } from "../model-service-tier.js";
-import { lookupModelKnowledge } from "../model-knowledge/index.js";
+import { lookupModelKnowledge, normalizeModelKnowledgeModelId } from "../model-knowledge/index.js";
 import { findProviderPreset, resolvePresetApiBase } from "../provider-presets/index.js";
 import { assertGoogleGeminiApiBase, googleNativeModelsListUrl } from "./google-gemini-endpoints.js";
 import { extractAwsRegionFromBedrockApiBase } from "./bedrock-region.js";
@@ -127,6 +127,8 @@ export interface ProviderListedModelRegion {
 
 export interface ProviderListedModelEntry {
   id: string;
+  /** Spirit's apply_patch editing function, materialized only for models that opt in. */
+  applyPatch?: true;
   transportOverride?: ProviderListedTransportOverride;
   /** Library/Hugging Face selection id when the runtime id is deployment-specific. */
   baseModelId?: string;
@@ -2608,6 +2610,11 @@ function readOpenRouterSupportedReasoningEfforts(
   return efforts;
 }
 
+function vercelGatewayLanguageModelDeclaresApplyPatch(id: string): boolean {
+  const normalized = normalizeModelKnowledgeModelId(id);
+  return normalized.startsWith("gpt-") || normalized.startsWith("o");
+}
+
 export function parseVercelAiGatewayModelEntriesPayload(body: unknown): ProviderListedModelEntry[] {
   if (typeof body !== "object" || body === null || !("data" in body)) {
     return [];
@@ -2660,6 +2667,11 @@ export function parseVercelAiGatewayModelEntriesPayload(body: unknown): Provider
 
     if (type === "language") {
       const modelEntry: ProviderListedModelEntry = { id: id.trim(), ...upstreamProviderFact };
+      // Vercel uses Spirit's custom apply_patch function for GPT and o-series language models.
+      // This is a write-time catalog declaration, never a runtime provider/model branch.
+      if (vercelGatewayLanguageModelDeclaresApplyPatch(id)) {
+        modelEntry.applyPatch = true;
+      }
       const contextLength = readPositiveIntegerModelTrait(record, "context_window");
       if (contextLength !== undefined) {
         modelEntry.contextLength = contextLength;

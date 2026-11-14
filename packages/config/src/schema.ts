@@ -158,6 +158,8 @@ export interface ModelInheritableFields {
 
 export interface ModelEntry extends ModelInheritableFields {
   name: string;
+  /** open-responses: opt this model into Spirit's apply_patch editing function. */
+  applyPatch?: true;
   /** Optional per-model connection override; transportKind and sdk must be declared together. */
   transportKind?: SpiritTransportKind;
   sdk?: string;
@@ -299,6 +301,7 @@ const MODEL_INHERITABLE_KEYS = [
 
 const MODEL_ENTRY_KEYS: ReadonlySet<string> = new Set([
   "name",
+  "applyPatch",
   "transportKind",
   "sdk",
   "thinkingEnabled",
@@ -882,6 +885,9 @@ function validateModelEntry(model: unknown, context: string): void {
   rejectUnknownKeys(model, MODEL_ENTRY_KEYS, context);
   readRequiredNonBlankString(model, "name", context);
   validateInheritableFields(model, context);
+  if (model["applyPatch"] !== undefined && model["applyPatch"] !== true) {
+    throw new SpiritConfigSchemaError(`${context}: "applyPatch" must be true when declared.`);
+  }
   const hasTransportOverride = model["transportKind"] !== undefined;
   const hasSdkOverride = model["sdk"] !== undefined;
   if (hasTransportOverride !== hasSdkOverride) {
@@ -1013,6 +1019,15 @@ function validateProviderEntry(entry: unknown, context: string): void {
   models.forEach((model, index) => {
     const modelContext = `${context}.models[${index}]`;
     validateModelEntry(model, modelContext);
+    if (
+      isPlainObject(model) &&
+      model["applyPatch"] === true &&
+      (model["transportKind"] ?? transportKind) !== "open-responses"
+    ) {
+      throw new SpiritConfigSchemaError(
+        `${modelContext}: "applyPatch" requires transportKind "open-responses".`,
+      );
+    }
     const effective = mergeRawInheritableFields(entry, model);
     validateServiceTierRule(effective, modelContext);
     validateReasoningRules(effective, modelContext);
@@ -1132,6 +1147,9 @@ export function resolveModelEntry(
     return undefined;
   }
   const resolved: ModelEntry = { name: model.name };
+  if (model.applyPatch !== undefined) {
+    resolved.applyPatch = true;
+  }
   if (model.thinkingEnabled !== undefined) {
     resolved.thinkingEnabled = model.thinkingEnabled;
   }

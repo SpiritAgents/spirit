@@ -665,3 +665,12 @@ test("applyCatalogEntryToStoredModel clears revoked effort and thinking state", 
   assert.equal(model.thinkingSwitch, undefined);
   assert.deepEqual(model.thinkingCapabilities, { supported: false });
 });
+
+test("applyCatalogEntryToStoredModel syncs and clears model-level applyPatch", () => {
+  const model = { name: "openai/gpt-5.4" };
+
+  assert.equal(applyCatalogEntryToStoredModel(model, { id: model.name, applyPatch: true }), true);
+  assert.equal(model.applyPatch, true);
+  assert.equal(applyCatalogEntryToStoredModel(model, { id: model.name }), true);
+  assert.equal("applyPatch" in model, false);
+});
