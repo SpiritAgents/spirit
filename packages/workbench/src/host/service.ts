@@ -396,6 +396,9 @@ import {
   startAutomationSchedulerMonitorIfNeeded as startAutomationSchedulerMonitorIfNeededFromService,
   type AutomationSchedulerServiceContext,
 } from "./automation-scheduler-service.js";
+import { resolveGitHubAutomationTriggerMenu } from "./github-automation-trigger-menu.js";
+import { assertAutomationMenuConfig } from "./automation-menu-values.js";
+import { normalizeAutomationTrigger } from "@spiritagent/automations";
 import {
   createAutomationCommand,
   deleteAutomationCommand,
@@ -741,6 +744,14 @@ export class DesktopHostService {
   private automationMonitorTimer: ReturnType<typeof setInterval> | undefined;
   private readonly runningAutomationIds = new Set<string>();
   private readonly automationTriggerPollControllers = new Map<string, Set<AbortController>>();
+  private readonly automationTriggerMenuSessions = new Map<
+    string,
+    { kind: string; controllers: Set<AbortController> }
+  >();
+  private readonly automationTriggerOverrides = new Map<
+    string,
+    { name?: string; icon?: import("@spiritagent/api/types").DesktopExtensionDesktopTabRuntimeIcon }
+  >();
   private automationsListCache: DesktopAutomationListItem[] = [];
   private readonly dreamUpdateListeners = new Set<(snapshot: DesktopSnapshot) => void>();
   private readonly automationUpdateListeners = new Set<(snapshot: DesktopSnapshot) => void>();
@@ -3963,6 +3974,170 @@ export class DesktopHostService {
     );
   }
 
+  async resolveAutomationTriggerMenu(
+    request: import("@spiritagent/api/types").ResolveAutomationTriggerMenuRequest,
+  ): Promise<import("@spiritagent/api/types").DesktopAutomationTriggerMenuPage> {
+    const kind = request.kind.trim();
+    const sessionId = request.sessionId.trim();
+    if (!kind || !sessionId || !Number.isInteger(request.page) || request.page < 1) {
+      throw new Error("Invalid Automation trigger menu request.");
+    }
+    if (request.path.some((entry) => !entry.trim())) {
+      throw new Error("Automation trigger menu path ids must not be empty.");
+    }
+    const existing = this.automationTriggerMenuSessions.get(sessionId);
+    if (existing && existing.kind !== kind) {
+      throw new Error("Automation trigger menu session provider cannot change.");
+    }
+    if (existing) {
+      for (const controller of existing.controllers) {
+        controller.abort();
+      }
+      existing.controllers.clear();
+    }
+    const controller = new AbortController();
+    const session = existing ?? { kind, controllers: new Set<AbortController>() };
+    session.controllers.add(controller);
+    this.automationTriggerMenuSessions.set(sessionId, session);
+    try {
+      const page =
+        kind === "github"
+          ? await resolveGitHubAutomationTriggerMenu({
+              path: request.path,
+              ...(request.query === undefined ? {} : { query: request.query }),
+              page: request.page,
+            })
+          : await this.resolveExtensionAutomationTriggerMenu(kind, request, controller.signal);
+      if (controller.signal.aborted) {
+        throw new Error("Automation trigger menu request was cancelled.");
+      }
+      return page;
+    } finally {
+      session.controllers.delete(controller);
+    }
+  }
+
+  private async resolveExtensionAutomationTriggerMenu(
+    kind: string,
+    request: import("@spiritagent/api/types").ResolveAutomationTriggerMenuRequest,
+    signal: AbortSignal,
+  ) {
+    const contribution = collectAutomationTriggerContributions(
+      await this.extensionManager().list(),
+    ).find((entry) => entry.kind === kind);
+    if (!contribution) {
+      throw new Error(`Unknown Automation trigger contribution: ${kind}`);
+    }
+    if (contribution.configuration !== "menu") {
+      throw new Error(`Automation trigger does not have a configuration menu: ${kind}`);
+    }
+    const page = await this.extensionManager().invokeAutomationTriggerMenu({
+      extensionId: contribution.extensionId,
+      contributionId: contribution.contributionId,
+      path: request.path,
+      ...(request.query === undefined ? {} : { query: request.query }),
+      page: request.page,
+      signal,
+      host: this.requireExtensionHostAdapter(),
+      logger: console,
+    });
+    return {
+      items: page.items.map((item) => ({
+        ...item,
+        ...(item.icon ? { icon: parseHostExtensionTabRuntimeIcon(item.icon) } : {}),
+        ...(item.action === "select" ? { config: assertAutomationMenuConfig(item.config) } : {}),
+      })),
+      ...(page.searchPlaceholder ? { searchPlaceholder: page.searchPlaceholder } : {}),
+      ...(page.hasMore !== undefined ? { hasMore: page.hasMore } : {}),
+    };
+  }
+
+  async cancelAutomationTriggerMenu(
+    request: import("@spiritagent/api/types").CancelAutomationTriggerMenuRequest,
+  ): Promise<void> {
+    const session = this.automationTriggerMenuSessions.get(request.sessionId);
+    if (!session) {
+      return;
+    }
+    for (const controller of session.controllers) {
+      controller.abort();
+    }
+    this.automationTriggerMenuSessions.delete(request.sessionId);
+  }
+
+  async validateAutomationTrigger(
+    request: import("@spiritagent/api/types").ValidateAutomationTriggerRequest,
+  ): Promise<import("@spiritagent/api/automations").DesktopAutomationTrigger> {
+    assertHostExtensionJsonValue(request.config, "Automation trigger config");
+    if (request.kind === "github") {
+      const trigger = normalizeAutomationTrigger({ kind: "github", ...request.config });
+      if (!trigger || trigger.kind !== "github") {
+        throw new Error("Invalid GitHub Automation trigger config.");
+      }
+      return trigger;
+    }
+    const contribution = collectAutomationTriggerContributions(
+      await this.extensionManager().list(),
+    ).find((entry) => entry.kind === request.kind);
+    if (!contribution) {
+      throw new Error(`Unknown Automation trigger contribution: ${request.kind}`);
+    }
+    const validation = await this.extensionManager().validateAutomationTrigger({
+      extensionId: contribution.extensionId,
+      contributionId: contribution.contributionId,
+      config: request.config,
+      host: this.requireExtensionHostAdapter(),
+      logger: console,
+    });
+    return {
+      kind: contribution.kind as `extension:${string}`,
+      config: validation.config,
+      label: validation.label,
+    };
+  }
+
+  async updateAutomationTriggerContribution(request: {
+    extensionId: string;
+    contributionId: string;
+    patch: {
+      name?: string;
+      icon?: import("@spiritagent/api/types").DesktopExtensionDesktopTabRuntimeIcon;
+    };
+  }): Promise<void> {
+    const contribution = collectAutomationTriggerContributions(
+      await this.extensionManager().list(),
+    ).find(
+      (entry) =>
+        entry.extensionId === request.extensionId &&
+        entry.contributionId === request.contributionId,
+    );
+    if (!contribution) {
+      throw new Error(`Unknown Automation trigger contribution: ${request.contributionId}`);
+    }
+    const name = request.patch.name?.trim();
+    this.automationTriggerOverrides.set(contribution.kind, {
+      ...(name ? { name } : {}),
+      ...(request.patch.icon ? { icon: parseHostExtensionTabRuntimeIcon(request.patch.icon) } : {}),
+    });
+    this.applyAutomationTriggerOverrides();
+    this.emitLiveSnapshotUpdate();
+  }
+
+  private applyAutomationTriggerOverrides(): void {
+    const state = this.requireState();
+    state.extensionsList = state.extensionsList.map((extension) => ({
+      ...extension,
+      ...(extension.automationTriggers
+        ? {
+            automationTriggers: extension.automationTriggers.map((trigger) => ({
+              ...trigger,
+              ...this.automationTriggerOverrides.get(trigger.kind),
+            })),
+          }
+        : {}),
+    }));
+  }
+
   private automationSchedulerContext(): AutomationSchedulerServiceContext {
     return {
       initialized: () => this.initialized,
@@ -4022,6 +4197,20 @@ export class DesktopHostService {
     for (const controllers of groups) {
       for (const controller of controllers ?? []) {
         controller.abort();
+      }
+    }
+    for (const [sessionId, session] of this.automationTriggerMenuSessions) {
+      if (ownerId && !session.kind.startsWith(`extension:${ownerId}/`)) {
+        continue;
+      }
+      for (const controller of session.controllers) {
+        controller.abort();
+      }
+      this.automationTriggerMenuSessions.delete(sessionId);
+    }
+    for (const kind of this.automationTriggerOverrides.keys()) {
+      if (!ownerId || kind.startsWith(`extension:${ownerId}/`)) {
+        this.automationTriggerOverrides.delete(kind);
       }
     }
     if (ownerId) {
@@ -5066,6 +5255,7 @@ export class DesktopHostService {
     const manager = this.extensionManager();
     const extensions = await manager.list();
     state.extensionsList = await buildDesktopExtensionListItems(manager, extensions, options);
+    this.applyAutomationTriggerOverrides();
     await this.workspaceToolTabs.reconcileExtensions(state.extensionsList);
 
     // Multi-source marketplace: refresh every source, then read its catalog.
@@ -5774,6 +5964,17 @@ export function openDesktopHostExtensionUiSession(
   request: McpUiOpenRequest,
 ): DesktopExtensionViewSession {
   return desktopHostService.openLocalExtensionUiSession(request);
+}
+
+export async function updateDesktopAutomationTriggerContribution(request: {
+  extensionId: string;
+  contributionId: string;
+  patch: {
+    name?: string;
+    icon?: import("@spiritagent/api/types").DesktopExtensionDesktopTabRuntimeIcon;
+  };
+}): Promise<void> {
+  return desktopHostService.updateAutomationTriggerContribution(request);
 }
 
 export function subscribeDesktopDreamUpdates(

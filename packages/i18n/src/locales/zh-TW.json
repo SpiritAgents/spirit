@@ -634,6 +634,8 @@
       "repositorySearchPlaceholder": "搜尋儲存庫",
       "repositoryEmpty": "找不到儲存庫",
       "repositoryLoadFailed": "無法載入儲存庫。請再試一次。",
+      "triggerLoadFailed": "載入觸發程序選項失敗",
+      "triggerEmpty": "沒有可用的觸發程序選項",
       "pullRequestCreated": "Pull request 已建立",
       "issueCreated": "Issue 已建立"
     },

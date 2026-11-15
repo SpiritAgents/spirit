@@ -634,6 +634,8 @@
       "repositorySearchPlaceholder": "Repositories durchsuchen",
       "repositoryEmpty": "Keine Repositories gefunden",
       "repositoryLoadFailed": "Repositories konnten nicht geladen werden. Erneut versuchen.",
+      "triggerLoadFailed": "Triggeroptionen konnten nicht geladen werden",
+      "triggerEmpty": "Keine Triggeroptionen verfügbar",
       "pullRequestCreated": "Pull Request erstellt",
       "issueCreated": "Issue erstellt"
     },

@@ -81,6 +81,9 @@ import type {
   DesktopAutomationDetail,
   DesktopAutomationListItem,
   DesktopCreateAutomationRequest,
+  ResolveAutomationTriggerMenuRequest,
+  CancelAutomationTriggerMenuRequest,
+  ValidateAutomationTriggerRequest,
   DesktopResolveTaskForRunResult,
   DesktopTaskMenuItem,
   DesktopDreamOverviewItem,
@@ -883,6 +886,42 @@ export function useDesktopRuntime() {
     }
     return api.listDreamsOverview();
   }, [api]);
+
+  const resolveAutomationTriggerMenu = useCallback(
+    async (request: ResolveAutomationTriggerMenuRequest) => {
+      if (!api) {
+        throw new Error("Desktop host is not ready.");
+      }
+      return api.resolveAutomationTriggerMenu(request);
+    },
+    [api],
+  );
+  const cancelAutomationTriggerMenu = useCallback(
+    async (request: CancelAutomationTriggerMenuRequest) => {
+      if (!api) {
+        return;
+      }
+      return api.cancelAutomationTriggerMenu(request);
+    },
+    [api],
+  );
+  const validateAutomationTrigger = useCallback(
+    async (request: ValidateAutomationTriggerRequest) => {
+      if (!api) {
+        throw new Error("Desktop host is not ready.");
+      }
+      try {
+        const result = await api.validateAutomationTrigger(request);
+        setRuntimeError("");
+        return result;
+      } catch (error) {
+        const message = describeError(error);
+        setRuntimeError(message);
+        throw new Error(message, { cause: error });
+      }
+    },
+    [api],
+  );
 
   const listAutomations = useCallback(async (): Promise<DesktopAutomationListItem[]> => {
     if (!api) {
@@ -4190,6 +4229,9 @@ export function useDesktopRuntime() {
     questionError,
     refreshSessions,
     listDreamsOverview,
+    resolveAutomationTriggerMenu,
+    cancelAutomationTriggerMenu,
+    validateAutomationTrigger,
     listAutomations,
     resolveTaskForRun,
     resolveTaskByLabel,

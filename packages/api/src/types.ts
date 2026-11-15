@@ -9,6 +9,7 @@ import type {
   SpiritTransportKind,
   ThinkingSwitchDeclaration,
 } from "@spiritagent/config";
+import type { JsonObject } from "@spiritagent/agent-core";
 import type { ModelReasoningEffort } from "@spiritagent/agent-core/reasoning-effort";
 import type { RemoteControlPendingPairing } from "@spiritagent/remote-control";
 import type {
@@ -866,7 +867,7 @@ export interface DesktopExtensionAutomationTrigger {
   icon: DesktopExtensionDesktopTabRuntimeIcon;
   configuration: "menu" | "none";
   inputSchema: Record<string, unknown>;
-  authorization?: { id: string; configured?: boolean };
+  authorization?: { id: string; action: string; configured?: boolean };
 }
 
 export interface DesktopExtensionAuthorization {
@@ -1535,6 +1536,48 @@ export interface DesktopDreamOverviewItem {
   workspaceRoot: string;
   gitBranch: string;
   updatedAtUnixMs: number;
+}
+
+export type DesktopAutomationTriggerMenuItem =
+  | {
+      action: "submenu";
+      id: string;
+      label: string;
+      description?: string;
+      icon?: DesktopExtensionDesktopTabRuntimeIcon;
+      disabled?: boolean;
+    }
+  | {
+      action: "select";
+      id: string;
+      label: string;
+      description?: string;
+      icon?: DesktopExtensionDesktopTabRuntimeIcon;
+      disabled?: boolean;
+      config: JsonObject;
+    };
+
+export interface DesktopAutomationTriggerMenuPage {
+  items: DesktopAutomationTriggerMenuItem[];
+  searchPlaceholder?: string;
+  hasMore?: boolean;
+}
+
+export interface ResolveAutomationTriggerMenuRequest {
+  kind: string;
+  sessionId: string;
+  path: string[];
+  query?: string;
+  page: number;
+}
+
+export interface CancelAutomationTriggerMenuRequest {
+  sessionId: string;
+}
+
+export interface ValidateAutomationTriggerRequest {
+  kind: string;
+  config: JsonObject;
 }
 
 export interface DesktopAutomationListItem {

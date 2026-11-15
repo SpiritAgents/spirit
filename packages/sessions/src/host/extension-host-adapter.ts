@@ -27,6 +27,16 @@ export interface DesktopExtensionHostUi {
   open(viewId: string, params?: unknown): Promise<DesktopExtensionViewSession>;
 }
 
+export interface DesktopExtensionHostAutomationTriggers {
+  update(
+    contributionId: string,
+    patch: {
+      name?: string;
+      icon?: import("@spiritagent/api/types").DesktopExtensionDesktopTabRuntimeIcon;
+    },
+  ): Promise<void>;
+}
+
 export interface DesktopExtensionHostTabs {
   open(request: DesktopExtensionTabOpenRequest): Promise<DesktopWorkspaceExtensionToolTab>;
   focus(instanceId: string): Promise<void>;
@@ -41,6 +51,7 @@ export interface DesktopExtensionHostAdapter {
   showMessageBox(request: DesktopExtensionMessageBoxRequest): Promise<void>;
   openExternal(url: string): Promise<void>;
   ui: DesktopExtensionHostUi;
+  automationTriggers: DesktopExtensionHostAutomationTriggers;
   tabs: DesktopExtensionHostTabs;
   webViews: DesktopExtensionWebViews;
   forExtension(extensionId: string, windowId?: string): DesktopExtensionHostAdapter;

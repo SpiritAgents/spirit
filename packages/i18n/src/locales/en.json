@@ -667,6 +667,8 @@
       "repositorySearchPlaceholder": "Search repositories",
       "repositoryEmpty": "No repositories found",
       "repositoryLoadFailed": "Failed to load repositories. Try again.",
+      "triggerLoadFailed": "Failed to load trigger options",
+      "triggerEmpty": "No trigger options available",
       "pullRequestCreated": "Pull request created",
       "issueCreated": "Issue created"
     },

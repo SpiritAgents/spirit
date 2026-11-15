@@ -642,6 +642,8 @@
       "repositorySearchPlaceholder": "搜索仓库",
       "repositoryEmpty": "未找到仓库",
       "repositoryLoadFailed": "加载仓库失败，请稍后重试",
+      "triggerLoadFailed": "加载触发器选项失败",
+      "triggerEmpty": "暂无可用触发器选项",
       "pullRequestCreated": "Pull Request 创建",
       "issueCreated": "Issue 创建"
     },

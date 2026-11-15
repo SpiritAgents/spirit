@@ -141,6 +141,11 @@ export type CommandPayloads = {
   continueAssistantCompletion: { messageId: number };
   poll: { sessionPath?: string } | undefined;
   listDreamsOverview: undefined;
+  resolveAutomationTriggerMenu: {
+    request: import("./types.js").ResolveAutomationTriggerMenuRequest;
+  };
+  cancelAutomationTriggerMenu: { request: import("./types.js").CancelAutomationTriggerMenuRequest };
+  validateAutomationTrigger: { request: import("./types.js").ValidateAutomationTriggerRequest };
   listAutomations: undefined;
   getAutomation: { automationId: string };
   createAutomation: { request: DesktopCreateAutomationRequest };

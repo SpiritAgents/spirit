@@ -634,6 +634,8 @@
       "repositorySearchPlaceholder": "Rechercher des dépôts",
       "repositoryEmpty": "Aucun dépôt trouvé",
       "repositoryLoadFailed": "Échec du chargement des dépôts. Réessayez.",
+      "triggerLoadFailed": "Échec du chargement des options de déclencheur",
+      "triggerEmpty": "Aucune option de déclencheur disponible",
       "pullRequestCreated": "Pull request créée",
       "issueCreated": "Issue créée"
     },

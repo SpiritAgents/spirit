@@ -72,6 +72,15 @@ export interface HostCommandDelegate {
   continueAssistantCompletion(messageId: number): Promise<unknown>;
   poll(request?: import("@spiritagent/api/types").PollRequest): Promise<unknown>;
   listDreamsOverview(): Promise<unknown>;
+  resolveAutomationTriggerMenu(
+    request: CommandPayloads["resolveAutomationTriggerMenu"]["request"],
+  ): Promise<unknown>;
+  cancelAutomationTriggerMenu(
+    request: CommandPayloads["cancelAutomationTriggerMenu"]["request"],
+  ): Promise<unknown>;
+  validateAutomationTrigger(
+    request: CommandPayloads["validateAutomationTrigger"]["request"],
+  ): Promise<unknown>;
   listAutomations(): Promise<unknown>;
   getAutomation(automationId: string): Promise<unknown>;
   createAutomation(request: CommandPayloads["createAutomation"]["request"]): Promise<unknown>;
@@ -299,6 +308,10 @@ const hostCommandDispatch = {
     host.continueAssistantCompletion(payload.messageId),
   poll: (host, payload) => host.poll(payload),
   listDreamsOverview: (host) => host.listDreamsOverview(),
+  resolveAutomationTriggerMenu: (host, payload) =>
+    host.resolveAutomationTriggerMenu(payload.request),
+  cancelAutomationTriggerMenu: (host, payload) => host.cancelAutomationTriggerMenu(payload.request),
+  validateAutomationTrigger: (host, payload) => host.validateAutomationTrigger(payload.request),
   listAutomations: (host) => host.listAutomations(),
   getAutomation: (host, payload) => host.getAutomation(payload.automationId),
   createAutomation: (host, payload) => host.createAutomation(payload.request),

@@ -386,6 +386,19 @@ export function createWebHostApi(): HostApi {
     listDreamsOverview() {
       return get<DesktopDreamOverviewItem[]>(baseUrl, "/api/dreams");
     },
+    resolveAutomationTriggerMenu() {
+      return Promise.reject(
+        new Error("Automation trigger menus are only available in the Electron desktop app."),
+      );
+    },
+    cancelAutomationTriggerMenu() {
+      return Promise.resolve();
+    },
+    validateAutomationTrigger() {
+      return Promise.reject(
+        new Error("Automation trigger validation is only available in the Electron desktop app."),
+      );
+    },
     listAutomations() {
       return get<import("../types.js").DesktopAutomationListItem[]>(baseUrl, "/api/automations");
     },

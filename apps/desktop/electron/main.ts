@@ -163,6 +163,7 @@ import {
   subscribeDesktopExtensionWebViewEvents,
   resolveDesktopExtensionTabIconFile,
   openDesktopHostExtensionUiSession,
+  updateDesktopAutomationTriggerContribution,
   openDesktopExtensionTab,
   focusDesktopExtensionTab,
   closeDesktopExtensionTab,
@@ -286,6 +287,11 @@ const desktopExtensionHostAdapter: NonNullable<
       throw new Error("Extension identity is not bound to the view API.");
     },
   },
+  automationTriggers: {
+    async update() {
+      throw new Error("Extension identity is not bound to the Automation trigger API.");
+    },
+  },
   tabs: {
     async open() {
       throw new Error("Extension identity is not bound to the tab API.");
@@ -337,6 +343,10 @@ const desktopExtensionHostAdapter: NonNullable<
           }
           return openDesktopHostExtensionUiSession({ extensionId, viewId, params });
         },
+      },
+      automationTriggers: {
+        update: (contributionId, patch) =>
+          updateDesktopAutomationTriggerContribution({ extensionId, contributionId, patch }),
       },
       tabs: {
         open: (request) =>

@@ -84,6 +84,10 @@ function mapDesktopAutomationTriggers(
       ? {
           authorization: {
             id: trigger.authorization,
+            action:
+              manifest.contributes?.authorizations?.find(
+                (authorization) => authorization.id === trigger.authorization,
+              )?.action ?? "",
             ...(configurations?.[trigger.authorization] === undefined
               ? {}
               : { configured: configurations[trigger.authorization] }),

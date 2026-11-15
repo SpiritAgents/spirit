@@ -5,6 +5,7 @@ import { ApprovalLevelMenu } from "@/components/approval-level-menu";
 import {
   AutomationTriggerMenu,
   defaultDesktopTimeTrigger,
+  type AutomationTriggerRuntime,
 } from "@/components/automation-trigger-menu";
 import { ModelPickerMenu } from "@spiritagent/ui/model-picker";
 import { WorkspaceSelectorMenu } from "@/components/workspace-selector-menu";
@@ -27,9 +28,7 @@ import type {
   DesktopModelEffortSelection,
   DesktopSnapshot,
   DesktopWorkspaceBinding,
-  GitHubAutomationRepositoriesSnapshot,
   ModelRef,
-  SearchGitHubAutomationRepositoriesSnapshot,
 } from "@/types";
 import { FONT_WEIGHT_MEDIUM } from "@/lib/desktop-typography";
 import { emptyModelRef, isEmptyModelRef, modelRefsEqual } from "@spiritagent/ui/model-picker";
@@ -46,11 +45,7 @@ type CreateAutomationDialogProps = {
   onOpenIntegrationsSettings?: () => void;
   onSubmit(request: DesktopCreateAutomationRequest): void | Promise<void>;
   onAddWorkspace?(): void | Promise<void>;
-  listGitHubRepositories(page?: number): Promise<GitHubAutomationRepositoriesSnapshot>;
-  searchGitHubRepositories(
-    query: string,
-    page?: number,
-  ): Promise<SearchGitHubAutomationRepositoriesSnapshot>;
+  triggerRuntime: AutomationTriggerRuntime;
 };
 
 export function CreateAutomationDialog({
@@ -63,8 +58,7 @@ export function CreateAutomationDialog({
   onOpenIntegrationsSettings,
   onSubmit,
   onAddWorkspace,
-  listGitHubRepositories,
-  searchGitHubRepositories,
+  triggerRuntime,
 }: CreateAutomationDialogProps) {
   const { t } = useTranslation();
   const [title, setTitle] = useState("");
@@ -155,8 +149,7 @@ export function CreateAutomationDialog({
               githubAuthChecking={githubAuthChecking}
               onOpenIntegrationsSettings={onOpenIntegrationsSettings}
               onTriggerChange={setTrigger}
-              listGitHubRepositories={listGitHubRepositories}
-              searchGitHubRepositories={searchGitHubRepositories}
+              runtime={triggerRuntime}
             />
             {snapshot ? (
               <>

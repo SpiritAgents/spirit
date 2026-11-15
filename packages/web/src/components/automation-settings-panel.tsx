@@ -5,6 +5,7 @@ import { ApprovalLevelMenu } from "@/components/approval-level-menu";
 import {
   AutomationTriggerMenu,
   defaultDesktopTimeTrigger,
+  type AutomationTriggerRuntime,
 } from "@/components/automation-trigger-menu";
 import { ModelPickerMenu } from "@spiritagent/ui/model-picker";
 import { WorkspaceSelectorMenu } from "@/components/workspace-selector-menu";
@@ -22,9 +23,7 @@ import type {
   DesktopSnapshot,
   DesktopUpdateAutomationRequest,
   DesktopWorkspaceBinding,
-  GitHubAutomationRepositoriesSnapshot,
   ModelRef,
-  SearchGitHubAutomationRepositoriesSnapshot,
 } from "@/types";
 import { emptyModelRef, isEmptyModelRef, modelRefsEqual } from "@spiritagent/ui/model-picker";
 import { configuredModelEffort, modelEffortPreference } from "@spiritagent/ui/model-picker";
@@ -40,11 +39,7 @@ type AutomationSettingsPanelProps = {
   onOpenIntegrationsSettings?: () => void;
   onSave(patch: DesktopUpdateAutomationRequest): void | Promise<void>;
   onAddWorkspace?(): void | Promise<void>;
-  listGitHubRepositories(page?: number): Promise<GitHubAutomationRepositoriesSnapshot>;
-  searchGitHubRepositories(
-    query: string,
-    page?: number,
-  ): Promise<SearchGitHubAutomationRepositoriesSnapshot>;
+  triggerRuntime: AutomationTriggerRuntime;
 };
 
 function triggersEqual(left: DesktopAutomationTrigger, right: DesktopAutomationTrigger): boolean {
@@ -65,8 +60,7 @@ export function AutomationSettingsPanel({
   onOpenIntegrationsSettings,
   onSave,
   onAddWorkspace,
-  listGitHubRepositories,
-  searchGitHubRepositories,
+  triggerRuntime,
 }: AutomationSettingsPanelProps) {
   const { t } = useTranslation();
   const initializedForAutomationIdRef = useRef<string | null>(null);
@@ -222,8 +216,7 @@ export function AutomationSettingsPanel({
               githubAuthChecking={githubAuthChecking}
               onOpenIntegrationsSettings={onOpenIntegrationsSettings}
               onTriggerChange={setTrigger}
-              listGitHubRepositories={listGitHubRepositories}
-              searchGitHubRepositories={searchGitHubRepositories}
+              runtime={triggerRuntime}
             />
             {snapshot ? (
               <>

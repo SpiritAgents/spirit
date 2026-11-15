@@ -634,6 +634,8 @@
       "repositorySearchPlaceholder": "リポジトリを検索",
       "repositoryEmpty": "リポジトリが見つかりません",
       "repositoryLoadFailed": "リポジトリの読み込みに失敗しました。もう一度お試しください。",
+      "triggerLoadFailed": "トリガーオプションを読み込めませんでした",
+      "triggerEmpty": "利用可能なトリガーオプションがありません",
       "pullRequestCreated": "プルリクエスト作成時",
       "issueCreated": "Issue 作成時"
     },

@@ -299,6 +299,15 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   listDreamsOverview() {
     return ipcRenderer.invoke("desktop:invoke", "listDreamsOverview");
   },
+  resolveAutomationTriggerMenu(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "resolveAutomationTriggerMenu", { request });
+  },
+  cancelAutomationTriggerMenu(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "cancelAutomationTriggerMenu", { request });
+  },
+  validateAutomationTrigger(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "validateAutomationTrigger", { request });
+  },
   listAutomations() {
     return ipcRenderer.invoke("desktop:invoke", "listAutomations");
   },

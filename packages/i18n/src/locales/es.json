@@ -634,6 +634,8 @@
       "repositorySearchPlaceholder": "Buscar repositorios",
       "repositoryEmpty": "No se encontraron repositorios",
       "repositoryLoadFailed": "Error al cargar repositorios. Inténtalo de nuevo.",
+      "triggerLoadFailed": "No se pudieron cargar las opciones del disparador",
+      "triggerEmpty": "No hay opciones de disparador disponibles",
       "pullRequestCreated": "Pull request creado",
       "issueCreated": "Issue creado"
     },

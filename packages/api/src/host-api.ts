@@ -223,6 +223,15 @@ export interface HostApi {
   poll(request?: import("./types.js").PollRequest): Promise<DesktopSnapshot>;
   setSubagentViewerTarget(parentToolCallId: string | null): Promise<DesktopSnapshot>;
   listDreamsOverview(): Promise<DesktopDreamOverviewItem[]>;
+  resolveAutomationTriggerMenu(
+    request: import("./types.js").ResolveAutomationTriggerMenuRequest,
+  ): Promise<import("./types.js").DesktopAutomationTriggerMenuPage>;
+  cancelAutomationTriggerMenu(
+    request: import("./types.js").CancelAutomationTriggerMenuRequest,
+  ): Promise<void>;
+  validateAutomationTrigger(
+    request: import("./types.js").ValidateAutomationTriggerRequest,
+  ): Promise<import("./lib/automation-trigger.js").DesktopAutomationTrigger>;
   listAutomations(): Promise<DesktopAutomationListItem[]>;
   getAutomation(automationId: string): Promise<DesktopAutomationDetail | undefined>;
   createAutomation(request: DesktopCreateAutomationRequest): Promise<DesktopSnapshot>;

@@ -638,6 +638,8 @@
       "repositorySearchPlaceholder": "Поиск репозиториев",
       "repositoryEmpty": "Репозитории не найдены",
       "repositoryLoadFailed": "Не удалось загрузить репозитории. Попробуйте снова.",
+      "triggerLoadFailed": "Не удалось загрузить параметры триггера",
+      "triggerEmpty": "Нет доступных параметров триггера",
       "pullRequestCreated": "Pull request создан",
       "issueCreated": "Issue создан"
     },

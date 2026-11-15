@@ -207,6 +207,15 @@ export async function createElectronHostApi(): Promise<HostApi> {
     listDreamsOverview() {
       return bridge.listDreamsOverview();
     },
+    resolveAutomationTriggerMenu(request) {
+      return bridge.resolveAutomationTriggerMenu(request);
+    },
+    cancelAutomationTriggerMenu(request) {
+      return bridge.cancelAutomationTriggerMenu(request);
+    },
+    validateAutomationTrigger(request) {
+      return bridge.validateAutomationTrigger(request);
+    },
     listAutomations() {
       return bridge.listAutomations();
     },
