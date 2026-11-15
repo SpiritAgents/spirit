@@ -111,14 +111,11 @@ export async function createElectronHostApi(): Promise<HostApi> {
     setExtensionEnabled(request) {
       return bridge.setExtensionEnabled(request);
     },
-    runExtension(request) {
-      return bridge.runExtension(request);
+    invokeExtensionAction(request) {
+      return bridge.invokeExtensionAction(request);
     },
     updateExtensionSettings(request) {
       return bridge.updateExtensionSettings(request);
-    },
-    updateExtensionSecret(request) {
-      return bridge.updateExtensionSecret(request);
     },
     createRule(request) {
       return bridge.createRule(request);
@@ -209,6 +206,15 @@ export async function createElectronHostApi(): Promise<HostApi> {
     },
     listDreamsOverview() {
       return bridge.listDreamsOverview();
+    },
+    resolveAutomationTriggerMenu(request) {
+      return bridge.resolveAutomationTriggerMenu(request);
+    },
+    cancelAutomationTriggerMenu(request) {
+      return bridge.cancelAutomationTriggerMenu(request);
+    },
+    validateAutomationTrigger(request) {
+      return bridge.validateAutomationTrigger(request);
     },
     listAutomations() {
       return bridge.listAutomations();

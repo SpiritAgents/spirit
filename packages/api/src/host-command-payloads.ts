@@ -46,7 +46,7 @@ import type {
   ListGitHubPullRequestsRequest,
   SearchGitHubAutomationRepositoriesRequest,
   MergeGitHubPullRequestRequest,
-  RunExtensionRequest,
+  InvokeExtensionActionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
   SubmitGitChipRequest,
@@ -65,7 +65,6 @@ import type {
   SetPaneWorkLocationRequest,
   CheckoutPaneGitBranchRequest,
   UpdateConfigRequest,
-  UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   WriteHostTextFileRequest,
   WriteWorkspaceTextFileRequest,
@@ -124,9 +123,8 @@ export type CommandPayloads = {
   updateExtension: { request: UpdateExtensionRequest };
   deleteExtension: { request: DeleteExtensionRequest };
   setExtensionEnabled: { request: SetExtensionEnabledRequest };
-  runExtension: { request: RunExtensionRequest };
+  invokeExtensionAction: { request: InvokeExtensionActionRequest };
   updateExtensionSettings: { request: UpdateExtensionSettingsRequest };
-  updateExtensionSecret: { request: UpdateExtensionSecretRequest };
   createRule: { request: CreateRuleRequest };
   createSkill: { request: CreateSkillRequest };
   deleteRule: { request: DeleteRuleRequest };
@@ -143,6 +141,11 @@ export type CommandPayloads = {
   continueAssistantCompletion: { messageId: number };
   poll: { sessionPath?: string } | undefined;
   listDreamsOverview: undefined;
+  resolveAutomationTriggerMenu: {
+    request: import("./types.js").ResolveAutomationTriggerMenuRequest;
+  };
+  cancelAutomationTriggerMenu: { request: import("./types.js").CancelAutomationTriggerMenuRequest };
+  validateAutomationTrigger: { request: import("./types.js").ValidateAutomationTriggerRequest };
   listAutomations: undefined;
   getAutomation: { automationId: string };
   createAutomation: { request: DesktopCreateAutomationRequest };

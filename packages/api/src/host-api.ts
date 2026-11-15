@@ -37,10 +37,9 @@ import type {
   MarketplaceUpdateCommandResult,
   RemoveMarketplaceSourceRequest,
   UpdateExtensionRequest,
-  RunExtensionRequest,
+  InvokeExtensionActionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
-  UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   RemoveProviderGroupRequest,
   PreviewModelsRequest,
@@ -150,9 +149,8 @@ export interface HostApi {
   updateExtension(request: UpdateExtensionRequest): Promise<MarketplaceUpdateCommandResult>;
   deleteExtension(request: DeleteExtensionRequest): Promise<DesktopSnapshot>;
   setExtensionEnabled(request: SetExtensionEnabledRequest): Promise<DesktopSnapshot>;
-  runExtension(request: RunExtensionRequest): Promise<DesktopSnapshot>;
+  invokeExtensionAction(request: InvokeExtensionActionRequest): Promise<unknown>;
   updateExtensionSettings(request: UpdateExtensionSettingsRequest): Promise<DesktopSnapshot>;
-  updateExtensionSecret(request: UpdateExtensionSecretRequest): Promise<DesktopSnapshot>;
   createRule(request: CreateRuleRequest): Promise<DesktopSnapshot>;
   createSkill(request: CreateSkillRequest): Promise<DesktopSnapshot>;
   deleteRule(request: DeleteRuleRequest): Promise<DesktopSnapshot>;
@@ -225,6 +223,15 @@ export interface HostApi {
   poll(request?: import("./types.js").PollRequest): Promise<DesktopSnapshot>;
   setSubagentViewerTarget(parentToolCallId: string | null): Promise<DesktopSnapshot>;
   listDreamsOverview(): Promise<DesktopDreamOverviewItem[]>;
+  resolveAutomationTriggerMenu(
+    request: import("./types.js").ResolveAutomationTriggerMenuRequest,
+  ): Promise<import("./types.js").DesktopAutomationTriggerMenuPage>;
+  cancelAutomationTriggerMenu(
+    request: import("./types.js").CancelAutomationTriggerMenuRequest,
+  ): Promise<void>;
+  validateAutomationTrigger(
+    request: import("./types.js").ValidateAutomationTriggerRequest,
+  ): Promise<import("./lib/automation-trigger.js").DesktopAutomationTrigger>;
   listAutomations(): Promise<DesktopAutomationListItem[]>;
   getAutomation(automationId: string): Promise<DesktopAutomationDetail | undefined>;
   createAutomation(request: DesktopCreateAutomationRequest): Promise<DesktopSnapshot>;

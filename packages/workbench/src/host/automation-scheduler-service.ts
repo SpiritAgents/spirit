@@ -1,3 +1,5 @@
+import type { JsonObject } from "@spiritagent/agent-core";
+
 import {
   automationTimeScheduleFromTrigger,
   createHostAutomationStore,
@@ -6,24 +8,29 @@ import {
   type HostAutomationDefinition,
   type HostAutomationRun,
 } from "@spiritagent/automations";
-import {
-  baselineGitHubAutomationWatermark,
-  computeGitHubPollMatchesForRepoGroup,
-  fetchGitHubAutomationRepoItems,
-  githubTriggerNeedsBaseline,
-  groupGitHubAutomationsByRepo,
-  mergeGitHubPollWatermarkUpdates,
-  resolveGitHubPollWatermark,
-  type GitHubAutomationPollMatch,
-} from "@spiritagent/github";
+import type {
+  AutomationTriggerPollOutput,
+  AutomationTriggerPollTarget,
+  AutomationTriggerProviderEvent,
+  RegisteredAutomationTriggerContribution,
+} from "@spiritagent/automations/trigger-provider";
+import type { GitHubAutomationPollMatch } from "@spiritagent/github";
 
 import { cloneDesktopConfig } from "@spiritagent/sessions/host/service-utils";
 import { modelExistsInProvider } from "@spiritagent/config";
-import { loadGitHubAccessToken } from "@spiritagent/github/auth-storage";
 import { spiritDataDir, type DesktopConfigFile } from "@spiritagent/sessions/host/storage";
 import { runDesktopAutomationOnce } from "./automation-runner.js";
+import { pollGitHubAutomationTriggerProvider } from "./github-automation-trigger-provider.js";
 
 export const AUTOMATION_SCHEDULER_MONITOR_INTERVAL_MS = 60_000;
+export const AUTOMATION_TRIGGER_PROVIDER_TIMEOUT_MS = 45_000;
+
+export interface AutomationRunOnceRequest {
+  definition: HostAutomationDefinition;
+  config: DesktopConfigFile;
+  triggerContext?: AutomationRunTriggerContext;
+  triggerEvent?: { id: string; checkpoint: JsonObject };
+}
 
 export interface AutomationSchedulerServiceContext {
   initialized(): boolean;
@@ -31,9 +38,31 @@ export interface AutomationSchedulerServiceContext {
   runningAutomationIds(): ReadonlySet<string>;
   markAutomationRunning(automationId: string, running: boolean): void;
   onAutomationUpdated(automationId: string): void;
+  onAutomationRunFinished?(definition: HostAutomationDefinition, run: HostAutomationRun): void;
+  onAutomationTriggerError?(definition: HostAutomationDefinition, error?: string): void;
   notifySessionListUpdated(): void;
   syncSessionFromDisk?(sessionPath: string): void | Promise<void>;
+  listAutomationTriggerContributions(): Promise<RegisteredAutomationTriggerContribution[]>;
+  pollAutomationTrigger(request: {
+    extensionId: string;
+    contributionId: string;
+    triggers: AutomationTriggerPollTarget[];
+    signal: AbortSignal;
+  }): Promise<AutomationTriggerPollOutput>;
+  trackAutomationTriggerPoll?(ownerId: string, controller: AbortController): () => void;
+  runAutomationOnce?(request: AutomationRunOnceRequest): Promise<HostAutomationRun | undefined>;
+  automationTriggerPollTimeoutMs?: number;
 }
+
+type SchedulerStore = ReturnType<typeof createHostAutomationStore>;
+type RegisteredProvider = RegisteredAutomationTriggerContribution & {
+  poll(input: {
+    triggers: AutomationTriggerPollTarget[];
+    signal: AbortSignal;
+  }): Promise<AutomationTriggerPollOutput>;
+};
+
+const schedulerTicks = new WeakMap<AutomationSchedulerServiceContext, Promise<void>>();
 
 export function startAutomationSchedulerMonitorIfNeeded(
   currentTimer: ReturnType<typeof setInterval> | undefined,
@@ -65,13 +94,8 @@ export function startAutomationSchedulerMonitorIfNeeded(
   })();
 }
 
-/**
- * Marks leftover running runs on disk as failed. Run state is only advanced by this process, so a
- * running run on disk at scheduler startup is necessarily a leftover from the last crash; without cleanup,
- * getActiveRun would permanently block later triggers of that automation. Returns the affected automation ids.
- */
 export async function failDanglingAutomationRuns(
-  store: ReturnType<typeof createHostAutomationStore>,
+  store: SchedulerStore,
   error: string,
 ): Promise<string[]> {
   const summaries = await store.listSummaries();
@@ -97,13 +121,22 @@ export async function failDanglingAutomationRuns(
   return affected;
 }
 
-export async function tickAutomationScheduler(
-  ctx: AutomationSchedulerServiceContext,
-): Promise<void> {
+export function tickAutomationScheduler(ctx: AutomationSchedulerServiceContext): Promise<void> {
+  const current = schedulerTicks.get(ctx);
+  if (current) {
+    return current;
+  }
+  const tick = runAutomationSchedulerTick(ctx).finally(() => {
+    schedulerTicks.delete(ctx);
+  });
+  schedulerTicks.set(ctx, tick);
+  return tick;
+}
+
+async function runAutomationSchedulerTick(ctx: AutomationSchedulerServiceContext): Promise<void> {
   if (!ctx.initialized()) {
     return;
   }
-
   const config = ctx.config();
   if (!config) {
     return;
@@ -112,18 +145,17 @@ export async function tickAutomationScheduler(
   const store = createHostAutomationStore(spiritDataDir());
   const definitions = await store.listEnabledDefinitions();
   const now = Date.now();
-
   try {
-    await tickGitHubAutomationTriggers(ctx, store, definitions, config);
+    await tickContributedAutomationTriggers(ctx, store, definitions, config);
   } catch {
-    /* GitHub poll failures must not block time triggers in the same tick. */
+    /* A provider or persistence failure must not block time triggers in this tick. */
   }
   await tickTimeAutomationTriggers(ctx, store, definitions, config, now);
 }
 
 async function tickTimeAutomationTriggers(
   ctx: AutomationSchedulerServiceContext,
-  store: ReturnType<typeof createHostAutomationStore>,
+  store: SchedulerStore,
   definitions: HostAutomationDefinition[],
   config: DesktopConfigFile,
   now: number,
@@ -140,7 +172,6 @@ async function tickTimeAutomationTriggers(
       continue;
     }
     const schedule = automationTimeScheduleFromTrigger(definition.trigger);
-    // Fall back to the creation time as the baseline: a newly created automation does not backfill times before its creation.
     const firedBaseline = definition.lastFiredAtUnixMs ?? definition.createdAtUnixMs;
     if (!schedule || !shouldFireNow(schedule, firedBaseline, now)) {
       continue;
@@ -155,149 +186,334 @@ async function tickTimeAutomationTriggers(
   }
 }
 
-async function tickGitHubAutomationTriggers(
+async function tickContributedAutomationTriggers(
   ctx: AutomationSchedulerServiceContext,
-  store: ReturnType<typeof createHostAutomationStore>,
+  store: SchedulerStore,
   definitions: HostAutomationDefinition[],
   config: DesktopConfigFile,
 ): Promise<void> {
-  const githubDefinitions = definitions.filter(
-    (definition) => definition.trigger.kind === "github",
-  );
-  if (githubDefinitions.length === 0) {
-    return;
+  const contributions = await ctx.listAutomationTriggerContributions();
+  const providers = new Map<string, RegisteredProvider>();
+  for (const contribution of contributions) {
+    providers.set(contribution.kind, {
+      ...contribution,
+      poll: ({ triggers, signal }) =>
+        ctx.pollAutomationTrigger({
+          extensionId: contribution.extensionId,
+          contributionId: contribution.contributionId,
+          triggers,
+          signal,
+        }),
+    });
   }
+  providers.set("github", {
+    kind: "github",
+    extensionId: "github",
+    contributionId: "github",
+    id: "github",
+    name: "GitHub",
+    description: "GitHub repository events",
+    icon: { type: "spirit", name: "globe" },
+    inputSchema: { type: "object" },
+    poll: pollGitHubAutomationTriggerProvider,
+  });
 
-  const accessToken = await loadGitHubAccessToken();
-  if (!accessToken) {
-    return;
-  }
-
-  for (const definition of githubDefinitions) {
-    if (!githubTriggerNeedsBaseline(definition.trigger)) {
+  const groups = new Map<string, HostAutomationDefinition[]>();
+  for (const definition of definitions) {
+    if (definition.trigger.kind === "time") {
       continue;
     }
-    if (definition.trigger.kind !== "github") {
-      continue;
-    }
-    try {
-      const lastSeenNumber = await baselineGitHubAutomationWatermark(
-        accessToken,
-        definition.trigger.owner,
-        definition.trigger.repo,
+    const provider = providers.get(definition.trigger.kind);
+    if (!provider) {
+      await setAutomationTriggerError(
+        ctx,
+        store,
+        definition.id,
+        `Automation trigger provider is unavailable: ${definition.trigger.kind}`,
       );
-      await store.ensureGitHubTriggerBaseline(definition.id, lastSeenNumber);
-    } catch {
-      /* Skip baseline for this automation; do not abort the rest of the tick. */
+      continue;
     }
+    const group = groups.get(definition.trigger.kind) ?? [];
+    group.push(definition);
+    groups.set(definition.trigger.kind, group);
   }
 
-  const refreshed = await store.listEnabledDefinitions();
-  const groups = groupGitHubAutomationsByRepo(
-    refreshed.filter((definition) => definition.trigger.kind === "github"),
-  );
-
-  for (const group of groups) {
-    const minWatermark = Math.min(
-      ...group.automations.map((definition) =>
-        definition.trigger.kind === "github"
-          ? resolveGitHubPollWatermark(definition.trigger)
-          : Number.MAX_SAFE_INTEGER,
-      ),
-    );
-    let items;
-    try {
-      items = await fetchGitHubAutomationRepoItems(accessToken, group.owner, group.repo, {
-        sinceNumber: Number.isFinite(minWatermark) ? minWatermark : 0,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      for (const definition of group.automations) {
-        try {
-          await store.setGitHubPollError(definition.id, message);
-        } catch {
-          /* ignore per-automation persistence errors */
-        }
+  for (const [kind, group] of groups) {
+    const provider = providers.get(kind)!;
+    const targets: AutomationTriggerPollTarget[] = [];
+    const targetDefinitions = new Map<string, HostAutomationDefinition>();
+    for (const definition of group) {
+      if (ctx.runningAutomationIds().has(definition.id)) {
+        continue;
       }
+      if (await store.getActiveRun(definition.id)) {
+        continue;
+      }
+      targets.push(automationTriggerPollTarget(definition));
+      targetDefinitions.set(definition.id, definition);
+    }
+    if (targets.length === 0) {
       continue;
     }
 
-    for (const definition of group.automations) {
-      try {
-        await store.setGitHubPollError(definition.id, undefined);
-      } catch {
-        /* ignore per-automation persistence errors */
-      }
+    const output = await pollProviderWithTimeout(provider, targets, ctx);
+    if (!output) {
+      continue;
     }
-
-    const matches = computeGitHubPollMatchesForRepoGroup(group, items);
-    const matchesByAutomation = groupGitHubPollMatchesByAutomation(matches);
-    for (const [automationId, automationMatches] of matchesByAutomation) {
-      if (ctx.runningAutomationIds().has(automationId)) {
+    const results = new Map(output.results.map((result) => [result.automationId, result]));
+    for (const target of targets) {
+      const definition = targetDefinitions.get(target.automationId)!;
+      const result = results.get(target.automationId);
+      if (!result) {
+        await setAutomationTriggerError(
+          ctx,
+          store,
+          definition.id,
+          "The trigger provider returned no result.",
+        );
         continue;
       }
-      const activeRun = await store.getActiveRun(automationId);
-      if (activeRun) {
+      if (result.error?.trim()) {
+        await setAutomationTriggerError(ctx, store, definition.id, result.error.trim());
         continue;
       }
 
-      const consumedMatches = await runGitHubMatchesAndCollectConsumed(
-        automationMatches,
-        async (match) => {
-          if (ctx.runningAutomationIds().has(automationId)) {
-            return undefined;
-          }
-          const latestDefinition = refreshed.find(
-            (definition) => definition.id === match.automationId,
+      const initializing = target.state === undefined;
+      if (initializing) {
+        if (result.checkpoint) {
+          await store.updateAutomationTriggerCheckpoint(definition.id, result.checkpoint);
+        } else {
+          await setAutomationTriggerError(
+            ctx,
+            store,
+            definition.id,
+            "The trigger provider did not return a baseline checkpoint.",
           );
-          if (!latestDefinition || latestDefinition.trigger.kind !== "github") {
-            return undefined;
-          }
-          return launchAutomationRun(ctx, store, {
-            definition: latestDefinition,
-            config,
-            context: {
-              kind: "github",
-              event: latestDefinition.trigger.event,
-              eventUrl: match.item.htmlUrl,
-            },
-          });
-        },
-      );
+        }
+        ctx.onAutomationUpdated(definition.id);
+        continue;
+      }
 
-      const watermarkUpdates = mergeGitHubPollWatermarkUpdates(consumedMatches);
-      const nextWatermark = watermarkUpdates.get(automationId);
-      if (nextWatermark !== undefined) {
-        await store.updateGitHubPollState(automationId, nextWatermark);
+      const events = result.events ?? [];
+      if (events.length === 0) {
+        if (result.checkpoint) {
+          await store.updateAutomationTriggerCheckpoint(definition.id, result.checkpoint);
+        } else {
+          await setAutomationTriggerError(ctx, store, definition.id, undefined);
+        }
+        ctx.onAutomationUpdated(definition.id);
+        continue;
+      }
+      if (!validProviderEvents(events)) {
+        await setAutomationTriggerError(
+          ctx,
+          store,
+          definition.id,
+          "The trigger provider returned invalid events.",
+        );
+        continue;
+      }
+
+      for (const event of events) {
+        const latest = (await store.get(definition.id))?.definition;
+        if (
+          !latest ||
+          latest.trigger.kind === "time" ||
+          ctx.runningAutomationIds().has(definition.id)
+        ) {
+          break;
+        }
+        if (await store.getActiveRun(definition.id)) {
+          break;
+        }
+        const context = automationRunTriggerContext(latest, event);
+        const run = await launchAutomationRun(ctx, store, {
+          definition: latest,
+          config,
+          context,
+          triggerEvent: { id: event.id, checkpoint: event.checkpoint },
+        });
+        if (!run || run.status !== "completed") {
+          break;
+        }
       }
     }
   }
 }
 
-/**
- * Launches a run for each matched event in order, returning the "consumed" matches (used to advance the watermark).
- * Semantics: once a run is created for an event (completed / blocked / failed), the event counts
- * as consumed and is not retried — blocked waits for user takeover, failed leaves a failure record;
- * without advancing the watermark, every tick would endlessly recreate runs and session files. launch returning
- * undefined means no run could be created at all (concurrent race or stale definition); stop then without consuming.
- * Also stop processing later events when a run is not completed, to avoid piling up runs in an abnormal state.
- */
-export async function runGitHubMatchesAndCollectConsumed(
+async function setAutomationTriggerError(
+  ctx: AutomationSchedulerServiceContext,
+  store: SchedulerStore,
+  automationId: string,
+  error?: string,
+): Promise<void> {
+  const definition = await store.setTriggerError(automationId, error);
+  ctx.onAutomationTriggerError?.(definition, error);
+  ctx.onAutomationUpdated(definition.id);
+}
+
+function automationTriggerPollTarget(
+  definition: HostAutomationDefinition,
+): AutomationTriggerPollTarget {
+  if (definition.trigger.kind === "github") {
+    return {
+      automationId: definition.id,
+      config: {
+        owner: definition.trigger.owner,
+        repo: definition.trigger.repo,
+        event: definition.trigger.event,
+      },
+      ...(definition.trigger.poll
+        ? { state: { lastSeenNumber: definition.trigger.poll.lastSeenNumber } }
+        : {}),
+    };
+  }
+  if (definition.trigger.kind === "time") {
+    throw new Error("Time triggers do not have a provider poll target.");
+  }
+  return {
+    automationId: definition.id,
+    config: definition.trigger.config,
+    ...(definition.trigger.state ? { state: definition.trigger.state } : {}),
+  };
+}
+
+function automationRunTriggerContext(
+  definition: HostAutomationDefinition,
+  event: AutomationTriggerProviderEvent,
+): AutomationRunTriggerContext {
+  if (definition.trigger.kind === "github") {
+    const url = typeof event.context?.url === "string" ? event.context.url : event.id;
+    return { kind: "github", event: definition.trigger.event, eventUrl: url };
+  }
+  if (definition.trigger.kind === "time") {
+    return { kind: "time" };
+  }
+  return {
+    kind: "extension",
+    summary: event.summary,
+    ...(event.context ? { context: event.context } : {}),
+  };
+}
+
+function validProviderEvents(events: readonly AutomationTriggerProviderEvent[]): boolean {
+  const ids = new Set<string>();
+  for (const event of events) {
+    if (!event.id.trim() || !event.summary.trim() || ids.has(event.id)) {
+      return false;
+    }
+    if (
+      event.checkpoint === null ||
+      typeof event.checkpoint !== "object" ||
+      Array.isArray(event.checkpoint)
+    ) {
+      return false;
+    }
+    ids.add(event.id);
+  }
+  return true;
+}
+
+async function pollProviderWithTimeout(
+  provider: RegisteredProvider,
+  triggers: AutomationTriggerPollTarget[],
+  ctx: AutomationSchedulerServiceContext,
+): Promise<AutomationTriggerPollOutput | undefined> {
+  const controller = new AbortController();
+  const ownerId = provider.extensionId;
+  const untrack = ctx.trackAutomationTriggerPoll?.(ownerId, controller);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, ctx.automationTriggerPollTimeoutMs ?? AUTOMATION_TRIGGER_PROVIDER_TIMEOUT_MS);
+  timer.unref?.();
+  try {
+    const output = await provider.poll({ triggers, signal: controller.signal });
+    if (timedOut) {
+      return {
+        results: triggers.map((trigger) => ({
+          automationId: trigger.automationId,
+          error: "Automation trigger poll timed out.",
+        })),
+      };
+    }
+    return controller.signal.aborted ? undefined : output;
+  } catch (error) {
+    if (controller.signal.aborted && !timedOut) {
+      return undefined;
+    }
+    const message = timedOut
+      ? "Automation trigger poll timed out."
+      : error instanceof Error
+        ? error.message
+        : String(error);
+    return {
+      results: triggers.map((trigger) => ({ automationId: trigger.automationId, error: message })),
+    };
+  } finally {
+    clearTimeout(timer);
+    untrack?.();
+  }
+}
+
+async function launchAutomationRun(
+  ctx: AutomationSchedulerServiceContext,
+  store: SchedulerStore,
+  input: {
+    definition: HostAutomationDefinition;
+    config: DesktopConfigFile;
+    context: AutomationRunTriggerContext;
+    triggerEvent?: { id: string; checkpoint: JsonObject };
+    markFiredAtUnixMs?: number;
+  },
+): Promise<HostAutomationRun | undefined> {
+  ctx.markAutomationRunning(input.definition.id, true);
+  try {
+    const request: AutomationRunOnceRequest = {
+      definition: input.definition,
+      config: cloneDesktopConfig(input.config),
+      triggerContext: input.context,
+      ...(input.triggerEvent ? { triggerEvent: input.triggerEvent } : {}),
+    };
+    const run = ctx.runAutomationOnce
+      ? await ctx.runAutomationOnce(request)
+      : await runDesktopAutomationOnce(request, {
+          onRunUpdated: (automationId) => ctx.onAutomationUpdated(automationId),
+          onRunFinished: (definition, run) => ctx.onAutomationRunFinished?.(definition, run),
+          notifySessionListUpdated: () => ctx.notifySessionListUpdated(),
+          syncSessionFromDisk: (sessionPath) => ctx.syncSessionFromDisk?.(sessionPath),
+        });
+    if (run && input.markFiredAtUnixMs !== undefined) {
+      await store.markFired(input.definition.id, input.markFiredAtUnixMs);
+    }
+    return run;
+  } catch {
+    return undefined;
+  } finally {
+    ctx.markAutomationRunning(input.definition.id, false);
+    ctx.onAutomationUpdated(input.definition.id);
+  }
+}
+
+export function runGitHubMatchesAndCollectConsumed(
   matches: GitHubAutomationPollMatch[],
   launch: (match: GitHubAutomationPollMatch) => Promise<HostAutomationRun | undefined>,
 ): Promise<GitHubAutomationPollMatch[]> {
-  const consumed: GitHubAutomationPollMatch[] = [];
-  for (const match of matches) {
-    const run = await launch(match);
-    if (!run) {
-      break;
+  return (async () => {
+    const consumed: GitHubAutomationPollMatch[] = [];
+    for (const match of matches) {
+      const run = await launch(match);
+      if (!run) {
+        break;
+      }
+      consumed.push(match);
+      if (run.status !== "completed") {
+        break;
+      }
     }
-    consumed.push(match);
-    if (run.status !== "completed") {
-      break;
-    }
-  }
-  return consumed;
+    return consumed;
+  })();
 }
 
 export function groupGitHubPollMatchesByAutomation(
@@ -313,42 +529,6 @@ export function groupGitHubPollMatchesByAutomation(
     grouped.set(match.automationId, [match]);
   }
   return grouped;
-}
-
-async function launchAutomationRun(
-  ctx: AutomationSchedulerServiceContext,
-  store: ReturnType<typeof createHostAutomationStore>,
-  input: {
-    definition: HostAutomationDefinition;
-    config: DesktopConfigFile;
-    context: AutomationRunTriggerContext;
-    markFiredAtUnixMs?: number;
-  },
-): Promise<HostAutomationRun | undefined> {
-  ctx.markAutomationRunning(input.definition.id, true);
-  try {
-    const run = await runDesktopAutomationOnce(
-      {
-        definition: input.definition,
-        config: cloneDesktopConfig(input.config),
-        triggerContext: input.context,
-      },
-      {
-        onRunUpdated: (automationId) => ctx.onAutomationUpdated(automationId),
-        notifySessionListUpdated: () => ctx.notifySessionListUpdated(),
-        syncSessionFromDisk: (sessionPath) => ctx.syncSessionFromDisk?.(sessionPath),
-      },
-    );
-    if (run && input.markFiredAtUnixMs !== undefined) {
-      await store.markFired(input.definition.id, input.markFiredAtUnixMs);
-    }
-    return run;
-  } catch {
-    return undefined;
-  } finally {
-    ctx.markAutomationRunning(input.definition.id, false);
-    ctx.onAutomationUpdated(input.definition.id);
-  }
 }
 
 export function automationDefinitionNeedsApiKey(

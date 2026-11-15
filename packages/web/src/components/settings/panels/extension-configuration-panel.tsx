@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { SettingsRow } from "@/components/settings/settings-row";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DesktopFormInput } from "@/components/ui/desktop-form-field";
 import {
@@ -13,11 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import type {
-  DesktopExtensionListItem,
-  UpdateExtensionSecretRequest,
-  UpdateExtensionSettingsRequest,
-} from "@/types";
+import type { DesktopExtensionListItem, UpdateExtensionSettingsRequest } from "@/types";
 import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
 import { cn } from "@/lib/utils";
@@ -26,31 +21,20 @@ export function ExtensionConfigurationPanel({
   item,
   extensionsBusy,
   onUpdateExtensionSettings,
-  onUpdateExtensionSecret,
 }: {
   item: DesktopExtensionListItem;
   extensionsBusy: boolean;
   onUpdateExtensionSettings: (request: UpdateExtensionSettingsRequest) => Promise<void>;
-  onUpdateExtensionSecret: (request: UpdateExtensionSecretRequest) => Promise<void>;
 }) {
   const { t } = useTranslation();
   const [settingDrafts, setSettingDrafts] = useState<Record<string, string>>({});
-  const [secretDrafts, setSecretDrafts] = useState<Record<string, string>>({});
 
   const settingDraftKey = (extensionId: string, key: string) => `${extensionId}::setting::${key}`;
-  const secretDraftKey = (extensionId: string, key: string) => `${extensionId}::secret::${key}`;
 
   const updateSettingDraft = (extensionId: string, key: string, value: string) => {
     setSettingDrafts((current) => ({
       ...current,
       [settingDraftKey(extensionId, key)]: value,
-    }));
-  };
-
-  const updateSecretDraft = (extensionId: string, key: string, value: string) => {
-    setSecretDrafts((current) => ({
-      ...current,
-      [secretDraftKey(extensionId, key)]: value,
     }));
   };
 
@@ -69,7 +53,6 @@ export function ExtensionConfigurationPanel({
   };
 
   const hasSettings = Boolean(item.settingsSchema?.length);
-  const hasSecrets = Boolean(item.secretSlots?.length);
 
   return (
     <div className="space-y-5">
@@ -82,7 +65,7 @@ export function ExtensionConfigurationPanel({
         </p>
       </div>
 
-      {!hasSettings && !hasSecrets ? (
+      {!hasSettings ? (
         <div
           className={cn(
             DESKTOP_CANVAS_CARD_SURFACE,
@@ -200,72 +183,6 @@ export function ExtensionConfigurationPanel({
                     }}
                   >
                     {t("common.save")}
-                  </Button>
-                </div>
-              </SettingsRow>
-            );
-          })}
-
-          {item.secretSlots?.map((slot) => {
-            const fieldKey = secretDraftKey(item.id, slot.key);
-            const configured =
-              item.secretStatuses?.find((entry) => entry.key === slot.key)?.configured === true;
-            return (
-              <SettingsRow
-                key={fieldKey}
-                label={slot.title}
-                description={slot.description}
-                htmlFor={fieldKey}
-              >
-                <div className="flex w-full flex-wrap justify-end gap-2 sm:max-w-md">
-                  <Badge
-                    variant={configured ? "secondary" : "outline"}
-                    className="h-9 px-3 text-muted-foreground"
-                  >
-                    {configured ? t("settings.configured") : t("settings.notConfigured")}
-                  </Badge>
-                  <DesktopFormInput
-                    id={fieldKey}
-                    shellClassName="min-w-0 flex-1"
-                    type="password"
-                    value={secretDrafts[fieldKey] ?? ""}
-                    disabled={extensionsBusy}
-                    placeholder={
-                      configured ? t("settings.enterNewValue") : t("settings.enterSecret")
-                    }
-                    onChange={(event) => updateSecretDraft(item.id, slot.key, event.target.value)}
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={extensionsBusy}
-                    onClick={() => {
-                      void onUpdateExtensionSecret({
-                        id: item.id,
-                        key: slot.key,
-                        value: secretDrafts[fieldKey] ?? "",
-                      });
-                      updateSecretDraft(item.id, slot.key, "");
-                    }}
-                  >
-                    {t("common.save")}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    disabled={extensionsBusy || !configured}
-                    onClick={() => {
-                      void onUpdateExtensionSecret({
-                        id: item.id,
-                        key: slot.key,
-                        value: "",
-                      });
-                      updateSecretDraft(item.id, slot.key, "");
-                    }}
-                  >
-                    {t("common.clear")}
                   </Button>
                 </div>
               </SettingsRow>

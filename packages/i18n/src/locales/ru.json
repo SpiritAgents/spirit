@@ -638,6 +638,8 @@
       "repositorySearchPlaceholder": "Поиск репозиториев",
       "repositoryEmpty": "Репозитории не найдены",
       "repositoryLoadFailed": "Не удалось загрузить репозитории. Попробуйте снова.",
+      "triggerLoadFailed": "Не удалось загрузить параметры триггера",
+      "triggerEmpty": "Нет доступных параметров триггера",
       "pullRequestCreated": "Pull request создан",
       "issueCreated": "Issue создан"
     },
@@ -667,6 +669,7 @@
     "noMatches": "Нет подходящих расширений.",
     "extensionNotFound": "Расширение не найдено. Вернитесь к списку.",
     "install": "Установить",
+    "authorize": "Авторизовать",
     "httpLocalSourceInstallUnsupported": "HTTP-каталоги не поддерживают установку расширений с локальным путём",
     "enable": "Включить",
     "disable": "Отключить",
@@ -675,6 +678,8 @@
     "uninstallExtension": "Удалить расширение",
     "empty": "Нет расширений",
     "contributionGroupTools": "Инструменты",
+    "contributionGroupAuthorization": "Авторизация",
+    "contributionGroupAutomationTriggers": "Триггеры Automation",
     "contributionGroupDesktop": "Рабочий стол",
     "contributionRuleTitle": "Правило",
     "contributionStyleTitle": "Стиль",
@@ -724,7 +729,9 @@
     "uninstallPersonalConfirmTitle": "Удалить «{{name}}»?",
     "uninstallPersonalConfirmDescription": "Локальная установка и запись в личном маркетплейсе будут удалены.",
     "removeMarketplaceConfirmTitle": "Удалить «{{name}}»?",
-    "removeMarketplaceConfirmDescription": "Это действие необратимо."
+    "removeMarketplaceConfirmDescription": "Это действие необратимо.",
+    "authorizationOptions": "Параметры авторизации",
+    "authorizationOptionsFor": "Параметры авторизации {{name}}"
   },
   "dreams": {
     "collectorRunning": "Сбор снов выполняется. Скоро здесь появятся новые последние тренды.",
@@ -902,6 +909,7 @@
       "createAutomationDaily": "Создание {{title}} с запуском каждый день в {{time}}",
       "createAutomationWeekly": "Создание {{title}} с запуском каждый {{weekday}} в {{time}}",
       "createAutomationGithubIssue": "Создание {{title}} с запуском при новом Issue в {{repo}}",
+      "createAutomationWithTrigger": "Создать {title} для запуска {trigger}",
       "createAutomationGithubPullRequest": "Создание {{title}} с запуском при новом Pull Request в {{repo}}",
       "editFile": "Изменение файла",
       "deleteFile": "Удаление файла",
@@ -1408,6 +1416,12 @@
     "defaultChatName": "Чат",
     "taskComplete": {
       "title": "Задача выполнена"
+    },
+    "automation": {
+      "completedTitle": "{{title}} завершено",
+      "blockedTitle": "{{title}} требует внимания",
+      "failedTitle": "{{title}} не удалось",
+      "triggerErrorTitle": "Триггеру {{title}} требуется внимание"
     },
     "approval": {
       "title": "Требуется подтверждение",

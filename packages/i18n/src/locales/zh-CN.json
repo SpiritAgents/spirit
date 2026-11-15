@@ -642,6 +642,8 @@
       "repositorySearchPlaceholder": "搜索仓库",
       "repositoryEmpty": "未找到仓库",
       "repositoryLoadFailed": "加载仓库失败，请稍后重试",
+      "triggerLoadFailed": "加载触发器选项失败",
+      "triggerEmpty": "暂无可用触发器选项",
       "pullRequestCreated": "Pull Request 创建",
       "issueCreated": "Issue 创建"
     },
@@ -671,6 +673,7 @@
     "noMatches": "没有匹配的扩展。",
     "extensionNotFound": "找不到该扩展，请返回列表。",
     "install": "安装",
+    "authorize": "授权",
     "httpLocalSourceInstallUnsupported": "HTTP 市场不支持安装本地路径源的扩展",
     "enable": "启用",
     "disable": "禁用",
@@ -679,6 +682,8 @@
     "uninstallExtension": "卸载扩展",
     "empty": "暂无扩展",
     "contributionGroupTools": "工具",
+    "contributionGroupAuthorization": "授权",
+    "contributionGroupAutomationTriggers": "Automation 触发器",
     "contributionGroupDesktop": "桌面",
     "contributionRuleTitle": "规则",
     "contributionStyleTitle": "样式",
@@ -728,7 +733,9 @@
     "uninstallPersonalConfirmTitle": "卸载“{{name}}”？",
     "uninstallPersonalConfirmDescription": "这会移除本地安装目录，并从个人市场中删除其记录。",
     "removeMarketplaceConfirmTitle": "移除“{{name}}”？",
-    "removeMarketplaceConfirmDescription": "此操作无法撤销。"
+    "removeMarketplaceConfirmDescription": "此操作无法撤销。",
+    "authorizationOptions": "授权选项",
+    "authorizationOptionsFor": "{{name}}授权选项"
   },
   "dreams": {
     "collectorRunning": "梦境正在收集中，新的近期动向会很快出现在这里",
@@ -906,6 +913,7 @@
       "createAutomationDaily": "创建每天 {{time}} 运行的{{title}}",
       "createAutomationWeekly": "创建每{{weekday}} {{time}} 运行的{{title}}",
       "createAutomationGithubIssue": "创建每当 GitHub 仓库 {{repo}} 有新 Issue 时运行的{{title}}",
+      "createAutomationWithTrigger": "创建“{title}”以运行{trigger}",
       "createAutomationGithubPullRequest": "创建每当 GitHub 仓库 {{repo}} 有新 Pull Request 时运行的{{title}}",
       "editFile": "编辑文件",
       "deleteFile": "删除文件",
@@ -1412,6 +1420,12 @@
     "defaultChatName": "对话",
     "taskComplete": {
       "title": "任务已完成"
+    },
+    "automation": {
+      "completedTitle": "{{title}} 已完成",
+      "blockedTitle": "{{title}} 需要处理",
+      "failedTitle": "{{title}} 运行失败",
+      "triggerErrorTitle": "{{title}} 触发器需要处理"
     },
     "approval": {
       "title": "待审批",

@@ -88,6 +88,10 @@ export async function initExtension(options: InitExtensionOptions): Promise<Init
     ...(Object.keys(contributes).length ? { contributes } : {}),
   };
 
+  for (const id of capabilities) {
+    Object.assign(manifest, capabilityDefinition(id).manifest?.(input) ?? {});
+  }
+
   const dump: MarketplaceExtensionDump = {
     schemaVersion: EXTENSION_DUMP_SCHEMA_VERSION,
     name,

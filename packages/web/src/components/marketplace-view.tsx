@@ -1,4 +1,3 @@
-import { Ellipsis } from "@spiritagent/icons/ellipsis";
 import { Globe } from "@spiritagent/icons/globe";
 import { Search } from "@spiritagent/icons/search";
 import { ChevronDown } from "@spiritagent/icons/chevron-down";
@@ -6,7 +5,7 @@ import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ArrowLeft, Blocks, Folder, Sparkles, Store, Trash2 } from "lucide-react";
+import { ArrowLeft, Blocks, Folder, Sparkles, Store } from "lucide-react";
 
 import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
 import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
@@ -14,6 +13,7 @@ import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catal
 import { MarketplaceAddSourceDialog } from "@/components/marketplace-add-source-dialog";
 import { MarketplaceCatalogSection } from "@/components/marketplace-catalog-section";
 import { MarketplaceDetailView } from "@/components/marketplace-detail-view";
+import { MarketplaceInstalledExtensionActions } from "@/components/marketplace-installed-extension-actions";
 import { MarketplaceSourceTab } from "@/components/marketplace-source-tab";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -57,6 +56,8 @@ import type {
   DesktopMarketplaceCatalogEntry,
   DesktopMarketplaceInstallResult,
   DesktopMarketplaceReviewStatus,
+  DesktopExtensionAuthorization,
+  InvokeExtensionActionRequest,
   DesktopMarketplaceSource,
   DesktopMarketplaceUpdateResult,
   ImportExtensionRequest,
@@ -107,6 +108,8 @@ type MarketplaceViewProps = {
   onPickMarketplaceDirectory: () => Promise<string | null>;
   onDeleteExtension: (request: DeleteExtensionRequest) => Promise<void>;
   onSetExtensionEnabled: (request: SetExtensionEnabledRequest) => Promise<void>;
+  onInvokeExtensionAction?: (request: InvokeExtensionActionRequest) => Promise<unknown>;
+  supportsExtensionActions?: boolean;
   /** "Generate Extension": returns to the conversation surface and inserts a create-extension chip. */
   onGenerateExtensionNavigate?: () => void;
   extensionsInstalling?: boolean;
@@ -125,6 +128,8 @@ export function MarketplaceView({
   onPickMarketplaceDirectory,
   onDeleteExtension,
   onSetExtensionEnabled,
+  onInvokeExtensionAction,
+  supportsExtensionActions = false,
   onGenerateExtensionNavigate,
   extensionsInstalling = false,
   useTranslucency = false,
@@ -487,6 +492,23 @@ export function MarketplaceView({
     setUninstallDialogOpen(true);
   }, []);
 
+  const handleAuthorize =
+    supportsExtensionActions && onInvokeExtensionAction
+      ? (item: DesktopMarketplaceCatalogEntry, authorization: DesktopExtensionAuthorization) => {
+          void runInstallAction(item.id, async () => {
+            try {
+              await onInvokeExtensionAction({
+                id: item.id,
+                actionId: authorization.action,
+                params: { authorizationId: authorization.id },
+              });
+            } catch {
+              /* runtimeError */
+            }
+          });
+        }
+      : undefined;
+
   // One row renderer for every list context: featured-section rows and
   // flat-list rows are identical, only their grouping differs.
   const renderExtensionRow = (item: DesktopMarketplaceCatalogEntry) => (
@@ -534,39 +556,18 @@ export function MarketplaceView({
           ) : null}
         </span>
       </button>
-      <div className="shrink-0 pr-2">
+      <div className="flex shrink-0 items-center gap-1.5 pr-2">
         {item.installed ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8 shrink-0 self-center"
-                title={t("marketplace.moreActions")}
-              >
-                <Ellipsis className="size-4" aria-hidden strokeWidth={1.75} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-40 p-0">
-              <div className="p-1">
-                <DropdownMenuItem className="gap-2" onSelect={() => handleToggleEnabled(item)}>
-                  <span>{item.enabled ? t("marketplace.disable") : t("marketplace.enable")}</span>
-                </DropdownMenuItem>
-              </div>
-              <DropdownMenuSeparator />
-              <div className="p-1">
-                <DropdownMenuItem
-                  variant="destructive"
-                  className="gap-2"
-                  onSelect={() => openUninstallDialog(item)}
-                >
-                  <Trash2 className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
-                  <span>{t("marketplace.uninstall")}</span>
-                </DropdownMenuItem>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <>
+            <MarketplaceInstalledExtensionActions
+              item={item}
+              authorizationVariant="outline"
+              disabled={installBusyIds.has(item.id)}
+              onToggleEnabled={() => handleToggleEnabled(item)}
+              onRequestUninstall={() => openUninstallDialog(item)}
+              onAuthorize={handleAuthorize}
+            />
+          </>
         ) : isInstallUnsupported(item) ? (
           <Tooltip delayDuration={300} disableHoverableContent>
             <TooltipTrigger>
@@ -868,6 +869,7 @@ export function MarketplaceView({
           onUpdate={() => handleUpdate(detailItem)}
           onToggleEnabled={() => handleToggleEnabled(detailItem)}
           onRequestUninstall={() => openUninstallDialog(detailItem)}
+          onAuthorize={handleAuthorize}
           useTranslucency={useTranslucency}
         />
       ) : (

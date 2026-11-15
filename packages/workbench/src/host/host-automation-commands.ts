@@ -68,7 +68,7 @@ export function toDesktopAutomationListItem(
     trigger: definition.trigger,
     enabled: definition.enabled,
     updatedAtUnixMs: definition.updatedAtUnixMs,
-    ...(definition.githubPollError ? { githubPollError: definition.githubPollError } : {}),
+    ...(definition.triggerError ? { triggerError: definition.triggerError } : {}),
     ...(lastRunAtUnixMs !== undefined ? { lastRunAtUnixMs } : {}),
   };
 }

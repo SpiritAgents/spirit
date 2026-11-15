@@ -12,6 +12,7 @@ import { ConversationSplitRoot } from "@/components/conversation/conversation-sp
 import { ConversationWorkspaceToolsDock } from "@/components/conversation/conversation-workspace-tools-dock";
 import { ConversationSplitProvider } from "@/contexts/conversation-split-context";
 import { CreateAutomationDialog } from "@/components/create-automation-dialog";
+import type { AutomationTriggerRuntime } from "@/components/automation-trigger-menu";
 import { DesktopTitleBar } from "@/components/desktop-title-bar";
 import { DesktopLayoutChromeBar } from "@/components/layout/desktop-layout-chrome-bar";
 import { LaunchSplash } from "@/components/launch-splash";
@@ -436,11 +437,29 @@ export default function App() {
     ],
   );
 
+  useEffect(() => {
+    const bridge = window.spiritDesktop;
+    return bridge?.subscribeAutomationNotification?.(({ automationId }) => {
+      surfaceNav.setSelectedAutomationId(automationId);
+      surfaceNav.setActiveSurface("automation-detail");
+    });
+  }, [surfaceNav.setActiveSurface, surfaceNav.setSelectedAutomationId]);
+
   if (runtime.webHostPairingRequired && runtime.hostKind === "web" && !snapshot) {
     return (
       <WebHostPairingGate busy={runtime.busyAction === "bootstrap"} onPair={runtime.pairWebHost} />
     );
   }
+
+  const automationTriggerRuntime: AutomationTriggerRuntime = {
+    contributions:
+      snapshot?.extensionsList.flatMap((extension) => extension.automationTriggers ?? []) ?? [],
+    supportsExtensionTriggers: isElectronShell,
+    resolveMenu: runtime.resolveAutomationTriggerMenu,
+    cancelMenu: runtime.cancelAutomationTriggerMenu,
+    validate: runtime.validateAutomationTrigger,
+    invokeExtensionAction: runtime.invokeExtensionAction,
+  };
 
   return (
     <ComposerLabelsProvider value={composerLabels}>
@@ -639,7 +658,6 @@ export default function App() {
                                 onRemoveProviderModels={runtime.removeProviderModels}
                                 onAddMcpServer={runtime.addMcpServer}
                                 onUpdateExtensionSettings={runtime.updateExtensionSettings}
-                                onUpdateExtensionSecret={runtime.updateExtensionSecret}
                                 onDeleteMcpServer={runtime.deleteMcpServer}
                                 onSaveHookEntry={runtime.saveHookEntry}
                                 onDeleteHookEntry={runtime.deleteHookEntry}
@@ -728,12 +746,7 @@ export default function App() {
                                     githubConnected={gitHubAuthConnected === true}
                                     githubAuthChecking={gitHubAuthConnected === null}
                                     onOpenIntegrationsSettings={openIntegrationsSettings}
-                                    listGitHubRepositories={
-                                      runtime.listGitHubAutomationRepositories
-                                    }
-                                    searchGitHubRepositories={
-                                      runtime.searchGitHubAutomationRepositories
-                                    }
+                                    triggerRuntime={automationTriggerRuntime}
                                     onAddWorkspace={() =>
                                       void runtime.pickWorkspaceDirectory?.().then((path) => {
                                         if (path) {
@@ -777,10 +790,7 @@ export default function App() {
                                   githubConnected={gitHubAuthConnected === true}
                                   githubAuthChecking={gitHubAuthConnected === null}
                                   onOpenIntegrationsSettings={openIntegrationsSettings}
-                                  listGitHubRepositories={runtime.listGitHubAutomationRepositories}
-                                  searchGitHubRepositories={
-                                    runtime.searchGitHubAutomationRepositories
-                                  }
+                                  triggerRuntime={automationTriggerRuntime}
                                   onSubmit={(request) => void runtime.createAutomation(request)}
                                   onAddWorkspace={() =>
                                     void runtime.pickWorkspaceDirectory?.().then((path) => {
@@ -820,6 +830,8 @@ export default function App() {
                                 onPickMarketplaceDirectory={runtime.pickWorkspaceDirectory}
                                 onDeleteExtension={runtime.deleteExtension}
                                 onSetExtensionEnabled={runtime.setExtensionEnabled}
+                                onInvokeExtensionAction={runtime.invokeExtensionAction}
+                                supportsExtensionActions={isElectronShell}
                                 onGenerateExtensionNavigate={() => {
                                   surfaceNav.handlePrefillComposerSkillChip("create-extension");
                                 }}

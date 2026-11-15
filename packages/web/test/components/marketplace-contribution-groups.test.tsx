@@ -104,7 +104,8 @@ describe("MarketplaceContributionGroups", () => {
     expect(container.querySelector("img")?.getAttribute("src")).toBe(
       "spirit://extension-ui/tab-icon/personal%2Fdemo/assets/preview.svg",
     );
-    expect(container.querySelector("img")?.classList.contains("text-muted-foreground")).toBe(true);
+    expect(container.querySelector("img")?.classList.contains("text-muted-foreground")).toBe(false);
+    expect(container.querySelector("img")?.classList.contains("text-foreground")).toBe(true);
   });
 
   test("nothing declared and nothing resolved renders nothing", () => {
@@ -126,4 +127,46 @@ describe("MarketplaceContributionGroups", () => {
     expect(container.querySelector(".rounded-lg")).toBeNull();
     expect(container.querySelector(".divide-y")).toBeNull();
   });
+});
+
+test("authorizations render static ids without runtime configuration state", () => {
+  const { getByText, queryByText } = render(
+    <MarketplaceContributionGroups
+      item={{
+        authorizations: [{ id: "oauth", action: "authorize", configured: true }],
+      }}
+    />,
+  );
+  expect(getByText("Authorization")).toBeTruthy();
+  expect(getByText("OAuth")).toBeTruthy();
+  expect(queryByText("Oauth")).toBeNull();
+  expect(queryByText("Configured")).toBeNull();
+  expect(document.querySelector("svg.lucide-shield-check")).toBeTruthy();
+  expect(
+    document.querySelector("svg.lucide-shield-check")?.classList.contains("text-foreground"),
+  ).toBe(true);
+});
+
+test("Automation trigger contributions render their names and descriptions", () => {
+  const { getByText } = render(
+    <MarketplaceContributionGroups
+      item={{
+        automationTriggers: [
+          {
+            kind: "extension:personal/demo/activity",
+            extensionId: "personal/demo",
+            contributionId: "activity",
+            name: "Repository Activity",
+            description: "React to new repository activity.",
+            configuration: "menu",
+            inputSchema: { type: "object" },
+            icon: { type: "spirit", name: "globe" },
+          },
+        ],
+      }}
+    />,
+  );
+  expect(getByText("Automation Triggers")).toBeTruthy();
+  expect(getByText("Repository Activity")).toBeTruthy();
+  expect(getByText("React to new repository activity.")).toBeTruthy();
 });

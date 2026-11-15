@@ -634,6 +634,8 @@
       "repositorySearchPlaceholder": "Repositories durchsuchen",
       "repositoryEmpty": "Keine Repositories gefunden",
       "repositoryLoadFailed": "Repositories konnten nicht geladen werden. Erneut versuchen.",
+      "triggerLoadFailed": "Triggeroptionen konnten nicht geladen werden",
+      "triggerEmpty": "Keine Triggeroptionen verfügbar",
       "pullRequestCreated": "Pull Request erstellt",
       "issueCreated": "Issue erstellt"
     },
@@ -663,6 +665,7 @@
     "noMatches": "Keine passenden Erweiterungen.",
     "extensionNotFound": "Erweiterung nicht gefunden. Bitte zurück zur Liste.",
     "install": "Installieren",
+    "authorize": "Autorisieren",
     "httpLocalSourceInstallUnsupported": "HTTP-Marktplätze können Erweiterungen mit lokalem Pfad nicht installieren",
     "enable": "Aktivieren",
     "disable": "Deaktivieren",
@@ -671,6 +674,8 @@
     "uninstallExtension": "Erweiterung deinstallieren",
     "empty": "Keine Erweiterungen vorhanden",
     "contributionGroupTools": "Tools",
+    "contributionGroupAuthorization": "Autorisierung",
+    "contributionGroupAutomationTriggers": "Automation-Trigger",
     "contributionGroupDesktop": "Desktop",
     "contributionRuleTitle": "Regel",
     "contributionStyleTitle": "Stil",
@@ -720,7 +725,9 @@
     "uninstallPersonalConfirmTitle": "„{{name}}“ deinstallieren?",
     "uninstallPersonalConfirmDescription": "Die lokale Installation und der Eintrag im persönlichen Marketplace werden entfernt.",
     "removeMarketplaceConfirmTitle": "„{{name}}“ entfernen?",
-    "removeMarketplaceConfirmDescription": "Dies kann nicht rückgängig gemacht werden."
+    "removeMarketplaceConfirmDescription": "Dies kann nicht rückgängig gemacht werden.",
+    "authorizationOptions": "Autorisierungsoptionen",
+    "authorizationOptionsFor": "{{name}}-Autorisierungsoptionen"
   },
   "dreams": {
     "collectorRunning": "Dreams werden gesammelt. Neue aktuelle Trends erscheinen in Kürze hier.",
@@ -898,6 +905,7 @@
       "createAutomationDaily": "{{title}} erstellen, das täglich um {{time}} läuft",
       "createAutomationWeekly": "{{title}} erstellen, das jeden {{weekday}} um {{time}} läuft",
       "createAutomationGithubIssue": "{{title}} erstellen, das läuft, wenn in {{repo}} ein Issue erstellt wird",
+      "createAutomationWithTrigger": "{title} erstellen, um {trigger} auszuführen",
       "createAutomationGithubPullRequest": "{{title}} erstellen, das läuft, wenn in {{repo}} ein Pull Request erstellt wird",
       "editFile": "Datei bearbeiten",
       "deleteFile": "Datei löschen",
@@ -1404,6 +1412,12 @@
     "defaultChatName": "Chat",
     "taskComplete": {
       "title": "Aufgabe abgeschlossen"
+    },
+    "automation": {
+      "completedTitle": "{{title}} abgeschlossen",
+      "blockedTitle": "{{title}} erfordert Aufmerksamkeit",
+      "failedTitle": "{{title}} fehlgeschlagen",
+      "triggerErrorTitle": "{{title}}-Trigger erfordert Aufmerksamkeit"
     },
     "approval": {
       "title": "Genehmigung erforderlich",

@@ -81,6 +81,9 @@ import type {
   DesktopAutomationDetail,
   DesktopAutomationListItem,
   DesktopCreateAutomationRequest,
+  ResolveAutomationTriggerMenuRequest,
+  CancelAutomationTriggerMenuRequest,
+  ValidateAutomationTriggerRequest,
   DesktopResolveTaskForRunResult,
   DesktopTaskMenuItem,
   DesktopDreamOverviewItem,
@@ -95,10 +98,9 @@ import type {
   InstallBuiltInExtensionRequest,
   InstallMarketplaceExtensionRequest,
   UpdateExtensionRequest,
-  RunExtensionRequest,
+  InvokeExtensionActionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
-  UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   PreviewModelsRequest,
   PreviewModelsResponse,
@@ -884,6 +886,42 @@ export function useDesktopRuntime() {
     }
     return api.listDreamsOverview();
   }, [api]);
+
+  const resolveAutomationTriggerMenu = useCallback(
+    async (request: ResolveAutomationTriggerMenuRequest) => {
+      if (!api) {
+        throw new Error("Desktop host is not ready.");
+      }
+      return api.resolveAutomationTriggerMenu(request);
+    },
+    [api],
+  );
+  const cancelAutomationTriggerMenu = useCallback(
+    async (request: CancelAutomationTriggerMenuRequest) => {
+      if (!api) {
+        return;
+      }
+      return api.cancelAutomationTriggerMenu(request);
+    },
+    [api],
+  );
+  const validateAutomationTrigger = useCallback(
+    async (request: ValidateAutomationTriggerRequest) => {
+      if (!api) {
+        throw new Error("Desktop host is not ready.");
+      }
+      try {
+        const result = await api.validateAutomationTrigger(request);
+        setRuntimeError("");
+        return result;
+      } catch (error) {
+        const message = describeError(error);
+        setRuntimeError(message);
+        throw new Error(message, { cause: error });
+      }
+    },
+    [api],
+  );
 
   const listAutomations = useCallback(async (): Promise<DesktopAutomationListItem[]> => {
     if (!api) {
@@ -2273,17 +2311,17 @@ export function useDesktopRuntime() {
     [api, applySnapshot],
   );
 
-  const runExtension = useCallback(
-    async (request: RunExtensionRequest) => {
+  const invokeExtensionAction = useCallback(
+    async (request: InvokeExtensionActionRequest) => {
       if (!api) {
         return;
       }
 
       setBusyAction("extensions");
       try {
-        const next = await api.runExtension(request);
-        applySnapshot(next);
+        const result = await api.invokeExtensionAction(request);
         setRuntimeError("");
+        return result;
       } catch (error) {
         const message = describeError(error);
         setRuntimeError(message);
@@ -2292,7 +2330,7 @@ export function useDesktopRuntime() {
         setBusyAction("");
       }
     },
-    [api, applySnapshot],
+    [api],
   );
 
   const updateExtensionSettings = useCallback(
@@ -2304,28 +2342,6 @@ export function useDesktopRuntime() {
       setBusyAction("extensions");
       try {
         const next = await api.updateExtensionSettings(request);
-        applySnapshot(next);
-        setRuntimeError("");
-      } catch (error) {
-        const message = describeError(error);
-        setRuntimeError(message);
-        throw new Error(message, { cause: error });
-      } finally {
-        setBusyAction("");
-      }
-    },
-    [api, applySnapshot],
-  );
-
-  const updateExtensionSecret = useCallback(
-    async (request: UpdateExtensionSecretRequest) => {
-      if (!api) {
-        return;
-      }
-
-      setBusyAction("extensions");
-      try {
-        const next = await api.updateExtensionSecret(request);
         applySnapshot(next);
         setRuntimeError("");
       } catch (error) {
@@ -4213,6 +4229,9 @@ export function useDesktopRuntime() {
     questionError,
     refreshSessions,
     listDreamsOverview,
+    resolveAutomationTriggerMenu,
+    cancelAutomationTriggerMenu,
+    validateAutomationTrigger,
     listAutomations,
     resolveTaskForRun,
     resolveTaskByLabel,
@@ -4278,9 +4297,8 @@ export function useDesktopRuntime() {
     createRule,
     deleteExtension,
     setExtensionEnabled,
-    runExtension,
+    invokeExtensionAction,
     updateExtensionSettings,
-    updateExtensionSecret,
     deleteMcpServer,
     saveHookEntry,
     deleteHookEntry,

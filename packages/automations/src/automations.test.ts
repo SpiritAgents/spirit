@@ -333,3 +333,151 @@ test("automation store persists modelRef and rejects legacy modelName-only files
     await rm(spiritDataDir, { recursive: true, force: true });
   }
 });
+
+test("extension triggers retain labels and provider state only through supported paths", async () => {
+  const kind = "extension:personal/demo/activity" as const;
+  assert.deepEqual(
+    normalizeAutomationTrigger({
+      kind,
+      config: { repository: "spirit" },
+      label: "Spirit activity",
+      state: { cursor: 4 },
+    }),
+    {
+      kind,
+      config: { repository: "spirit" },
+      label: "Spirit activity",
+      state: { cursor: 4 },
+    },
+  );
+  assert.equal(
+    formatTriggerLabel({
+      kind,
+      config: { repository: "spirit" },
+      label: "Spirit activity",
+    }),
+    "Spirit activity",
+  );
+  assert.equal(normalizeAutomationTrigger({ kind, config: {}, label: "" }), undefined);
+
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-extension-trigger-store-"));
+  try {
+    const store = createHostAutomationStore(spiritDataDir);
+    const created = await store.create({
+      title: "Extension trigger",
+      overview: "React to activity",
+      trigger: {
+        kind,
+        config: {
+          repository: "spirit",
+          options: { events: ["created"], nested: { first: 1, second: 2 } },
+        },
+        label: "Spirit activity",
+        state: { injected: true },
+      },
+      workspaceRoot: spiritDataDir,
+      modelRef: { providerId: "custom-openai", name: "gpt-test" },
+      approvalLevel: "default",
+    });
+    assert.equal(created.trigger.kind === kind && "state" in created.trigger, false);
+
+    await store.updateAutomationTriggerState(created.id, { cursor: 4 });
+    await store.setTriggerError(created.id, "temporary failure");
+    const updatedTitle = await store.update(created.id, { title: "Renamed" });
+    assert.deepEqual(updatedTitle.trigger.kind === kind ? updatedTitle.trigger.state : undefined, {
+      cursor: 4,
+    });
+    assert.equal(updatedTitle.triggerError, "temporary failure");
+
+    const reorderedConfig = await store.update(created.id, {
+      trigger: {
+        kind,
+        config: {
+          options: { nested: { second: 2, first: 1 }, events: ["created"] },
+          repository: "spirit",
+        },
+        label: "Spirit activity",
+        state: { injected: true },
+      },
+    });
+    assert.deepEqual(
+      reorderedConfig.trigger.kind === kind ? reorderedConfig.trigger.state : undefined,
+      { cursor: 4 },
+    );
+
+    const updatedConfig = await store.update(created.id, {
+      trigger: {
+        kind,
+        config: { cursor: 5 },
+        label: "Spirit activity",
+        state: { injected: true },
+      },
+    });
+    assert.equal(updatedConfig.trigger.kind === kind && "state" in updatedConfig.trigger, false);
+    assert.equal(updatedConfig.triggerError, undefined);
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+  }
+});
+
+test("event consumption atomically stores the run and checkpoint and dedupes after reload", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-trigger-consumption-"));
+  const kind = "extension:personal/demo/activity" as const;
+  try {
+    const store = createHostAutomationStore(spiritDataDir);
+    const created = await store.create({
+      title: "Extension trigger",
+      overview: "React to activity",
+      trigger: { kind, config: {}, label: "Spirit activity" },
+      workspaceRoot: spiritDataDir,
+      modelRef: { providerId: "custom-openai", name: "gpt-test" },
+      approvalLevel: "default",
+    });
+    const input = {
+      id: "run-1",
+      automationId: created.id,
+      sessionPath: "/tmp/run-1.json",
+      status: "running" as const,
+      startedAtUnixMs: 1,
+    };
+    const first = await store.consumeAutomationTriggerEvent(created.id, input, {
+      eventId: "event-1",
+      checkpoint: { cursor: 1 },
+    });
+    assert.equal(first.created, true);
+    assert.equal(first.run.triggerEventId, "event-1");
+    assert.deepEqual(first.run, (await store.get(created.id))?.runs[0]);
+    const afterFirst = await store.get(created.id);
+    assert.equal(afterFirst?.definition.trigger.kind, kind);
+    if (afterFirst?.definition.trigger.kind === kind) {
+      assert.deepEqual(afterFirst.definition.trigger.state, { cursor: 1 });
+    }
+
+    const duplicate = await store.consumeAutomationTriggerEvent(
+      created.id,
+      { ...input, id: "run-duplicate" },
+      { eventId: "event-1", checkpoint: { cursor: 1 } },
+    );
+    assert.equal(duplicate.created, false);
+    assert.equal(duplicate.run.id, "run-1");
+
+    const second = await store.consumeAutomationTriggerEvent(
+      created.id,
+      { ...input, id: "run-2" },
+      { eventId: "event-2", checkpoint: { cursor: 2 } },
+    );
+    assert.equal(second.created, true);
+
+    const reloaded = createHostAutomationStore(spiritDataDir);
+    const duplicateAfterReload = await reloaded.consumeAutomationTriggerEvent(
+      created.id,
+      { ...input, id: "run-3" },
+      { eventId: "event-2", checkpoint: { cursor: 2 } },
+    );
+    assert.equal(duplicateAfterReload.created, false);
+    assert.equal(duplicateAfterReload.run.id, "run-2");
+    assert.equal((await reloaded.get(created.id))?.runs.length, 2);
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+  }
+});

@@ -4,12 +4,11 @@ import { useTranslation } from "react-i18next";
 
 import { AutomationHistoryTable } from "@/components/automation-history-table";
 import { AutomationSettingsPanel } from "@/components/automation-settings-panel";
+import type { AutomationTriggerRuntime } from "@/components/automation-trigger-menu";
 import type {
   DesktopAutomationDetail,
   DesktopSnapshot,
   DesktopUpdateAutomationRequest,
-  GitHubAutomationRepositoriesSnapshot,
-  SearchGitHubAutomationRepositoriesSnapshot,
 } from "@/types";
 import { FONT_WEIGHT_MEDIUM } from "@/lib/desktop-typography";
 import {
@@ -33,11 +32,7 @@ type AutomationDetailViewProps = {
   githubConnected: boolean;
   githubAuthChecking?: boolean;
   onOpenIntegrationsSettings?: () => void;
-  listGitHubRepositories(page?: number): Promise<GitHubAutomationRepositoriesSnapshot>;
-  searchGitHubRepositories(
-    query: string,
-    page?: number,
-  ): Promise<SearchGitHubAutomationRepositoriesSnapshot>;
+  triggerRuntime: AutomationTriggerRuntime;
 };
 
 type AutomationDetailTab = "history" | "settings";
@@ -103,8 +98,7 @@ export function AutomationDetailView({
   githubConnected,
   githubAuthChecking,
   onOpenIntegrationsSettings,
-  listGitHubRepositories,
-  searchGitHubRepositories,
+  triggerRuntime,
 }: AutomationDetailViewProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<AutomationDetailTab>("history");
@@ -190,8 +184,7 @@ export function AutomationDetailView({
                 githubAuthChecking={githubAuthChecking}
                 onOpenIntegrationsSettings={onOpenIntegrationsSettings}
                 onAddWorkspace={onAddWorkspace}
-                listGitHubRepositories={listGitHubRepositories}
-                searchGitHubRepositories={searchGitHubRepositories}
+                triggerRuntime={triggerRuntime}
                 onSave={async (patch) => {
                   await updateAutomation(automationId, patch);
                   await refresh({ silent: true });

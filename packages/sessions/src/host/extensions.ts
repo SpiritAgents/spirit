@@ -19,9 +19,12 @@ import {
   type HostExtensionDesktopTabDefinition,
   type HostExtensionManager,
   type HostInstalledExtension,
+  type HostExtensionManifest,
   type HostMarketplaceCatalogItem,
   type MarketplaceCatalogItem,
 } from "@spiritagent/extensions";
+
+import { extensionAutomationTriggerKind } from "@spiritagent/automations/trigger-provider";
 
 import type {
   DesktopExtensionCssLayer,
@@ -41,6 +44,57 @@ export function buildDesktopExtensionToolDefinitions(
       inputSchema: tool.inputSchema as JsonObject,
     })),
   );
+}
+
+function mapDesktopAuthorizations(
+  manifest: HostExtensionManifest,
+  configurations?: Record<string, boolean | undefined>,
+): import("../types.js").DesktopExtensionAuthorization[] | undefined {
+  const authorizations = manifest.contributes?.authorizations;
+  if (!authorizations?.length) {
+    return undefined;
+  }
+  return authorizations.map((authorization) => ({
+    id: authorization.id,
+    action: authorization.action,
+    ...(configurations?.[authorization.id] === undefined
+      ? {}
+      : { configured: configurations[authorization.id] }),
+  }));
+}
+
+function mapDesktopAutomationTriggers(
+  manifest: HostExtensionManifest,
+  configurations?: Record<string, boolean | undefined>,
+): import("../types.js").DesktopExtensionAutomationTrigger[] | undefined {
+  const triggers = manifest.contributes?.automationTriggers;
+  if (!triggers?.length) {
+    return undefined;
+  }
+  return triggers.map((trigger) => ({
+    kind: extensionAutomationTriggerKind(manifest.sourceId, manifest.name, trigger.id),
+    extensionId: manifest.id,
+    contributionId: trigger.id,
+    name: trigger.name,
+    description: trigger.description,
+    icon: trigger.icon,
+    configuration: trigger.configuration ?? "none",
+    inputSchema: trigger.inputSchema,
+    ...(trigger.authorization
+      ? {
+          authorization: {
+            id: trigger.authorization,
+            action:
+              manifest.contributes?.authorizations?.find(
+                (authorization) => authorization.id === trigger.authorization,
+              )?.action ?? "",
+            ...(configurations?.[trigger.authorization] === undefined
+              ? {}
+              : { configured: configurations[trigger.authorization] }),
+          },
+        }
+      : {}),
+  }));
 }
 
 export async function buildDesktopExtensionListItems(
@@ -72,6 +126,22 @@ export async function buildDesktopExtensionListItems(
           : {}),
         ...(item.manifest.main ? { main: item.manifest.main } : {}),
         supportedHosts: [...item.manifest.supportedHosts],
+        ...(item.manifest.contributes?.authorizations?.length
+          ? {
+              authorizations: mapDesktopAuthorizations(
+                item.manifest,
+                skipLiveState ? undefined : await manager.getAuthorizationConfigurations(item.id),
+              ),
+            }
+          : {}),
+        ...(item.manifest.contributes?.automationTriggers?.length
+          ? {
+              automationTriggers: mapDesktopAutomationTriggers(
+                item.manifest,
+                skipLiveState ? undefined : await manager.getAuthorizationConfigurations(item.id),
+              ),
+            }
+          : {}),
         ...(item.manifest.activationEvents?.length
           ? { activationEvents: [...item.manifest.activationEvents] }
           : {}),
@@ -156,26 +226,6 @@ export async function buildDesktopExtensionListItems(
                 : { settingsValues: await manager.getSettingsValues(item.id) }),
             }
           : {}),
-        ...(item.manifest.secretSlots?.length
-          ? {
-              secretSlots: item.manifest.secretSlots.map((slot) => ({
-                key: slot.key,
-                title: slot.title,
-                ...(slot.description ? { description: slot.description } : {}),
-                ...(slot.required !== undefined ? { required: slot.required } : {}),
-              })),
-              ...(skipLiveState
-                ? {}
-                : {
-                    secretStatuses: Object.entries(await manager.getSecretStatus(item.id)).map(
-                      ([key, configured]) => ({
-                        key,
-                        configured,
-                      }),
-                    ),
-                  }),
-            }
-          : {}),
         ...(item.archiveFileName ? { archiveFileName: item.archiveFileName } : {}),
         ...(item.installSource ? { installSource: item.installSource } : {}),
         installed: catalogInstalled,
@@ -200,7 +250,9 @@ function isMarketplaceCatalogInstalled(item: HostInstalledExtension): boolean {
  */
 export async function buildDesktopMarketplaceCatalogEntries(
   items: readonly MarketplaceCatalogItem[],
+  installedExtensions: readonly import("../types.js").DesktopExtensionListItem[] = [],
 ): Promise<DesktopMarketplaceCatalogEntry[]> {
+  const installedById = new Map(installedExtensions.map((extension) => [extension.id, extension]));
   return Promise.all(
     items.map(async (item) => {
       const { entry, source } = item;
@@ -267,6 +319,30 @@ export async function buildDesktopMarketplaceCatalogEntries(
         artifactKind: typeof entry.source === "string" ? "local" : "npm",
         ...(iconUrl ? { iconUrl } : {}),
         supportedHosts: [...manifest.supportedHosts],
+        ...(manifest.contributes?.authorizations?.length
+          ? {
+              authorizations: mapDesktopAuthorizations(
+                manifest,
+                Object.fromEntries(
+                  (installedById.get(`${source.id}/${entry.name}`)?.authorizations ?? []).map(
+                    (authorization) => [authorization.id, authorization.configured],
+                  ),
+                ),
+              ),
+            }
+          : {}),
+        ...(manifest.contributes?.automationTriggers?.length
+          ? {
+              automationTriggers: mapDesktopAutomationTriggers(
+                manifest,
+                Object.fromEntries(
+                  (installedById.get(`${source.id}/${entry.name}`)?.authorizations ?? []).map(
+                    (authorization) => [authorization.id, authorization.configured],
+                  ),
+                ),
+              ),
+            }
+          : {}),
         ...(manifest.activationEvents?.length
           ? { activationEvents: [...manifest.activationEvents] }
           : {}),
@@ -356,30 +432,6 @@ function mapDesktopViews(
     ...(view.height === undefined ? {} : { height: view.height }),
     ...(view.chrome ? { chrome: view.chrome } : {}),
   }));
-}
-
-export async function resolveEnabledExtensionViewOwner(
-  manager: HostExtensionManager,
-  viewId: string,
-): Promise<{ extensionId: string; title?: string; width?: number; height?: number } | null> {
-  const listed = await manager.list();
-  const matches = listed.flatMap((item) => {
-    if (!item.enabled) {
-      return [];
-    }
-    const view = item.manifest.contributes?.desktop?.views?.find((entry) => entry.id === viewId);
-    return view ? [{ extensionId: item.id, view }] : [];
-  });
-  if (matches.length !== 1) {
-    return null;
-  }
-  const match = matches[0];
-  return {
-    extensionId: match.extensionId,
-    ...(match.view.title ? { title: match.view.title } : {}),
-    ...(match.view.width === undefined ? {} : { width: match.view.width }),
-    ...(match.view.height === undefined ? {} : { height: match.view.height }),
-  };
 }
 
 export async function resolveEnabledExtensionViewFile(

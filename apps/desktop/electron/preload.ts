@@ -203,14 +203,11 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   setExtensionEnabled(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "setExtensionEnabled", { request });
   },
-  runExtension(request: unknown) {
-    return ipcRenderer.invoke("desktop:invoke", "runExtension", { request });
+  invokeExtensionAction(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "invokeExtensionAction", { request });
   },
   updateExtensionSettings(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "updateExtensionSettings", { request });
-  },
-  updateExtensionSecret(request: unknown) {
-    return ipcRenderer.invoke("desktop:invoke", "updateExtensionSecret", { request });
   },
   createRule(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "createRule", { request });
@@ -301,6 +298,15 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   },
   listDreamsOverview() {
     return ipcRenderer.invoke("desktop:invoke", "listDreamsOverview");
+  },
+  resolveAutomationTriggerMenu(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "resolveAutomationTriggerMenu", { request });
+  },
+  cancelAutomationTriggerMenu(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "cancelAutomationTriggerMenu", { request });
+  },
+  validateAutomationTrigger(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "validateAutomationTrigger", { request });
   },
   listAutomations() {
     return ipcRenderer.invoke("desktop:invoke", "listAutomations");
@@ -845,11 +851,14 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
       | { type: "button"; text: string; action?: "allow" | "deny" | "focus" }
       | { type: "text"; text: string; placeholder?: string; action: "reply" }
     >;
-    kind?: "task-complete" | "approval" | "ask-questions" | "generic";
+    kind?: "task-complete" | "approval" | "ask-questions" | "generic" | "automation";
     context?: {
       approvalId?: string;
       questionToolCallId?: string;
       questionId?: string;
+      automationId?: string;
+      runId?: string;
+      sessionPath?: string;
     };
   }) {
     return ipcRenderer.invoke("desktop:show-notification", request);
@@ -896,6 +905,20 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
     ipcRenderer.on("desktop:notify-refresh", onRefresh);
     return () => {
       ipcRenderer.removeListener("desktop:notify-refresh", onRefresh);
+    };
+  },
+  subscribeAutomationNotification(callback: (payload: { automationId: string }) => void) {
+    const onAutomation = (
+      _event: Electron.IpcRendererEvent,
+      payload: { automationId?: string },
+    ) => {
+      if (typeof payload?.automationId === "string") {
+        callback({ automationId: payload.automationId });
+      }
+    };
+    ipcRenderer.on("desktop:automation-notification", onAutomation);
+    return () => {
+      ipcRenderer.removeListener("desktop:automation-notification", onAutomation);
     };
   },
   subscribeApprovalFromNotification(

@@ -9,6 +9,7 @@ import type {
   SpiritTransportKind,
   ThinkingSwitchDeclaration,
 } from "@spiritagent/config";
+import type { JsonObject } from "@spiritagent/agent-core";
 import type { ModelReasoningEffort } from "@spiritagent/agent-core/reasoning-effort";
 import type { RemoteControlPendingPairing } from "@spiritagent/remote-control";
 import type {
@@ -542,6 +543,8 @@ export interface DesktopMarketplaceCatalogEntry {
   /** Renderable icon: data URL (local/git registries) or https URL (index direct-links). */
   iconUrl?: string;
   supportedHosts: DesktopExtensionHostKind[];
+  authorizations?: DesktopExtensionAuthorization[];
+  automationTriggers?: DesktopExtensionAutomationTrigger[];
   activationEvents?: string[];
   requestedCapabilities?: string[];
   contributedTools?: DesktopExtensionContributedTool[];
@@ -618,8 +621,10 @@ export interface SetExtensionEnabledRequest {
   enabled: boolean;
 }
 
-export interface RunExtensionRequest {
+export interface InvokeExtensionActionRequest {
   id: string;
+  actionId: string;
+  params?: unknown;
 }
 
 export type DesktopExtensionSettingValue = string | boolean | number | null;
@@ -627,12 +632,6 @@ export type DesktopExtensionSettingValue = string | boolean | number | null;
 export interface UpdateExtensionSettingsRequest {
   id: string;
   values: Record<string, DesktopExtensionSettingValue>;
-}
-
-export interface UpdateExtensionSecretRequest {
-  id: string;
-  key: string;
-  value?: string;
 }
 
 export type DesktopExtensionToolApprovalMode = "allowed" | "need-approval" | "need-questions";
@@ -844,18 +843,6 @@ export interface DesktopExtensionSettingDefinition {
   options?: DesktopExtensionSettingOption[];
 }
 
-export interface DesktopExtensionSecretSlot {
-  key: string;
-  title: string;
-  description?: string;
-  required?: boolean;
-}
-
-export interface DesktopExtensionSecretStatus {
-  key: string;
-  configured: boolean;
-}
-
 export type DesktopExtensionHostKind = "cli" | "desktop";
 
 export interface DesktopExtensionInstructionContributionSummary {
@@ -871,6 +858,24 @@ export interface DesktopExtensionAuthor {
   url?: string;
 }
 
+export interface DesktopExtensionAutomationTrigger {
+  kind: string;
+  extensionId: string;
+  contributionId: string;
+  name: string;
+  description: string;
+  icon: DesktopExtensionDesktopTabRuntimeIcon;
+  configuration: "menu" | "none";
+  inputSchema: JsonObject;
+  authorization?: { id: string; action: string; configured?: boolean };
+}
+
+export interface DesktopExtensionAuthorization {
+  id: string;
+  action: string;
+  configured?: boolean;
+}
+
 export interface DesktopExtensionListItem {
   id: string;
   displayName: string;
@@ -881,6 +886,8 @@ export interface DesktopExtensionListItem {
   author?: DesktopExtensionAuthor;
   main?: string;
   supportedHosts: DesktopExtensionHostKind[];
+  authorizations?: DesktopExtensionAuthorization[];
+  automationTriggers?: DesktopExtensionAutomationTrigger[];
   activationEvents?: string[];
   requestedCapabilities?: string[];
   contributedTools?: DesktopExtensionContributedTool[];
@@ -892,8 +899,6 @@ export interface DesktopExtensionListItem {
   instructionContributions?: DesktopExtensionInstructionContributionSummary;
   settingsSchema?: DesktopExtensionSettingDefinition[];
   settingsValues?: Record<string, DesktopExtensionSettingValue>;
-  secretSlots?: DesktopExtensionSecretSlot[];
-  secretStatuses?: DesktopExtensionSecretStatus[];
   archiveFileName?: string;
   installSource?: "built-in" | "archive" | "marketplace";
   installed?: boolean;
@@ -1533,13 +1538,55 @@ export interface DesktopDreamOverviewItem {
   updatedAtUnixMs: number;
 }
 
+export type DesktopAutomationTriggerMenuItem =
+  | {
+      action: "submenu";
+      id: string;
+      label: string;
+      description?: string;
+      icon?: DesktopExtensionDesktopTabRuntimeIcon;
+      disabled?: boolean;
+    }
+  | {
+      action: "select";
+      id: string;
+      label: string;
+      description?: string;
+      icon?: DesktopExtensionDesktopTabRuntimeIcon;
+      disabled?: boolean;
+      config: JsonObject;
+    };
+
+export interface DesktopAutomationTriggerMenuPage {
+  items: DesktopAutomationTriggerMenuItem[];
+  searchPlaceholder?: string;
+  hasMore?: boolean;
+}
+
+export interface ResolveAutomationTriggerMenuRequest {
+  kind: string;
+  sessionId: string;
+  path: string[];
+  query?: string;
+  page: number;
+}
+
+export interface CancelAutomationTriggerMenuRequest {
+  sessionId: string;
+}
+
+export interface ValidateAutomationTriggerRequest {
+  kind: string;
+  config: JsonObject;
+}
+
 export interface DesktopAutomationListItem {
   id: string;
   title: string;
   scheduleLabel: string;
   trigger: DesktopAutomationTrigger;
   enabled: boolean;
-  githubPollError?: string;
+  triggerError?: string;
   lastRunAtUnixMs?: number;
   updatedAtUnixMs: number;
 }
@@ -1576,6 +1623,7 @@ export interface DesktopAutomationRun {
   sessionPath: string;
   status: DesktopAutomationRunStatus;
   startedAtUnixMs: number;
+  triggerEventId?: string;
   completedAtUnixMs?: number;
   error?: string;
 }
@@ -1594,6 +1642,7 @@ export interface DesktopAutomationDefinition {
   createdAtUnixMs: number;
   updatedAtUnixMs: number;
   lastFiredAtUnixMs?: number;
+  triggerError?: string;
 }
 
 export interface DesktopAutomationDetail {

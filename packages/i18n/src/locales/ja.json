@@ -634,6 +634,8 @@
       "repositorySearchPlaceholder": "リポジトリを検索",
       "repositoryEmpty": "リポジトリが見つかりません",
       "repositoryLoadFailed": "リポジトリの読み込みに失敗しました。もう一度お試しください。",
+      "triggerLoadFailed": "トリガーオプションを読み込めませんでした",
+      "triggerEmpty": "利用可能なトリガーオプションがありません",
       "pullRequestCreated": "プルリクエスト作成時",
       "issueCreated": "Issue 作成時"
     },
@@ -663,6 +665,7 @@
     "noMatches": "一致する拡張機能がありません。",
     "extensionNotFound": "拡張機能が見つかりません。リストに戻ってください。",
     "install": "インストール",
+    "authorize": "認可",
     "httpLocalSourceInstallUnsupported": "HTTP マーケットプレイスではローカルパスソースの拡張機能をインストールできません",
     "enable": "有効にする",
     "disable": "無効にする",
@@ -671,6 +674,8 @@
     "uninstallExtension": "拡張機能をアンインストール",
     "empty": "拡張機能がありません",
     "contributionGroupTools": "ツール",
+    "contributionGroupAuthorization": "認可",
+    "contributionGroupAutomationTriggers": "Automation トリガー",
     "contributionGroupDesktop": "デスクトップ",
     "contributionRuleTitle": "ルール",
     "contributionStyleTitle": "スタイル",
@@ -720,7 +725,9 @@
     "uninstallPersonalConfirmTitle": "「{{name}}」をアンインストールしますか？",
     "uninstallPersonalConfirmDescription": "ローカルのインストールが削除され、個人マーケットプレイスの記録も削除されます。",
     "removeMarketplaceConfirmTitle": "「{{name}}」を削除しますか？",
-    "removeMarketplaceConfirmDescription": "この操作は元に戻せません。"
+    "removeMarketplaceConfirmDescription": "この操作は元に戻せません。",
+    "authorizationOptions": "認可オプション",
+    "authorizationOptionsFor": "{{name}}の認可オプション"
   },
   "dreams": {
     "collectorRunning": "Dream を収集中です。新しい最近のトレンドが間もなくここに表示されます。",
@@ -898,6 +905,7 @@
       "createAutomationDaily": "毎日 {{time}} に実行する{{title}}の作成",
       "createAutomationWeekly": "毎週{{weekday}} {{time}} に実行する{{title}}の作成",
       "createAutomationGithubIssue": "GitHub リポジトリ {{repo}} で新しい Issue が作成されたときに実行する{{title}}の作成",
+      "createAutomationWithTrigger": "{title} を作成して {trigger} を実行",
       "createAutomationGithubPullRequest": "GitHub リポジトリ {{repo}} で新しいプルリクエストが作成されたときに実行する{{title}}の作成",
       "editFile": "ファイルの編集",
       "deleteFile": "ファイルの削除",
@@ -1404,6 +1412,12 @@
     "defaultChatName": "チャット",
     "taskComplete": {
       "title": "タスク完了"
+    },
+    "automation": {
+      "completedTitle": "{{title}} が完了しました",
+      "blockedTitle": "{{title}} は対応が必要です",
+      "failedTitle": "{{title}} は失敗しました",
+      "triggerErrorTitle": "{{title}} のトリガーは対応が必要です"
     },
     "approval": {
       "title": "承認が必要",

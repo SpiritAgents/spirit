@@ -56,12 +56,6 @@ interface ExtensionManifestLike {
     defaultValue?: string | boolean | number;
     options?: Array<{ value: string; label: string; description?: string }>;
   }>;
-  secretSlots?: Array<{
-    key: string;
-    title: string;
-    description?: string;
-    required?: boolean;
-  }>;
 }
 
 function serializeExtensionContributes(
@@ -172,16 +166,6 @@ export function serializeHostExtension(item: {
           })),
         }
       : {}),
-    ...(item.manifest.secretSlots?.length
-      ? {
-          secretSlots: item.manifest.secretSlots.map((slot) => ({
-            key: slot.key,
-            title: slot.title,
-            ...(slot.description ? { description: slot.description } : {}),
-            ...(slot.required !== undefined ? { required: slot.required } : {}),
-          })),
-        }
-      : {}),
     ...(item.archiveFileName ? { archiveFileName: item.archiveFileName } : {}),
     ...(item.installSource ? { installSource: item.installSource } : {}),
     installedAtUnixMs: item.installedAtUnixMs,
@@ -258,9 +242,6 @@ export function serializeMarketplaceCatalogItem(item: MarketplaceCatalogItem): J
       : {}),
     ...(entry.manifest.settingsSchema?.length
       ? { settingsSchema: entry.manifest.settingsSchema as unknown as JsonValue }
-      : {}),
-    ...(entry.manifest.secretSlots?.length
-      ? { secretSlots: entry.manifest.secretSlots as unknown as JsonValue }
       : {}),
     installed: item.installed,
     ...(item.enabled !== undefined ? { enabled: item.enabled } : {}),

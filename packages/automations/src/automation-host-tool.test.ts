@@ -5,6 +5,7 @@ import {
   CREATE_AUTOMATION_CONTRIBUTED_TOOL,
   CREATE_AUTOMATION_TOOL_NAME,
   buildAutomationHostToolDefinitions,
+  createAutomationContributedTool,
   deriveAutomationTitle,
   parseCreateAutomationApprovalLevel,
   parseCreateAutomationTrigger,
@@ -16,7 +17,7 @@ import {
 test("CREATE_AUTOMATION_CONTRIBUTED_TOOL exposes required overview", () => {
   assert.equal(CREATE_AUTOMATION_CONTRIBUTED_TOOL.name, CREATE_AUTOMATION_TOOL_NAME);
   const schema = CREATE_AUTOMATION_CONTRIBUTED_TOOL.inputSchema;
-  assert.deepEqual(schema.required, ["overview"]);
+  assert.deepEqual(schema.required, ["overview", "trigger"]);
   const properties = schema.properties;
   assert.ok(properties && typeof properties === "object" && !Array.isArray(properties));
   const trigger = properties.trigger;
@@ -120,8 +121,8 @@ test("CREATE_AUTOMATION_CONTRIBUTED_TOOL approval_level enum includes auto-appro
   assert.deepEqual(approvalLevel.enum, ["default", "auto-approval", "bypass-approval"]);
 });
 
-test("previewCreateAutomationFromArguments derives title and trigger", () => {
-  const preview = previewCreateAutomationFromArguments({
+test("previewCreateAutomationFromArguments derives title and trigger", async () => {
+  const preview = await previewCreateAutomationFromArguments({
     overview: "Summarize CI failures.",
     title: "CI check",
     trigger: { kind: "time", schedule: { kind: "weekly", weekday: 1, hour: 9, minute: 0 } },
@@ -139,4 +140,61 @@ test("toBuiltInLazyToolIndexEntry maps contributed metadata to lazy index entry"
   assert.equal(entry.toolName, CREATE_AUTOMATION_TOOL_NAME);
   assert.equal(entry.agentModeExposure, "agent");
   assert.equal(entry.excludeFromAskMode, true);
+});
+
+test("contributed trigger schemas are exposed as closed oneOf branches", () => {
+  const definition = createAutomationContributedTool([
+    {
+      kind: "extension:personal/demo/activity",
+      inputSchema: {
+        type: "object",
+        properties: { repository: { type: "string" } },
+        required: ["repository"],
+        additionalProperties: false,
+      },
+    },
+  ]);
+  const properties = definition.inputSchema.properties as Record<string, unknown>;
+  const trigger = properties.trigger as { oneOf: Array<Record<string, unknown>> };
+  assert.equal(trigger.oneOf.length, 3);
+  assert.deepEqual(trigger.oneOf[2], {
+    type: "object",
+    properties: {
+      kind: { type: "string", const: "extension:personal/demo/activity" },
+      config: {
+        type: "object",
+        properties: { repository: { type: "string" } },
+        required: ["repository"],
+        additionalProperties: false,
+      },
+    },
+    required: ["kind", "config"],
+    additionalProperties: false,
+  });
+});
+
+test("extension tool inputs reject injected labels and use provider validation for previews", async () => {
+  assert.throws(
+    () =>
+      parseCreateAutomationTrigger({
+        kind: "extension:personal/demo/activity",
+        config: {},
+        label: "forged",
+      }),
+    /cannot include label or state/,
+  );
+
+  const preview = await previewCreateAutomationFromArguments(
+    {
+      overview: "Track activity",
+      trigger: { kind: "extension:personal/demo/activity", config: { repository: "spirit" } },
+    },
+    async (input) => ({
+      kind: input.kind as `extension:${string}`,
+      config: "config" in input ? input.config : {},
+      label: "Spirit activity",
+    }),
+  );
+  assert.equal(preview.trigger.kind, "extension:personal/demo/activity");
+  assert.equal("label" in preview.trigger ? preview.trigger.label : undefined, "Spirit activity");
 });

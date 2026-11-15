@@ -61,7 +61,6 @@ export function SettingsView({
   onRemoveProviderModels,
   onAddMcpServer,
   onUpdateExtensionSettings,
-  onUpdateExtensionSecret,
   onDeleteMcpServer,
   onSaveHookEntry,
   onDeleteHookEntry,
@@ -144,7 +143,6 @@ export function SettingsView({
                 item={extensionSettingsItem}
                 extensionsBusy={extensionsBusy}
                 onUpdateExtensionSettings={onUpdateExtensionSettings}
-                onUpdateExtensionSecret={onUpdateExtensionSecret}
               />
             ) : tab === "developer" && isViteDev ? (
               <DeveloperSettingsPanel

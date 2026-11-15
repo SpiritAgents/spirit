@@ -38,12 +38,11 @@ export interface HostCommandDelegate {
   updateExtension(request: CommandPayloads["updateExtension"]["request"]): Promise<unknown>;
   deleteExtension(request: CommandPayloads["deleteExtension"]["request"]): Promise<unknown>;
   setExtensionEnabled(request: CommandPayloads["setExtensionEnabled"]["request"]): Promise<unknown>;
-  runExtension(request: CommandPayloads["runExtension"]["request"]): Promise<unknown>;
+  invokeExtensionAction(
+    request: CommandPayloads["invokeExtensionAction"]["request"],
+  ): Promise<unknown>;
   updateExtensionSettings(
     request: CommandPayloads["updateExtensionSettings"]["request"],
-  ): Promise<unknown>;
-  updateExtensionSecret(
-    request: CommandPayloads["updateExtensionSecret"]["request"],
   ): Promise<unknown>;
   createRule(request: CommandPayloads["createRule"]["request"]): Promise<unknown>;
   createSkill(request: CommandPayloads["createSkill"]["request"]): Promise<unknown>;
@@ -73,6 +72,15 @@ export interface HostCommandDelegate {
   continueAssistantCompletion(messageId: number): Promise<unknown>;
   poll(request?: import("@spiritagent/api/types").PollRequest): Promise<unknown>;
   listDreamsOverview(): Promise<unknown>;
+  resolveAutomationTriggerMenu(
+    request: CommandPayloads["resolveAutomationTriggerMenu"]["request"],
+  ): Promise<unknown>;
+  cancelAutomationTriggerMenu(
+    request: CommandPayloads["cancelAutomationTriggerMenu"]["request"],
+  ): Promise<unknown>;
+  validateAutomationTrigger(
+    request: CommandPayloads["validateAutomationTrigger"]["request"],
+  ): Promise<unknown>;
   listAutomations(): Promise<unknown>;
   getAutomation(automationId: string): Promise<unknown>;
   createAutomation(request: CommandPayloads["createAutomation"]["request"]): Promise<unknown>;
@@ -273,9 +281,8 @@ const hostCommandDispatch = {
   updateExtension: (host, payload) => host.updateExtension(payload.request),
   deleteExtension: (host, payload) => host.deleteExtension(payload.request),
   setExtensionEnabled: (host, payload) => host.setExtensionEnabled(payload.request),
-  runExtension: (host, payload) => host.runExtension(payload.request),
+  invokeExtensionAction: (host, payload) => host.invokeExtensionAction(payload.request),
   updateExtensionSettings: (host, payload) => host.updateExtensionSettings(payload.request),
-  updateExtensionSecret: (host, payload) => host.updateExtensionSecret(payload.request),
   createRule: (host, payload) => host.createRule(payload.request),
   createSkill: (host, payload) => host.createSkill(payload.request),
   deleteRule: (host, payload) => host.deleteRule(payload.request),
@@ -301,6 +308,10 @@ const hostCommandDispatch = {
     host.continueAssistantCompletion(payload.messageId),
   poll: (host, payload) => host.poll(payload),
   listDreamsOverview: (host) => host.listDreamsOverview(),
+  resolveAutomationTriggerMenu: (host, payload) =>
+    host.resolveAutomationTriggerMenu(payload.request),
+  cancelAutomationTriggerMenu: (host, payload) => host.cancelAutomationTriggerMenu(payload.request),
+  validateAutomationTrigger: (host, payload) => host.validateAutomationTrigger(payload.request),
   listAutomations: (host) => host.listAutomations(),
   getAutomation: (host, payload) => host.getAutomation(payload.automationId),
   createAutomation: (host, payload) => host.createAutomation(payload.request),

@@ -300,9 +300,9 @@ function AutomationListRow({
         ) : null}
       </div>
       <p className="text-xs text-muted-foreground">{triggerLabel}</p>
-      {item.githubPollError ? (
+      {item.triggerError ? (
         <p data-spirit-selectable="text" className="text-xs text-destructive">
-          {item.githubPollError}
+          {item.triggerError}
         </p>
       ) : null}
     </button>

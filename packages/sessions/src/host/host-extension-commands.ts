@@ -33,12 +33,11 @@ import type {
   InstallBuiltInExtensionRequest,
   InstallMarketplaceExtensionRequest,
   RemoveMarketplaceSourceRequest,
-  RunExtensionRequest,
+  InvokeExtensionActionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
   SubmitSkillSlashRequest,
   UpdateExtensionRequest,
-  UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
 } from "../types.js";
 import type { HostExtensionEvent } from "@spiritagent/extensions";
@@ -70,12 +69,17 @@ type HostExtensionManager = {
   }>;
   remove(id: string): Promise<void>;
   setEnabled(id: string, enabled: boolean): Promise<void>;
-  run(input: { id: string; host: DesktopExtensionHostAdapter; logger: Console }): Promise<void>;
+  invokeAction(input: {
+    extensionId: string;
+    actionId: string;
+    params?: unknown;
+    host: DesktopExtensionHostAdapter;
+    logger: Console;
+  }): Promise<unknown>;
   setSettingsValues(input: {
     id: string;
     values: UpdateExtensionSettingsRequest["values"];
   }): Promise<unknown>;
-  setSecretValue(input: { id: string; key: string; value?: string }): Promise<unknown>;
 };
 
 type McpRefreshable = {
@@ -491,23 +495,30 @@ export async function setExtensionEnabledCommand(
   });
 }
 
-export async function runExtensionCommand(
+export async function invokeExtensionActionCommand(
   ctx: HostExtensionCommandContext,
-  request: RunExtensionRequest,
-): Promise<DesktopSnapshot> {
+  request: InvokeExtensionActionRequest,
+): Promise<unknown> {
   return ctx.runSerialized(async () => {
     await ctx.ensureInitialized();
-    const id = request.id.trim();
-    if (!id) {
+    const extensionId = request.id.trim();
+    const actionId = request.actionId.trim();
+    if (!extensionId) {
       throw new Error(i18n.t("error.extensionIdRequired"));
     }
+    if (!actionId) {
+      throw new Error("Extension action id is required.");
+    }
 
-    await ctx.extensionManager().run({
-      id,
+    const result = await ctx.extensionManager().invokeAction({
+      extensionId,
+      actionId,
+      ...(request.params === undefined ? {} : { params: request.params }),
       host: ctx.requireExtensionHostAdapter(),
       logger: console,
     });
-    return ctx.buildSnapshot();
+    await ctx.refreshRuntimeAfterExtensionMutation();
+    return result;
   });
 }
 
@@ -525,31 +536,6 @@ export async function updateExtensionSettingsCommand(
     await ctx.extensionManager().setSettingsValues({
       id,
       values: request.values,
-    });
-    await ctx.refreshRuntimeAfterExtensionMutation();
-    return ctx.buildSnapshot();
-  });
-}
-
-export async function updateExtensionSecretCommand(
-  ctx: HostExtensionCommandContext,
-  request: UpdateExtensionSecretRequest,
-): Promise<DesktopSnapshot> {
-  return ctx.runSerialized(async () => {
-    await ctx.ensureInitialized();
-    const id = request.id.trim();
-    const key = request.key.trim();
-    if (!id) {
-      throw new Error(i18n.t("error.extensionIdRequired"));
-    }
-    if (!key) {
-      throw new Error(i18n.t("error.secretKeyRequired"));
-    }
-
-    await ctx.extensionManager().setSecretValue({
-      id,
-      key,
-      ...(request.value !== undefined ? { value: request.value } : {}),
     });
     await ctx.refreshRuntimeAfterExtensionMutation();
     return ctx.buildSnapshot();

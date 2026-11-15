@@ -43,11 +43,15 @@ import {
   deriveAutomationTitle,
   parseCreateAutomationApprovalLevel,
   parseCreateAutomationTriggerInput,
+  type AutomationTriggerToolInput,
+  type AutomationTriggerValidator,
 } from "@spiritagent/automations/automation-host-tool";
 import {
   createHostAutomationStore,
   formatTriggerLabel,
+  normalizeAutomationTrigger,
   type HostAutomationDefinition,
+  type HostAutomationTrigger,
 } from "@spiritagent/automations";
 import type { ModelReasoningEffort } from "@spiritagent/agent-core/reasoning-effort";
 import type { ModelRef } from "@spiritagent/config";
@@ -205,6 +209,7 @@ export interface NodeHostToolServiceOptions {
   getModelCompatibilityProfile?: () => HostToolModelCompatibilityProfile | undefined;
   getApprovalLevel?: () => ApprovalLevel;
   getAutomationCreateDefaults?: () => HostAutomationCreateDefaults;
+  validateAutomationTrigger?: AutomationTriggerValidator;
   onAutomationCreated?: (definition: HostAutomationDefinition) => void;
   /** Full tool list exposed to the model (builtin + extension + MCP). Used for unknown-tool errors. */
   availableToolDefinitions?: () => JsonValue;
@@ -295,6 +300,7 @@ export class NodeHostToolService<
     this.getModelCompatibilityProfile = options.getModelCompatibilityProfile;
     this.getApprovalLevel = options.getApprovalLevel;
     this.getAutomationCreateDefaults = options.getAutomationCreateDefaults;
+    this.validateAutomationTrigger = options.validateAutomationTrigger;
     this.onAutomationCreated = options.onAutomationCreated;
     this.availableToolDefinitions = options.availableToolDefinitions;
   }
@@ -306,6 +312,8 @@ export class NodeHostToolService<
   private readonly getApprovalLevel: (() => ApprovalLevel) | undefined;
 
   private readonly getAutomationCreateDefaults: (() => HostAutomationCreateDefaults) | undefined;
+
+  private readonly validateAutomationTrigger: AutomationTriggerValidator | undefined;
 
   private readonly onAutomationCreated:
     | ((definition: HostAutomationDefinition) => void)
@@ -569,7 +577,7 @@ export class NodeHostToolService<
           name: CREATE_AUTOMATION_TOOL_NAME,
           title: deriveAutomationTitle(overview, explicitTitle),
           overview,
-          trigger: parseCreateAutomationTriggerInput(parsed),
+          trigger: parseCreateAutomationTriggerInput(parsed) as HostAutomationTrigger,
           approval_level: parseCreateAutomationApprovalLevel(parsed.approval_level),
         };
       }
@@ -789,7 +797,7 @@ export class NodeHostToolService<
       case CREATE_AUTOMATION_TOOL_NAME:
         return {
           kind: "need-approval",
-          approval: this.describeCreateAutomationApproval(request),
+          approval: await this.describeCreateAutomationApproval(request),
         };
       case "edit_file": {
         return {
@@ -853,7 +861,7 @@ export class NodeHostToolService<
         case APPLY_PATCH_HOST_TOOL_NAME:
           return this.describeApplyPatchApproval(request);
         case CREATE_AUTOMATION_TOOL_NAME:
-          return this.describeCreateAutomationApproval(request);
+          return await this.describeCreateAutomationApproval(request);
         default:
           return undefined;
       }
@@ -906,13 +914,14 @@ export class NodeHostToolService<
     };
   }
 
-  private describeCreateAutomationApproval(
+  private async describeCreateAutomationApproval(
     request: Extract<HostToolRequest<QuestionSpec>, { name: typeof CREATE_AUTOMATION_TOOL_NAME }>,
-  ): ToolApprovalRequest {
+  ): Promise<ToolApprovalRequest> {
+    const trigger = await this.resolveAutomationTrigger(request.trigger);
     return {
       kind: "create_automation",
       title: request.title,
-      trigger: request.trigger as JsonValue,
+      trigger: trigger as JsonValue,
       approvalLevel: request.approval_level,
       overview: request.overview,
       overviewChars: [...request.overview].length,
@@ -2032,6 +2041,17 @@ export class NodeHostToolService<
     return `[write]\naction: create_file\npath: ${target}\nchars: ${[...content].length}`;
   }
 
+  private async resolveAutomationTrigger(input: AutomationTriggerToolInput) {
+    if (this.validateAutomationTrigger) {
+      return this.validateAutomationTrigger(input);
+    }
+    const normalized = normalizeAutomationTrigger(input);
+    if (!normalized) {
+      throw new Error("Invalid automation trigger.");
+    }
+    return normalized;
+  }
+
   private async executeCreateAutomation(
     request: Extract<HostToolRequest<QuestionSpec>, { name: typeof CREATE_AUTOMATION_TOOL_NAME }>,
   ): Promise<string> {
@@ -2043,7 +2063,7 @@ export class NodeHostToolService<
     const definition = await store.create({
       title: request.title,
       overview: request.overview,
-      trigger: request.trigger,
+      trigger: await this.resolveAutomationTrigger(request.trigger),
       workspaceRoot: defaults.workspaceRoot,
       modelRef: defaults.modelRef,
       ...(defaults.reasoningEffort ? { reasoningEffort: defaults.reasoningEffort } : {}),

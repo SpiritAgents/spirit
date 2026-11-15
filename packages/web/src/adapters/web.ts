@@ -27,10 +27,8 @@ import type {
   InstallMarketplaceExtensionRequest,
   RemoveMarketplaceSourceRequest,
   UpdateExtensionRequest,
-  RunExtensionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
-  UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   PreviewModelsRequest,
   PreviewModelsResponse,
@@ -199,14 +197,13 @@ export function createWebHostApi(): HostApi {
     setExtensionEnabled(request: SetExtensionEnabledRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions/enabled", request);
     },
-    runExtension(request: RunExtensionRequest) {
-      return post<DesktopSnapshot>(baseUrl, "/api/extensions/run", request);
+    invokeExtensionAction() {
+      return Promise.reject(
+        new Error("Extension actions are only available in the Electron desktop app."),
+      );
     },
     updateExtensionSettings(request: UpdateExtensionSettingsRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions/settings", request);
-    },
-    updateExtensionSecret(request: UpdateExtensionSecretRequest) {
-      return post<DesktopSnapshot>(baseUrl, "/api/extensions/secret", request);
     },
     createRule(request: CreateRuleRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/rules", request);
@@ -388,6 +385,19 @@ export function createWebHostApi(): HostApi {
     },
     listDreamsOverview() {
       return get<DesktopDreamOverviewItem[]>(baseUrl, "/api/dreams");
+    },
+    resolveAutomationTriggerMenu() {
+      return Promise.reject(
+        new Error("Automation trigger menus are only available in the Electron desktop app."),
+      );
+    },
+    cancelAutomationTriggerMenu() {
+      return Promise.resolve();
+    },
+    validateAutomationTrigger() {
+      return Promise.reject(
+        new Error("Automation trigger validation is only available in the Electron desktop app."),
+      );
     },
     listAutomations() {
       return get<import("../types.js").DesktopAutomationListItem[]>(baseUrl, "/api/automations");

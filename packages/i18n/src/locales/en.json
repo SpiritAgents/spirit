@@ -667,6 +667,8 @@
       "repositorySearchPlaceholder": "Search repositories",
       "repositoryEmpty": "No repositories found",
       "repositoryLoadFailed": "Failed to load repositories. Try again.",
+      "triggerLoadFailed": "Failed to load trigger options",
+      "triggerEmpty": "No trigger options available",
       "pullRequestCreated": "Pull request created",
       "issueCreated": "Issue created"
     },
@@ -696,6 +698,7 @@
     "noMatches": "No matching extensions.",
     "extensionNotFound": "Extension not found. Please return to the list.",
     "install": "Install",
+    "authorize": "Authorize",
     "httpLocalSourceInstallUnsupported": "HTTP marketplaces can't install extensions that use a local path source",
     "enable": "Enable",
     "disable": "Disable",
@@ -704,6 +707,8 @@
     "uninstallExtension": "Uninstall Extension",
     "empty": "No extensions",
     "contributionGroupTools": "Tools",
+    "contributionGroupAuthorization": "Authorization",
+    "contributionGroupAutomationTriggers": "Automation Triggers",
     "contributionGroupDesktop": "Desktop",
     "contributionRuleTitle": "Rule",
     "contributionStyleTitle": "Style",
@@ -753,7 +758,9 @@
     "uninstallPersonalConfirmTitle": "Uninstall \"{{name}}\"?",
     "uninstallPersonalConfirmDescription": "This will remove the local installation and delete its record from the Personal marketplace.",
     "removeMarketplaceConfirmTitle": "Remove \"{{name}}\"?",
-    "removeMarketplaceConfirmDescription": "This cannot be undone."
+    "removeMarketplaceConfirmDescription": "This cannot be undone.",
+    "authorizationOptions": "Authorization Options",
+    "authorizationOptionsFor": "{{name}} Authorization Options"
   },
   "dreams": {
     "collectorRunning": "Dreams are being collected. New recent trends will appear here soon.",
@@ -931,6 +938,7 @@
       "createAutomationDaily": "Create {{title}} to run daily at {{time}}",
       "createAutomationWeekly": "Create {{title}} to run every {{weekday}} at {{time}}",
       "createAutomationGithubIssue": "Create {{title}} to run when an issue is opened in {{repo}}",
+      "createAutomationWithTrigger": "Create {title} to run {trigger}",
       "createAutomationGithubPullRequest": "Create {{title}} to run when a pull request is opened in {{repo}}",
       "editFile": "Edit File",
       "deleteFile": "Delete File",
@@ -1437,6 +1445,12 @@
     "defaultChatName": "Chat",
     "taskComplete": {
       "title": "Task completed"
+    },
+    "automation": {
+      "completedTitle": "{{title}} completed",
+      "blockedTitle": "{{title}} needs attention",
+      "failedTitle": "{{title}} failed",
+      "triggerErrorTitle": "{{title}} trigger needs attention"
     },
     "approval": {
       "title": "Approval required",

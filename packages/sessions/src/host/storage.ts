@@ -570,18 +570,17 @@ export function createDesktopExtensionStateStore(
     },
     async loadSecret(extensionId, key) {
       const value = getKeyringPassword(KEYRING_SERVICE, extensionSecretAccount(extensionId, key));
-      const trimmed = value?.trim();
-      return trimmed || undefined;
+      return value;
     },
     async saveSecret(extensionId, key, value) {
-      setKeyringPassword(KEYRING_SERVICE, extensionSecretAccount(extensionId, key), value.trim());
+      setKeyringPassword(KEYRING_SERVICE, extensionSecretAccount(extensionId, key), value);
     },
     async deleteSecret(extensionId, key) {
       deleteKeyringPassword(KEYRING_SERVICE, extensionSecretAccount(extensionId, key));
     },
     async hasSecret(extensionId, key) {
       const value = getKeyringPassword(KEYRING_SERVICE, extensionSecretAccount(extensionId, key));
-      return Boolean(value?.trim());
+      return value !== undefined && value.length > 0;
     },
   };
 }

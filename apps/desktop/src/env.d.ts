@@ -23,10 +23,9 @@ import type {
   InstallMarketplaceExtensionRequest,
   RemoveMarketplaceSourceRequest,
   UpdateExtensionRequest,
-  RunExtensionRequest,
+  InvokeExtensionActionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
-  UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   PreviewModelsRequest,
   PreviewModelsResponse,
@@ -95,9 +94,8 @@ declare global {
     updateExtension(request: UpdateExtensionRequest): Promise<unknown>;
     deleteExtension(request: DeleteExtensionRequest): Promise<DesktopSnapshot>;
     setExtensionEnabled(request: SetExtensionEnabledRequest): Promise<DesktopSnapshot>;
-    runExtension(request: RunExtensionRequest): Promise<DesktopSnapshot>;
+    invokeExtensionAction(request: InvokeExtensionActionRequest): Promise<unknown>;
     updateExtensionSettings(request: UpdateExtensionSettingsRequest): Promise<DesktopSnapshot>;
-    updateExtensionSecret(request: UpdateExtensionSecretRequest): Promise<DesktopSnapshot>;
     createRule(request: CreateRuleRequest): Promise<DesktopSnapshot>;
     createSkill(request: CreateSkillRequest): Promise<DesktopSnapshot>;
     deleteRule(request: DeleteRuleRequest): Promise<DesktopSnapshot>;
@@ -138,6 +136,15 @@ declare global {
     poll(request?: import("./types").PollRequest): Promise<DesktopSnapshot>;
     setSubagentViewerTarget(parentToolCallId: string | null): Promise<DesktopSnapshot>;
     listDreamsOverview(): Promise<DesktopDreamOverviewItem[]>;
+    resolveAutomationTriggerMenu(
+      request: import("./types.js").ResolveAutomationTriggerMenuRequest,
+    ): Promise<import("./types.js").DesktopAutomationTriggerMenuPage>;
+    cancelAutomationTriggerMenu(
+      request: import("./types.js").CancelAutomationTriggerMenuRequest,
+    ): Promise<void>;
+    validateAutomationTrigger(
+      request: import("./types.js").ValidateAutomationTriggerRequest,
+    ): Promise<import("./types.js").DesktopAutomationTrigger>;
     listAutomations(): Promise<import("./types.js").DesktopAutomationListItem[]>;
     getAutomation(
       automationId: string,
@@ -421,6 +428,9 @@ declare global {
     subscribeWindowFullScreen(callback: (fullScreen: boolean) => void): () => void;
     subscribeAppAwayChanged(callback: (away: boolean) => void): () => void;
     subscribeNotifyRefresh(callback: () => void): () => void;
+    subscribeAutomationNotification?(
+      callback: (payload: { automationId: string }) => void,
+    ): () => void;
     subscribeApprovalFromNotification(
       callback: (payload: { decision: "allow" | "deny"; requestId?: string }) => void,
     ): () => void;

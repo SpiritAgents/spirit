@@ -7,8 +7,8 @@
  *
  * Injection is opt-in per call site: first-party curated ids (model display
  * titles, marketplace category headers) pass this table to `formatTitleFromId`;
- * third-party extension contribution names (skills, tools, MCP servers) do not,
- * so author-chosen names stay as written.
+ * third-party extension contribution ids (skills, tools, MCP servers, authorizations) also use this table,
+ * while author-chosen displayName values stay verbatim.
  */
 export const WELL_KNOWN_CASING_OVERRIDES: Readonly<Record<string, string>> = {
   ai: "AI",
@@ -24,6 +24,7 @@ export const WELL_KNOWN_CASING_OVERRIDES: Readonly<Record<string, string>> = {
   mimo: "MiMo",
   minimax: "MiniMax",
   nvidia: "NVIDIA",
+  oauth: "OAuth",
   openai: "OpenAI",
   oss: "OSS",
   spacexai: "SpaceXAI",

@@ -33,6 +33,7 @@ import {
   registerDesktopNotifications,
   registerWindowsToastActivationHandler,
   setApprovalNotificationHandler,
+  setAutomationNotificationHandler,
   showDesktopNotification,
   type DesktopNotificationPayload,
 } from "./desktop-notifications.js";
@@ -162,16 +163,16 @@ import {
   publishDesktopExtensionWebViewEvent,
   subscribeDesktopExtensionWebViewEvents,
   resolveDesktopExtensionTabIconFile,
-  openDesktopHostExtensionUi,
+  openDesktopHostExtensionUiSession,
+  updateDesktopAutomationTriggerContribution,
   openDesktopExtensionTab,
   focusDesktopExtensionTab,
   closeDesktopExtensionTab,
   updateDesktopExtensionTab,
   emitDesktopExtensionTabEvent,
   subscribeDesktopExtensionTabEvents,
-  closeDesktopHostExtensionUi,
-  resolveDesktopExtensionViewOwner,
   setDesktopGitHubFetchImplementation,
+  setDesktopAutomationNotificationAdapter,
   setDesktopExtensionHostAdapter,
   shutdownDesktopHostService,
   refreshDesktopRemoteControlConfig,
@@ -215,6 +216,7 @@ import {
 } from "./github-oauth-flow.js";
 import { resolveRendererDistPath } from "./renderer-dist.js";
 import { registerGitHubDeviceLoginRunners } from "@spiritagent/sessions/host/github-oauth-bridge";
+import { assertExtensionExternalUrl } from "./extension-external-url.js";
 import { listSystemFonts } from "./system-fonts.js";
 import { syncWindowsImmersiveDarkMode } from "./win-dwm.js";
 import { PRODUCT_DISPLAY_NAME } from "./product-display-name.js";
@@ -279,21 +281,17 @@ const desktopExtensionHostAdapter: NonNullable<
     }
     await dialog.showMessageBox(options);
   },
+  async openExternal(url) {
+    await shell.openExternal(assertExtensionExternalUrl(url).toString());
+  },
   ui: {
-    async open(viewId, params) {
-      const owner = await resolveDesktopExtensionViewOwner(viewId);
-      if (!owner) {
-        throw new Error(`Unknown or ambiguous extension view: ${viewId}`);
-      }
-      const opened = await openDesktopHostExtensionUi({
-        extensionId: owner.extensionId,
-        viewId,
-        params,
-      });
-      return opened.kind === "opened" ? opened.result : opened;
+    async open() {
+      throw new Error("Extension identity is not bound to the view API.");
     },
-    close() {
-      closeDesktopHostExtensionUi();
+  },
+  automationTriggers: {
+    async update() {
+      throw new Error("Extension identity is not bound to the Automation trigger API.");
     },
   },
   tabs: {
@@ -338,7 +336,20 @@ const desktopExtensionHostAdapter: NonNullable<
     return {
       boundExtensionId: extensionId,
       showMessageBox: (request) => desktopExtensionHostAdapter.showMessageBox(request),
-      ui: desktopExtensionHostAdapter.ui,
+      openExternal: (url) => desktopExtensionHostAdapter.openExternal(url),
+      ui: {
+        async open(viewId, params) {
+          const view = await resolveDesktopExtensionViewFile(extensionId, viewId);
+          if (!view) {
+            throw new Error(`Unknown extension view: ${extensionId}/${viewId}`);
+          }
+          return openDesktopHostExtensionUiSession({ extensionId, viewId, params });
+        },
+      },
+      automationTriggers: {
+        update: (contributionId, patch) =>
+          updateDesktopAutomationTriggerContribution({ extensionId, contributionId, patch }),
+      },
       tabs: {
         open: (request) =>
           openDesktopExtensionTab({
@@ -1278,6 +1289,26 @@ if (gotSpiritSingleInstanceLock) {
       net.fetch(input instanceof URL ? input.toString() : input, init);
 
     setDesktopGitHubFetchImplementation(electronNetFetch);
+    setDesktopAutomationNotificationAdapter({
+      isAway: () => Promise.resolve(getAppAwayFromUser()),
+      show: (payload) => showDesktopNotification(payload),
+    });
+    setAutomationNotificationHandler(async (context) => {
+      await focusOrCreateSpiritDesktopWindows();
+      if (context.sessionPath) {
+        await handleSpiritOpenSessionFromProtocol(context.sessionPath);
+        return;
+      }
+      if (context.automationId) {
+        for (const window of BrowserWindow.getAllWindows()) {
+          if (!window.isDestroyed()) {
+            window.webContents.send("desktop:automation-notification", {
+              automationId: context.automationId,
+            });
+          }
+        }
+      }
+    });
 
     unsubscribeDesktopDreamUpdates = subscribeDesktopDreamUpdates((snapshot) => {
       for (const window of BrowserWindow.getAllWindows()) {

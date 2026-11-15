@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/automations": "workspace:*",
     "@spiritagent/config": "workspace:*",
     "@spiritagent/extension-toolkit": "workspace:*",
     "@spiritagent/icons": "workspace:*",
@@ -43,6 +44,7 @@
   },
   "devDependencies": {
     "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/automations": "workspace:*",
     "@spiritagent/config": "workspace:*",
     "@spiritagent/extension-toolkit": "workspace:*",
     "@spiritagent/icons": "workspace:*",

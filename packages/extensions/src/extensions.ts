@@ -24,6 +24,7 @@ import {
   MCP_CONFIG_FILE_NAME,
   parseHooksConfigFile,
   parseMcpConfigFile,
+  type JsonObject,
 } from "@spiritagent/agent-core";
 import {
   assertDeclaredInstructionContributionFiles as assertToolkitDeclaredInstructionContributionFiles,
@@ -32,6 +33,16 @@ import {
   type MarketplaceExtensionDump,
 } from "@spiritagent/extension-toolkit";
 
+import type {
+  AutomationTriggerContributionDefinition,
+  AutomationTriggerMenuPage,
+  AutomationTriggerPollOutput,
+  AutomationTriggerPollTarget,
+  AutomationTriggerProvider,
+  AutomationTriggerValidation,
+} from "@spiritagent/automations/trigger-provider";
+
+import { assertHostExtensionJsonValue } from "./extension-tab-values.js";
 import { clearBuiltInExtensionRemoved, noteBuiltInExtensionRemoved } from "./built-in/state.js";
 import { removePersonalRegistryEntry } from "./marketplace/personal.js";
 import {
@@ -55,6 +66,7 @@ import {
 
 const TEMP_DIR_PREFIX = "spirit-extension-";
 const EXTENSION_FIELD_KEY_PATTERN = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/u;
+const EXTENSION_SECRET_SLOT_KEY_PATTERN = /^[A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*$/u;
 const EXTENSION_TOOL_INVOCATION_NAME_MAX_LENGTH = 64;
 const EXTENSION_TOOL_ID_FRAGMENT_LIMIT = 16;
 const EXTENSION_TOOL_NAME_FRAGMENT_LIMIT = 24;
@@ -78,6 +90,7 @@ export const SUPPORTED_HOST_EXTENSION_REQUESTED_CAPABILITIES = [
   "questions-flow",
   "settings",
   "secret-storage",
+  "automation-triggers",
   "structured-results",
   "desktop-ui",
   "desktop-webview-display",
@@ -143,8 +156,21 @@ export interface HostExtensionContributedToolDefinition {
   executionMode?: HostExtensionToolExecutionMode;
 }
 
+export interface HostExtensionAuthorizationDefinition {
+  id: string;
+  /** Handles initial authorization and subsequent credential management for this contribution. */
+  action: string;
+  secretSlots: string[];
+}
+
+export interface HostExtensionAutomationTriggerDefinition extends AutomationTriggerContributionDefinition {
+  icon: HostExtensionDesktopTabIcon;
+}
+
 export interface HostExtensionContributionSet {
   tools?: HostExtensionContributedToolDefinition[];
+  automationTriggers?: HostExtensionAutomationTriggerDefinition[];
+  authorizations?: HostExtensionAuthorizationDefinition[];
   desktop?: HostExtensionDesktopContributionSet;
   cli?: HostExtensionCliContributionSet;
   /** Declared agent MCP contribution; files live at the package-root mcp.json. */
@@ -296,13 +322,6 @@ export interface HostExtensionSettingDefinition {
   options?: HostExtensionSettingOption[];
 }
 
-export interface HostExtensionSecretSlot {
-  key: string;
-  title: string;
-  description?: string;
-  required?: boolean;
-}
-
 export interface HostExtensionAuthor {
   name: string;
   email?: string;
@@ -339,7 +358,7 @@ export interface HostExtensionManifest {
   requestedCapabilities?: HostExtensionRequestedCapability[];
   contributes?: HostExtensionContributionSet;
   settingsSchema?: HostExtensionSettingDefinition[];
-  secretSlots?: HostExtensionSecretSlot[];
+  secretSlots?: string[];
 }
 
 export interface HostMarketplaceCatalogItem extends HostInstalledExtension {
@@ -508,7 +527,60 @@ export interface DispatchExtensionWebViewEventRequest<THostApi> {
   logger?: Pick<Console, "error" | "log">;
 }
 
+export interface HostExtensionActionExecutionContext<THostApi> {
+  extension: HostExtensionRuntimeInfo;
+  host: THostApi;
+  actionId: string;
+  params?: unknown;
+  log(message: string): void;
+  settings: HostExtensionSettingsAccessor;
+  secrets: HostExtensionSecretsAccessor;
+}
+
+export type HostExtensionActionHandler<THostApi> = (
+  context: HostExtensionActionExecutionContext<THostApi>,
+) => Promise<unknown> | unknown;
+
+export interface InvokeExtensionActionRequest<THostApi> {
+  extensionId: string;
+  actionId: string;
+  params?: unknown;
+  host: THostApi;
+  logger?: Pick<Console, "error" | "log">;
+}
+
+export interface InvokeExtensionAutomationTriggerRequest<THostApi> {
+  extensionId: string;
+  contributionId: string;
+  host: THostApi;
+  logger?: Pick<Console, "error" | "log">;
+}
+
+export interface ValidateExtensionAutomationTriggerRequest<
+  THostApi,
+> extends InvokeExtensionAutomationTriggerRequest<THostApi> {
+  config: JsonObject;
+}
+
+export interface InvokeExtensionAutomationTriggerMenuRequest<
+  THostApi,
+> extends InvokeExtensionAutomationTriggerRequest<THostApi> {
+  path: string[];
+  query?: string;
+  page: number;
+  signal: AbortSignal;
+}
+
+export interface InvokeExtensionAutomationTriggerPollRequest<
+  THostApi,
+> extends InvokeExtensionAutomationTriggerRequest<THostApi> {
+  triggers: AutomationTriggerPollTarget[];
+  signal: AbortSignal;
+}
+
 export interface HostActivatedExtension {
+  actions?: Record<string, HostExtensionActionHandler<unknown>>;
+  automationTriggers?: Record<string, AutomationTriggerProvider<unknown>>;
   onWebViewEvent?(event: HostExtensionWebViewEvent): Promise<void> | void;
   onTabRequest?<THostApi>(
     request: HostExtensionTabRequestContext<THostApi>,
@@ -545,12 +617,6 @@ export interface UpdateExtensionSettingsRequest {
   values: HostExtensionSettingsValues;
 }
 
-export interface UpdateExtensionSecretRequest {
-  id: string;
-  key: string;
-  value?: string;
-}
-
 export interface DispatchExtensionEventRequest<THostApi> {
   event: HostExtensionEvent;
   host: THostApi;
@@ -571,10 +637,19 @@ export interface HostExtensionManager {
   run<THostApi>(request: RunExtensionRequest<THostApi>): Promise<void>;
   invokeTool<THostApi>(request: InvokeExtensionToolRequest<THostApi>): Promise<string>;
   invokeTabRequest<THostApi>(request: InvokeExtensionTabRequest<THostApi>): Promise<unknown>;
+  invokeAction<THostApi>(request: InvokeExtensionActionRequest<THostApi>): Promise<unknown>;
+  getAuthorizationConfigurations(id: string): Promise<Record<string, boolean>>;
+  validateAutomationTrigger<THostApi>(
+    request: ValidateExtensionAutomationTriggerRequest<THostApi>,
+  ): Promise<AutomationTriggerValidation>;
+  invokeAutomationTriggerMenu<THostApi>(
+    request: InvokeExtensionAutomationTriggerMenuRequest<THostApi>,
+  ): Promise<AutomationTriggerMenuPage>;
+  invokeAutomationTriggerPoll<THostApi>(
+    request: InvokeExtensionAutomationTriggerPollRequest<THostApi>,
+  ): Promise<AutomationTriggerPollOutput>;
   getSettingsValues(id: string): Promise<HostExtensionSettingsValues>;
   setSettingsValues(request: UpdateExtensionSettingsRequest): Promise<HostExtensionSettingsValues>;
-  getSecretStatus(id: string): Promise<Record<string, boolean>>;
-  setSecretValue(request: UpdateExtensionSecretRequest): Promise<Record<string, boolean>>;
   collectSystemPromptContributions<THostApi>(
     request: CollectExtensionSystemPromptContributionsRequest<THostApi>,
   ): Promise<HostExtensionSystemPromptContribution[]>;
@@ -640,17 +715,36 @@ export function createHostExtensionManager(
     async invokeTabRequest(request) {
       return invokeExtensionTabRequest(context, activatedExtensions, stateStore, request);
     },
+    async invokeAction(request) {
+      return invokeExtensionAction(context, activatedExtensions, stateStore, request);
+    },
+    async getAuthorizationConfigurations(id) {
+      return loadExtensionAuthorizationConfigurations(context, stateStore, id);
+    },
+    async validateAutomationTrigger(request) {
+      return validateExtensionAutomationTrigger(context, activatedExtensions, stateStore, request);
+    },
+    async invokeAutomationTriggerMenu(request) {
+      return invokeExtensionAutomationTriggerMenu(
+        context,
+        activatedExtensions,
+        stateStore,
+        request,
+      );
+    },
+    async invokeAutomationTriggerPoll(request) {
+      return invokeExtensionAutomationTriggerPoll(
+        context,
+        activatedExtensions,
+        stateStore,
+        request,
+      );
+    },
     async getSettingsValues(id) {
       return loadExtensionSettingsValues(context, stateStore, id);
     },
     async setSettingsValues(request) {
       return saveExtensionSettingsValues(context, stateStore, request);
-    },
-    async getSecretStatus(id) {
-      return loadExtensionSecretStatus(context, stateStore, id);
-    },
-    async setSecretValue(request) {
-      return saveExtensionSecretValue(context, stateStore, request);
     },
     async collectSystemPromptContributions(request) {
       return collectExtensionSystemPromptContributions(
@@ -870,6 +964,14 @@ export async function installPreparedExtensionDirectory(
   if (!replaceExisting && (existsSync(targetDirectory) || registryEntries.has(manifest.id))) {
     throw new Error(`The extension already exists; remove it before importing: ${manifest.id}`);
   }
+  const previousManifest =
+    replaceExisting &&
+    existsSync(path.join(targetDirectory, SPIRIT_DIR_NAME, EXTENSION_DUMP_FILE_NAME))
+      ? await readInstalledExtensionDump(
+          path.join(targetDirectory, SPIRIT_DIR_NAME, EXTENSION_DUMP_FILE_NAME),
+          targetDirectory,
+        )
+      : undefined;
 
   if (manifest.main) {
     const mainFilePath = path.join(preparedDirectoryPath, ...manifest.main.split("/"));
@@ -892,8 +994,10 @@ export async function installPreparedExtensionDirectory(
     sourceDirectory,
     `.backup-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
   );
+  const hadExistingDirectory = replaceExisting && existsSync(targetDirectory);
   let renamedExisting = false;
   let movedIntoPlace = false;
+  let updateApplied = false;
 
   try {
     await cp(preparedDirectoryPath, stagedDirectory, {
@@ -902,25 +1006,39 @@ export async function installPreparedExtensionDirectory(
       errorOnExist: true,
     });
 
-    if (replaceExisting && existsSync(targetDirectory)) {
+    if (hadExistingDirectory) {
       await rename(targetDirectory, backupDirectory);
       renamedExisting = true;
     }
 
     await rename(stagedDirectory, targetDirectory);
     movedIntoPlace = true;
-  } catch (error) {
-    if (!movedIntoPlace) {
-      await rm(targetDirectory, { recursive: true, force: true });
+
+    if (previousManifest) {
+      const removedSlots = (previousManifest.secretSlots ?? []).filter(
+        (key) => !(manifest.secretSlots ?? []).includes(key),
+      );
+      // Keep the old package restorable until cleanup finishes so a failed
+      // keyring operation can be retried from the old manifest.
+      await deleteExtensionSecretSlots(context, previousManifest.id, removedSlots);
     }
-    if (renamedExisting && !existsSync(targetDirectory) && existsSync(backupDirectory)) {
-      await rename(backupDirectory, targetDirectory);
-      renamedExisting = false;
+    updateApplied = true;
+  } catch (error) {
+    if (renamedExisting) {
+      if (movedIntoPlace) {
+        await rm(targetDirectory, { recursive: true, force: true });
+      }
+      if (existsSync(backupDirectory)) {
+        await rename(backupDirectory, targetDirectory);
+        renamedExisting = false;
+      }
+    } else if (!hadExistingDirectory) {
+      await rm(targetDirectory, { recursive: true, force: true });
     }
     throw error;
   } finally {
     await rm(stagingRoot, { recursive: true, force: true });
-    if (renamedExisting && existsSync(backupDirectory)) {
+    if (updateApplied && renamedExisting && existsSync(backupDirectory)) {
       await rm(backupDirectory, { recursive: true, force: true });
     }
   }
@@ -972,6 +1090,7 @@ export async function removeInstalledExtension(
     throw new Error(`Extension not found: ${normalizedId}`);
   }
 
+  await deleteExtensionSecretSlots(context, target.id, target.manifest.secretSlots ?? []);
   await rm(target.directoryPath, { recursive: true, force: true });
   await writeExtensionRegistry(
     paths.extensionsIndexFile,
@@ -1104,6 +1223,189 @@ export async function invokeExtensionTool<THostApi>(
   return renderExtensionToolResult(result);
 }
 
+async function requireAutomationTriggerProvider<THostApi>(
+  context: ExtensionManagementContext,
+  activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
+  stateStore: ExtensionStateStore,
+  request: InvokeExtensionAutomationTriggerRequest<THostApi>,
+) {
+  const target = await requireInstalledExtension(context, request.extensionId);
+  if (!target.enabled) {
+    throw new Error(`The extension is disabled: ${target.id}`);
+  }
+  const contribution = target.manifest.contributes?.automationTriggers?.find(
+    (entry) => entry.id === request.contributionId,
+  );
+  if (!contribution) {
+    throw new Error(
+      `The extension does not declare the Automation trigger: ${request.contributionId}`,
+    );
+  }
+  const entry = await ensureActivatedExtension(target, activatedExtensions, stateStore, {
+    host: request.host,
+    ...(request.logger ? { logger: request.logger } : {}),
+    log: (message) => {
+      request.logger?.log(`[extension:${target.id}] ${message}`);
+    },
+  });
+  const provider = entry.activatedExtension?.automationTriggers?.[request.contributionId];
+  if (!provider) {
+    throw new Error(
+      `The extension does not export the Automation trigger provider: ${request.contributionId}`,
+    );
+  }
+  return { target, entry, provider };
+}
+
+function automationTriggerBaseContext<THostApi>(
+  target: HostInstalledExtension,
+  entry: ActivatedExtensionCacheEntry,
+  stateStore: ExtensionStateStore,
+  request: InvokeExtensionAutomationTriggerRequest<THostApi>,
+) {
+  return {
+    extension: entry.runtimeInfo,
+    host: bindHostForExtension(request.host, target.id),
+    contributionId: request.contributionId,
+    settings: createSettingsAccessor(target, stateStore),
+    secrets: createSecretsAccessor(target, stateStore),
+  };
+}
+
+export async function validateExtensionAutomationTrigger<THostApi>(
+  context: ExtensionManagementContext,
+  activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
+  stateStore: ExtensionStateStore,
+  request: ValidateExtensionAutomationTriggerRequest<THostApi>,
+): Promise<AutomationTriggerValidation> {
+  assertHostExtensionJsonValue(request.config, "Automation trigger config");
+  if (Array.isArray(request.config)) {
+    throw new Error("Automation trigger config must be an object.");
+  }
+  const { target, entry, provider } = await requireAutomationTriggerProvider(
+    context,
+    activatedExtensions,
+    stateStore,
+    request,
+  );
+  const validation = await provider.validate({
+    ...automationTriggerBaseContext(target, entry, stateStore, request),
+    config: request.config,
+  });
+  if (!isRecord(validation) || typeof validation.label !== "string" || !validation.label.trim()) {
+    throw new Error("Automation trigger validation must return a non-empty label.");
+  }
+  assertHostExtensionJsonValue(validation.config, "Validated Automation trigger config");
+  if (Array.isArray(validation.config)) {
+    throw new Error("Validated Automation trigger config must be an object.");
+  }
+  return { config: validation.config, label: validation.label.trim() };
+}
+
+export async function invokeExtensionAutomationTriggerMenu<THostApi>(
+  context: ExtensionManagementContext,
+  activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
+  stateStore: ExtensionStateStore,
+  request: InvokeExtensionAutomationTriggerMenuRequest<THostApi>,
+): Promise<AutomationTriggerMenuPage> {
+  if (!Number.isInteger(request.page) || request.page < 1) {
+    throw new Error("Automation trigger menu page must be a positive integer.");
+  }
+  if (request.path.some((entry) => !entry.trim())) {
+    throw new Error("Automation trigger menu path ids must not be empty.");
+  }
+  const { target, entry, provider } = await requireAutomationTriggerProvider(
+    context,
+    activatedExtensions,
+    stateStore,
+    request,
+  );
+  if (!provider.menu) {
+    throw new Error(`The Automation trigger does not provide a menu: ${request.contributionId}`);
+  }
+  const page = await provider.menu({
+    ...automationTriggerBaseContext(target, entry, stateStore, request),
+    path: request.path,
+    ...(request.query === undefined ? {} : { query: request.query }),
+    page: request.page,
+    signal: request.signal,
+  });
+  if (!isRecord(page) || !Array.isArray(page.items)) {
+    throw new Error("Automation trigger menu must return an items array.");
+  }
+  return page;
+}
+
+export async function invokeExtensionAutomationTriggerPoll<THostApi>(
+  context: ExtensionManagementContext,
+  activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
+  stateStore: ExtensionStateStore,
+  request: InvokeExtensionAutomationTriggerPollRequest<THostApi>,
+): Promise<AutomationTriggerPollOutput> {
+  for (const trigger of request.triggers) {
+    if (!trigger.automationId.trim()) {
+      throw new Error("Automation trigger poll targets require an automation id.");
+    }
+    assertHostExtensionJsonValue(trigger.config, "Automation trigger poll config");
+    if (trigger.state !== undefined) {
+      assertHostExtensionJsonValue(trigger.state, "Automation trigger poll state");
+    }
+  }
+  const { target, entry, provider } = await requireAutomationTriggerProvider(
+    context,
+    activatedExtensions,
+    stateStore,
+    request,
+  );
+  const output = await provider.poll({
+    ...automationTriggerBaseContext(target, entry, stateStore, request),
+    triggers: request.triggers,
+    signal: request.signal,
+  });
+  if (!isRecord(output) || !Array.isArray(output.results)) {
+    throw new Error("Automation trigger poll must return a results array.");
+  }
+  return output;
+}
+
+export async function invokeExtensionAction<THostApi>(
+  context: ExtensionManagementContext,
+  activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
+  stateStore: ExtensionStateStore,
+  request: InvokeExtensionActionRequest<THostApi>,
+): Promise<unknown> {
+  const target = await requireInstalledExtension(context, request.extensionId);
+  if (!target.enabled) {
+    throw new Error(`The extension is disabled: ${target.id}`);
+  }
+  const actionId = request.actionId.trim();
+  if (!target.manifest.contributes?.authorizations?.some((entry) => entry.action === actionId)) {
+    throw new Error(`The extension does not declare the action: ${actionId}`);
+  }
+  const entry = await ensureActivatedExtension(target, activatedExtensions, stateStore, {
+    host: request.host,
+    ...(request.logger ? { logger: request.logger } : {}),
+    log: (message) => {
+      request.logger?.log(`[extension:${target.id}] ${message}`);
+    },
+  });
+  const handler = entry.activatedExtension?.actions?.[actionId];
+  if (!handler) {
+    throw new Error(`The extension does not export the action: ${actionId}`);
+  }
+  return handler({
+    extension: entry.runtimeInfo,
+    host: bindHostForExtension(request.host, target.id),
+    actionId,
+    ...(request.params === undefined ? {} : { params: request.params }),
+    log: (message) => {
+      request.logger?.log(`[extension:${target.id}] ${message}`);
+    },
+    settings: createSettingsAccessor(target, stateStore),
+    secrets: createSecretsAccessor(target, stateStore),
+  });
+}
+
 export async function invokeExtensionTabRequest<THostApi>(
   context: ExtensionManagementContext,
   activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
@@ -1159,45 +1461,20 @@ export async function saveExtensionSettingsValues(
   return saveSettingsValuesForExtension(extension, stateStore, request.values);
 }
 
-export async function loadExtensionSecretStatus(
+export async function loadExtensionAuthorizationConfigurations(
   context: ExtensionManagementContext,
   stateStore: ExtensionStateStore,
   id: string,
 ): Promise<Record<string, boolean>> {
   const extension = await requireInstalledExtension(context, id);
-  const status: Record<string, boolean> = {};
-
-  for (const slot of extension.manifest.secretSlots ?? []) {
-    status[slot.key] = await hasExtensionSecret(stateStore, extension.id, slot.key);
+  const result: Record<string, boolean> = {};
+  for (const authorization of extension.manifest.contributes?.authorizations ?? []) {
+    const configured = await Promise.all(
+      authorization.secretSlots.map((key) => hasExtensionSecret(stateStore, extension.id, key)),
+    );
+    result[authorization.id] = configured.every(Boolean);
   }
-
-  return status;
-}
-
-export async function saveExtensionSecretValue(
-  context: ExtensionManagementContext,
-  stateStore: ExtensionStateStore,
-  request: UpdateExtensionSecretRequest,
-): Promise<Record<string, boolean>> {
-  const extension = await requireInstalledExtension(context, request.id);
-  const secretKey = request.key.trim();
-  if (!extension.manifest.secretSlots?.some((slot) => slot.key === secretKey)) {
-    throw new Error(`The extension does not declare the secret slot: ${secretKey}`);
-  }
-
-  const nextValue = request.value?.trim();
-  if (nextValue) {
-    if (!stateStore.saveSecret) {
-      throw new Error(
-        `The current host does not implement extension secret storage: ${extension.id}`,
-      );
-    }
-    await stateStore.saveSecret(extension.id, secretKey, nextValue);
-  } else if (stateStore.deleteSecret) {
-    await stateStore.deleteSecret(extension.id, secretKey);
-  }
-
-  return loadExtensionSecretStatus(context, stateStore, extension.id);
+  return result;
 }
 
 export async function dispatchExtensionEvent<THostApi>(
@@ -1510,6 +1787,9 @@ function createSecretsAccessor(
     },
     async set(key, value) {
       assertSecretSlot(extension.manifest, key);
+      if (value.length === 0) {
+        throw new Error(`Extension secret values must not be empty: ${key}`);
+      }
       if (!stateStore.saveSecret) {
         throw new Error(
           `The current host does not implement extension secret storage: ${extension.id}`,
@@ -1522,6 +1802,20 @@ function createSecretsAccessor(
       await stateStore.deleteSecret?.(extension.id, key);
     },
   };
+}
+
+async function deleteExtensionSecretSlots(
+  context: ExtensionManagementContext,
+  extensionId: string,
+  keys: readonly string[],
+): Promise<void> {
+  const stateStore = context.stateStore ?? createFileExtensionStateStore(context);
+  if (!stateStore.deleteSecret) {
+    return;
+  }
+  for (const key of new Set(keys)) {
+    await stateStore.deleteSecret(extensionId, key);
+  }
 }
 
 async function hasExtensionSecret(
@@ -1539,7 +1833,7 @@ async function hasExtensionSecret(
 }
 
 function assertSecretSlot(manifest: HostExtensionManifest, key: string): void {
-  if (!manifest.secretSlots?.some((slot) => slot.key === key)) {
+  if (!manifest.secretSlots?.includes(key)) {
     throw new Error(`The extension does not declare the secret slot: ${key}`);
   }
 }
@@ -1917,6 +2211,38 @@ async function parseExtensionManifestFields(
     dump.manifest.supportedHosts,
     "manifest.supportedHosts",
   );
+  if (
+    (contributes?.authorizations?.length ?? 0) > 0 &&
+    !requestedCapabilities.includes("secret-storage")
+  ) {
+    throw new Error("Authorization contributions require the secret-storage capability.");
+  }
+  if (
+    (contributes?.automationTriggers?.length ?? 0) > 0 &&
+    !requestedCapabilities.includes("automation-triggers")
+  ) {
+    throw new Error("Automation trigger contributions require the automation-triggers capability.");
+  }
+  for (const authorization of contributes?.authorizations ?? []) {
+    for (const key of authorization.secretSlots) {
+      if (!secretSlots.includes(key)) {
+        throw new Error(
+          `Authorization ${authorization.id} references an undeclared secret slot: ${key}`,
+        );
+      }
+    }
+  }
+
+  for (const trigger of contributes?.automationTriggers ?? []) {
+    if (
+      trigger.authorization &&
+      !contributes?.authorizations?.some((entry) => entry.id === trigger.authorization)
+    ) {
+      throw new Error(
+        `Automation trigger ${trigger.id} references an unknown authorization: ${trigger.authorization}`,
+      );
+    }
+  }
 
   // The declared-file check runs whenever the caller can read package files
   // (install, ZIP import, local catalog display); remote catalog entries
@@ -2139,6 +2465,8 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
     return undefined;
   }
 
+  const actions = resolveActivatedExtensionActions(value.actions);
+  const automationTriggers = resolveActivatedAutomationTriggers(value.automationTriggers);
   const tools = resolveActivatedExtensionTools(value.tools);
   const invokeTool =
     typeof value.invokeTool === "function"
@@ -2158,6 +2486,8 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
     typeof value.onWebViewEvent === "function" ? value.onWebViewEvent : undefined;
   const dispose = typeof value.dispose === "function" ? value.dispose : undefined;
   if (
+    !actions &&
+    !automationTriggers &&
     !tools &&
     !invokeTool &&
     !systemPrompt &&
@@ -2172,6 +2502,8 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
 
   return Object.assign(
     {},
+    actions ? { actions } : {},
+    automationTriggers ? { automationTriggers } : {},
     tools ? { tools } : {},
     invokeTool ? { invokeTool } : {},
     systemPrompt ? { systemPrompt } : {},
@@ -2183,6 +2515,35 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
       : {},
     dispose ? { dispose: dispose as HostActivatedExtension["dispose"] } : {},
   ) as HostActivatedExtension;
+}
+
+function resolveActivatedAutomationTriggers(
+  value: unknown,
+): HostActivatedExtension["automationTriggers"] | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const entries = Object.entries(value).filter(([, provider]) => {
+    if (!isRecord(provider)) {
+      return false;
+    }
+    return typeof provider.validate === "function" && typeof provider.poll === "function";
+  });
+  return entries.length > 0
+    ? (Object.fromEntries(entries) as HostActivatedExtension["automationTriggers"])
+    : undefined;
+}
+
+function resolveActivatedExtensionActions(
+  value: unknown,
+): HostActivatedExtension["actions"] | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const entries = Object.entries(value).filter(([, handler]) => typeof handler === "function");
+  return entries.length > 0
+    ? (Object.fromEntries(entries) as HostActivatedExtension["actions"])
+    : undefined;
 }
 
 function resolveActivatedExtensionTools(
@@ -2346,18 +2707,38 @@ async function optionalContributionSetField(
   }
 
   const tools = optionalContributedToolsField(value.tools, `${fieldPrefix}.tools`);
+  const authorizations = optionalAuthorizationsField(
+    value.authorizations,
+    `${fieldPrefix}.authorizations`,
+  );
+  const automationTriggers = optionalAutomationTriggersField(
+    value.automationTriggers,
+    `${fieldPrefix}.automationTriggers`,
+  );
   const desktop = optionalDesktopContributionSetField(value.desktop, `${fieldPrefix}.desktop`);
   const cli = await optionalCliContributionSetField(value.cli, options, `${fieldPrefix}.cli`);
   const mcp = optionalDeclaredContributionFlag(value.mcp, `${fieldPrefix}.mcp`);
   const hooks = optionalDeclaredContributionFlag(value.hooks, `${fieldPrefix}.hooks`);
   const skills = optionalDeclaredContributionFlag(value.skills, `${fieldPrefix}.skills`);
   const rules = optionalDeclaredContributionFlag(value.rules, `${fieldPrefix}.rules`);
-  if (tools.length === 0 && !desktop && !cli && !mcp && !hooks && !skills && !rules) {
+  if (
+    tools.length === 0 &&
+    authorizations.length === 0 &&
+    automationTriggers.length === 0 &&
+    !desktop &&
+    !cli &&
+    !mcp &&
+    !hooks &&
+    !skills &&
+    !rules
+  ) {
     return undefined;
   }
 
   return {
     ...(tools.length > 0 ? { tools } : {}),
+    ...(authorizations.length > 0 ? { authorizations } : {}),
+    ...(automationTriggers.length > 0 ? { automationTriggers } : {}),
     ...(desktop ? { desktop } : {}),
     ...(cli ? { cli } : {}),
     ...(mcp ? { mcp: true } : {}),
@@ -2365,6 +2746,96 @@ async function optionalContributionSetField(
     ...(skills ? { skills: true } : {}),
     ...(rules ? { rules: true } : {}),
   };
+}
+
+function optionalAutomationTriggersField(
+  value: unknown,
+  fieldPrefix: string,
+): HostExtensionAutomationTriggerDefinition[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const triggers = value.map((entry, index) => {
+    const field = `${fieldPrefix}[${index}]`;
+    if (!isRecord(entry)) {
+      throw new Error(`Extension field ${field} must be an object.`);
+    }
+    const id = stringField(entry.id, `${field}.id`);
+    if (!EXTENSION_FIELD_KEY_PATTERN.test(id)) {
+      throw new Error(`Extension field ${field}.id is invalid.`);
+    }
+    const configuration = entry.configuration;
+    if (configuration !== undefined && configuration !== "menu") {
+      throw new Error(`Extension field ${field}.configuration must be "menu" when present.`);
+    }
+    const inputSchema = schemaField(entry.inputSchema, `${field}.inputSchema`) as JsonObject;
+    if (inputSchema.type !== "object") {
+      throw new Error(`Extension field ${field}.inputSchema.type must be "object".`);
+    }
+    assertNoSchemaReferences(inputSchema, `${field}.inputSchema`);
+    return {
+      id,
+      name: stringField(entry.name, `${field}.name`),
+      description: stringField(entry.description, `${field}.description`),
+      icon: parseDesktopTabIcon(entry.icon, `${field}.icon`),
+      ...(configuration === "menu" ? { configuration: "menu" as const } : {}),
+      inputSchema,
+      ...(entry.authorization === undefined
+        ? {}
+        : { authorization: stringField(entry.authorization, `${field}.authorization`) }),
+    };
+  });
+  if (new Set(triggers.map((entry) => entry.id)).size !== triggers.length) {
+    throw new Error(`Extension field ${fieldPrefix} must not contain duplicate ids.`);
+  }
+  return triggers;
+}
+
+function assertNoSchemaReferences(value: unknown, fieldName: string): void {
+  if (Array.isArray(value)) {
+    for (const [index, entry] of value.entries()) {
+      assertNoSchemaReferences(entry, `${fieldName}[${index}]`);
+    }
+    return;
+  }
+  if (!isRecord(value)) {
+    return;
+  }
+  for (const [key, entry] of Object.entries(value)) {
+    if (key === "$ref") {
+      throw new Error(`Extension field ${fieldName} must be self-contained and cannot use $ref.`);
+    }
+    assertNoSchemaReferences(entry, `${fieldName}.${key}`);
+  }
+}
+
+function optionalAuthorizationsField(
+  value: unknown,
+  fieldPrefix: string,
+): HostExtensionAuthorizationDefinition[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const authorizations = value.map((entry, index) => {
+    const field = `${fieldPrefix}[${index}]`;
+    if (!isRecord(entry)) {
+      throw new Error(`Extension field ${field} must be an object.`);
+    }
+    const id = stringField(entry.id, `${field}.id`);
+    const action = stringField(entry.action, `${field}.action`);
+    if (!EXTENSION_FIELD_KEY_PATTERN.test(id) || !EXTENSION_FIELD_KEY_PATTERN.test(action)) {
+      throw new Error(`Extension field ${field} has an invalid id or action.`);
+    }
+    const secretSlots = optionalSecretSlotsField(entry.secretSlots, `${field}.secretSlots`);
+    if (secretSlots.length === 0) {
+      throw new Error(`Extension field ${field}.secretSlots must not be empty.`);
+    }
+    return { id, action, secretSlots };
+  });
+  if (new Set(authorizations.map((entry) => entry.id)).size !== authorizations.length) {
+    throw new Error(`Extension field ${fieldPrefix} must not contain duplicate ids.`);
+  }
+  return authorizations;
 }
 
 function optionalDeclaredContributionFlag(value: unknown, fieldName: string): boolean {
@@ -2930,29 +3401,25 @@ function optionalSettingDefaultValueField(
   }
 }
 
-function optionalSecretSlotsField(value: unknown, fieldPrefix: string): HostExtensionSecretSlot[] {
+function optionalSecretSlotsField(value: unknown, fieldPrefix: string): string[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  return value.map((entry, index) => {
-    if (!isRecord(entry)) {
-      throw new Error(`Extension field ${fieldPrefix}[${index}] must be an object.`);
+  const slots = value.map((entry, index) => {
+    if (typeof entry !== "string") {
+      throw new Error(`Extension field ${fieldPrefix}[${index}] must be a string.`);
     }
-    const key = stringField(entry.key, `${fieldPrefix}[${index}].key`);
-    if (!EXTENSION_FIELD_KEY_PATTERN.test(key)) {
+    const key = entry.trim();
+    if (!EXTENSION_SECRET_SLOT_KEY_PATTERN.test(key)) {
       throw new Error(`Invalid extension secret slot key: ${key}`);
     }
-    const title = stringField(entry.title, `${fieldPrefix}[${index}].title`);
-    const description = optionalStringField(entry.description);
-    const required = optionalBooleanField(entry.required);
-    return {
-      key,
-      title,
-      ...(description ? { description } : {}),
-      ...(required !== undefined ? { required } : {}),
-    };
+    return key;
   });
+  if (new Set(slots).size !== slots.length) {
+    throw new Error(`Extension field ${fieldPrefix} must not contain duplicate slots.`);
+  }
+  return slots;
 }
 
 function optionalBooleanField(value: unknown): boolean | undefined {

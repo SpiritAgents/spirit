@@ -634,6 +634,8 @@
       "repositorySearchPlaceholder": "Pesquisar repositórios",
       "repositoryEmpty": "Nenhum repositório encontrado",
       "repositoryLoadFailed": "Falha ao carregar repositórios. Tente novamente.",
+      "triggerLoadFailed": "Falha ao carregar opções do gatilho",
+      "triggerEmpty": "Nenhuma opção de gatilho disponível",
       "pullRequestCreated": "Pull request criado",
       "issueCreated": "Issue criada"
     },
@@ -663,6 +665,7 @@
     "noMatches": "Nenhuma extensão correspondente.",
     "extensionNotFound": "Extensão não encontrada. Volte para a lista.",
     "install": "Instalar",
+    "authorize": "Autorizar",
     "httpLocalSourceInstallUnsupported": "Mercados HTTP não podem instalar extensões que usam um caminho de origem local",
     "enable": "Ativar",
     "disable": "Desativar",
@@ -671,6 +674,8 @@
     "uninstallExtension": "Desinstalar extensão",
     "empty": "Nenhuma extensão",
     "contributionGroupTools": "Ferramentas",
+    "contributionGroupAuthorization": "Autorização",
+    "contributionGroupAutomationTriggers": "Gatilhos Automation",
     "contributionGroupDesktop": "Desktop",
     "contributionRuleTitle": "Regra",
     "contributionStyleTitle": "Estilo",
@@ -720,7 +725,9 @@
     "uninstallPersonalConfirmTitle": "Desinstalar \"{{name}}\"?",
     "uninstallPersonalConfirmDescription": "Isso removerá a instalação local e excluirá o registro do marketplace Pessoal.",
     "removeMarketplaceConfirmTitle": "Remover \"{{name}}\"?",
-    "removeMarketplaceConfirmDescription": "Esta ação não pode ser desfeita."
+    "removeMarketplaceConfirmDescription": "Esta ação não pode ser desfeita.",
+    "authorizationOptions": "Opções de autorização",
+    "authorizationOptionsFor": "Opções de autorização de {{name}}"
   },
   "dreams": {
     "collectorRunning": "Dreams estão sendo coletados. Novas tendências recentes aparecerão aqui em breve.",
@@ -898,6 +905,7 @@
       "createAutomationDaily": "Criar {{title}} para executar diariamente às {{time}}",
       "createAutomationWeekly": "Criar {{title}} para executar cada {{weekday}} às {{time}}",
       "createAutomationGithubIssue": "Criar {{title}} para executar quando uma issue for criada em {{repo}}",
+      "createAutomationWithTrigger": "Criar {title} para executar {trigger}",
       "createAutomationGithubPullRequest": "Criar {{title}} para executar quando um pull request for criado em {{repo}}",
       "editFile": "Editar arquivo",
       "deleteFile": "Excluir arquivo",
@@ -1404,6 +1412,12 @@
     "defaultChatName": "Conversa",
     "taskComplete": {
       "title": "Tarefa concluída"
+    },
+    "automation": {
+      "completedTitle": "{{title}} concluído",
+      "blockedTitle": "{{title}} requer atenção",
+      "failedTitle": "{{title}} falhou",
+      "triggerErrorTitle": "O gatilho de {{title}} requer atenção"
     },
     "approval": {
       "title": "Aprovação necessária",

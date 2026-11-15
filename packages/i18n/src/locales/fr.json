@@ -634,6 +634,8 @@
       "repositorySearchPlaceholder": "Rechercher des dépôts",
       "repositoryEmpty": "Aucun dépôt trouvé",
       "repositoryLoadFailed": "Échec du chargement des dépôts. Réessayez.",
+      "triggerLoadFailed": "Échec du chargement des options de déclencheur",
+      "triggerEmpty": "Aucune option de déclencheur disponible",
       "pullRequestCreated": "Pull request créée",
       "issueCreated": "Issue créée"
     },
@@ -663,6 +665,7 @@
     "noMatches": "Aucune extension correspondante.",
     "extensionNotFound": "Extension introuvable. Veuillez revenir à la liste.",
     "install": "Installer",
+    "authorize": "Autoriser",
     "httpLocalSourceInstallUnsupported": "Les marchés HTTP ne permettent pas d'installer les extensions utilisant un chemin local",
     "enable": "Activer",
     "disable": "Désactiver",
@@ -671,6 +674,8 @@
     "uninstallExtension": "Désinstaller l'extension",
     "empty": "Aucune extension",
     "contributionGroupTools": "Outils",
+    "contributionGroupAuthorization": "Autorisation",
+    "contributionGroupAutomationTriggers": "Déclencheurs Automation",
     "contributionGroupDesktop": "Bureau",
     "contributionRuleTitle": "Règle",
     "contributionStyleTitle": "Style",
@@ -720,7 +725,9 @@
     "uninstallPersonalConfirmTitle": "Désinstaller « {{name}} » ?",
     "uninstallPersonalConfirmDescription": "L'installation locale et son enregistrement dans le marketplace Personnel seront supprimés.",
     "removeMarketplaceConfirmTitle": "Retirer « {{name}} » ?",
-    "removeMarketplaceConfirmDescription": "Cette action est irréversible."
+    "removeMarketplaceConfirmDescription": "Cette action est irréversible.",
+    "authorizationOptions": "Options d’autorisation",
+    "authorizationOptionsFor": "Options d’autorisation {{name}}"
   },
   "dreams": {
     "collectorRunning": "Les Dreams sont en cours de collecte. De nouvelles tendances récentes apparaîtront ici bientôt.",
@@ -898,6 +905,7 @@
       "createAutomationDaily": "Création de {{title}} exécutée chaque jour à {{time}}",
       "createAutomationWeekly": "Création de {{title}} exécutée chaque {{weekday}} à {{time}}",
       "createAutomationGithubIssue": "Création de {{title}} exécutée quand une issue est créée dans {{repo}}",
+      "createAutomationWithTrigger": "Créer {title} pour exécuter {trigger}",
       "createAutomationGithubPullRequest": "Création de {{title}} exécutée quand une pull request est créée dans {{repo}}",
       "editFile": "Modification de fichier",
       "deleteFile": "Suppression de fichier",
@@ -1404,6 +1412,12 @@
     "defaultChatName": "Discussion",
     "taskComplete": {
       "title": "Tâche terminée"
+    },
+    "automation": {
+      "completedTitle": "{{title}} terminé",
+      "blockedTitle": "{{title}} nécessite une intervention",
+      "failedTitle": "{{title}} a échoué",
+      "triggerErrorTitle": "Le déclencheur de {{title}} nécessite une intervention"
     },
     "approval": {
       "title": "Approbation requise",

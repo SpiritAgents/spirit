@@ -4,11 +4,12 @@
 
 import { useTranslation } from "react-i18next";
 
-import { Monitor, Plug, ScrollText, Wand2, Webhook, Wrench } from "lucide-react";
+import { Monitor, Plug, ScrollText, ShieldCheck, Wand2, Webhook, Wrench } from "lucide-react";
 import type { ElementType } from "react";
 import { getSpiritIconComponent } from "@spiritagent/icons";
 
 import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
+import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
 
 import { DESKTOP_LIST_ITEM_PRIMARY_CLASS } from "@/lib/desktop-typography";
 import { markdownToPlainText } from "@/lib/markdown-plain-text";
@@ -26,6 +27,8 @@ type ContributionItem = Pick<
   | "desktopSettingsPage"
   | "desktopViews"
   | "desktopTabs"
+  | "authorizations"
+  | "automationTriggers"
   | "requestedCapabilities"
 >;
 
@@ -71,7 +74,9 @@ export function MarketplaceContributionGroups({
   const mcpItems: ContributionEntry[] = (contributions?.mcp ?? []).map((server) => ({
     key: `mcp:${server.name}`,
     icon: Plug,
-    title: server.displayName?.trim() || formatTitleFromId(server.name),
+    title:
+      server.displayName?.trim() ||
+      formatTitleFromId(server.name, { casingOverrides: WELL_KNOWN_CASING_OVERRIDES }),
   }));
   if (mcpItems.length > 0) {
     groups.push({ key: "mcps", label: t("settings.mcps"), items: mcpItems });
@@ -121,7 +126,7 @@ export function MarketplaceContributionGroups({
   const skillItems: ContributionEntry[] = (contributions?.skills ?? []).map((skill) => ({
     key: `skill:${skill.name}`,
     icon: Wand2,
-    title: formatTitleFromId(skill.name),
+    title: formatTitleFromId(skill.name, { casingOverrides: WELL_KNOWN_CASING_OVERRIDES }),
     ...(skill.description.trim() ? { overview: skill.description.trim() } : {}),
   }));
   if (skillItems.length > 0) {
@@ -137,11 +142,47 @@ export function MarketplaceContributionGroups({
   const toolItems: ContributionEntry[] = (item.contributedTools ?? []).map((tool) => ({
     key: `tool:${tool.name}`,
     icon: Wrench,
-    title: formatTitleFromId(tool.name),
+    title: formatTitleFromId(tool.name, { casingOverrides: WELL_KNOWN_CASING_OVERRIDES }),
     ...(tool.description.trim() ? { overview: tool.description.trim() } : {}),
   }));
   if (toolItems.length > 0) {
     groups.push({ key: "tools", label: t("marketplace.contributionGroupTools"), items: toolItems });
+  }
+
+  if (item.authorizations?.length) {
+    groups.push({
+      key: "authorizations",
+      label: t("marketplace.contributionGroupAuthorization"),
+      items: item.authorizations.map((authorization) => ({
+        key: `authorization:${authorization.id}`,
+        icon: ShieldCheck,
+        title: formatTitleFromId(authorization.id, {
+          casingOverrides: WELL_KNOWN_CASING_OVERRIDES,
+        }),
+      })),
+    });
+  }
+
+  if (item.automationTriggers?.length) {
+    groups.push({
+      key: "automation-triggers",
+      label: t("marketplace.contributionGroupAutomationTriggers"),
+      items: item.automationTriggers.map((trigger) => ({
+        key: `automation-trigger:${trigger.kind}`,
+        icon:
+          trigger.icon.type === "spirit"
+            ? (getSpiritIconComponent(trigger.icon.name) ?? Monitor)
+            : Monitor,
+        ...(trigger.icon.type === "spirit" ? { iconClassName: "text-foreground" } : {}),
+        ...(trigger.icon.type === "file"
+          ? { iconUrl: extensionTabPackagedIconUrl(item.id, trigger.icon.path) }
+          : trigger.icon.type === "image"
+            ? { iconUrl: trigger.icon.dataUrl }
+            : {}),
+        title: trigger.name,
+        overview: trigger.description,
+      })),
+    });
   }
 
   const desktopItems: ContributionEntry[] = [];
@@ -204,14 +245,11 @@ export function MarketplaceContributionGroups({
                   <img
                     aria-hidden
                     src={entry.iconUrl}
-                    className="size-4 shrink-0 object-contain text-muted-foreground"
+                    className="size-4 shrink-0 object-contain text-foreground"
                   />
                 ) : (
                   <entry.icon
-                    className={cn(
-                      "size-4 shrink-0",
-                      entry.iconClassName ?? "text-muted-foreground",
-                    )}
+                    className={cn("size-4 shrink-0", entry.iconClassName ?? "text-foreground")}
                     aria-hidden
                     strokeWidth={1.75}
                   />
