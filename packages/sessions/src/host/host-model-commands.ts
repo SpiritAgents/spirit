@@ -37,8 +37,7 @@ import type {
   PreviewModelsRequest,
   PreviewModelsResponse,
   RemoveModelRequest,
-  RemoveProviderGroupRequest,
-  RemoveProviderModelsRequest,
+  DisconnectProviderRequest,
   UpdateConfigRequest,
 } from "../types.js";
 import {
@@ -1323,9 +1322,9 @@ export async function removeModelCommand(
   });
 }
 
-export async function removeProviderGroupCommand(
+export async function disconnectProviderCommand(
   ctx: HostModelCommandContext,
-  request: RemoveProviderGroupRequest,
+  request: DisconnectProviderRequest,
 ): Promise<DesktopSnapshot> {
   return ctx.runSerialized(async () => {
     await ctx.ensureInitialized();
@@ -1352,20 +1351,6 @@ export async function removeProviderGroupCommand(
     ctx.setLastRuntimeError("");
     await ctx.persistCurrentSessionIfNeeded();
     return ctx.buildSnapshot();
-  });
-}
-
-/** @deprecated use {@link removeProviderGroupCommand} */
-export async function removeProviderModelsCommand(
-  ctx: HostModelCommandContext,
-  request: RemoveProviderModelsRequest,
-): Promise<DesktopSnapshot> {
-  const provider = request.provider.trim();
-  if (!provider || provider === "custom") {
-    throw new Error(i18n.t("error.providerDeleteOnly"));
-  }
-  return removeProviderGroupCommand(ctx, {
-    providerId: provider,
   });
 }
 

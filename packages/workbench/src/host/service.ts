@@ -147,8 +147,7 @@ import type {
   RememberWorkspaceRequest,
   ForgetWorkspaceRequest,
   RemoveModelRequest,
-  RemoveProviderGroupRequest,
-  RemoveProviderModelsRequest,
+  DisconnectProviderRequest,
   QueryWorkspaceFileReferenceSuggestionsRequest,
   RecordCodeCompletionFileStateRequest,
   RequestCodeCompletionRequest,
@@ -198,8 +197,7 @@ import {
   addProviderModelsCommand,
   previewModelsCommand,
   removeModelCommand,
-  removeProviderGroupCommand,
-  removeProviderModelsCommand,
+  disconnectProviderCommand,
   updateConfigCommand,
   type HostModelCommandContext,
 } from "@spiritagent/sessions/host/host-model-commands";
@@ -1768,12 +1766,8 @@ export class DesktopHostService {
     return removeModelCommand(this.modelCommandContext(), request);
   }
 
-  async removeProviderModels(request: RemoveProviderModelsRequest): Promise<DesktopSnapshot> {
-    return removeProviderModelsCommand(this.modelCommandContext(), request);
-  }
-
-  async removeProviderGroup(request: RemoveProviderGroupRequest): Promise<DesktopSnapshot> {
-    return removeProviderGroupCommand(this.modelCommandContext(), request);
+  async disconnectProvider(request: DisconnectProviderRequest): Promise<DesktopSnapshot> {
+    return disconnectProviderCommand(this.modelCommandContext(), request);
   }
 
   async createSkill(request: CreateSkillRequest): Promise<DesktopSnapshot> {

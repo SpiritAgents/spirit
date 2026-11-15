@@ -175,8 +175,7 @@ export class HostService {
       method === "host.addModel" ||
       method === "host.addProviderModels" ||
       method === "host.removeModel" ||
-      method === "host.removeProviderModels" ||
-      method === "host.removeProviderGroup"
+      method === "host.disconnectProvider"
     ) {
       return executeHostModelCommand(method, params, this.spiritDataDir);
     }
@@ -798,8 +797,7 @@ export const HOST_METHODS = new Set([
   "host.addModel",
   "host.addProviderModels",
   "host.removeModel",
-  "host.removeProviderModels",
-  "host.removeProviderGroup",
+  "host.disconnectProvider",
   "session.listStored",
   "session.loadStored",
   "session.saveStored",

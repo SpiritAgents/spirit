@@ -77,9 +77,8 @@ declare global {
     addProviderModels(request: AddProviderModelsRequest): Promise<DesktopSnapshot>;
     previewModels(request: PreviewModelsRequest): Promise<PreviewModelsResponse>;
     removeModel(name: string): Promise<DesktopSnapshot>;
-    removeProviderModels(provider: string): Promise<DesktopSnapshot>;
-    removeProviderGroup(
-      request: import("./types").RemoveProviderGroupRequest,
+    disconnectProvider(
+      request: import("./types").DisconnectProviderRequest,
     ): Promise<DesktopSnapshot>;
     addMcpServer(request: AddMcpServerRequest): Promise<DesktopSnapshot>;
     deleteMcpServer(request: DeleteMcpServerRequest): Promise<DesktopSnapshot>;

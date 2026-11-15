@@ -158,11 +158,8 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   removeModel(name: string) {
     return ipcRenderer.invoke("desktop:invoke", "removeModel", { request: { name } });
   },
-  removeProviderModels(provider: string) {
-    return ipcRenderer.invoke("desktop:invoke", "removeProviderModels", { request: { provider } });
-  },
-  removeProviderGroup(request: unknown) {
-    return ipcRenderer.invoke("desktop:invoke", "removeProviderGroup", { request });
+  disconnectProvider(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "disconnectProvider", { request });
   },
   addMcpServer(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "addMcpServer", { request });

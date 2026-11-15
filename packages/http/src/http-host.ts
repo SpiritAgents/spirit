@@ -398,12 +398,12 @@ async function handleApiRequest({
     return;
   }
 
-  if (request.method === "POST" && pathname === "/api/models/remove-provider") {
-    const provider =
-      typeof jsonBody?.provider === "string" && jsonBody.provider.trim()
-        ? jsonBody.provider.trim()
+  if (request.method === "POST" && pathname === "/api/models/disconnect-provider") {
+    const providerId =
+      typeof jsonBody?.providerId === "string" && jsonBody.providerId.trim()
+        ? jsonBody.providerId.trim()
         : undefined;
-    if (!provider) {
+    if (!providerId) {
       writeJson(request, response, 400, { error: i18nHost.t("webHost.error.invalidProvider") });
       return;
     }
@@ -411,7 +411,7 @@ async function handleApiRequest({
       request,
       response,
       200,
-      await runHostCommand("removeProviderModels", { request: { provider } }),
+      await runHostCommand("disconnectProvider", { request: { providerId } }),
     );
     return;
   }

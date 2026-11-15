@@ -33,6 +33,17 @@ function jsonResponse(body, status = 200) {
   });
 }
 
+test("disconnects a provider through the dedicated command endpoint", async () => {
+  const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}));
+  vi.stubGlobal("fetch", fetchMock);
+
+  await createWebHostApi().disconnectProvider({ providerId: "provider-a" });
+
+  const [url, init] = fetchMock.mock.calls[0];
+  assert.equal(url, "/api/models/disconnect-provider");
+  assert.deepEqual(JSON.parse(init.body), { providerId: "provider-a" });
+});
+
 test("consumes a query token before bootstrap and pageUrl serialization", async () => {
   window.localStorage.setItem(storageKey, "previous-fake-token");
   window.history.replaceState({}, "", "/?token=query-fake-token&keep=1#remote");

@@ -58,7 +58,7 @@ export function SettingsView({
   onAddProviderModels,
   onPreviewModels,
   onRemoveModel,
-  onRemoveProviderModels,
+  onDisconnectProvider,
   onAddMcpServer,
   onUpdateExtensionSettings,
   onDeleteMcpServer,
@@ -178,7 +178,7 @@ export function SettingsView({
                 onAddProviderModels={onAddProviderModels}
                 onPreviewModels={onPreviewModels}
                 onRemoveModel={onRemoveModel}
-                onRemoveProviderModels={onRemoveProviderModels}
+                onDisconnectProvider={onDisconnectProvider}
               />
             ) : tab === "skills" ? (
               <SkillsSettingsPanel

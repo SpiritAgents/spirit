@@ -78,7 +78,7 @@ export function ModelsSettingsPanel({
   onAddProviderModels,
   onPreviewModels,
   onRemoveModel,
-  onRemoveProviderModels,
+  onDisconnectProvider,
 }: Pick<
   SettingsViewProps,
   | "settings"
@@ -90,7 +90,7 @@ export function ModelsSettingsPanel({
   | "onAddProviderModels"
   | "onPreviewModels"
   | "onRemoveModel"
-  | "onRemoveProviderModels"
+  | "onDisconnectProvider"
 >) {
   const { t } = useTranslation();
   const [providerDialogOpen, setProviderDialogOpen] = useState(false);
@@ -112,7 +112,7 @@ export function ModelsSettingsPanel({
     secondaryLanguageModel: false,
   });
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [deleteGroupTarget, setDeleteGroupTarget] = useState<string | null>(null);
+  const [disconnectProviderTarget, setDisconnectProviderTarget] = useState<string | null>(null);
 
   const models = snapshot?.config.models ?? [];
   const configProviders = snapshot?.config.providers ?? [];
@@ -498,9 +498,9 @@ export function ModelsSettingsPanel({
                       size="sm"
                       className="shrink-0"
                       disabled={modelsBusy || modelsPreviewBusy}
-                      onClick={() => setDeleteGroupTarget(providerEntry.id)}
+                      onClick={() => setDisconnectProviderTarget(providerEntry.id)}
                     >
-                      {t("settings.deleteGroup")}
+                      {t("settings.disconnectProvider")}
                     </Button>
                   </div>
                   {groupModels.length === 0 ? (
@@ -871,32 +871,34 @@ export function ModelsSettingsPanel({
       />
 
       <AlertDialog
-        open={deleteGroupTarget !== null}
+        open={disconnectProviderTarget !== null}
         onOpenChange={(open) => {
           if (!open) {
-            setDeleteGroupTarget(null);
+            setDisconnectProviderTarget(null);
           }
         }}
-        title={t("settings.deleteProviderGroupConfirmTitle", {
-          provider: deleteGroupTarget
+        title={t("settings.disconnectProviderConfirmTitle", {
+          provider: disconnectProviderTarget
             ? (() => {
-                const target = configProviders.find((entry) => entry.id === deleteGroupTarget);
-                return target ? groupDisplayLabel(target) : deleteGroupTarget;
+                const target = configProviders.find(
+                  (entry) => entry.id === disconnectProviderTarget,
+                );
+                return target ? groupDisplayLabel(target) : disconnectProviderTarget;
               })()
             : "",
         })}
-        description={t("settings.deleteProviderGroupConfirmDescription")}
-        confirmLabel={t("settings.deleteGroup")}
+        description={t("settings.disconnectProviderConfirmDescription")}
+        confirmLabel={t("settings.disconnectProvider")}
         cancelLabel={t("common.cancel")}
         busy={modelsBusy}
         onConfirm={async () => {
-          const providerId = deleteGroupTarget;
+          const providerId = disconnectProviderTarget;
           if (!providerId) {
             return;
           }
           try {
-            await onRemoveProviderModels(providerId);
-            setDeleteGroupTarget(null);
+            await onDisconnectProvider(providerId);
+            setDisconnectProviderTarget(null);
           } catch {
             /* runtimeError */
           }

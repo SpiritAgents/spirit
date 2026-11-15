@@ -7,8 +7,7 @@ import {
   addProviderModelsCommand,
   previewModelsCommand,
   removeModelCommand,
-  removeProviderGroupCommand,
-  removeProviderModelsCommand,
+  disconnectProviderCommand,
   updateConfigCommand,
   type HostModelCommandContext,
 } from "@spiritagent/sessions/host/host-model-commands";
@@ -129,11 +128,8 @@ async function executeHostModelCommandInScope(
     case "host.removeModel":
       await removeModelCommand(context, request);
       break;
-    case "host.removeProviderModels":
-      await removeProviderModelsCommand(context, request);
-      break;
-    case "host.removeProviderGroup":
-      await removeProviderGroupCommand(context, request);
+    case "host.disconnectProvider":
+      await disconnectProviderCommand(context, request);
       break;
     default:
       throw new Error(`unknown model command: ${method}`);

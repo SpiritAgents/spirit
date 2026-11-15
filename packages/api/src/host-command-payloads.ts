@@ -24,7 +24,7 @@ import type {
   RemoveMarketplaceSourceRequest,
   UpdateExtensionRequest,
   PreviewModelsRequest,
-  RemoveProviderGroupRequest,
+  DisconnectProviderRequest,
   QueryWorkspaceFileReferenceSuggestionsRequest,
   RecordCodeCompletionFileStateRequest,
   RequestCodeCompletionRequest,
@@ -33,7 +33,6 @@ import type {
   RememberWorkspaceRequest,
   ForgetWorkspaceRequest,
   RemoveModelRequest,
-  RemoveProviderModelsRequest,
   QueuedUserTurnRequest,
   RewindAndSubmitMessageRequest,
   ReplyPendingApprovalRequest,
@@ -108,8 +107,7 @@ export type CommandPayloads = {
   addProviderModels: { request: AddProviderModelsRequest };
   previewModels: { request: PreviewModelsRequest };
   removeModel: { request: RemoveModelRequest };
-  removeProviderModels: { request: RemoveProviderModelsRequest };
-  removeProviderGroup: { request: RemoveProviderGroupRequest };
+  disconnectProvider: { request: DisconnectProviderRequest };
   addMcpServer: { request: AddMcpServerRequest };
   deleteMcpServer: { request: DeleteMcpServerRequest };
   saveHookEntry: { request: SaveHookEntryRequest };

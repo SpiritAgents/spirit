@@ -427,13 +427,8 @@ export interface RemoveModelRequest {
   ref: ModelRef;
 }
 
-export interface RemoveProviderGroupRequest {
+export interface DisconnectProviderRequest {
   providerId: string;
-}
-
-/** @deprecated Use RemoveProviderGroupRequest */
-export interface RemoveProviderModelsRequest {
-  provider: string;
 }
 
 export interface DesktopMcpCapabilityToggles {

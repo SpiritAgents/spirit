@@ -41,7 +41,7 @@ import type {
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
   UpdateExtensionSettingsRequest,
-  RemoveProviderGroupRequest,
+  DisconnectProviderRequest,
   PreviewModelsRequest,
   PreviewModelsResponse,
   QueryWorkspaceFileReferenceSuggestionsRequest,
@@ -130,8 +130,7 @@ export interface HostApi {
   addProviderModels(request: AddProviderModelsRequest): Promise<DesktopSnapshot>;
   previewModels(request: PreviewModelsRequest): Promise<PreviewModelsResponse>;
   removeModel(name: string): Promise<DesktopSnapshot>;
-  removeProviderModels(provider: string): Promise<DesktopSnapshot>;
-  removeProviderGroup(request: RemoveProviderGroupRequest): Promise<DesktopSnapshot>;
+  disconnectProvider(request: DisconnectProviderRequest): Promise<DesktopSnapshot>;
   addMcpServer(request: AddMcpServerRequest): Promise<DesktopSnapshot>;
   deleteMcpServer(request: DeleteMcpServerRequest): Promise<DesktopSnapshot>;
   saveHookEntry(request: SaveHookEntryRequest): Promise<DesktopSnapshot>;

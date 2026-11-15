@@ -10,7 +10,7 @@ import { setKeyringStoreForTests } from "@spiritagent/config/credentials";
 
 import {
   addProviderModelsCommand,
-  removeProviderGroupCommand,
+  disconnectProviderCommand,
 } from "../../../../packages/sessions/dist/host/host-model-commands.js";
 import { fetchCatalogModels } from "../../../../packages/sessions/dist/host/model-config.js";
 import {
@@ -170,7 +170,7 @@ test("connecting an empty catalog preserves unrelated default model references",
   });
 });
 
-test("empty reconnect prunes stale models and an empty provider group can be deleted", async () => {
+test("empty reconnect prunes stale models and an empty provider can be disconnected", async () => {
   const staleCustom = {
     id: "empty-catalog-fixture",
     label: "Empty Catalog Fixture",
@@ -196,7 +196,7 @@ test("empty reconnect prunes stale models and an empty provider group can be del
       assert.deepEqual(config[slot], expected);
     }
 
-    await removeProviderGroupCommand(ctx, { providerId: "empty-catalog-fixture" });
+    await disconnectProviderCommand(ctx, { providerId: "empty-catalog-fixture" });
     config = await readDiskConfig(dir);
     assert.deepEqual(
       config.providers.map((provider) => provider.id),

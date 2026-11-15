@@ -152,11 +152,8 @@ export function createWebHostApi(): HostApi {
     removeModel(name: string) {
       return post<DesktopSnapshot>(baseUrl, "/api/models/remove", { name });
     },
-    removeProviderModels(provider: string) {
-      return post<DesktopSnapshot>(baseUrl, "/api/models/remove-provider", { provider });
-    },
-    removeProviderGroup(request: import("../types").RemoveProviderGroupRequest) {
-      return post<DesktopSnapshot>(baseUrl, "/api/models/remove-provider-group", request);
+    disconnectProvider(request: import("../types").DisconnectProviderRequest) {
+      return post<DesktopSnapshot>(baseUrl, "/api/models/disconnect-provider", request);
     },
     addMcpServer(request: AddMcpServerRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/mcps", request);

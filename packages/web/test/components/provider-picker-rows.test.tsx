@@ -10,7 +10,7 @@ if (typeof globalThis.ResizeObserver === "undefined") {
 
 import "./setup";
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 
 import { ModelsSettingsPanel } from "@/components/settings/models/models-settings-panel";
@@ -46,7 +46,7 @@ test("provider picker keeps a selection-specific accessible name", () => {
       onAddProviderModels={vi.fn()}
       onPreviewModels={vi.fn()}
       onRemoveModel={vi.fn()}
-      onRemoveProviderModels={vi.fn()}
+      onDisconnectProvider={vi.fn()}
     />,
   );
 
@@ -57,7 +57,7 @@ test("provider picker keeps a selection-specific accessible name", () => {
   ).toBeTruthy();
 });
 
-test("settings keeps a connected provider group visible when its catalog is empty", () => {
+test("settings keeps a connected provider visible when its catalog is empty", () => {
   render(
     <ModelsSettingsPanel
       settings={{ activeModel: emptyModelRef() } as SettingsFormState}
@@ -85,13 +85,18 @@ test("settings keeps a connected provider group visible when its catalog is empt
       onAddProviderModels={vi.fn()}
       onPreviewModels={vi.fn()}
       onRemoveModel={vi.fn()}
-      onRemoveProviderModels={vi.fn()}
+      onDisconnectProvider={vi.fn()}
     />,
   );
 
   expect(screen.getByText("Mistral")).toBeTruthy();
   expect(screen.getByText("0 models")).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Delete Group" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Disconnect" }));
+  const dialog = screen.getByRole("alertdialog", { name: 'Disconnect "Mistral"?' });
+  expect(
+    within(dialog).getByText("Its models, configuration, and key will be removed from Spirit."),
+  ).toBeTruthy();
+  expect(within(dialog).getByRole("button", { name: "Disconnect" })).toBeTruthy();
   expect(screen.queryByText("No saved models yet")).toBeNull();
 });
 
@@ -123,7 +128,7 @@ test("modal empty state explains deployment and offers reconnect", () => {
       onAddProviderModels={vi.fn()}
       onPreviewModels={vi.fn()}
       onRemoveModel={vi.fn()}
-      onRemoveProviderModels={vi.fn()}
+      onDisconnectProvider={vi.fn()}
     />,
   );
 

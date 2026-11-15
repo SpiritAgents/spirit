@@ -1905,7 +1905,7 @@ export function useDesktopRuntime() {
     [api, applySnapshot],
   );
 
-  const removeProviderModels = useCallback(
+  const disconnectProvider = useCallback(
     async (providerId: string) => {
       if (!api) {
         return;
@@ -1913,7 +1913,7 @@ export function useDesktopRuntime() {
 
       setBusyAction("models");
       try {
-        const next = await api.removeProviderGroup({ providerId });
+        const next = await api.disconnectProvider({ providerId });
         applySnapshot(next);
         setRuntimeError("");
       } catch (error) {
@@ -4285,7 +4285,7 @@ export function useDesktopRuntime() {
     addProviderModels,
     previewModels,
     removeModel,
-    removeProviderModels,
+    disconnectProvider,
     addMcpServer,
     importExtension,
     installBuiltInExtension,
