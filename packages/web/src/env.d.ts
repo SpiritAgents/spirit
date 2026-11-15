@@ -23,7 +23,7 @@ import type {
   InstallMarketplaceExtensionRequest,
   RemoveMarketplaceSourceRequest,
   UpdateExtensionRequest,
-  RunExtensionRequest,
+  InvokeExtensionActionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
   UpdateExtensionSettingsRequest,
@@ -94,7 +94,7 @@ declare global {
     updateExtension(request: UpdateExtensionRequest): Promise<unknown>;
     deleteExtension(request: DeleteExtensionRequest): Promise<DesktopSnapshot>;
     setExtensionEnabled(request: SetExtensionEnabledRequest): Promise<DesktopSnapshot>;
-    runExtension(request: RunExtensionRequest): Promise<DesktopSnapshot>;
+    invokeExtensionAction(request: InvokeExtensionActionRequest): Promise<unknown>;
     updateExtensionSettings(request: UpdateExtensionSettingsRequest): Promise<DesktopSnapshot>;
     createRule(request: CreateRuleRequest): Promise<DesktopSnapshot>;
     createSkill(request: CreateSkillRequest): Promise<DesktopSnapshot>;

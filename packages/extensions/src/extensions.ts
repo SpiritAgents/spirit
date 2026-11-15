@@ -144,8 +144,15 @@ export interface HostExtensionContributedToolDefinition {
   executionMode?: HostExtensionToolExecutionMode;
 }
 
+export interface HostExtensionAuthorizationDefinition {
+  id: string;
+  action: string;
+  secretSlots: string[];
+}
+
 export interface HostExtensionContributionSet {
   tools?: HostExtensionContributedToolDefinition[];
+  authorizations?: HostExtensionAuthorizationDefinition[];
   desktop?: HostExtensionDesktopContributionSet;
   cli?: HostExtensionCliContributionSet;
   /** Declared agent MCP contribution; files live at the package-root mcp.json. */
@@ -502,7 +509,30 @@ export interface DispatchExtensionWebViewEventRequest<THostApi> {
   logger?: Pick<Console, "error" | "log">;
 }
 
+export interface HostExtensionActionExecutionContext<THostApi> {
+  extension: HostExtensionRuntimeInfo;
+  host: THostApi;
+  actionId: string;
+  params?: unknown;
+  log(message: string): void;
+  settings: HostExtensionSettingsAccessor;
+  secrets: HostExtensionSecretsAccessor;
+}
+
+export type HostExtensionActionHandler<THostApi> = (
+  context: HostExtensionActionExecutionContext<THostApi>,
+) => Promise<unknown> | unknown;
+
+export interface InvokeExtensionActionRequest<THostApi> {
+  extensionId: string;
+  actionId: string;
+  params?: unknown;
+  host: THostApi;
+  logger?: Pick<Console, "error" | "log">;
+}
+
 export interface HostActivatedExtension {
+  actions?: Record<string, HostExtensionActionHandler<unknown>>;
   onWebViewEvent?(event: HostExtensionWebViewEvent): Promise<void> | void;
   onTabRequest?<THostApi>(
     request: HostExtensionTabRequestContext<THostApi>,
@@ -559,6 +589,7 @@ export interface HostExtensionManager {
   run<THostApi>(request: RunExtensionRequest<THostApi>): Promise<void>;
   invokeTool<THostApi>(request: InvokeExtensionToolRequest<THostApi>): Promise<string>;
   invokeTabRequest<THostApi>(request: InvokeExtensionTabRequest<THostApi>): Promise<unknown>;
+  invokeAction<THostApi>(request: InvokeExtensionActionRequest<THostApi>): Promise<unknown>;
   getSettingsValues(id: string): Promise<HostExtensionSettingsValues>;
   setSettingsValues(request: UpdateExtensionSettingsRequest): Promise<HostExtensionSettingsValues>;
   collectSystemPromptContributions<THostApi>(
@@ -625,6 +656,9 @@ export function createHostExtensionManager(
     },
     async invokeTabRequest(request) {
       return invokeExtensionTabRequest(context, activatedExtensions, stateStore, request);
+    },
+    async invokeAction(request) {
+      return invokeExtensionAction(context, activatedExtensions, stateStore, request);
     },
     async getSettingsValues(id) {
       return loadExtensionSettingsValues(context, stateStore, id);
@@ -1107,6 +1141,44 @@ export async function invokeExtensionTool<THostApi>(
     ...(request.questionsResult !== undefined ? { questionsResult: request.questionsResult } : {}),
   });
   return renderExtensionToolResult(result);
+}
+
+export async function invokeExtensionAction<THostApi>(
+  context: ExtensionManagementContext,
+  activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
+  stateStore: ExtensionStateStore,
+  request: InvokeExtensionActionRequest<THostApi>,
+): Promise<unknown> {
+  const target = await requireInstalledExtension(context, request.extensionId);
+  if (!target.enabled) {
+    throw new Error(`The extension is disabled: ${target.id}`);
+  }
+  const actionId = request.actionId.trim();
+  if (!target.manifest.contributes?.authorizations?.some((entry) => entry.action === actionId)) {
+    throw new Error(`The extension does not declare the action: ${actionId}`);
+  }
+  const entry = await ensureActivatedExtension(target, activatedExtensions, stateStore, {
+    host: request.host,
+    ...(request.logger ? { logger: request.logger } : {}),
+    log: (message) => {
+      request.logger?.log(`[extension:${target.id}] ${message}`);
+    },
+  });
+  const handler = entry.activatedExtension?.actions?.[actionId];
+  if (!handler) {
+    throw new Error(`The extension does not export the action: ${actionId}`);
+  }
+  return handler({
+    extension: entry.runtimeInfo,
+    host: bindHostForExtension(request.host, target.id),
+    actionId,
+    ...(request.params === undefined ? {} : { params: request.params }),
+    log: (message) => {
+      request.logger?.log(`[extension:${target.id}] ${message}`);
+    },
+    settings: createSettingsAccessor(target, stateStore),
+    secrets: createSecretsAccessor(target, stateStore),
+  });
 }
 
 export async function invokeExtensionTabRequest<THostApi>(
@@ -1898,6 +1970,15 @@ async function parseExtensionManifestFields(
     dump.manifest.supportedHosts,
     "manifest.supportedHosts",
   );
+  for (const authorization of contributes?.authorizations ?? []) {
+    for (const key of authorization.secretSlots) {
+      if (!secretSlots.includes(key)) {
+        throw new Error(
+          `Authorization ${authorization.id} references an undeclared secret slot: ${key}`,
+        );
+      }
+    }
+  }
 
   // The declared-file check runs whenever the caller can read package files
   // (install, ZIP import, local catalog display); remote catalog entries
@@ -2120,6 +2201,7 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
     return undefined;
   }
 
+  const actions = resolveActivatedExtensionActions(value.actions);
   const tools = resolveActivatedExtensionTools(value.tools);
   const invokeTool =
     typeof value.invokeTool === "function"
@@ -2139,6 +2221,7 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
     typeof value.onWebViewEvent === "function" ? value.onWebViewEvent : undefined;
   const dispose = typeof value.dispose === "function" ? value.dispose : undefined;
   if (
+    !actions &&
     !tools &&
     !invokeTool &&
     !systemPrompt &&
@@ -2153,6 +2236,7 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
 
   return Object.assign(
     {},
+    actions ? { actions } : {},
     tools ? { tools } : {},
     invokeTool ? { invokeTool } : {},
     systemPrompt ? { systemPrompt } : {},
@@ -2164,6 +2248,18 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
       : {},
     dispose ? { dispose: dispose as HostActivatedExtension["dispose"] } : {},
   ) as HostActivatedExtension;
+}
+
+function resolveActivatedExtensionActions(
+  value: unknown,
+): HostActivatedExtension["actions"] | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const entries = Object.entries(value).filter(([, handler]) => typeof handler === "function");
+  return entries.length > 0
+    ? (Object.fromEntries(entries) as HostActivatedExtension["actions"])
+    : undefined;
 }
 
 function resolveActivatedExtensionTools(
@@ -2327,18 +2423,32 @@ async function optionalContributionSetField(
   }
 
   const tools = optionalContributedToolsField(value.tools, `${fieldPrefix}.tools`);
+  const authorizations = optionalAuthorizationsField(
+    value.authorizations,
+    `${fieldPrefix}.authorizations`,
+  );
   const desktop = optionalDesktopContributionSetField(value.desktop, `${fieldPrefix}.desktop`);
   const cli = await optionalCliContributionSetField(value.cli, options, `${fieldPrefix}.cli`);
   const mcp = optionalDeclaredContributionFlag(value.mcp, `${fieldPrefix}.mcp`);
   const hooks = optionalDeclaredContributionFlag(value.hooks, `${fieldPrefix}.hooks`);
   const skills = optionalDeclaredContributionFlag(value.skills, `${fieldPrefix}.skills`);
   const rules = optionalDeclaredContributionFlag(value.rules, `${fieldPrefix}.rules`);
-  if (tools.length === 0 && !desktop && !cli && !mcp && !hooks && !skills && !rules) {
+  if (
+    tools.length === 0 &&
+    authorizations.length === 0 &&
+    !desktop &&
+    !cli &&
+    !mcp &&
+    !hooks &&
+    !skills &&
+    !rules
+  ) {
     return undefined;
   }
 
   return {
     ...(tools.length > 0 ? { tools } : {}),
+    ...(authorizations.length > 0 ? { authorizations } : {}),
     ...(desktop ? { desktop } : {}),
     ...(cli ? { cli } : {}),
     ...(mcp ? { mcp: true } : {}),
@@ -2346,6 +2456,35 @@ async function optionalContributionSetField(
     ...(skills ? { skills: true } : {}),
     ...(rules ? { rules: true } : {}),
   };
+}
+
+function optionalAuthorizationsField(
+  value: unknown,
+  fieldPrefix: string,
+): HostExtensionAuthorizationDefinition[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const authorizations = value.map((entry, index) => {
+    const field = `${fieldPrefix}[${index}]`;
+    if (!isRecord(entry)) {
+      throw new Error(`Extension field ${field} must be an object.`);
+    }
+    const id = stringField(entry.id, `${field}.id`);
+    const action = stringField(entry.action, `${field}.action`);
+    if (!EXTENSION_FIELD_KEY_PATTERN.test(id) || !EXTENSION_FIELD_KEY_PATTERN.test(action)) {
+      throw new Error(`Extension field ${field} has an invalid id or action.`);
+    }
+    const secretSlots = optionalSecretSlotsField(entry.secretSlots, `${field}.secretSlots`);
+    if (secretSlots.length === 0) {
+      throw new Error(`Extension field ${field}.secretSlots must not be empty.`);
+    }
+    return { id, action, secretSlots };
+  });
+  if (new Set(authorizations.map((entry) => entry.id)).size !== authorizations.length) {
+    throw new Error(`Extension field ${fieldPrefix} must not contain duplicate ids.`);
+  }
+  return authorizations;
 }
 
 function optionalDeclaredContributionFlag(value: unknown, fieldName: string): boolean {

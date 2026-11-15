@@ -131,7 +131,7 @@ import type {
   DesktopSnapshot,
   WorkspaceContentInvalidation,
   FileRewindWarning,
-  RunExtensionRequest,
+  InvokeExtensionActionRequest,
   SaveHookEntryRequest,
   UpdateExtensionSettingsRequest,
   PendingAssistantAux,
@@ -217,7 +217,7 @@ import {
   installMarketplaceExtensionCommand,
   inspectMcpServerCommand,
   removeMarketplaceSourceCommand,
-  runExtensionCommand,
+  invokeExtensionActionCommand,
   setExtensionEnabledCommand,
   saveHookEntryCommand,
   submitSkillSlashCommand,
@@ -540,13 +540,13 @@ import {
   resolveEnabledExtensionViewFile,
   resolveEnabledExtensionTabFile,
   resolveEnabledExtensionTabIconFile,
-  resolveEnabledExtensionViewOwner,
 } from "@spiritagent/sessions/host/extensions";
 import {
   getDesktopExtensionHostAdapter,
   requireDesktopExtensionHostAdapter,
   setDesktopExtensionHostAdapter,
   type DesktopExtensionHostAdapter,
+  type DesktopExtensionViewSession,
 } from "@spiritagent/sessions/host/extension-host-adapter";
 import {
   ExtensionWarmupCoordinator,
@@ -795,7 +795,7 @@ export class DesktopHostService {
   private pendingWorkspaceCapabilityTrust: WorkspaceCapabilityTrustRequest | undefined;
   private pendingExtensionUi: DesktopPendingExtensionUi | undefined;
   private pendingExtensionUiWaiter:
-    | { requestId: string; resolve: (result: McpUiOpenResult) => void }
+    | { requestId: string; resolve: (result: unknown) => void }
     | undefined;
   private pendingRemoteExtensionUi:
     | {
@@ -1827,8 +1827,8 @@ export class DesktopHostService {
     return setExtensionEnabledCommand(this.extensionCommandContext(), request);
   }
 
-  async runExtension(request: RunExtensionRequest): Promise<DesktopSnapshot> {
-    return runExtensionCommand(this.extensionCommandContext(), request);
+  async invokeExtensionAction(request: InvokeExtensionActionRequest): Promise<unknown> {
+    return invokeExtensionActionCommand(this.extensionCommandContext(), request);
   }
 
   async updateExtensionSettings(request: UpdateExtensionSettingsRequest): Promise<DesktopSnapshot> {
@@ -2606,40 +2606,53 @@ export class DesktopHostService {
     return this.buildSnapshot();
   }
 
-  openLocalExtensionUi(request: McpUiOpenRequest): Promise<McpUiOpenResult> {
-    return new Promise((resolve) => {
-      const previous = this.pendingExtensionUiWaiter;
-      if (previous) {
-        previous.resolve({ kind: "opened", result: { dismissed: true } });
-      }
-      const previousRemote = this.pendingRemoteExtensionUi;
-      this.pendingRemoteExtensionUi = undefined;
-      if (previousRemote) {
-        void replyRemoteExtensionUi(previousRemote.runtime, previousRemote.requestId, {
-          dismissed: true,
-        });
-      }
-      const requestId = crypto.randomUUID();
-      this.pendingExtensionUiWaiter = { requestId, resolve };
-      this.pendingExtensionUi = {
-        requestId,
-        extensionId: request.extensionId,
-        viewId: request.viewId,
-        ...(request.params === undefined ? {} : { params: request.params }),
-      };
-      this.emitLiveSnapshotUpdate();
-    });
+  async openLocalExtensionUi(request: McpUiOpenRequest): Promise<McpUiOpenResult> {
+    const session = this.openLocalExtensionUiSession(request);
+    return { kind: "opened", result: await session.result };
   }
 
-  dismissLocalExtensionUi(): void {
-    const waiter = this.pendingExtensionUiWaiter;
+  openLocalExtensionUiSession(request: McpUiOpenRequest): DesktopExtensionViewSession {
+    const previous = this.pendingExtensionUiWaiter;
+    if (previous) {
+      previous.resolve({ dismissed: true });
+    }
+    const previousRemote = this.pendingRemoteExtensionUi;
+    this.pendingRemoteExtensionUi = undefined;
+    if (previousRemote) {
+      void replyRemoteExtensionUi(previousRemote.runtime, previousRemote.requestId, {
+        dismissed: true,
+      });
+    }
+    const requestId = crypto.randomUUID();
+    const result = new Promise<unknown>((resolve) => {
+      this.pendingExtensionUiWaiter = { requestId, resolve };
+    });
+    this.pendingExtensionUi = {
+      requestId,
+      extensionId: request.extensionId,
+      viewId: request.viewId,
+      ...(request.params === undefined ? {} : { params: request.params }),
+    };
+    this.emitLiveSnapshotUpdate();
+    return {
+      requestId,
+      result,
+      close: (closeResult) => {
+        this.settleLocalExtensionUi(requestId, closeResult);
+      },
+    };
+  }
+
+  private settleLocalExtensionUi(requestId: string, result: unknown): boolean {
+    if (this.pendingExtensionUiWaiter?.requestId !== requestId) {
+      return false;
+    }
     this.pendingExtensionUi = undefined;
+    this.pendingExtensionUiWaiter.resolve(result);
     this.pendingExtensionUiWaiter = undefined;
     this.pendingRemoteExtensionUi = undefined;
-    if (waiter) {
-      waiter.resolve({ kind: "opened", result: { dismissed: true } });
-    }
     this.emitLiveSnapshotUpdate();
+    return true;
   }
 
   async resolveExtensionUi(request: ResolveExtensionUiRequest): Promise<DesktopSnapshot> {
@@ -2648,11 +2661,7 @@ export class DesktopHostService {
       return this.buildSnapshot();
     }
     this.pendingExtensionUi = undefined;
-    if (this.pendingExtensionUiWaiter?.requestId === request.requestId) {
-      this.pendingExtensionUiWaiter.resolve({ kind: "opened", result: request.result });
-      this.pendingExtensionUiWaiter = undefined;
-      this.pendingRemoteExtensionUi = undefined;
-      this.emitLiveSnapshotUpdate();
+    if (this.settleLocalExtensionUi(request.requestId, request.result)) {
       return this.buildSnapshot();
     }
     const remote = this.pendingRemoteExtensionUi;
@@ -3573,7 +3582,7 @@ export class DesktopHostService {
         }
         const previousLocal = this.pendingExtensionUiWaiter;
         if (previousLocal) {
-          previousLocal.resolve({ kind: "opened", result: { dismissed: true } });
+          previousLocal.resolve({ dismissed: true });
           this.pendingExtensionUiWaiter = undefined;
         }
         this.pendingExtensionUi = request;
@@ -5004,12 +5013,6 @@ export class DesktopHostService {
     return resolveEnabledExtensionTabIconFile(this.extensionManager(), extensionId, iconPath);
   }
 
-  async resolveExtensionViewOwner(
-    viewId: string,
-  ): Promise<{ extensionId: string; title?: string; width?: number; height?: number } | null> {
-    return resolveEnabledExtensionViewOwner(this.extensionManager(), viewId);
-  }
-
   private async refreshExtensionsList(options?: { metadataOnly?: boolean }): Promise<void> {
     const state = this.requireState();
     const manager = this.extensionManager();
@@ -5715,18 +5718,10 @@ export async function resolveDesktopExtensionTabIconFile(
   return desktopHostService.resolveExtensionTabIconFile(extensionId, iconPath);
 }
 
-export function openDesktopHostExtensionUi(request: McpUiOpenRequest): Promise<McpUiOpenResult> {
-  return desktopHostService.openLocalExtensionUi(request);
-}
-
-export function closeDesktopHostExtensionUi(): void {
-  desktopHostService.dismissLocalExtensionUi();
-}
-
-export async function resolveDesktopExtensionViewOwner(
-  viewId: string,
-): Promise<{ extensionId: string; title?: string; width?: number; height?: number } | null> {
-  return desktopHostService.resolveExtensionViewOwner(viewId);
+export function openDesktopHostExtensionUiSession(
+  request: McpUiOpenRequest,
+): DesktopExtensionViewSession {
+  return desktopHostService.openLocalExtensionUiSession(request);
 }
 
 export function subscribeDesktopDreamUpdates(

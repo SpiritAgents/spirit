@@ -618,8 +618,10 @@ export interface SetExtensionEnabledRequest {
   enabled: boolean;
 }
 
-export interface RunExtensionRequest {
+export interface InvokeExtensionActionRequest {
   id: string;
+  actionId: string;
+  params?: unknown;
 }
 
 export type DesktopExtensionSettingValue = string | boolean | number | null;

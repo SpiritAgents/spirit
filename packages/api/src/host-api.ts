@@ -37,7 +37,7 @@ import type {
   MarketplaceUpdateCommandResult,
   RemoveMarketplaceSourceRequest,
   UpdateExtensionRequest,
-  RunExtensionRequest,
+  InvokeExtensionActionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
   UpdateExtensionSettingsRequest,
@@ -149,7 +149,7 @@ export interface HostApi {
   updateExtension(request: UpdateExtensionRequest): Promise<MarketplaceUpdateCommandResult>;
   deleteExtension(request: DeleteExtensionRequest): Promise<DesktopSnapshot>;
   setExtensionEnabled(request: SetExtensionEnabledRequest): Promise<DesktopSnapshot>;
-  runExtension(request: RunExtensionRequest): Promise<DesktopSnapshot>;
+  invokeExtensionAction(request: InvokeExtensionActionRequest): Promise<unknown>;
   updateExtensionSettings(request: UpdateExtensionSettingsRequest): Promise<DesktopSnapshot>;
   createRule(request: CreateRuleRequest): Promise<DesktopSnapshot>;
   createSkill(request: CreateSkillRequest): Promise<DesktopSnapshot>;

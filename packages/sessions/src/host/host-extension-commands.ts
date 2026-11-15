@@ -33,7 +33,7 @@ import type {
   InstallBuiltInExtensionRequest,
   InstallMarketplaceExtensionRequest,
   RemoveMarketplaceSourceRequest,
-  RunExtensionRequest,
+  InvokeExtensionActionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
   SubmitSkillSlashRequest,
@@ -69,7 +69,13 @@ type HostExtensionManager = {
   }>;
   remove(id: string): Promise<void>;
   setEnabled(id: string, enabled: boolean): Promise<void>;
-  run(input: { id: string; host: DesktopExtensionHostAdapter; logger: Console }): Promise<void>;
+  invokeAction(input: {
+    extensionId: string;
+    actionId: string;
+    params?: unknown;
+    host: DesktopExtensionHostAdapter;
+    logger: Console;
+  }): Promise<unknown>;
   setSettingsValues(input: {
     id: string;
     values: UpdateExtensionSettingsRequest["values"];
@@ -489,23 +495,30 @@ export async function setExtensionEnabledCommand(
   });
 }
 
-export async function runExtensionCommand(
+export async function invokeExtensionActionCommand(
   ctx: HostExtensionCommandContext,
-  request: RunExtensionRequest,
-): Promise<DesktopSnapshot> {
+  request: InvokeExtensionActionRequest,
+): Promise<unknown> {
   return ctx.runSerialized(async () => {
     await ctx.ensureInitialized();
-    const id = request.id.trim();
-    if (!id) {
+    const extensionId = request.id.trim();
+    const actionId = request.actionId.trim();
+    if (!extensionId) {
       throw new Error(i18n.t("error.extensionIdRequired"));
     }
+    if (!actionId) {
+      throw new Error("Extension action id is required.");
+    }
 
-    await ctx.extensionManager().run({
-      id,
+    const result = await ctx.extensionManager().invokeAction({
+      extensionId,
+      actionId,
+      ...(request.params === undefined ? {} : { params: request.params }),
       host: ctx.requireExtensionHostAdapter(),
       logger: console,
     });
-    return ctx.buildSnapshot();
+    await ctx.refreshRuntimeAfterExtensionMutation();
+    return result;
   });
 }
 

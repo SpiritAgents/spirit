@@ -17,9 +17,14 @@ export interface DesktopExtensionMessageBoxRequest {
   type?: "none" | "info" | "error" | "question" | "warning";
 }
 
+export interface DesktopExtensionViewSession {
+  readonly requestId: string;
+  readonly result: Promise<unknown>;
+  close(result?: unknown): void;
+}
+
 export interface DesktopExtensionHostUi {
-  open(viewId: string, params?: unknown): Promise<unknown>;
-  close(): void;
+  open(viewId: string, params?: unknown): Promise<DesktopExtensionViewSession>;
 }
 
 export interface DesktopExtensionHostTabs {
@@ -34,6 +39,7 @@ export interface DesktopExtensionHostAdapter {
   /** Set on extension-bound adapters; the extension manager preserves per-request window binding. */
   readonly boundExtensionId?: string;
   showMessageBox(request: DesktopExtensionMessageBoxRequest): Promise<void>;
+  openExternal(url: string): Promise<void>;
   ui: DesktopExtensionHostUi;
   tabs: DesktopExtensionHostTabs;
   webViews: DesktopExtensionWebViews;

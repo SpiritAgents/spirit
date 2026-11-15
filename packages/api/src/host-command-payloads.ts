@@ -46,7 +46,7 @@ import type {
   ListGitHubPullRequestsRequest,
   SearchGitHubAutomationRepositoriesRequest,
   MergeGitHubPullRequestRequest,
-  RunExtensionRequest,
+  InvokeExtensionActionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
   SubmitGitChipRequest,
@@ -123,7 +123,7 @@ export type CommandPayloads = {
   updateExtension: { request: UpdateExtensionRequest };
   deleteExtension: { request: DeleteExtensionRequest };
   setExtensionEnabled: { request: SetExtensionEnabledRequest };
-  runExtension: { request: RunExtensionRequest };
+  invokeExtensionAction: { request: InvokeExtensionActionRequest };
   updateExtensionSettings: { request: UpdateExtensionSettingsRequest };
   createRule: { request: CreateRuleRequest };
   createSkill: { request: CreateSkillRequest };

@@ -111,8 +111,8 @@ export async function createElectronHostApi(): Promise<HostApi> {
     setExtensionEnabled(request) {
       return bridge.setExtensionEnabled(request);
     },
-    runExtension(request) {
-      return bridge.runExtension(request);
+    invokeExtensionAction(request) {
+      return bridge.invokeExtensionAction(request);
     },
     updateExtensionSettings(request) {
       return bridge.updateExtensionSettings(request);

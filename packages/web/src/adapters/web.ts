@@ -27,7 +27,6 @@ import type {
   InstallMarketplaceExtensionRequest,
   RemoveMarketplaceSourceRequest,
   UpdateExtensionRequest,
-  RunExtensionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
   UpdateExtensionSettingsRequest,
@@ -198,8 +197,10 @@ export function createWebHostApi(): HostApi {
     setExtensionEnabled(request: SetExtensionEnabledRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions/enabled", request);
     },
-    runExtension(request: RunExtensionRequest) {
-      return post<DesktopSnapshot>(baseUrl, "/api/extensions/run", request);
+    invokeExtensionAction() {
+      return Promise.reject(
+        new Error("Extension actions are only available in the Electron desktop app."),
+      );
     },
     updateExtensionSettings(request: UpdateExtensionSettingsRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions/settings", request);

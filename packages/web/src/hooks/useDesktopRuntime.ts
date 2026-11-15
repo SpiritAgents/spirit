@@ -95,7 +95,7 @@ import type {
   InstallBuiltInExtensionRequest,
   InstallMarketplaceExtensionRequest,
   UpdateExtensionRequest,
-  RunExtensionRequest,
+  InvokeExtensionActionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
   UpdateExtensionSettingsRequest,
@@ -2272,17 +2272,17 @@ export function useDesktopRuntime() {
     [api, applySnapshot],
   );
 
-  const runExtension = useCallback(
-    async (request: RunExtensionRequest) => {
+  const invokeExtensionAction = useCallback(
+    async (request: InvokeExtensionActionRequest) => {
       if (!api) {
         return;
       }
 
       setBusyAction("extensions");
       try {
-        const next = await api.runExtension(request);
-        applySnapshot(next);
+        const result = await api.invokeExtensionAction(request);
         setRuntimeError("");
+        return result;
       } catch (error) {
         const message = describeError(error);
         setRuntimeError(message);
@@ -2291,7 +2291,7 @@ export function useDesktopRuntime() {
         setBusyAction("");
       }
     },
-    [api, applySnapshot],
+    [api],
   );
 
   const updateExtensionSettings = useCallback(
@@ -4255,7 +4255,7 @@ export function useDesktopRuntime() {
     createRule,
     deleteExtension,
     setExtensionEnabled,
-    runExtension,
+    invokeExtensionAction,
     updateExtensionSettings,
     deleteMcpServer,
     saveHookEntry,

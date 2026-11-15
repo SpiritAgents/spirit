@@ -162,15 +162,13 @@ import {
   publishDesktopExtensionWebViewEvent,
   subscribeDesktopExtensionWebViewEvents,
   resolveDesktopExtensionTabIconFile,
-  openDesktopHostExtensionUi,
+  openDesktopHostExtensionUiSession,
   openDesktopExtensionTab,
   focusDesktopExtensionTab,
   closeDesktopExtensionTab,
   updateDesktopExtensionTab,
   emitDesktopExtensionTabEvent,
   subscribeDesktopExtensionTabEvents,
-  closeDesktopHostExtensionUi,
-  resolveDesktopExtensionViewOwner,
   setDesktopGitHubFetchImplementation,
   setDesktopExtensionHostAdapter,
   shutdownDesktopHostService,
@@ -215,6 +213,7 @@ import {
 } from "./github-oauth-flow.js";
 import { resolveRendererDistPath } from "./renderer-dist.js";
 import { registerGitHubDeviceLoginRunners } from "@spiritagent/sessions/host/github-oauth-bridge";
+import { assertExtensionExternalUrl } from "./extension-external-url.js";
 import { listSystemFonts } from "./system-fonts.js";
 import { syncWindowsImmersiveDarkMode } from "./win-dwm.js";
 import { PRODUCT_DISPLAY_NAME } from "./product-display-name.js";
@@ -279,21 +278,12 @@ const desktopExtensionHostAdapter: NonNullable<
     }
     await dialog.showMessageBox(options);
   },
+  async openExternal(url) {
+    await shell.openExternal(assertExtensionExternalUrl(url).toString());
+  },
   ui: {
-    async open(viewId, params) {
-      const owner = await resolveDesktopExtensionViewOwner(viewId);
-      if (!owner) {
-        throw new Error(`Unknown or ambiguous extension view: ${viewId}`);
-      }
-      const opened = await openDesktopHostExtensionUi({
-        extensionId: owner.extensionId,
-        viewId,
-        params,
-      });
-      return opened.kind === "opened" ? opened.result : opened;
-    },
-    close() {
-      closeDesktopHostExtensionUi();
+    async open() {
+      throw new Error("Extension identity is not bound to the view API.");
     },
   },
   tabs: {
@@ -338,7 +328,16 @@ const desktopExtensionHostAdapter: NonNullable<
     return {
       boundExtensionId: extensionId,
       showMessageBox: (request) => desktopExtensionHostAdapter.showMessageBox(request),
-      ui: desktopExtensionHostAdapter.ui,
+      openExternal: (url) => desktopExtensionHostAdapter.openExternal(url),
+      ui: {
+        async open(viewId, params) {
+          const view = await resolveDesktopExtensionViewFile(extensionId, viewId);
+          if (!view) {
+            throw new Error(`Unknown extension view: ${extensionId}/${viewId}`);
+          }
+          return openDesktopHostExtensionUiSession({ extensionId, viewId, params });
+        },
+      },
       tabs: {
         open: (request) =>
           openDesktopExtensionTab({
