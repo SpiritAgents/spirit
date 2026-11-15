@@ -98,7 +98,6 @@ import type {
   RunExtensionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
-  UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   PreviewModelsRequest,
   PreviewModelsResponse,
@@ -2317,28 +2316,6 @@ export function useDesktopRuntime() {
     [api, applySnapshot],
   );
 
-  const updateExtensionSecret = useCallback(
-    async (request: UpdateExtensionSecretRequest) => {
-      if (!api) {
-        return;
-      }
-
-      setBusyAction("extensions");
-      try {
-        const next = await api.updateExtensionSecret(request);
-        applySnapshot(next);
-        setRuntimeError("");
-      } catch (error) {
-        const message = describeError(error);
-        setRuntimeError(message);
-        throw new Error(message, { cause: error });
-      } finally {
-        setBusyAction("");
-      }
-    },
-    [api, applySnapshot],
-  );
-
   const saveSettingsPatch = useCallback(
     async (patch: Partial<SettingsFormState>) => {
       const translucencyPatch = patch.translucency !== undefined;
@@ -4280,7 +4257,6 @@ export function useDesktopRuntime() {
     setExtensionEnabled,
     runExtension,
     updateExtensionSettings,
-    updateExtensionSecret,
     deleteMcpServer,
     saveHookEntry,
     deleteHookEntry,

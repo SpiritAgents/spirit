@@ -156,26 +156,6 @@ export async function buildDesktopExtensionListItems(
                 : { settingsValues: await manager.getSettingsValues(item.id) }),
             }
           : {}),
-        ...(item.manifest.secretSlots?.length
-          ? {
-              secretSlots: item.manifest.secretSlots.map((slot) => ({
-                key: slot.key,
-                title: slot.title,
-                ...(slot.description ? { description: slot.description } : {}),
-                ...(slot.required !== undefined ? { required: slot.required } : {}),
-              })),
-              ...(skipLiveState
-                ? {}
-                : {
-                    secretStatuses: Object.entries(await manager.getSecretStatus(item.id)).map(
-                      ([key, configured]) => ({
-                        key,
-                        configured,
-                      }),
-                    ),
-                  }),
-            }
-          : {}),
         ...(item.archiveFileName ? { archiveFileName: item.archiveFileName } : {}),
         ...(item.installSource ? { installSource: item.installSource } : {}),
         installed: catalogInstalled,

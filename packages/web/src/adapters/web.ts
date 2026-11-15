@@ -30,7 +30,6 @@ import type {
   RunExtensionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
-  UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   PreviewModelsRequest,
   PreviewModelsResponse,
@@ -204,9 +203,6 @@ export function createWebHostApi(): HostApi {
     },
     updateExtensionSettings(request: UpdateExtensionSettingsRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions/settings", request);
-    },
-    updateExtensionSecret(request: UpdateExtensionSecretRequest) {
-      return post<DesktopSnapshot>(baseUrl, "/api/extensions/secret", request);
     },
     createRule(request: CreateRuleRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/rules", request);

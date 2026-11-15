@@ -65,7 +65,6 @@ import type {
   SetPaneWorkLocationRequest,
   CheckoutPaneGitBranchRequest,
   UpdateConfigRequest,
-  UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   WriteHostTextFileRequest,
   WriteWorkspaceTextFileRequest,
@@ -126,7 +125,6 @@ export type CommandPayloads = {
   setExtensionEnabled: { request: SetExtensionEnabledRequest };
   runExtension: { request: RunExtensionRequest };
   updateExtensionSettings: { request: UpdateExtensionSettingsRequest };
-  updateExtensionSecret: { request: UpdateExtensionSecretRequest };
   createRule: { request: CreateRuleRequest };
   createSkill: { request: CreateSkillRequest };
   deleteRule: { request: DeleteRuleRequest };

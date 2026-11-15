@@ -65,7 +65,7 @@ export interface MarketplaceExtensionManifest {
   requestedCapabilities?: string[];
   contributes?: MarketplaceManifestContributes;
   settingsSchema?: unknown[];
-  secretSlots?: unknown[];
+  secretSlots?: string[];
 }
 
 export interface MarketplaceManifestContributes {
@@ -295,8 +295,12 @@ function parseManifest(value: unknown, fieldName: string): MarketplaceExtensionM
   if (value.settingsSchema !== undefined && !Array.isArray(value.settingsSchema)) {
     throw new Error(`${fieldName}.settingsSchema must be an array.`);
   }
-  if (value.secretSlots !== undefined && !Array.isArray(value.secretSlots)) {
-    throw new Error(`${fieldName}.secretSlots must be an array.`);
+  if (
+    value.secretSlots !== undefined &&
+    (!Array.isArray(value.secretSlots) ||
+      value.secretSlots.some((entry) => typeof entry !== "string"))
+  ) {
+    throw new Error(`${fieldName}.secretSlots must be an array of strings.`);
   }
 
   assertDeclarationConsistency(requestedCapabilities, contributes, fieldName);
@@ -307,7 +311,7 @@ function parseManifest(value: unknown, fieldName: string): MarketplaceExtensionM
     ...(requestedCapabilities ? { requestedCapabilities } : {}),
     ...(contributes ? { contributes } : {}),
     ...(value.settingsSchema ? { settingsSchema: value.settingsSchema as unknown[] } : {}),
-    ...(value.secretSlots ? { secretSlots: value.secretSlots as unknown[] } : {}),
+    ...(value.secretSlots ? { secretSlots: value.secretSlots as string[] } : {}),
   };
 }
 

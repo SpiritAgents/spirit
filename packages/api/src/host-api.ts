@@ -40,7 +40,6 @@ import type {
   RunExtensionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
-  UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   RemoveProviderGroupRequest,
   PreviewModelsRequest,
@@ -152,7 +151,6 @@ export interface HostApi {
   setExtensionEnabled(request: SetExtensionEnabledRequest): Promise<DesktopSnapshot>;
   runExtension(request: RunExtensionRequest): Promise<DesktopSnapshot>;
   updateExtensionSettings(request: UpdateExtensionSettingsRequest): Promise<DesktopSnapshot>;
-  updateExtensionSecret(request: UpdateExtensionSecretRequest): Promise<DesktopSnapshot>;
   createRule(request: CreateRuleRequest): Promise<DesktopSnapshot>;
   createSkill(request: CreateSkillRequest): Promise<DesktopSnapshot>;
   deleteRule(request: DeleteRuleRequest): Promise<DesktopSnapshot>;

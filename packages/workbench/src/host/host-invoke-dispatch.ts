@@ -42,9 +42,6 @@ export interface HostCommandDelegate {
   updateExtensionSettings(
     request: CommandPayloads["updateExtensionSettings"]["request"],
   ): Promise<unknown>;
-  updateExtensionSecret(
-    request: CommandPayloads["updateExtensionSecret"]["request"],
-  ): Promise<unknown>;
   createRule(request: CommandPayloads["createRule"]["request"]): Promise<unknown>;
   createSkill(request: CommandPayloads["createSkill"]["request"]): Promise<unknown>;
   deleteRule(request: CommandPayloads["deleteRule"]["request"]): Promise<unknown>;
@@ -275,7 +272,6 @@ const hostCommandDispatch = {
   setExtensionEnabled: (host, payload) => host.setExtensionEnabled(payload.request),
   runExtension: (host, payload) => host.runExtension(payload.request),
   updateExtensionSettings: (host, payload) => host.updateExtensionSettings(payload.request),
-  updateExtensionSecret: (host, payload) => host.updateExtensionSecret(payload.request),
   createRule: (host, payload) => host.createRule(payload.request),
   createSkill: (host, payload) => host.createSkill(payload.request),
   deleteRule: (host, payload) => host.deleteRule(payload.request),

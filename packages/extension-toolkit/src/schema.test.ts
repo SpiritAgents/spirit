@@ -304,3 +304,13 @@ test("parseExtensionDump validates the install-record schema", () => {
     /sourceId must be a non-empty string/,
   );
 });
+
+test("secretSlots is a string-only private storage declaration", () => {
+  const doc = validIndex();
+  doc.extensions[0]!.manifest.secretSlots = ["oauthAccessToken", "privateKey"];
+  const parsed = parseMarketplaceIndex(doc);
+  assert.deepEqual(parsed.extensions[0]?.manifest.secretSlots, ["oauthAccessToken", "privateKey"]);
+
+  doc.extensions[0]!.manifest.secretSlots = [{ key: "oauthAccessToken", title: "OAuth" }];
+  assert.throws(() => parseMarketplaceIndex(doc), /secretSlots must be an array of strings/);
+});

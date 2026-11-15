@@ -22,7 +22,6 @@ import type {
   PreviewModelsRequest,
   PreviewModelsResponse,
   SaveHookEntryRequest,
-  UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
 } from "@/types";
 
@@ -91,7 +90,6 @@ export type SettingsViewProps = {
   onRemoveProviderModels: (providerId: string) => Promise<void>;
   onAddMcpServer: (request: AddMcpServerRequest) => Promise<void>;
   onUpdateExtensionSettings: (request: UpdateExtensionSettingsRequest) => Promise<void>;
-  onUpdateExtensionSecret: (request: UpdateExtensionSecretRequest) => Promise<void>;
   onDeleteMcpServer: (request: DeleteMcpServerRequest) => Promise<void>;
   onSaveHookEntry: (request: SaveHookEntryRequest) => Promise<void>;
   onDeleteHookEntry: (request: DeleteHookEntryRequest) => Promise<void>;

@@ -133,7 +133,6 @@ import type {
   FileRewindWarning,
   RunExtensionRequest,
   SaveHookEntryRequest,
-  UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   PendingAssistantAux,
   QueuedUserTurnRequest,
@@ -223,7 +222,6 @@ import {
   saveHookEntryCommand,
   submitSkillSlashCommand,
   updateExtensionCommand,
-  updateExtensionSecretCommand,
   updateExtensionSettingsCommand,
   type HostExtensionCommandContext,
 } from "@spiritagent/sessions/host/host-extension-commands";
@@ -1835,10 +1833,6 @@ export class DesktopHostService {
 
   async updateExtensionSettings(request: UpdateExtensionSettingsRequest): Promise<DesktopSnapshot> {
     return updateExtensionSettingsCommand(this.extensionCommandContext(), request);
-  }
-
-  async updateExtensionSecret(request: UpdateExtensionSecretRequest): Promise<DesktopSnapshot> {
-    return updateExtensionSecretCommand(this.extensionCommandContext(), request);
   }
 
   async deleteSkill(request: DeleteSkillRequest): Promise<DesktopSnapshot> {

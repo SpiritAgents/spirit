@@ -55,6 +55,7 @@ import {
 
 const TEMP_DIR_PREFIX = "spirit-extension-";
 const EXTENSION_FIELD_KEY_PATTERN = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/u;
+const EXTENSION_SECRET_SLOT_KEY_PATTERN = /^[A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*$/u;
 const EXTENSION_TOOL_INVOCATION_NAME_MAX_LENGTH = 64;
 const EXTENSION_TOOL_ID_FRAGMENT_LIMIT = 16;
 const EXTENSION_TOOL_NAME_FRAGMENT_LIMIT = 24;
@@ -296,13 +297,6 @@ export interface HostExtensionSettingDefinition {
   options?: HostExtensionSettingOption[];
 }
 
-export interface HostExtensionSecretSlot {
-  key: string;
-  title: string;
-  description?: string;
-  required?: boolean;
-}
-
 export interface HostExtensionAuthor {
   name: string;
   email?: string;
@@ -339,7 +333,7 @@ export interface HostExtensionManifest {
   requestedCapabilities?: HostExtensionRequestedCapability[];
   contributes?: HostExtensionContributionSet;
   settingsSchema?: HostExtensionSettingDefinition[];
-  secretSlots?: HostExtensionSecretSlot[];
+  secretSlots?: string[];
 }
 
 export interface HostMarketplaceCatalogItem extends HostInstalledExtension {
@@ -545,12 +539,6 @@ export interface UpdateExtensionSettingsRequest {
   values: HostExtensionSettingsValues;
 }
 
-export interface UpdateExtensionSecretRequest {
-  id: string;
-  key: string;
-  value?: string;
-}
-
 export interface DispatchExtensionEventRequest<THostApi> {
   event: HostExtensionEvent;
   host: THostApi;
@@ -573,8 +561,6 @@ export interface HostExtensionManager {
   invokeTabRequest<THostApi>(request: InvokeExtensionTabRequest<THostApi>): Promise<unknown>;
   getSettingsValues(id: string): Promise<HostExtensionSettingsValues>;
   setSettingsValues(request: UpdateExtensionSettingsRequest): Promise<HostExtensionSettingsValues>;
-  getSecretStatus(id: string): Promise<Record<string, boolean>>;
-  setSecretValue(request: UpdateExtensionSecretRequest): Promise<Record<string, boolean>>;
   collectSystemPromptContributions<THostApi>(
     request: CollectExtensionSystemPromptContributionsRequest<THostApi>,
   ): Promise<HostExtensionSystemPromptContribution[]>;
@@ -645,12 +631,6 @@ export function createHostExtensionManager(
     },
     async setSettingsValues(request) {
       return saveExtensionSettingsValues(context, stateStore, request);
-    },
-    async getSecretStatus(id) {
-      return loadExtensionSecretStatus(context, stateStore, id);
-    },
-    async setSecretValue(request) {
-      return saveExtensionSecretValue(context, stateStore, request);
     },
     async collectSystemPromptContributions(request) {
       return collectExtensionSystemPromptContributions(
@@ -1159,47 +1139,6 @@ export async function saveExtensionSettingsValues(
   return saveSettingsValuesForExtension(extension, stateStore, request.values);
 }
 
-export async function loadExtensionSecretStatus(
-  context: ExtensionManagementContext,
-  stateStore: ExtensionStateStore,
-  id: string,
-): Promise<Record<string, boolean>> {
-  const extension = await requireInstalledExtension(context, id);
-  const status: Record<string, boolean> = {};
-
-  for (const slot of extension.manifest.secretSlots ?? []) {
-    status[slot.key] = await hasExtensionSecret(stateStore, extension.id, slot.key);
-  }
-
-  return status;
-}
-
-export async function saveExtensionSecretValue(
-  context: ExtensionManagementContext,
-  stateStore: ExtensionStateStore,
-  request: UpdateExtensionSecretRequest,
-): Promise<Record<string, boolean>> {
-  const extension = await requireInstalledExtension(context, request.id);
-  const secretKey = request.key.trim();
-  if (!extension.manifest.secretSlots?.some((slot) => slot.key === secretKey)) {
-    throw new Error(`The extension does not declare the secret slot: ${secretKey}`);
-  }
-
-  const nextValue = request.value?.trim();
-  if (nextValue) {
-    if (!stateStore.saveSecret) {
-      throw new Error(
-        `The current host does not implement extension secret storage: ${extension.id}`,
-      );
-    }
-    await stateStore.saveSecret(extension.id, secretKey, nextValue);
-  } else if (stateStore.deleteSecret) {
-    await stateStore.deleteSecret(extension.id, secretKey);
-  }
-
-  return loadExtensionSecretStatus(context, stateStore, extension.id);
-}
-
 export async function dispatchExtensionEvent<THostApi>(
   context: ExtensionManagementContext,
   activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
@@ -1510,6 +1449,9 @@ function createSecretsAccessor(
     },
     async set(key, value) {
       assertSecretSlot(extension.manifest, key);
+      if (value.length === 0) {
+        throw new Error(`Extension secret values must not be empty: ${key}`);
+      }
       if (!stateStore.saveSecret) {
         throw new Error(
           `The current host does not implement extension secret storage: ${extension.id}`,
@@ -1539,7 +1481,7 @@ async function hasExtensionSecret(
 }
 
 function assertSecretSlot(manifest: HostExtensionManifest, key: string): void {
-  if (!manifest.secretSlots?.some((slot) => slot.key === key)) {
+  if (!manifest.secretSlots?.includes(key)) {
     throw new Error(`The extension does not declare the secret slot: ${key}`);
   }
 }
@@ -2930,29 +2872,25 @@ function optionalSettingDefaultValueField(
   }
 }
 
-function optionalSecretSlotsField(value: unknown, fieldPrefix: string): HostExtensionSecretSlot[] {
+function optionalSecretSlotsField(value: unknown, fieldPrefix: string): string[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  return value.map((entry, index) => {
-    if (!isRecord(entry)) {
-      throw new Error(`Extension field ${fieldPrefix}[${index}] must be an object.`);
+  const slots = value.map((entry, index) => {
+    if (typeof entry !== "string") {
+      throw new Error(`Extension field ${fieldPrefix}[${index}] must be a string.`);
     }
-    const key = stringField(entry.key, `${fieldPrefix}[${index}].key`);
-    if (!EXTENSION_FIELD_KEY_PATTERN.test(key)) {
+    const key = entry.trim();
+    if (!EXTENSION_SECRET_SLOT_KEY_PATTERN.test(key)) {
       throw new Error(`Invalid extension secret slot key: ${key}`);
     }
-    const title = stringField(entry.title, `${fieldPrefix}[${index}].title`);
-    const description = optionalStringField(entry.description);
-    const required = optionalBooleanField(entry.required);
-    return {
-      key,
-      title,
-      ...(description ? { description } : {}),
-      ...(required !== undefined ? { required } : {}),
-    };
+    return key;
   });
+  if (new Set(slots).size !== slots.length) {
+    throw new Error(`Extension field ${fieldPrefix} must not contain duplicate slots.`);
+  }
+  return slots;
 }
 
 function optionalBooleanField(value: unknown): boolean | undefined {

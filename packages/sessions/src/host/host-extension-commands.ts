@@ -38,7 +38,6 @@ import type {
   SetExtensionEnabledRequest,
   SubmitSkillSlashRequest,
   UpdateExtensionRequest,
-  UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
 } from "../types.js";
 import type { HostExtensionEvent } from "@spiritagent/extensions";
@@ -75,7 +74,6 @@ type HostExtensionManager = {
     id: string;
     values: UpdateExtensionSettingsRequest["values"];
   }): Promise<unknown>;
-  setSecretValue(input: { id: string; key: string; value?: string }): Promise<unknown>;
 };
 
 type McpRefreshable = {
@@ -525,31 +523,6 @@ export async function updateExtensionSettingsCommand(
     await ctx.extensionManager().setSettingsValues({
       id,
       values: request.values,
-    });
-    await ctx.refreshRuntimeAfterExtensionMutation();
-    return ctx.buildSnapshot();
-  });
-}
-
-export async function updateExtensionSecretCommand(
-  ctx: HostExtensionCommandContext,
-  request: UpdateExtensionSecretRequest,
-): Promise<DesktopSnapshot> {
-  return ctx.runSerialized(async () => {
-    await ctx.ensureInitialized();
-    const id = request.id.trim();
-    const key = request.key.trim();
-    if (!id) {
-      throw new Error(i18n.t("error.extensionIdRequired"));
-    }
-    if (!key) {
-      throw new Error(i18n.t("error.secretKeyRequired"));
-    }
-
-    await ctx.extensionManager().setSecretValue({
-      id,
-      key,
-      ...(request.value !== undefined ? { value: request.value } : {}),
     });
     await ctx.refreshRuntimeAfterExtensionMutation();
     return ctx.buildSnapshot();

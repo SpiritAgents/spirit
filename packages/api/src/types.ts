@@ -629,12 +629,6 @@ export interface UpdateExtensionSettingsRequest {
   values: Record<string, DesktopExtensionSettingValue>;
 }
 
-export interface UpdateExtensionSecretRequest {
-  id: string;
-  key: string;
-  value?: string;
-}
-
 export type DesktopExtensionToolApprovalMode = "allowed" | "need-approval" | "need-questions";
 
 export type DesktopExtensionToolExecutionMode = "foreground" | "background";
@@ -844,18 +838,6 @@ export interface DesktopExtensionSettingDefinition {
   options?: DesktopExtensionSettingOption[];
 }
 
-export interface DesktopExtensionSecretSlot {
-  key: string;
-  title: string;
-  description?: string;
-  required?: boolean;
-}
-
-export interface DesktopExtensionSecretStatus {
-  key: string;
-  configured: boolean;
-}
-
 export type DesktopExtensionHostKind = "cli" | "desktop";
 
 export interface DesktopExtensionInstructionContributionSummary {
@@ -892,8 +874,6 @@ export interface DesktopExtensionListItem {
   instructionContributions?: DesktopExtensionInstructionContributionSummary;
   settingsSchema?: DesktopExtensionSettingDefinition[];
   settingsValues?: Record<string, DesktopExtensionSettingValue>;
-  secretSlots?: DesktopExtensionSecretSlot[];
-  secretStatuses?: DesktopExtensionSecretStatus[];
   archiveFileName?: string;
   installSource?: "built-in" | "archive" | "marketplace";
   installed?: boolean;

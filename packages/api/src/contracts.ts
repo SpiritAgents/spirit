@@ -29,7 +29,6 @@ export type HostCommandName =
   | "setExtensionEnabled"
   | "runExtension"
   | "updateExtensionSettings"
-  | "updateExtensionSecret"
   | "createRule"
   | "createSkill"
   | "deleteRule"
