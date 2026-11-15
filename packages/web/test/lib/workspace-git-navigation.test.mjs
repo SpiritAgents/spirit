@@ -6,7 +6,7 @@ import { resolveWorkspaceGitTab } from "../../src/lib/workspace-git-navigation.t
 
 test("resolveWorkspaceGitTab keeps focus when active tab is Git", () => {
   const initial = createInitialWorkspaceToolsState(true);
-  const gitTabId = initial.tabs.find((tab) => tab.kind === "git")?.id;
+  const gitTabId = initial.tabs.find((tab) => tab.builtInKind === "git")?.id;
   assert.ok(gitTabId);
 
   const navigation = resolveWorkspaceGitTab(initial.tabs, gitTabId);
@@ -18,7 +18,7 @@ test("resolveWorkspaceGitTab keeps focus when active tab is Git", () => {
 
 test("resolveWorkspaceGitTab focuses first Git tab when active tab is not Git", () => {
   const initial = createInitialWorkspaceToolsState(true);
-  const gitTabId = initial.tabs.find((tab) => tab.kind === "git")?.id;
+  const gitTabId = initial.tabs.find((tab) => tab.builtInKind === "git")?.id;
   assert.ok(gitTabId);
 
   const navigation = resolveWorkspaceGitTab(initial.tabs, initial.activeTabId);
@@ -29,11 +29,11 @@ test("resolveWorkspaceGitTab focuses first Git tab when active tab is not Git", 
 
 test("resolveWorkspaceGitTab creates Git tab when missing", () => {
   const initial = createInitialWorkspaceToolsState(true);
-  const tabsWithoutGit = initial.tabs.filter((tab) => tab.kind !== "git");
+  const tabsWithoutGit = initial.tabs.filter((tab) => tab.builtInKind !== "git");
 
   const navigation = resolveWorkspaceGitTab(tabsWithoutGit, initial.activeTabId);
 
   assert.notEqual(navigation.activeTabId, initial.activeTabId);
-  assert.equal(navigation.tabs.at(-1)?.kind, "git");
+  assert.equal(navigation.tabs.at(-1)?.builtInKind, "git");
   assert.equal(navigation.gitTabId, navigation.activeTabId);
 });

@@ -93,7 +93,7 @@ function initFakeService(tasks) {
     setTabs: (tabs) => {
       state.tabs = tabs;
       for (const tab of tabs) {
-        if (tab.kind === "task" && !state.sessions.has(tab.id)) {
+        if (tab.builtInKind === "task" && !state.sessions.has(tab.id)) {
           const session = createFakeSession();
           state.sessions.set(tab.id, session);
           registerTaskTerminal(tab.id, { session, taskKey: tab.taskKey, running: false });

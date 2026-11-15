@@ -15,6 +15,7 @@ import {
 } from "@spiritagent/ui/composer";
 import {
   findWorkspaceToolTab,
+  isWorkspaceToolTabKind,
   type WorkspaceToolTab,
   type WorkspaceToolTabKind,
 } from "./workspace-tool-tabs.js";
@@ -85,7 +86,7 @@ export function trackedTabOfKind(
     return undefined;
   }
   const tab = findWorkspaceToolTab(tabs, trimmed);
-  return tab?.kind === kind ? tab : undefined;
+  return isWorkspaceToolTabKind(tab, kind) ? tab : undefined;
 }
 
 export function resolveSessionChatPathFromTranscript(

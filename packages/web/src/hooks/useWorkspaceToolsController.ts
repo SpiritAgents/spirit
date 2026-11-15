@@ -9,6 +9,7 @@ import {
   addWorkspaceToolTab,
   createInitialWorkspaceToolsState,
   findWorkspaceToolTab,
+  isWorkspaceToolTabKind,
   focusFirstTabOfKind,
   normalizeWorkspaceToolTabsForHost,
   openBrowserUrlInWorkspaceTabs,
@@ -220,7 +221,7 @@ export function useWorkspaceToolsController({
   const openGitTab = useCallback((preferTabId?: string) => {
     if (preferTabId) {
       const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, preferTabId);
-      if (tab?.kind === "git") {
+      if (isWorkspaceToolTabKind(tab, "git")) {
         setWorkspaceToolsOpen(true);
         setActiveWorkspaceToolTabId(preferTabId);
         return;
@@ -255,7 +256,7 @@ export function useWorkspaceToolsController({
       },
     ) => {
       const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, tabId);
-      if (tab?.kind !== "files") {
+      if (!isWorkspaceToolTabKind(tab, "files")) {
         openWorkspaceFile(relativePath, options);
         return;
       }
@@ -276,7 +277,7 @@ export function useWorkspaceToolsController({
 
   const revealWorkspaceDirectoryOnTab = useCallback((tabId: string, relativePath: string) => {
     const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, tabId);
-    if (tab?.kind !== "files") {
+    if (!isWorkspaceToolTabKind(tab, "files")) {
       revealWorkspaceDirectory(relativePath);
       return;
     }
@@ -301,7 +302,7 @@ export function useWorkspaceToolsController({
       }
       if (preferTabId) {
         const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, preferTabId);
-        if (tab?.kind === "browser") {
+        if (isWorkspaceToolTabKind(tab, "browser")) {
           setWorkspaceToolsOpen(true);
           setWorkspaceToolTabs(
             workspaceToolTabsRef.current.map((item) =>
@@ -313,8 +314,10 @@ export function useWorkspaceToolsController({
         }
       }
       const tabs = workspaceToolTabsRef.current;
-      const vacant = tabs.find((tab) => tab.kind === "browser" && !tab.tabTitle?.trim());
-      const existing = vacant ?? tabs.find((tab) => tab.kind === "browser");
+      const vacant = tabs.find(
+        (tab) => isWorkspaceToolTabKind(tab, "browser") && !tab.tabTitle?.trim(),
+      );
+      const existing = vacant ?? tabs.find((tab) => isWorkspaceToolTabKind(tab, "browser"));
       if (existing) {
         setWorkspaceToolsOpen(true);
         setWorkspaceToolTabs(
@@ -335,7 +338,7 @@ export function useWorkspaceToolsController({
       }
       if (preferTabId) {
         const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, preferTabId);
-        if (tab?.kind === "pr") {
+        if (isWorkspaceToolTabKind(tab, "pr")) {
           setWorkspaceToolsOpen(true);
           setActiveWorkspaceToolTabId(preferTabId);
           setWorkspacePrRevealTargetId(preferTabId);
@@ -366,7 +369,7 @@ export function useWorkspaceToolsController({
     const activeTabId = activeWorkspaceToolTabIdRef.current;
     const activeTab = findWorkspaceToolTab(tabs, activeTabId);
     let targetFilesTabId: string;
-    if (activeTab?.kind === "files") {
+    if (isWorkspaceToolTabKind(activeTab, "files")) {
       targetFilesTabId = activeTabId;
     } else {
       const firstFilesId = focusFirstTabOfKind(tabs, "files");

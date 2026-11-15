@@ -92,6 +92,7 @@ import type { EditorFileTarget, WorkspaceEditorViewMode } from "@/lib/workspace-
 import { resolveWorkspaceFilesTabIcon } from "@/lib/workspace-explorer-icon";
 import {
   addWorkspaceToolTab,
+  isWorkspaceToolTabKind,
   closeWorkspaceToolTab,
   workspaceTerminalChipDisplayName,
   workspaceToolTabLabel,
@@ -639,7 +640,10 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId), [activeTabId, tabs]);
 
   useEffect(() => {
-    if (activeTab?.kind !== "terminal" && activeTab?.kind !== "task") {
+    if (
+      !isWorkspaceToolTabKind(activeTab, "terminal") &&
+      !isWorkspaceToolTabKind(activeTab, "task")
+    ) {
       return;
     }
     setMountedTerminalTabIds((prev) => {
@@ -660,7 +664,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
       if (kind === "pr" && (!prTabEnabled || gitHubAuthConnected !== true)) {
         return;
       }
-      const vacant = tabs.find((tab) => tab.kind === kind && !tab.tabTitle);
+      const vacant = tabs.find((tab) => isWorkspaceToolTabKind(tab, kind) && !tab.tabTitle);
       if (vacant) {
         onActiveTabIdChange(vacant.id);
         return;
@@ -704,11 +708,14 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   const handleCloseTab = useCallback(
     (closeId: string) => {
       const tab = tabs.find((item) => item.id === closeId);
-      if (tab?.kind === "files" && tab.tabDirty) {
+      if (isWorkspaceToolTabKind(tab, "files") && tab.tabDirty) {
         setPendingCloseTabId(closeId);
         return;
       }
-      if (tab?.kind === "task" && shouldConfirmTaskTabClose(getTaskTerminal(closeId))) {
+      if (
+        isWorkspaceToolTabKind(tab, "task") &&
+        shouldConfirmTaskTabClose(getTaskTerminal(closeId))
+      ) {
         setPendingTaskClose({ tabId: closeId, label: tab.tabTitle ?? "" });
         setTaskCloseDialogOpen(true);
         return;
@@ -751,7 +758,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     (tabId: string, title: string | undefined) => {
       onTabsChange((prev) =>
         prev.map((item) =>
-          item.id === tabId && item.pinnedTitle !== true
+          item.kind === "built-in" && item.id === tabId && item.pinnedTitle !== true
             ? {
                 ...item,
                 tabTitle: title || undefined,
@@ -835,12 +842,16 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
             className="flex items-center gap-1"
           >
             {tabs.map((item) => {
-              const meta = TAB_KIND_META[item.kind];
+              if (item.kind === "extension") {
+                return null;
+              }
+              const meta = TAB_KIND_META[item.builtInKind];
               const displayTitle = item.tabTitle;
-              const filesTabIcon =
-                item.kind === "files" ? resolveWorkspaceFilesTabIcon(displayTitle) : undefined;
+              const filesTabIcon = isWorkspaceToolTabKind(item, "files")
+                ? resolveWorkspaceFilesTabIcon(displayTitle)
+                : undefined;
               const Icon =
-                item.kind === "pr" && item.prStatus
+                isWorkspaceToolTabKind(item, "pr") && item.prStatus
                   ? resolvePrTabStatusIcon(item.prStatus)
                   : (filesTabIcon ?? meta.icon);
               return (
@@ -848,7 +859,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   key={item.id}
                   tab={item}
                   icon={Icon}
-                  label={workspaceToolTabLabel(item.kind, tabs, item.id, t)}
+                  label={workspaceToolTabLabel(item.builtInKind, tabs, item.id, t)}
                   selected={item.id === activeTabId}
                   onSelect={onActiveTabIdChange}
                   onClose={handleCloseTab}
@@ -995,14 +1006,26 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
         aria-live="polite"
       >
         {tabs.map((item) => {
+          if (item.kind === "extension") {
+            return null;
+          }
           const selected = item.id === activeTabId;
-          const panelPadding = item.kind === "files" || item.kind === "terminal" ? "p-0" : "p-0";
+          const panelPadding =
+            isWorkspaceToolTabKind(item, "files") || isWorkspaceToolTabKind(item, "terminal")
+              ? "p-0"
+              : "p-0";
           const planRevealEnabled =
-            item.kind === "files" && planRevealTabId != null && item.id === planRevealTabId;
+            isWorkspaceToolTabKind(item, "files") &&
+            planRevealTabId != null &&
+            item.id === planRevealTabId;
           const fileRevealEnabled =
-            item.kind === "files" && fileRevealTabId != null && item.id === fileRevealTabId;
+            isWorkspaceToolTabKind(item, "files") &&
+            fileRevealTabId != null &&
+            item.id === fileRevealTabId;
           const prRevealEnabled =
-            item.kind === "pr" && prRevealTabId != null && item.id === prRevealTabId;
+            isWorkspaceToolTabKind(item, "pr") &&
+            prRevealTabId != null &&
+            item.id === prRevealTabId;
 
           return (
             <div
@@ -1019,7 +1042,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                 !selected && "invisible",
               )}
             >
-              {item.kind === "files" ? (
+              {isWorkspaceToolTabKind(item, "files") ? (
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pt-0">
                   <WorkspaceFilesTab
                     workspaceRoot={workspaceRoot}
@@ -1070,7 +1093,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     codeCompletionEnabled={codeCompletionEnabled}
                   />
                 </div>
-              ) : item.kind === "terminal" ? (
+              ) : isWorkspaceToolTabKind(item, "terminal") ? (
                 mountedTerminalTabIds.has(item.id) ? (
                   <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                     <WorkspaceTerminalTab
@@ -1088,7 +1111,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     />
                   </div>
                 ) : null
-              ) : item.kind === "task" ? (
+              ) : isWorkspaceToolTabKind(item, "task") ? (
                 mountedTerminalTabIds.has(item.id) ? (
                   <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                     <WorkspaceTaskTerminalTab
@@ -1100,7 +1123,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     />
                   </div>
                 ) : null
-              ) : item.kind === "browser" ? (
+              ) : isWorkspaceToolTabKind(item, "browser") ? (
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                   <WorkspaceBrowserTab
                     browserTabId={item.id}
@@ -1119,7 +1142,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     }
                   />
                 </div>
-              ) : item.kind === "pr" ? (
+              ) : isWorkspaceToolTabKind(item, "pr") ? (
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                   <WorkspacePrTab
                     gitSnapshot={gitSnapshot}

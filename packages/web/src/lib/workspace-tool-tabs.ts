@@ -1,27 +1,54 @@
+import type {
+  DesktopExtensionDesktopTabRuntimeIcon,
+  DesktopExtensionDesktopTabScope,
+} from "@spiritagent/api/types";
 import type { PullRequestChipStatus } from "@spiritagent/ui/composer";
 
 export type WorkspaceToolTabKind = "files" | "terminal" | "git" | "browser" | "pr" | "task";
+export type WorkspaceBuiltInToolTabKind = WorkspaceToolTabKind;
 
 export const BROWSER_NEW_TAB_SENTINEL = "__spirit_browser_new_tab__";
 
-export type WorkspaceToolTab = {
+export type WorkspaceExtensionToolTabScope =
+  | { kind: Extract<DesktopExtensionDesktopTabScope, "window-shared"> }
+  | { kind: Extract<DesktopExtensionDesktopTabScope, "workspace">; workspaceRoot: string }
+  | { kind: Extract<DesktopExtensionDesktopTabScope, "session">; sessionKey: string };
+
+type WorkspaceToolTabBase = {
   id: string;
-  kind: WorkspaceToolTabKind;
-  /** Only used when kind === "browser"; the sentinel represents the built-in new tab page */
-  browserUrl?: string;
-  /** Current title reported by each child Tab component (file name / page title / terminal title); only the icon is shown when empty */
+  /** Current title reported by each child Tab component; only the icon is shown when empty. */
   tabTitle?: string;
-  /** Only used when kind === "files"; indicates the currently open file has unsaved edits */
+  /** Files and extension tabs use the unified unsaved-changes close confirmation. */
   tabDirty?: boolean;
-  /** Only used when kind === "files"; workspace-relative path of the currently open file (for reuse across tabs) */
+};
+
+export type WorkspaceBuiltInToolTab = WorkspaceToolTabBase & {
+  kind: "built-in";
+  builtInKind: WorkspaceBuiltInToolTabKind;
+  /** Only used when builtInKind === "browser"; the sentinel represents the built-in new tab page. */
+  browserUrl?: string;
+  /** Only used when builtInKind === "files"; workspace-relative path of the current file. */
   filesWorkspacePath?: string;
-  /** Only used when kind === "pr"; the status of the current PR detail page, used to switch the tab icon */
+  /** Only used when builtInKind === "pr"; switches the tab icon to the current PR status. */
   prStatus?: PullRequestChipStatus;
-  /** Only used when kind === "task"; the resolved task key this tab belongs to */
+  /** Only used when builtInKind === "task"; the resolved task key this tab belongs to. */
   taskKey?: string;
-  /** Only used when kind === "task"; the task label owns the title, so OSC/process title updates must not replace it */
+  /** Only used when builtInKind === "task"; task labels must not be replaced by process titles. */
   pinnedTitle?: boolean;
 };
+
+export type WorkspaceExtensionToolTab = WorkspaceToolTabBase & {
+  kind: "extension";
+  extensionId: string;
+  contributionId: string;
+  /** Stable per-contribution runtime identity; id mirrors this value for renderer compatibility. */
+  instanceId: string;
+  scope: WorkspaceExtensionToolTabScope;
+  initialParams?: unknown;
+  icon?: DesktopExtensionDesktopTabRuntimeIcon;
+};
+
+export type WorkspaceToolTab = WorkspaceBuiltInToolTab | WorkspaceExtensionToolTab;
 
 const KIND_BASE_LABEL_KEY: Record<WorkspaceToolTabKind, string> = {
   files: "workspace.files",
@@ -39,16 +66,46 @@ function newTabId(): string {
   return `tab-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+export function isWorkspaceToolTabKind<K extends WorkspaceToolTabKind>(
+  tab: WorkspaceToolTab | undefined,
+  kind: K,
+): tab is WorkspaceBuiltInToolTab & { builtInKind: K } {
+  return tab?.kind === "built-in" && tab.builtInKind === kind;
+}
+
 export function isBrowserNewTabUrl(url: string | undefined): boolean {
   return url === BROWSER_NEW_TAB_SENTINEL || url === undefined || url === "";
 }
 
-export function createWorkspaceToolTab(kind: WorkspaceToolTabKind): WorkspaceToolTab {
-  const tab: WorkspaceToolTab = { id: newTabId(), kind };
+export function createWorkspaceToolTab(kind: WorkspaceToolTabKind): WorkspaceBuiltInToolTab {
+  const tab: WorkspaceBuiltInToolTab = { id: newTabId(), kind: "built-in", builtInKind: kind };
   if (kind === "browser") {
     tab.browserUrl = BROWSER_NEW_TAB_SENTINEL;
   }
   return tab;
+}
+
+export function createExtensionWorkspaceToolTab(input: {
+  extensionId: string;
+  contributionId: string;
+  scope: WorkspaceExtensionToolTabScope;
+  initialParams?: unknown;
+  icon?: DesktopExtensionDesktopTabRuntimeIcon;
+  tabTitle?: string;
+  instanceId?: string;
+}): WorkspaceExtensionToolTab {
+  const instanceId = input.instanceId ?? newTabId();
+  return {
+    id: instanceId,
+    kind: "extension",
+    extensionId: input.extensionId,
+    contributionId: input.contributionId,
+    instanceId,
+    scope: input.scope,
+    ...(input.initialParams === undefined ? {} : { initialParams: input.initialParams }),
+    ...(input.icon ? { icon: input.icon } : {}),
+    ...(input.tabTitle ? { tabTitle: input.tabTitle } : {}),
+  };
 }
 
 export type WorkspaceToolTabsDefaultsOptions = {
@@ -75,8 +132,8 @@ export function createInitialWorkspaceToolsState(includeBrowser = false): {
   return { tabs, activeTabId: defaultActiveWorkspaceToolTabId(tabs) };
 }
 
-export function defaultActiveWorkspaceToolTabId(tabs: WorkspaceToolTab[]): string {
-  const files = tabs.find((t) => t.kind === "files");
+export function defaultActiveWorkspaceToolTabId(tabs: readonly WorkspaceToolTab[]): string {
+  const files = tabs.find((tab) => isWorkspaceToolTabKind(tab, "files"));
   return files?.id ?? tabs[0]?.id ?? "";
 }
 
@@ -86,7 +143,9 @@ export function workspaceToolTabLabel(
   tabId: string,
   translate: (key: string) => string,
 ): string {
-  const index = tabs.filter((t) => t.kind === kind).findIndex((t) => t.id === tabId);
+  const index = tabs
+    .filter((tab) => isWorkspaceToolTabKind(tab, kind))
+    .findIndex((t) => t.id === tabId);
   const base = translate(KIND_BASE_LABEL_KEY[kind]);
   if (index <= 0) {
     return base;
@@ -105,7 +164,7 @@ export function workspaceTerminalChipDisplayName(
     return titled;
   }
   const index = tabs
-    .filter((item) => item.kind === "terminal")
+    .filter((item) => isWorkspaceToolTabKind(item, "terminal"))
     .findIndex((item) => item.id === tab.id);
   const base = translate("workspace.terminalChipDefaultName");
   if (index <= 0) {
@@ -118,7 +177,7 @@ export function focusFirstTabOfKind(
   tabs: readonly WorkspaceToolTab[],
   kind: WorkspaceToolTabKind,
 ): string | null {
-  return tabs.find((t) => t.kind === kind)?.id ?? null;
+  return tabs.find((tab) => isWorkspaceToolTabKind(tab, kind))?.id ?? null;
 }
 
 export function findWorkspaceToolTab(
@@ -159,7 +218,9 @@ export function openBrowserUrlInWorkspaceTabs(
   tabs: readonly WorkspaceToolTab[],
   url: string,
 ): { tabs: WorkspaceToolTab[]; activeId: string } {
-  const vacant = tabs.find((tab) => tab.kind === "browser" && !tab.tabTitle?.trim());
+  const vacant = tabs.find(
+    (tab) => isWorkspaceToolTabKind(tab, "browser") && !tab.tabTitle?.trim(),
+  );
   if (vacant) {
     return {
       tabs: tabs.map((tab) => (tab.id === vacant.id ? { ...tab, browserUrl: url } : tab)),
@@ -169,7 +230,7 @@ export function openBrowserUrlInWorkspaceTabs(
   return addWorkspaceBrowserTabWithUrl(tabs, url);
 }
 
-/** Creates a browser sub-tab with the target URL directly (avoiding landing on the new-tab sentinel first and updating a second time). */
+/** Creates a browser sub-tab with the target URL directly. */
 export function addWorkspaceBrowserTabWithUrl(
   tabs: readonly WorkspaceToolTab[],
   url: string,
@@ -189,15 +250,15 @@ export function normalizeWorkspaceToolTabsForHost(
   let nextTabs = [...tabs];
 
   if (!includePr) {
-    nextTabs = nextTabs.filter((tab) => tab.kind !== "pr");
+    nextTabs = nextTabs.filter((tab) => !isWorkspaceToolTabKind(tab, "pr"));
   }
 
   if (includeBrowser) {
-    if (!nextTabs.some((tab) => tab.kind === "browser")) {
+    if (!nextTabs.some((tab) => isWorkspaceToolTabKind(tab, "browser"))) {
       nextTabs = [...nextTabs, createWorkspaceToolTab("browser")];
     }
   } else {
-    const withoutBrowser = nextTabs.filter((tab) => tab.kind !== "browser");
+    const withoutBrowser = nextTabs.filter((tab) => !isWorkspaceToolTabKind(tab, "browser"));
     nextTabs =
       withoutBrowser.length > 0
         ? withoutBrowser
@@ -238,10 +299,16 @@ export function closeWorkspaceToolTab(
   const closingTab = tabs[closeIndex]!;
   let nextTabs = tabs.filter((t) => t.id !== closeId);
 
-  const kindExhausted = !nextTabs.some((t) => t.kind === closingTab.kind);
-  let recreatedTab: WorkspaceToolTab | undefined;
-  if (kindExhausted && shouldEnsureTabKindAfterClose(closingTab.kind, options)) {
-    recreatedTab = createWorkspaceToolTab(closingTab.kind);
+  const kindExhausted =
+    closingTab.kind === "built-in" &&
+    !nextTabs.some((tab) => isWorkspaceToolTabKind(tab, closingTab.builtInKind));
+  let recreatedTab: WorkspaceBuiltInToolTab | undefined;
+  if (
+    closingTab.kind === "built-in" &&
+    kindExhausted &&
+    shouldEnsureTabKindAfterClose(closingTab.builtInKind, options)
+  ) {
+    recreatedTab = createWorkspaceToolTab(closingTab.builtInKind);
     nextTabs = [...nextTabs, recreatedTab];
   }
 

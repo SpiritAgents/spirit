@@ -1,6 +1,7 @@
 import {
   addWorkspaceToolTab,
   findWorkspaceToolTab,
+  isWorkspaceToolTabKind,
   focusFirstTabOfKind,
   type WorkspaceToolTab,
 } from "@/lib/workspace-tool-tabs";
@@ -17,7 +18,7 @@ export function resolveWorkspaceGitTab(
   activeTabId: string,
 ): ResolveWorkspaceGitTabResult {
   const activeTab = findWorkspaceToolTab(tabs, activeTabId);
-  if (activeTab?.kind === "git") {
+  if (isWorkspaceToolTabKind(activeTab, "git")) {
     return { tabs: [...tabs], activeTabId, gitTabId: activeTabId };
   }
 
