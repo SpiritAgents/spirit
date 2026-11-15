@@ -23,6 +23,13 @@ import {
   type BackgroundTaskOwner,
 } from "@spiritagent/sessions";
 import { createSubagentWorkspaceBootstrap } from "@spiritagent/workspace";
+import {
+  isEmptyModelRef,
+  loadSpiritConfig,
+  modelRefKey,
+  modelRefsEqual,
+  resolveSubagentLanguageModelSelector,
+} from "@spiritagent/config";
 import type { AcpServerConfig, AcpSessionState } from "./types.js";
 import { AVAILABLE_MODES, normalizeModeId } from "./types.js";
 import { createAcpRuntime, type AcpRuntimeResult } from "./runtime-factory.js";
@@ -66,6 +73,7 @@ interface CreateAcpSessionOptions {
   sessionId?: string;
   sessionKind?: "default" | "dream-collector" | "subagent";
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
+  modelRef?: import("@spiritagent/config").ModelRef;
 }
 
 /** Owns ACP session lifetimes independently of individual prompt requests. */
@@ -180,6 +188,7 @@ export class SessionManager {
         },
         ...(options.sessionKind ? { sessionKind: options.sessionKind } : {}),
         ...(options.subagentOrigin ? { subagentOrigin: options.subagentOrigin } : {}),
+        ...(options.modelRef ? { modelRef: options.modelRef } : {}),
       },
     );
     const session: LiveSession = {
@@ -406,6 +415,18 @@ export class SessionManager {
     if (!request.sessionId && parent.sessionKind === "subagent") {
       throw new Error("Nested subagents are not supported.");
     }
+    const selectedModel =
+      request.model !== undefined
+        ? resolveSubagentLanguageModelSelector(
+            loadSpiritConfig(this.globalConfig.spiritDataDir)?.providers ?? [],
+            request.model,
+          )
+        : undefined;
+    const inheritedModel = request.sessionId
+      ? undefined
+      : (selectedModel ??
+        parent.result.modelRef ??
+        loadSpiritConfig(this.globalConfig.spiritDataDir)?.activeModel);
     const target = request.sessionId
       ? await this.loadSession(request.sessionId, parent.workspaceRoot, parent.onEvent, true)
       : await this.createSession(parent.workspaceRoot, parent.onEvent, parent.currentMode, {
@@ -414,6 +435,7 @@ export class SessionManager {
             parentSessionId,
             parentToolCallId: request.parentToolCallId,
           },
+          ...(inheritedModel ? { modelRef: inheritedModel } : {}),
         });
     const session = this.sessions.get(target.sessionId);
     if (!session || session.closing) throw new Error(`Session ${target.sessionId} not found`);
@@ -438,6 +460,23 @@ export class SessionManager {
         this.cancel(target.sessionId, { preserveAgentWriter: true });
         await session.operations;
       }
+      if (request.sessionId && selectedModel) {
+        const storedModel = session.result.modelRef;
+        if (!storedModel || !modelRefsEqual(storedModel, selectedModel)) {
+          const fresh = await session.result.reconfigure({
+            workspaceRoot: session.workspaceRoot,
+            modelRef: selectedModel,
+          });
+          session.result = fresh;
+          session.toolExecutor = fresh.toolExecutor;
+          session.activeSkills = fresh.activeSkills;
+          session.enabledSkillCatalog = fresh.enabledSkillCatalog;
+          session.setAgentMode = fresh.setAgentMode;
+          await fresh.persist();
+        }
+      }
+      const effectiveModel =
+        session.result.modelRef ?? loadSpiritConfig(this.globalConfig.spiritDataDir)?.activeModel;
       const transcript = resolveSubagentTranscriptFilePath(
         this.globalConfig.spiritDataDir,
         target.sessionId,
@@ -455,6 +494,9 @@ export class SessionManager {
           await request.context.update({
             sessionId: target.sessionId,
             sessionTranscript: transcript,
+            ...(effectiveModel && !isEmptyModelRef(effectiveModel)
+              ? { model: modelRefKey(effectiveModel) }
+              : {}),
             ...(session.worktreePath ? { worktreePath: session.worktreePath } : {}),
             ...(session.worktreeBranch ? { worktreeBranch: session.worktreeBranch } : {}),
           });

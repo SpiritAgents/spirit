@@ -78,6 +78,11 @@ import {
 } from "@spiritagent/workspace";
 
 import { createNoopPeer } from "./noop-peer.js";
+import {
+  listSubagentLanguageModelSelectors,
+  loadSpiritConfig,
+  type ModelRef,
+} from "@spiritagent/config";
 import { tryResolveTransportConfig } from "@spiritagent/config/resolve-transport";
 import type { AcpServerConfig } from "./types.js";
 
@@ -86,7 +91,8 @@ export type AcpHostRuntime = AgentRuntime<LlmTransportConfig, LlmToolAgentState,
 export interface AcpRuntimeResult {
   runtime: AcpHostRuntime;
   toolExecutor: HostToolExecutorProxy;
-  reconfigure(next: { workspaceRoot: string }): Promise<AcpRuntimeResult>;
+  modelRef?: ModelRef;
+  reconfigure(next: { workspaceRoot: string; modelRef?: ModelRef }): Promise<AcpRuntimeResult>;
   workspaceRoot: string;
   sessionKind?: "default" | "dream-collector" | "subagent";
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
@@ -118,6 +124,7 @@ export async function createAcpRuntime(
     requireExisting?: boolean;
     sessionKind?: "default" | "dream-collector" | "subagent";
     subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
+    modelRef?: ModelRef;
     subagentSessionDelegate?: import("@spiritagent/agent-core").SubagentSessionDelegate;
     workLocation?: import("@spiritagent/api/work-location").WorkLocationKind;
     worktreePath?: string;
@@ -145,6 +152,7 @@ export async function createAcpRuntime(
     );
     lease = sessionLease;
     const saved = await sessionStore.read();
+    let modelRef = options.modelRef ?? saved?.modelRef;
     if (options.requireExisting && !saved) throw new Error("Stored ACP session not found.");
     if (
       saved &&
@@ -169,6 +177,7 @@ export async function createAcpRuntime(
         sessionId: sessionId,
         workspaceRoot: result.workspaceRoot,
         agentMode: result.agentModeSnapshot(),
+        ...(modelRef ? { modelRef } : {}),
         workLocation: result.workLocation,
         ...(result.worktreePath ? { worktreePath: result.worktreePath } : {}),
         ...(result.worktreeBranch ? { worktreeBranch: result.worktreeBranch } : {}),
@@ -211,6 +220,8 @@ export async function createAcpRuntime(
       onEvent,
       saved?.agentMode ?? initialMode,
       sessionId,
+      undefined,
+      modelRef,
     );
     const configurePreparedRuntime = (environment: PreparedAcpRuntime): void => {
       environment.runtimeOptions.backgroundTasks = {
@@ -235,6 +246,7 @@ export async function createAcpRuntime(
       ...(worktreeBranch ? { worktreeBranch } : {}),
       ...(sessionKind ? { sessionKind } : {}),
       ...(subagentOrigin ? { subagentOrigin } : {}),
+      ...(modelRef ? { modelRef } : {}),
       runtime,
       tasks,
       sessionId: sessionId,
@@ -247,14 +259,18 @@ export async function createAcpRuntime(
       reconfigure: async (next) => {
         const current = result;
         if (!current) throw new Error("ACP runtime is not initialized.");
+        const nextModelRef = next.modelRef ?? modelRef;
         const nextPrepared = await prepareAcpRuntime(
           { ...config, workspaceRoot: next.workspaceRoot },
           onEvent,
           current.agentModeSnapshot(),
           sessionId,
+          undefined,
+          nextModelRef,
         );
         configurePreparedRuntime(nextPrepared);
         runtime.replaceHostOptions(nextPrepared.runtimeOptions);
+        modelRef = nextModelRef;
         result = {
           ...nextPrepared,
           workspaceRoot: next.workspaceRoot,
@@ -263,6 +279,7 @@ export async function createAcpRuntime(
           ...(current.worktreeBranch ? { worktreeBranch: current.worktreeBranch } : {}),
           ...(current.sessionKind ? { sessionKind: current.sessionKind } : {}),
           ...(current.subagentOrigin ? { subagentOrigin: current.subagentOrigin } : {}),
+          ...(modelRef ? { modelRef } : {}),
           runtime,
           tasks,
           sessionId: sessionId,
@@ -337,10 +354,11 @@ async function prepareAcpRuntime(
   initialMode: AgentMode,
   transcriptSessionKey: string,
   inheritedTransport?: { config: LlmTransportConfig; providerId?: string },
+  modelRef?: ModelRef,
 ): Promise<PreparedAcpRuntime> {
   const resolvedTransport = inheritedTransport
     ? { ok: true as const, ...inheritedTransport }
-    : tryResolveTransportConfig(config);
+    : tryResolveTransportConfig({ ...config, ...(modelRef ? { modelRef } : {}) });
   if (!resolvedTransport.ok) {
     throw new Error(resolvedTransport.error);
   }
@@ -358,6 +376,9 @@ async function prepareAcpRuntime(
   const toolExecutor = new HostToolExecutorProxy(
     noopPeer,
     createHostMcpService(workspaceRoot, spiritDataDir),
+  );
+  toolExecutor.setSubagentLanguageModelSelectorResolver(() =>
+    listSubagentLanguageModelSelectors(loadSpiritConfig(spiritDataDir)?.providers ?? []),
   );
 
   // 2. Create NodeHostToolService with noop MCP adapter
