@@ -30,7 +30,14 @@ import { createSubagentWorkspaceBootstrap } from "@spiritagent/workspace";
 import { extractActivePlanPathFromLlmHistory } from "@spiritagent/instructions";
 import type { ApprovalLevel } from "@spiritagent/api/approval-level";
 import type { HostDreamScope, HostDreamSourceSessionRef } from "@spiritagent/automations/dreams";
-import type { ModelRef } from "@spiritagent/config";
+import {
+  isEmptyModelRef,
+  loadSpiritConfig,
+  modelRefKey,
+  modelRefsEqual,
+  resolveSubagentLanguageModelSelector,
+  type ModelRef,
+} from "@spiritagent/config";
 import {
   createBackgroundTaskOwner,
   createSessionId,
@@ -527,6 +534,18 @@ export class SessionManager {
     if (!request.sessionId && parent.info.sessionKind === "subagent") {
       throw new Error("Nested subagents are not supported.");
     }
+    const selectedModel =
+      request.model !== undefined
+        ? resolveSubagentLanguageModelSelector(
+            loadSpiritConfig(this.spiritDataDir)?.providers ?? [],
+            request.model,
+          )
+        : undefined;
+    const inheritedModel = request.sessionId
+      ? undefined
+      : (selectedModel ??
+        parent.createParams.modelRef ??
+        loadSpiritConfig(this.spiritDataDir)?.activeModel);
     const target = request.sessionId
       ? await this.resumeSession(request.sessionId, parent.info.workspaceRoot, parent.info.hostKind)
       : await this.createSession({
@@ -537,7 +556,9 @@ export class SessionManager {
             parentSessionId,
             parentToolCallId: request.parentToolCallId,
           },
-          ...(parent.createParams.modelRef ? { modelRef: parent.createParams.modelRef } : {}),
+          ...(inheritedModel && !isEmptyModelRef(inheritedModel)
+            ? { modelRef: inheritedModel }
+            : {}),
           ...(parent.createParams.agentMode ? { agentMode: parent.createParams.agentMode } : {}),
           approvalLevel: parent.info.approvalLevel,
           ...(parent.createParams.hostUiPromptSection
@@ -589,6 +610,14 @@ export class SessionManager {
         this.abort(target.sessionId, { preserveAgentWriter: true });
         await targetSession.operations;
       }
+      if (request.sessionId && selectedModel) {
+        const storedModel = targetSession.createParams.modelRef;
+        if (!storedModel || !modelRefsEqual(storedModel, selectedModel)) {
+          await this.replaceConfig(target.sessionId, selectedModel);
+        }
+      }
+      const effectiveModel =
+        targetSession.createParams.modelRef ?? loadSpiritConfig(this.spiritDataDir)?.activeModel;
       await this.serializeSession(targetSession, async () => {
         if (request.worktree) {
           await this.setSessionWorktree(target.sessionId);
@@ -596,6 +625,9 @@ export class SessionManager {
         await request.context.update({
           sessionId: target.sessionId,
           sessionTranscript: transcript,
+          ...(effectiveModel && !isEmptyModelRef(effectiveModel)
+            ? { model: modelRefKey(effectiveModel) }
+            : {}),
           ...(targetSession.info.worktreePath
             ? { worktreePath: targetSession.info.worktreePath }
             : {}),
