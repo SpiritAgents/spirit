@@ -673,6 +673,7 @@
     "empty": "확장 기능이 없습니다",
     "contributionGroupTools": "도구",
     "contributionGroupAuthorization": "승인",
+    "contributionGroupAutomationTriggers": "Automation 트리거",
     "contributionGroupDesktop": "데스크톱",
     "contributionRuleTitle": "규칙",
     "contributionStyleTitle": "스타일",

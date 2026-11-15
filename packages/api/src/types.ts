@@ -543,6 +543,7 @@ export interface DesktopMarketplaceCatalogEntry {
   iconUrl?: string;
   supportedHosts: DesktopExtensionHostKind[];
   authorizations?: DesktopExtensionAuthorization[];
+  automationTriggers?: DesktopExtensionAutomationTrigger[];
   activationEvents?: string[];
   requestedCapabilities?: string[];
   contributedTools?: DesktopExtensionContributedTool[];
@@ -856,6 +857,18 @@ export interface DesktopExtensionAuthor {
   url?: string;
 }
 
+export interface DesktopExtensionAutomationTrigger {
+  kind: string;
+  extensionId: string;
+  contributionId: string;
+  name: string;
+  description: string;
+  icon: DesktopExtensionDesktopTabRuntimeIcon;
+  configuration: "menu" | "none";
+  inputSchema: Record<string, unknown>;
+  authorization?: { id: string; configured?: boolean };
+}
+
 export interface DesktopExtensionAuthorization {
   id: string;
   action: string;
@@ -873,6 +886,7 @@ export interface DesktopExtensionListItem {
   main?: string;
   supportedHosts: DesktopExtensionHostKind[];
   authorizations?: DesktopExtensionAuthorization[];
+  automationTriggers?: DesktopExtensionAutomationTrigger[];
   activationEvents?: string[];
   requestedCapabilities?: string[];
   contributedTools?: DesktopExtensionContributedTool[];

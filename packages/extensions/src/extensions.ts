@@ -24,6 +24,7 @@ import {
   MCP_CONFIG_FILE_NAME,
   parseHooksConfigFile,
   parseMcpConfigFile,
+  type JsonObject,
 } from "@spiritagent/agent-core";
 import {
   assertDeclaredInstructionContributionFiles as assertToolkitDeclaredInstructionContributionFiles,
@@ -32,6 +33,16 @@ import {
   type MarketplaceExtensionDump,
 } from "@spiritagent/extension-toolkit";
 
+import type {
+  AutomationTriggerContributionDefinition,
+  AutomationTriggerMenuPage,
+  AutomationTriggerPollOutput,
+  AutomationTriggerPollTarget,
+  AutomationTriggerProvider,
+  AutomationTriggerValidation,
+} from "@spiritagent/automations/trigger-provider";
+
+import { assertHostExtensionJsonValue } from "./extension-tab-values.js";
 import { clearBuiltInExtensionRemoved, noteBuiltInExtensionRemoved } from "./built-in/state.js";
 import { removePersonalRegistryEntry } from "./marketplace/personal.js";
 import {
@@ -79,6 +90,7 @@ export const SUPPORTED_HOST_EXTENSION_REQUESTED_CAPABILITIES = [
   "questions-flow",
   "settings",
   "secret-storage",
+  "automation-triggers",
   "structured-results",
   "desktop-ui",
   "desktop-webview-display",
@@ -151,8 +163,13 @@ export interface HostExtensionAuthorizationDefinition {
   secretSlots: string[];
 }
 
+export interface HostExtensionAutomationTriggerDefinition extends AutomationTriggerContributionDefinition {
+  icon: HostExtensionDesktopTabIcon;
+}
+
 export interface HostExtensionContributionSet {
   tools?: HostExtensionContributedToolDefinition[];
+  automationTriggers?: HostExtensionAutomationTriggerDefinition[];
   authorizations?: HostExtensionAuthorizationDefinition[];
   desktop?: HostExtensionDesktopContributionSet;
   cli?: HostExtensionCliContributionSet;
@@ -532,8 +549,38 @@ export interface InvokeExtensionActionRequest<THostApi> {
   logger?: Pick<Console, "error" | "log">;
 }
 
+export interface InvokeExtensionAutomationTriggerRequest<THostApi> {
+  extensionId: string;
+  contributionId: string;
+  host: THostApi;
+  logger?: Pick<Console, "error" | "log">;
+}
+
+export interface ValidateExtensionAutomationTriggerRequest<
+  THostApi,
+> extends InvokeExtensionAutomationTriggerRequest<THostApi> {
+  config: JsonObject;
+}
+
+export interface InvokeExtensionAutomationTriggerMenuRequest<
+  THostApi,
+> extends InvokeExtensionAutomationTriggerRequest<THostApi> {
+  path: string[];
+  query?: string;
+  page: number;
+  signal: AbortSignal;
+}
+
+export interface InvokeExtensionAutomationTriggerPollRequest<
+  THostApi,
+> extends InvokeExtensionAutomationTriggerRequest<THostApi> {
+  triggers: AutomationTriggerPollTarget[];
+  signal: AbortSignal;
+}
+
 export interface HostActivatedExtension {
   actions?: Record<string, HostExtensionActionHandler<unknown>>;
+  automationTriggers?: Record<string, AutomationTriggerProvider<unknown>>;
   onWebViewEvent?(event: HostExtensionWebViewEvent): Promise<void> | void;
   onTabRequest?<THostApi>(
     request: HostExtensionTabRequestContext<THostApi>,
@@ -592,6 +639,15 @@ export interface HostExtensionManager {
   invokeTabRequest<THostApi>(request: InvokeExtensionTabRequest<THostApi>): Promise<unknown>;
   invokeAction<THostApi>(request: InvokeExtensionActionRequest<THostApi>): Promise<unknown>;
   getAuthorizationConfigurations(id: string): Promise<Record<string, boolean>>;
+  validateAutomationTrigger<THostApi>(
+    request: ValidateExtensionAutomationTriggerRequest<THostApi>,
+  ): Promise<AutomationTriggerValidation>;
+  invokeAutomationTriggerMenu<THostApi>(
+    request: InvokeExtensionAutomationTriggerMenuRequest<THostApi>,
+  ): Promise<AutomationTriggerMenuPage>;
+  invokeAutomationTriggerPoll<THostApi>(
+    request: InvokeExtensionAutomationTriggerPollRequest<THostApi>,
+  ): Promise<AutomationTriggerPollOutput>;
   getSettingsValues(id: string): Promise<HostExtensionSettingsValues>;
   setSettingsValues(request: UpdateExtensionSettingsRequest): Promise<HostExtensionSettingsValues>;
   collectSystemPromptContributions<THostApi>(
@@ -664,6 +720,25 @@ export function createHostExtensionManager(
     },
     async getAuthorizationConfigurations(id) {
       return loadExtensionAuthorizationConfigurations(context, stateStore, id);
+    },
+    async validateAutomationTrigger(request) {
+      return validateExtensionAutomationTrigger(context, activatedExtensions, stateStore, request);
+    },
+    async invokeAutomationTriggerMenu(request) {
+      return invokeExtensionAutomationTriggerMenu(
+        context,
+        activatedExtensions,
+        stateStore,
+        request,
+      );
+    },
+    async invokeAutomationTriggerPoll(request) {
+      return invokeExtensionAutomationTriggerPoll(
+        context,
+        activatedExtensions,
+        stateStore,
+        request,
+      );
     },
     async getSettingsValues(id) {
       return loadExtensionSettingsValues(context, stateStore, id);
@@ -1146,6 +1221,151 @@ export async function invokeExtensionTool<THostApi>(
     ...(request.questionsResult !== undefined ? { questionsResult: request.questionsResult } : {}),
   });
   return renderExtensionToolResult(result);
+}
+
+async function requireAutomationTriggerProvider<THostApi>(
+  context: ExtensionManagementContext,
+  activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
+  stateStore: ExtensionStateStore,
+  request: InvokeExtensionAutomationTriggerRequest<THostApi>,
+) {
+  const target = await requireInstalledExtension(context, request.extensionId);
+  if (!target.enabled) {
+    throw new Error(`The extension is disabled: ${target.id}`);
+  }
+  const contribution = target.manifest.contributes?.automationTriggers?.find(
+    (entry) => entry.id === request.contributionId,
+  );
+  if (!contribution) {
+    throw new Error(
+      `The extension does not declare the Automation trigger: ${request.contributionId}`,
+    );
+  }
+  const entry = await ensureActivatedExtension(target, activatedExtensions, stateStore, {
+    host: request.host,
+    ...(request.logger ? { logger: request.logger } : {}),
+    log: (message) => {
+      request.logger?.log(`[extension:${target.id}] ${message}`);
+    },
+  });
+  const provider = entry.activatedExtension?.automationTriggers?.[request.contributionId];
+  if (!provider) {
+    throw new Error(
+      `The extension does not export the Automation trigger provider: ${request.contributionId}`,
+    );
+  }
+  return { target, entry, provider };
+}
+
+function automationTriggerBaseContext<THostApi>(
+  target: HostInstalledExtension,
+  entry: ActivatedExtensionCacheEntry,
+  stateStore: ExtensionStateStore,
+  request: InvokeExtensionAutomationTriggerRequest<THostApi>,
+) {
+  return {
+    extension: entry.runtimeInfo,
+    host: bindHostForExtension(request.host, target.id),
+    contributionId: request.contributionId,
+    settings: createSettingsAccessor(target, stateStore),
+    secrets: createSecretsAccessor(target, stateStore),
+  };
+}
+
+export async function validateExtensionAutomationTrigger<THostApi>(
+  context: ExtensionManagementContext,
+  activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
+  stateStore: ExtensionStateStore,
+  request: ValidateExtensionAutomationTriggerRequest<THostApi>,
+): Promise<AutomationTriggerValidation> {
+  assertHostExtensionJsonValue(request.config, "Automation trigger config");
+  if (Array.isArray(request.config)) {
+    throw new Error("Automation trigger config must be an object.");
+  }
+  const { target, entry, provider } = await requireAutomationTriggerProvider(
+    context,
+    activatedExtensions,
+    stateStore,
+    request,
+  );
+  const validation = await provider.validate({
+    ...automationTriggerBaseContext(target, entry, stateStore, request),
+    config: request.config,
+  });
+  if (!isRecord(validation) || typeof validation.label !== "string" || !validation.label.trim()) {
+    throw new Error("Automation trigger validation must return a non-empty label.");
+  }
+  assertHostExtensionJsonValue(validation.config, "Validated Automation trigger config");
+  if (Array.isArray(validation.config)) {
+    throw new Error("Validated Automation trigger config must be an object.");
+  }
+  return { config: validation.config, label: validation.label.trim() };
+}
+
+export async function invokeExtensionAutomationTriggerMenu<THostApi>(
+  context: ExtensionManagementContext,
+  activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
+  stateStore: ExtensionStateStore,
+  request: InvokeExtensionAutomationTriggerMenuRequest<THostApi>,
+): Promise<AutomationTriggerMenuPage> {
+  if (!Number.isInteger(request.page) || request.page < 1) {
+    throw new Error("Automation trigger menu page must be a positive integer.");
+  }
+  if (request.path.some((entry) => !entry.trim())) {
+    throw new Error("Automation trigger menu path ids must not be empty.");
+  }
+  const { target, entry, provider } = await requireAutomationTriggerProvider(
+    context,
+    activatedExtensions,
+    stateStore,
+    request,
+  );
+  if (!provider.menu) {
+    throw new Error(`The Automation trigger does not provide a menu: ${request.contributionId}`);
+  }
+  const page = await provider.menu({
+    ...automationTriggerBaseContext(target, entry, stateStore, request),
+    path: request.path,
+    ...(request.query === undefined ? {} : { query: request.query }),
+    page: request.page,
+    signal: request.signal,
+  });
+  if (!isRecord(page) || !Array.isArray(page.items)) {
+    throw new Error("Automation trigger menu must return an items array.");
+  }
+  return page;
+}
+
+export async function invokeExtensionAutomationTriggerPoll<THostApi>(
+  context: ExtensionManagementContext,
+  activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
+  stateStore: ExtensionStateStore,
+  request: InvokeExtensionAutomationTriggerPollRequest<THostApi>,
+): Promise<AutomationTriggerPollOutput> {
+  for (const trigger of request.triggers) {
+    if (!trigger.automationId.trim()) {
+      throw new Error("Automation trigger poll targets require an automation id.");
+    }
+    assertHostExtensionJsonValue(trigger.config, "Automation trigger poll config");
+    if (trigger.state !== undefined) {
+      assertHostExtensionJsonValue(trigger.state, "Automation trigger poll state");
+    }
+  }
+  const { target, entry, provider } = await requireAutomationTriggerProvider(
+    context,
+    activatedExtensions,
+    stateStore,
+    request,
+  );
+  const output = await provider.poll({
+    ...automationTriggerBaseContext(target, entry, stateStore, request),
+    triggers: request.triggers,
+    signal: request.signal,
+  });
+  if (!isRecord(output) || !Array.isArray(output.results)) {
+    throw new Error("Automation trigger poll must return a results array.");
+  }
+  return output;
 }
 
 export async function invokeExtensionAction<THostApi>(
@@ -1991,6 +2211,18 @@ async function parseExtensionManifestFields(
     dump.manifest.supportedHosts,
     "manifest.supportedHosts",
   );
+  if (
+    (contributes?.authorizations?.length ?? 0) > 0 &&
+    !requestedCapabilities.includes("secret-storage")
+  ) {
+    throw new Error("Authorization contributions require the secret-storage capability.");
+  }
+  if (
+    (contributes?.automationTriggers?.length ?? 0) > 0 &&
+    !requestedCapabilities.includes("automation-triggers")
+  ) {
+    throw new Error("Automation trigger contributions require the automation-triggers capability.");
+  }
   for (const authorization of contributes?.authorizations ?? []) {
     for (const key of authorization.secretSlots) {
       if (!secretSlots.includes(key)) {
@@ -1998,6 +2230,17 @@ async function parseExtensionManifestFields(
           `Authorization ${authorization.id} references an undeclared secret slot: ${key}`,
         );
       }
+    }
+  }
+
+  for (const trigger of contributes?.automationTriggers ?? []) {
+    if (
+      trigger.authorization &&
+      !contributes?.authorizations?.some((entry) => entry.id === trigger.authorization)
+    ) {
+      throw new Error(
+        `Automation trigger ${trigger.id} references an unknown authorization: ${trigger.authorization}`,
+      );
     }
   }
 
@@ -2223,6 +2466,7 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
   }
 
   const actions = resolveActivatedExtensionActions(value.actions);
+  const automationTriggers = resolveActivatedAutomationTriggers(value.automationTriggers);
   const tools = resolveActivatedExtensionTools(value.tools);
   const invokeTool =
     typeof value.invokeTool === "function"
@@ -2243,6 +2487,7 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
   const dispose = typeof value.dispose === "function" ? value.dispose : undefined;
   if (
     !actions &&
+    !automationTriggers &&
     !tools &&
     !invokeTool &&
     !systemPrompt &&
@@ -2258,6 +2503,7 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
   return Object.assign(
     {},
     actions ? { actions } : {},
+    automationTriggers ? { automationTriggers } : {},
     tools ? { tools } : {},
     invokeTool ? { invokeTool } : {},
     systemPrompt ? { systemPrompt } : {},
@@ -2269,6 +2515,23 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
       : {},
     dispose ? { dispose: dispose as HostActivatedExtension["dispose"] } : {},
   ) as HostActivatedExtension;
+}
+
+function resolveActivatedAutomationTriggers(
+  value: unknown,
+): HostActivatedExtension["automationTriggers"] | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const entries = Object.entries(value).filter(([, provider]) => {
+    if (!isRecord(provider)) {
+      return false;
+    }
+    return typeof provider.validate === "function" && typeof provider.poll === "function";
+  });
+  return entries.length > 0
+    ? (Object.fromEntries(entries) as HostActivatedExtension["automationTriggers"])
+    : undefined;
 }
 
 function resolveActivatedExtensionActions(
@@ -2448,6 +2711,10 @@ async function optionalContributionSetField(
     value.authorizations,
     `${fieldPrefix}.authorizations`,
   );
+  const automationTriggers = optionalAutomationTriggersField(
+    value.automationTriggers,
+    `${fieldPrefix}.automationTriggers`,
+  );
   const desktop = optionalDesktopContributionSetField(value.desktop, `${fieldPrefix}.desktop`);
   const cli = await optionalCliContributionSetField(value.cli, options, `${fieldPrefix}.cli`);
   const mcp = optionalDeclaredContributionFlag(value.mcp, `${fieldPrefix}.mcp`);
@@ -2457,6 +2724,7 @@ async function optionalContributionSetField(
   if (
     tools.length === 0 &&
     authorizations.length === 0 &&
+    automationTriggers.length === 0 &&
     !desktop &&
     !cli &&
     !mcp &&
@@ -2470,6 +2738,7 @@ async function optionalContributionSetField(
   return {
     ...(tools.length > 0 ? { tools } : {}),
     ...(authorizations.length > 0 ? { authorizations } : {}),
+    ...(automationTriggers.length > 0 ? { automationTriggers } : {}),
     ...(desktop ? { desktop } : {}),
     ...(cli ? { cli } : {}),
     ...(mcp ? { mcp: true } : {}),
@@ -2477,6 +2746,67 @@ async function optionalContributionSetField(
     ...(skills ? { skills: true } : {}),
     ...(rules ? { rules: true } : {}),
   };
+}
+
+function optionalAutomationTriggersField(
+  value: unknown,
+  fieldPrefix: string,
+): HostExtensionAutomationTriggerDefinition[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const triggers = value.map((entry, index) => {
+    const field = `${fieldPrefix}[${index}]`;
+    if (!isRecord(entry)) {
+      throw new Error(`Extension field ${field} must be an object.`);
+    }
+    const id = stringField(entry.id, `${field}.id`);
+    if (!EXTENSION_FIELD_KEY_PATTERN.test(id)) {
+      throw new Error(`Extension field ${field}.id is invalid.`);
+    }
+    const configuration = entry.configuration;
+    if (configuration !== undefined && configuration !== "menu") {
+      throw new Error(`Extension field ${field}.configuration must be "menu" when present.`);
+    }
+    const inputSchema = schemaField(entry.inputSchema, `${field}.inputSchema`) as JsonObject;
+    if (inputSchema.type !== "object") {
+      throw new Error(`Extension field ${field}.inputSchema.type must be "object".`);
+    }
+    assertNoSchemaReferences(inputSchema, `${field}.inputSchema`);
+    return {
+      id,
+      name: stringField(entry.name, `${field}.name`),
+      description: stringField(entry.description, `${field}.description`),
+      icon: parseDesktopTabIcon(entry.icon, `${field}.icon`),
+      ...(configuration === "menu" ? { configuration: "menu" as const } : {}),
+      inputSchema,
+      ...(entry.authorization === undefined
+        ? {}
+        : { authorization: stringField(entry.authorization, `${field}.authorization`) }),
+    };
+  });
+  if (new Set(triggers.map((entry) => entry.id)).size !== triggers.length) {
+    throw new Error(`Extension field ${fieldPrefix} must not contain duplicate ids.`);
+  }
+  return triggers;
+}
+
+function assertNoSchemaReferences(value: unknown, fieldName: string): void {
+  if (Array.isArray(value)) {
+    for (const [index, entry] of value.entries()) {
+      assertNoSchemaReferences(entry, `${fieldName}[${index}]`);
+    }
+    return;
+  }
+  if (!isRecord(value)) {
+    return;
+  }
+  for (const [key, entry] of Object.entries(value)) {
+    if (key === "$ref") {
+      throw new Error(`Extension field ${fieldName} must be self-contained and cannot use $ref.`);
+    }
+    assertNoSchemaReferences(entry, `${fieldName}.${key}`);
+  }
 }
 
 function optionalAuthorizationsField(

@@ -24,6 +24,8 @@ import {
   type MarketplaceCatalogItem,
 } from "@spiritagent/extensions";
 
+import { extensionAutomationTriggerKind } from "@spiritagent/automations/trigger-provider";
+
 import type {
   DesktopExtensionCssLayer,
   DesktopExtensionDesktopView,
@@ -61,6 +63,36 @@ function mapDesktopAuthorizations(
   }));
 }
 
+function mapDesktopAutomationTriggers(
+  manifest: HostExtensionManifest,
+  configurations?: Record<string, boolean | undefined>,
+): import("../types.js").DesktopExtensionAutomationTrigger[] | undefined {
+  const triggers = manifest.contributes?.automationTriggers;
+  if (!triggers?.length) {
+    return undefined;
+  }
+  return triggers.map((trigger) => ({
+    kind: extensionAutomationTriggerKind(manifest.sourceId, manifest.name, trigger.id),
+    extensionId: manifest.id,
+    contributionId: trigger.id,
+    name: trigger.name,
+    description: trigger.description,
+    icon: trigger.icon,
+    configuration: trigger.configuration ?? "none",
+    inputSchema: trigger.inputSchema,
+    ...(trigger.authorization
+      ? {
+          authorization: {
+            id: trigger.authorization,
+            ...(configurations?.[trigger.authorization] === undefined
+              ? {}
+              : { configured: configurations[trigger.authorization] }),
+          },
+        }
+      : {}),
+  }));
+}
+
 export async function buildDesktopExtensionListItems(
   manager: HostExtensionManager,
   extensions: readonly HostInstalledExtension[],
@@ -93,6 +125,14 @@ export async function buildDesktopExtensionListItems(
         ...(item.manifest.contributes?.authorizations?.length
           ? {
               authorizations: mapDesktopAuthorizations(
+                item.manifest,
+                skipLiveState ? undefined : await manager.getAuthorizationConfigurations(item.id),
+              ),
+            }
+          : {}),
+        ...(item.manifest.contributes?.automationTriggers?.length
+          ? {
+              automationTriggers: mapDesktopAutomationTriggers(
                 item.manifest,
                 skipLiveState ? undefined : await manager.getAuthorizationConfigurations(item.id),
               ),
@@ -278,6 +318,18 @@ export async function buildDesktopMarketplaceCatalogEntries(
         ...(manifest.contributes?.authorizations?.length
           ? {
               authorizations: mapDesktopAuthorizations(
+                manifest,
+                Object.fromEntries(
+                  (installedById.get(`${source.id}/${entry.name}`)?.authorizations ?? []).map(
+                    (authorization) => [authorization.id, authorization.configured],
+                  ),
+                ),
+              ),
+            }
+          : {}),
+        ...(manifest.contributes?.automationTriggers?.length
+          ? {
+              automationTriggers: mapDesktopAutomationTriggers(
                 manifest,
                 Object.fromEntries(
                   (installedById.get(`${source.id}/${entry.name}`)?.authorizations ?? []).map(

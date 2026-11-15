@@ -33,7 +33,7 @@ test("desktop authorization projection exposes configuration without secret decl
       assert.equal(id, extension.id);
       return { oauth: true };
     },
-  } as HostExtensionManager;
+  } as unknown as HostExtensionManager;
 
   const [item] = await buildDesktopExtensionListItems(manager, [extension]);
   assert.deepEqual(item?.authorizations, [{ id: "oauth", action: "authorize", configured: true }]);

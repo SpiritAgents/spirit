@@ -903,6 +903,9 @@ importers:
       '@spiritagent/agent-core':
         specifier: workspace:*
         version: link:../agent-core
+      '@spiritagent/automations':
+        specifier: workspace:*
+        version: link:../automations
       '@spiritagent/config':
         specifier: workspace:*
         version: link:../config

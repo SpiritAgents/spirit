@@ -141,3 +141,27 @@ test("authorizations render static ids without runtime configuration state", () 
   expect(queryByText("Configured")).toBeNull();
   expect(document.querySelector("svg.lucide-shield-check")).toBeTruthy();
 });
+
+test("Automation trigger contributions render their names and descriptions", () => {
+  const { getByText } = render(
+    <MarketplaceContributionGroups
+      item={{
+        automationTriggers: [
+          {
+            kind: "extension:personal/demo/activity",
+            extensionId: "personal/demo",
+            contributionId: "activity",
+            name: "Repository Activity",
+            description: "React to new repository activity.",
+            configuration: "menu",
+            inputSchema: { type: "object" },
+            icon: { type: "spirit", name: "globe" },
+          },
+        ],
+      }}
+    />,
+  );
+  expect(getByText("Automation Triggers")).toBeTruthy();
+  expect(getByText("Repository Activity")).toBeTruthy();
+  expect(getByText("React to new repository activity.")).toBeTruthy();
+});

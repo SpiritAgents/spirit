@@ -706,6 +706,7 @@
     "empty": "No extensions",
     "contributionGroupTools": "Tools",
     "contributionGroupAuthorization": "Authorization",
+    "contributionGroupAutomationTriggers": "Automation Triggers",
     "contributionGroupDesktop": "Desktop",
     "contributionRuleTitle": "Rule",
     "contributionStyleTitle": "Style",

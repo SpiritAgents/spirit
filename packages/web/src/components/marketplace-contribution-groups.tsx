@@ -27,6 +27,7 @@ type ContributionItem = Pick<
   | "desktopViews"
   | "desktopTabs"
   | "authorizations"
+  | "automationTriggers"
   | "requestedCapabilities"
 >;
 
@@ -153,6 +154,28 @@ export function MarketplaceContributionGroups({
         key: `authorization:${authorization.id}`,
         icon: ShieldCheck,
         title: formatTitleFromId(authorization.id),
+      })),
+    });
+  }
+
+  if (item.automationTriggers?.length) {
+    groups.push({
+      key: "automation-triggers",
+      label: t("marketplace.contributionGroupAutomationTriggers"),
+      items: item.automationTriggers.map((trigger) => ({
+        key: `automation-trigger:${trigger.kind}`,
+        icon:
+          trigger.icon.type === "spirit"
+            ? (getSpiritIconComponent(trigger.icon.name) ?? Monitor)
+            : Monitor,
+        ...(trigger.icon.type === "spirit" ? { iconClassName: "text-foreground" } : {}),
+        ...(trigger.icon.type === "file"
+          ? { iconUrl: extensionTabPackagedIconUrl(item.id, trigger.icon.path) }
+          : trigger.icon.type === "image"
+            ? { iconUrl: trigger.icon.dataUrl }
+            : {}),
+        title: trigger.name,
+        overview: trigger.description,
       })),
     });
   }
