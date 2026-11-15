@@ -1,8 +1,17 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
-import { extensionTabPageUrl } from "@/lib/extension-tab-frame";
+import {
+  extensionTabPageUrl,
+  SPIRIT_EXTENSION_TAB_CONTEXT,
+  SPIRIT_EXTENSION_TAB_READY,
+  SPIRIT_EXTENSION_TAB_READY_REQUEST,
+} from "@/lib/extension-tab-frame";
+import {
+  collectHostDocumentChrome,
+  collectHostStylesheetCssText,
+} from "@/lib/extension-view-tokens";
 import { cn } from "@/lib/utils";
 import type { DesktopExtensionDesktopTab, WorkspaceExtensionToolTab } from "@/types";
 
@@ -17,6 +26,7 @@ export function ExtensionTabHost({
 }) {
   const { t } = useTranslation();
   const [attempt, setAttempt] = useState(0);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
@@ -30,6 +40,69 @@ export function ExtensionTabHost({
   useEffect(() => {
     setStatus("loading");
   }, [attempt, tab.instanceId]);
+
+  const sendContext = useCallback(() => {
+    const chrome = collectHostDocumentChrome();
+    iframeRef.current?.contentWindow?.postMessage(
+      {
+        type: SPIRIT_EXTENSION_TAB_CONTEXT,
+        extensionId: tab.extensionId,
+        contributionId: tab.contributionId,
+        instanceId: tab.instanceId,
+        initialParams: tab.initialParams ?? null,
+        scope: tab.scope,
+        visible: active,
+        theme: { ...chrome, cssText: collectHostStylesheetCssText() },
+      },
+      "*",
+    );
+  }, [active, tab]);
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) {
+      return;
+    }
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== iframe.contentWindow) {
+        return;
+      }
+      if (
+        event.data?.extensionId !== tab.extensionId ||
+        event.data?.contributionId !== tab.contributionId ||
+        event.data?.instanceId !== tab.instanceId
+      ) {
+        return;
+      }
+      if (event.data.type === SPIRIT_EXTENSION_TAB_READY_REQUEST) {
+        sendContext();
+        return;
+      }
+      if (event.data.type === SPIRIT_EXTENSION_TAB_READY) {
+        setStatus("ready");
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [attempt, sendContext, tab]);
+
+  useEffect(() => {
+    if (status === "ready") {
+      sendContext();
+    }
+  }, [active, sendContext, status]);
+
+  useEffect(() => {
+    if (status !== "ready") {
+      return;
+    }
+    const observer = new MutationObserver(sendContext);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "style"],
+    });
+    return () => observer.disconnect();
+  }, [sendContext, status]);
 
   return (
     <div
@@ -53,13 +126,13 @@ export function ExtensionTabHost({
         </div>
       ) : null}
       <iframe
+        ref={iframeRef}
         key={attempt}
         title={tab.tabTitle ?? contribution.name}
         sandbox="allow-scripts"
         src={extensionTabPageUrl(tab)}
         className={cn("size-full border-0 bg-background", status === "error" && "invisible")}
         data-extension-tab-active={active}
-        onLoad={() => setStatus("ready")}
         onError={() => setStatus("error")}
       />
     </div>

@@ -1,5 +1,9 @@
 import { SPIRIT_EXTENSION_UI_ORIGIN } from "@/lib/extension-view-frame";
 
+export const SPIRIT_EXTENSION_TAB_READY_REQUEST = "spirit-extension-tab-ready-request";
+export const SPIRIT_EXTENSION_TAB_READY = "spirit-extension-tab-ready";
+export const SPIRIT_EXTENSION_TAB_CONTEXT = "spirit-extension-tab-context";
+
 export function extensionTabPageUrl(input: {
   extensionId: string;
   contributionId: string;

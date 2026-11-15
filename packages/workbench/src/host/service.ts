@@ -538,6 +538,8 @@ import {
   collectDesktopExtensionCssLayers,
   collectExtensionSystemPrompts,
   resolveEnabledExtensionViewFile,
+  resolveEnabledExtensionTabFile,
+  resolveEnabledExtensionTabIconFile,
   resolveEnabledExtensionViewOwner,
 } from "@spiritagent/sessions/host/extensions";
 import {
@@ -4724,6 +4726,20 @@ export class DesktopHostService {
     return resolveEnabledExtensionViewFile(this.extensionManager(), extensionId, viewId);
   }
 
+  async resolveExtensionTabFile(
+    extensionId: string,
+    contributionId: string,
+  ): Promise<{ filePath: string; extensionRoot: string } | null> {
+    return resolveEnabledExtensionTabFile(this.extensionManager(), extensionId, contributionId);
+  }
+
+  async resolveExtensionTabIconFile(
+    extensionId: string,
+    iconPath: string,
+  ): Promise<{ filePath: string; extensionRoot: string } | null> {
+    return resolveEnabledExtensionTabIconFile(this.extensionManager(), extensionId, iconPath);
+  }
+
   async resolveExtensionViewOwner(
     viewId: string,
   ): Promise<{ extensionId: string; title?: string; width?: number; height?: number } | null> {
@@ -5419,6 +5435,20 @@ export async function resolveDesktopExtensionViewFile(
   viewId: string,
 ): Promise<{ filePath: string; extensionRoot: string } | null> {
   return desktopHostService.resolveExtensionViewFile(extensionId, viewId);
+}
+
+export async function resolveDesktopExtensionTabFile(
+  extensionId: string,
+  contributionId: string,
+): Promise<{ filePath: string; extensionRoot: string } | null> {
+  return desktopHostService.resolveExtensionTabFile(extensionId, contributionId);
+}
+
+export async function resolveDesktopExtensionTabIconFile(
+  extensionId: string,
+  iconPath: string,
+): Promise<{ filePath: string; extensionRoot: string } | null> {
+  return desktopHostService.resolveExtensionTabIconFile(extensionId, iconPath);
 }
 
 export function openDesktopHostExtensionUi(request: McpUiOpenRequest): Promise<McpUiOpenResult> {

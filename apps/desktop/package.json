@@ -33,7 +33,7 @@
     "build:app": "pnpm run build:deps && pnpm run build:renderer && pnpm run build:electron",
     "build": "pnpm run build:app",
     "build:extension-ui": "pnpm --filter @spiritagent/web build:extension-ui",
-    "dev:extension-ui": "pnpm --filter @spiritagent/web exec vite build --watch --config vite.extension-ui.config.ts",
+    "dev:extension-ui": "pnpm --filter @spiritagent/web run dev:extension-ui",
     "build:renderer": "pnpm --filter @spiritagent/web build",
     "build:electron": "tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.cjs.json && node ./scripts/rename-preload-to-cjs.mjs && node ./scripts/build-native-appkit.mjs",
     "dist": "node scripts/gen-brand-assets.mjs && node scripts/ensure-packaged-ripgrep.mjs && pnpm run build:app && electron-builder --config electron-builder.config.mjs",

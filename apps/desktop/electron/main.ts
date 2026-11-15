@@ -71,6 +71,7 @@ import {
   getScanningPromise,
   startLocalListenersScan,
 } from "@spiritagent/http/local-listeners";
+import { shouldBlockExtensionTabNavigation } from "./extension-ui-protocol.js";
 import {
   bindBrowserGuestDevtools,
   closeBrowserGuestDevtools,
@@ -155,6 +156,8 @@ async function focusOrCreateSpiritDesktopWindows(): Promise<void> {
 import {
   invokeDesktopHostCommand,
   resolveDesktopExtensionViewFile,
+  resolveDesktopExtensionTabFile,
+  resolveDesktopExtensionTabIconFile,
   openDesktopHostExtensionUi,
   closeDesktopHostExtensionUi,
   resolveDesktopExtensionViewOwner,
@@ -1081,6 +1084,16 @@ async function createMainWindow(): Promise<BrowserWindow> {
     // the next push is a full snapshot and no delta is applied against bootstrapping state.
     lastLivePushByWebContents.delete(window.webContents);
   });
+  window.webContents.on("will-frame-navigate", (details) => {
+    if (shouldBlockExtensionTabNavigation(details.frame?.url ?? "", details.url)) {
+      details.preventDefault();
+      console.warn("[extensions] blocked extension tab navigation", {
+        from: details.frame?.url,
+        to: details.url,
+      });
+    }
+  });
+
   window.webContents.on("did-start-navigation", (details) => {
     if (details.isMainFrame && !details.isSameDocument) {
       workspacePtyManager.disposeAllForWebContents(webContentsId);
@@ -1140,6 +1153,10 @@ if (gotSpiritSingleInstanceLock) {
       resolveExtensionUiRuntimePath: () =>
         path.join(rendererDistPath(), "extension-ui", "runtime.js"),
       resolveExtensionViewFile: resolveDesktopExtensionViewFile,
+      resolveExtensionTabFile: resolveDesktopExtensionTabFile,
+      resolveExtensionTabIconFile: resolveDesktopExtensionTabIconFile,
+      resolveExtensionTabRuntimePath: () =>
+        path.join(rendererDistPath(), "extension-ui", "tab-runtime.js"),
     });
     bindSpiritProtocolActionHandlers({
       focusWindows: focusSpiritDesktopWindows,
