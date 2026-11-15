@@ -46,6 +46,7 @@ export interface RunDesktopAutomationOnceInput {
 
 export interface RunDesktopAutomationOnceDeps {
   onRunUpdated?(automationId: string): void;
+  onRunFinished?(definition: HostAutomationDefinition, run: HostAutomationRun): void;
   notifySessionListUpdated?(): void;
   syncSessionFromDisk?(sessionPath: string): void | Promise<void>;
 }
@@ -275,6 +276,9 @@ export async function runDesktopAutomationOnce(
     deps.notifySessionListUpdated?.();
     return run;
   } finally {
+    if (run.status !== "running") {
+      deps.onRunFinished?.(input.definition, run);
+    }
     if (runtimeHandle) {
       await disposeAutomationRuntime(runtimeHandle);
     }

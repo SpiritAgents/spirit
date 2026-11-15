@@ -398,6 +398,10 @@ import {
 } from "./automation-scheduler-service.js";
 import { resolveGitHubAutomationTriggerMenu } from "./github-automation-trigger-menu.js";
 import { assertAutomationMenuConfig } from "./automation-menu-values.js";
+import {
+  notifyAutomationRunFinished,
+  notifyAutomationTriggerError,
+} from "./automation-notifications.js";
 import { normalizeAutomationTrigger } from "@spiritagent/automations";
 import {
   createAutomationCommand,
@@ -4183,6 +4187,12 @@ export class DesktopHostService {
         }),
       trackAutomationTriggerPoll: (ownerId, controller) =>
         this.trackAutomationTriggerPoll(ownerId, controller),
+      onAutomationRunFinished: (definition, run) => {
+        void notifyAutomationRunFinished(definition, run);
+      },
+      onAutomationTriggerError: (definition, error) => {
+        void notifyAutomationTriggerError(definition, error);
+      },
       onAutomationUpdated: (automationId) => {
         void this.runSerialized(async () => {
           await this.refreshAutomationsListCache();
@@ -6133,3 +6143,5 @@ function normalizeApprovalDecision(
       throw new Error(i18n.t("error.invalidApproval"));
   }
 }
+
+export { setDesktopAutomationNotificationAdapter } from "./automation-notifications.js";

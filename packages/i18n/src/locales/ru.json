@@ -1417,6 +1417,12 @@
     "taskComplete": {
       "title": "Задача выполнена"
     },
+    "automation": {
+      "completedTitle": "{{title}} завершено",
+      "blockedTitle": "{{title}} требует внимания",
+      "failedTitle": "{{title}} не удалось",
+      "triggerErrorTitle": "Триггеру {{title}} требуется внимание"
+    },
     "approval": {
       "title": "Требуется подтверждение",
       "returnToApp": "Вернитесь в приложение для подтверждения.",

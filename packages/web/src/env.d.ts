@@ -428,6 +428,9 @@ declare global {
     subscribeWindowFullScreen(callback: (fullScreen: boolean) => void): () => void;
     subscribeAppAwayChanged(callback: (away: boolean) => void): () => void;
     subscribeNotifyRefresh(callback: () => void): () => void;
+    subscribeAutomationNotification?(
+      callback: (payload: { automationId: string }) => void,
+    ): () => void;
     subscribeApprovalFromNotification(
       callback: (payload: { decision: "allow" | "deny"; requestId?: string }) => void,
     ): () => void;

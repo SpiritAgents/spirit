@@ -36,12 +36,17 @@ export type ApprovalNotificationHandler = (
   requestId?: string,
 ) => Promise<void>;
 
+export type AutomationNotificationHandler = (
+  context: DesktopNotificationContext,
+) => void | Promise<void>;
+
 export type NotificationReplyHandler = (
   payload: DesktopNotificationReplyPayload,
 ) => void | Promise<void>;
 
 let mainWindowRef: BrowserWindow | undefined;
 let approvalHandler: ApprovalNotificationHandler | undefined;
+let automationHandler: AutomationNotificationHandler | undefined;
 let replyHandler: NotificationReplyHandler | undefined;
 let permissionRequested = false;
 let windowsActivationHandlerRegistered = false;
@@ -162,6 +167,12 @@ export function setApprovalNotificationHandler(
   approvalHandler = handler;
 }
 
+export function setAutomationNotificationHandler(
+  handler: AutomationNotificationHandler | undefined,
+): void {
+  automationHandler = handler;
+}
+
 export function setNotificationReplyHandler(handler: NotificationReplyHandler | undefined): void {
   replyHandler = handler;
 }
@@ -221,6 +232,10 @@ export async function showDesktopNotification(
       });
 
   notification.on("click", () => {
+    if (payload.kind === "automation" && automationHandler) {
+      void Promise.resolve(automationHandler(payload.context ?? {})).catch(() => undefined);
+      return;
+    }
     focusMainWindow();
   });
 

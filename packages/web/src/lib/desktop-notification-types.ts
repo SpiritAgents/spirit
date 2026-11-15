@@ -1,4 +1,9 @@
-export type DesktopNotificationKind = "task-complete" | "approval" | "ask-questions" | "generic";
+export type DesktopNotificationKind =
+  | "task-complete"
+  | "approval"
+  | "ask-questions"
+  | "generic"
+  | "automation";
 
 export type DesktopNotificationAction =
   | {
@@ -18,6 +23,9 @@ export type DesktopNotificationContext = {
   approvalId?: string;
   questionToolCallId?: string;
   questionId?: string;
+  automationId?: string;
+  runId?: string;
+  sessionPath?: string;
 };
 
 export type DesktopShowNotificationRequest = {

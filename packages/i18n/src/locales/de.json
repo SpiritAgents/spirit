@@ -1413,6 +1413,12 @@
     "taskComplete": {
       "title": "Aufgabe abgeschlossen"
     },
+    "automation": {
+      "completedTitle": "{{title}} abgeschlossen",
+      "blockedTitle": "{{title}} erfordert Aufmerksamkeit",
+      "failedTitle": "{{title}} fehlgeschlagen",
+      "triggerErrorTitle": "{{title}}-Trigger erfordert Aufmerksamkeit"
+    },
     "approval": {
       "title": "Genehmigung erforderlich",
       "returnToApp": "Zurück zur App zur Genehmigung.",

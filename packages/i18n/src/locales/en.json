@@ -1446,6 +1446,12 @@
     "taskComplete": {
       "title": "Task completed"
     },
+    "automation": {
+      "completedTitle": "{{title}} completed",
+      "blockedTitle": "{{title}} needs attention",
+      "failedTitle": "{{title}} failed",
+      "triggerErrorTitle": "{{title}} trigger needs attention"
+    },
     "approval": {
       "title": "Approval required",
       "returnToApp": "Return to the app to handle approval.",

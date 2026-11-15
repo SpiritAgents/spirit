@@ -851,11 +851,14 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
       | { type: "button"; text: string; action?: "allow" | "deny" | "focus" }
       | { type: "text"; text: string; placeholder?: string; action: "reply" }
     >;
-    kind?: "task-complete" | "approval" | "ask-questions" | "generic";
+    kind?: "task-complete" | "approval" | "ask-questions" | "generic" | "automation";
     context?: {
       approvalId?: string;
       questionToolCallId?: string;
       questionId?: string;
+      automationId?: string;
+      runId?: string;
+      sessionPath?: string;
     };
   }) {
     return ipcRenderer.invoke("desktop:show-notification", request);
@@ -902,6 +905,20 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
     ipcRenderer.on("desktop:notify-refresh", onRefresh);
     return () => {
       ipcRenderer.removeListener("desktop:notify-refresh", onRefresh);
+    };
+  },
+  subscribeAutomationNotification(callback: (payload: { automationId: string }) => void) {
+    const onAutomation = (
+      _event: Electron.IpcRendererEvent,
+      payload: { automationId?: string },
+    ) => {
+      if (typeof payload?.automationId === "string") {
+        callback({ automationId: payload.automationId });
+      }
+    };
+    ipcRenderer.on("desktop:automation-notification", onAutomation);
+    return () => {
+      ipcRenderer.removeListener("desktop:automation-notification", onAutomation);
     };
   },
   subscribeApprovalFromNotification(

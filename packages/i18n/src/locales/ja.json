@@ -1413,6 +1413,12 @@
     "taskComplete": {
       "title": "タスク完了"
     },
+    "automation": {
+      "completedTitle": "{{title}} が完了しました",
+      "blockedTitle": "{{title}} は対応が必要です",
+      "failedTitle": "{{title}} は失敗しました",
+      "triggerErrorTitle": "{{title}} のトリガーは対応が必要です"
+    },
     "approval": {
       "title": "承認が必要",
       "returnToApp": "アプリに戻って承認を処理してください。",

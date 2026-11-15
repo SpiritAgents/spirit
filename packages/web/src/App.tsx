@@ -437,6 +437,14 @@ export default function App() {
     ],
   );
 
+  useEffect(() => {
+    const bridge = window.spiritDesktop;
+    return bridge?.subscribeAutomationNotification?.(({ automationId }) => {
+      surfaceNav.setSelectedAutomationId(automationId);
+      surfaceNav.setActiveSurface("automation-detail");
+    });
+  }, [surfaceNav.setActiveSurface, surfaceNav.setSelectedAutomationId]);
+
   if (runtime.webHostPairingRequired && runtime.hostKind === "web" && !snapshot) {
     return (
       <WebHostPairingGate busy={runtime.busyAction === "bootstrap"} onPair={runtime.pairWebHost} />

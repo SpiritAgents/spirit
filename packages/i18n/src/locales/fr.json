@@ -1413,6 +1413,12 @@
     "taskComplete": {
       "title": "Tâche terminée"
     },
+    "automation": {
+      "completedTitle": "{{title}} terminé",
+      "blockedTitle": "{{title}} nécessite une intervention",
+      "failedTitle": "{{title}} a échoué",
+      "triggerErrorTitle": "Le déclencheur de {{title}} nécessite une intervention"
+    },
     "approval": {
       "title": "Approbation requise",
       "returnToApp": "Revenez à l'application pour gérer l'approbation.",

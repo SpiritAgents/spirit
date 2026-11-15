@@ -1413,6 +1413,12 @@
     "taskComplete": {
       "title": "任務完成"
     },
+    "automation": {
+      "completedTitle": "{{title}} 已完成",
+      "blockedTitle": "{{title}} 需要處理",
+      "failedTitle": "{{title}} 執行失敗",
+      "triggerErrorTitle": "{{title}} 觸發程序需要處理"
+    },
     "approval": {
       "title": "需要審核",
       "returnToApp": "返回應用程式處理審核。",

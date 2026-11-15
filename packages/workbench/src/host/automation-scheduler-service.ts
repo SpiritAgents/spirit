@@ -38,6 +38,8 @@ export interface AutomationSchedulerServiceContext {
   runningAutomationIds(): ReadonlySet<string>;
   markAutomationRunning(automationId: string, running: boolean): void;
   onAutomationUpdated(automationId: string): void;
+  onAutomationRunFinished?(definition: HostAutomationDefinition, run: HostAutomationRun): void;
+  onAutomationTriggerError?(definition: HostAutomationDefinition, error?: string): void;
   notifySessionListUpdated(): void;
   syncSessionFromDisk?(sessionPath: string): void | Promise<void>;
   listAutomationTriggerContributions(): Promise<RegisteredAutomationTriggerContribution[]>;
@@ -223,11 +225,12 @@ async function tickContributedAutomationTriggers(
     }
     const provider = providers.get(definition.trigger.kind);
     if (!provider) {
-      await store.setTriggerError(
+      await setAutomationTriggerError(
+        ctx,
+        store,
         definition.id,
         `Automation trigger provider is unavailable: ${definition.trigger.kind}`,
       );
-      ctx.onAutomationUpdated(definition.id);
       continue;
     }
     const group = groups.get(definition.trigger.kind) ?? [];
@@ -262,13 +265,16 @@ async function tickContributedAutomationTriggers(
       const definition = targetDefinitions.get(target.automationId)!;
       const result = results.get(target.automationId);
       if (!result) {
-        await store.setTriggerError(definition.id, "The trigger provider returned no result.");
-        ctx.onAutomationUpdated(definition.id);
+        await setAutomationTriggerError(
+          ctx,
+          store,
+          definition.id,
+          "The trigger provider returned no result.",
+        );
         continue;
       }
       if (result.error?.trim()) {
-        await store.setTriggerError(definition.id, result.error.trim());
-        ctx.onAutomationUpdated(definition.id);
+        await setAutomationTriggerError(ctx, store, definition.id, result.error.trim());
         continue;
       }
 
@@ -277,7 +283,9 @@ async function tickContributedAutomationTriggers(
         if (result.checkpoint) {
           await store.updateAutomationTriggerCheckpoint(definition.id, result.checkpoint);
         } else {
-          await store.setTriggerError(
+          await setAutomationTriggerError(
+            ctx,
+            store,
             definition.id,
             "The trigger provider did not return a baseline checkpoint.",
           );
@@ -291,14 +299,18 @@ async function tickContributedAutomationTriggers(
         if (result.checkpoint) {
           await store.updateAutomationTriggerCheckpoint(definition.id, result.checkpoint);
         } else {
-          await store.setTriggerError(definition.id, undefined);
+          await setAutomationTriggerError(ctx, store, definition.id, undefined);
         }
         ctx.onAutomationUpdated(definition.id);
         continue;
       }
       if (!validProviderEvents(events)) {
-        await store.setTriggerError(definition.id, "The trigger provider returned invalid events.");
-        ctx.onAutomationUpdated(definition.id);
+        await setAutomationTriggerError(
+          ctx,
+          store,
+          definition.id,
+          "The trigger provider returned invalid events.",
+        );
         continue;
       }
 
@@ -327,6 +339,17 @@ async function tickContributedAutomationTriggers(
       }
     }
   }
+}
+
+async function setAutomationTriggerError(
+  ctx: AutomationSchedulerServiceContext,
+  store: SchedulerStore,
+  automationId: string,
+  error?: string,
+): Promise<void> {
+  const definition = await store.setTriggerError(automationId, error);
+  ctx.onAutomationTriggerError?.(definition, error);
+  ctx.onAutomationUpdated(definition.id);
 }
 
 function automationTriggerPollTarget(
@@ -457,6 +480,7 @@ async function launchAutomationRun(
       ? await ctx.runAutomationOnce(request)
       : await runDesktopAutomationOnce(request, {
           onRunUpdated: (automationId) => ctx.onAutomationUpdated(automationId),
+          onRunFinished: (definition, run) => ctx.onAutomationRunFinished?.(definition, run),
           notifySessionListUpdated: () => ctx.notifySessionListUpdated(),
           syncSessionFromDisk: (sessionPath) => ctx.syncSessionFromDisk?.(sessionPath),
         });

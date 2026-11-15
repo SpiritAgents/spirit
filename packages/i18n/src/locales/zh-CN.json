@@ -1421,6 +1421,12 @@
     "taskComplete": {
       "title": "任务已完成"
     },
+    "automation": {
+      "completedTitle": "{{title}} 已完成",
+      "blockedTitle": "{{title}} 需要处理",
+      "failedTitle": "{{title}} 运行失败",
+      "triggerErrorTitle": "{{title}} 触发器需要处理"
+    },
     "approval": {
       "title": "待审批",
       "returnToApp": "返回应用以处理审批。",

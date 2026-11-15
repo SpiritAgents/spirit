@@ -1413,6 +1413,12 @@
     "taskComplete": {
       "title": "Tarefa concluída"
     },
+    "automation": {
+      "completedTitle": "{{title}} concluído",
+      "blockedTitle": "{{title}} requer atenção",
+      "failedTitle": "{{title}} falhou",
+      "triggerErrorTitle": "O gatilho de {{title}} requer atenção"
+    },
     "approval": {
       "title": "Aprovação necessária",
       "returnToApp": "Volte ao aplicativo para lidar com a aprovação.",

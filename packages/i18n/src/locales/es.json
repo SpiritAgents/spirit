@@ -1413,6 +1413,12 @@
     "taskComplete": {
       "title": "Tarea completada"
     },
+    "automation": {
+      "completedTitle": "{{title}} completado",
+      "blockedTitle": "{{title}} requiere atención",
+      "failedTitle": "{{title}} falló",
+      "triggerErrorTitle": "El disparador de {{title}} requiere atención"
+    },
     "approval": {
       "title": "Aprobación requerida",
       "returnToApp": "Vuelve a la app para gestionar la aprobación.",

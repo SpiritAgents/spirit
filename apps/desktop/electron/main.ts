@@ -33,6 +33,7 @@ import {
   registerDesktopNotifications,
   registerWindowsToastActivationHandler,
   setApprovalNotificationHandler,
+  setAutomationNotificationHandler,
   showDesktopNotification,
   type DesktopNotificationPayload,
 } from "./desktop-notifications.js";
@@ -171,6 +172,7 @@ import {
   emitDesktopExtensionTabEvent,
   subscribeDesktopExtensionTabEvents,
   setDesktopGitHubFetchImplementation,
+  setDesktopAutomationNotificationAdapter,
   setDesktopExtensionHostAdapter,
   shutdownDesktopHostService,
   refreshDesktopRemoteControlConfig,
@@ -1287,6 +1289,26 @@ if (gotSpiritSingleInstanceLock) {
       net.fetch(input instanceof URL ? input.toString() : input, init);
 
     setDesktopGitHubFetchImplementation(electronNetFetch);
+    setDesktopAutomationNotificationAdapter({
+      isAway: () => Promise.resolve(getAppAwayFromUser()),
+      show: (payload) => showDesktopNotification(payload),
+    });
+    setAutomationNotificationHandler(async (context) => {
+      await focusOrCreateSpiritDesktopWindows();
+      if (context.sessionPath) {
+        await handleSpiritOpenSessionFromProtocol(context.sessionPath);
+        return;
+      }
+      if (context.automationId) {
+        for (const window of BrowserWindow.getAllWindows()) {
+          if (!window.isDestroyed()) {
+            window.webContents.send("desktop:automation-notification", {
+              automationId: context.automationId,
+            });
+          }
+        }
+      }
+    });
 
     unsubscribeDesktopDreamUpdates = subscribeDesktopDreamUpdates((snapshot) => {
       for (const window of BrowserWindow.getAllWindows()) {
