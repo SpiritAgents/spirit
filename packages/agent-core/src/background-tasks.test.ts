@@ -50,8 +50,8 @@ describe("background task contracts", () => {
       expect(parameters.required).toEqual(["prompt"]);
       expect(Object.keys(parameters.properties).sort()).toEqual(
         background
-          ? ["background", "prompt", "session_id", "worktree"]
-          : ["prompt", "session_id", "worktree"],
+          ? ["background", "model", "prompt", "session_id", "worktree"]
+          : ["model", "prompt", "session_id", "worktree"],
       );
       const sessionIdSchema = parameters.properties.session_id;
       const worktreeSchema = parameters.properties.worktree;

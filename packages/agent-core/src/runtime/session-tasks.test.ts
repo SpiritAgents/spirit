@@ -861,9 +861,11 @@ describe("managed tasks in AgentRuntime", () => {
 
   it("uses the native session delegate when configured", async () => {
     const prompts: string[] = [];
+    const models: Array<string | undefined> = [];
     const delegate: import("../runtime/types.js").SubagentSessionDelegate = {
       execute: async (request) => {
         prompts.push(request.prompt);
+        models.push(request.model);
         await request.context.update({
           sessionId: "sess_native",
           sessionTranscript: "/tmp/native.json",
@@ -890,7 +892,8 @@ describe("managed tasks in AgentRuntime", () => {
               {
                 id: "native-call",
                 name: "subagent",
-                argumentsJson: '{"prompt":"Investigate","background":{"delay":0}}',
+                argumentsJson:
+                  '{"prompt":"Investigate","model":"alpha::shared","background":{"delay":0}}',
               },
             ])
           : finalResponse(state, "Done."),
@@ -900,10 +903,33 @@ describe("managed tasks in AgentRuntime", () => {
     await runtime.startUserTurnStreaming("Delegate");
     await advanceRuntime(runtime, 500);
     expect(prompts).toEqual(["Investigate"]);
+    expect(models).toEqual(["alpha::shared"]);
     const finished = runtime
       .drainEvents()
       .find((event) => event.kind === "tool-execution-finished");
     expect(finished?.execution.output).toContain("sessionId: sess_native");
+    await runtime.shutdown();
+  });
+
+  it("rejects an explicit model without a native session delegate", async () => {
+    let rounds = 0;
+    const { runtime, manager } = runtimeFixture((state) =>
+      ++rounds === 1
+        ? toolCalls(state, [
+            {
+              id: "unsupported-model-call",
+              name: "subagent",
+              argumentsJson:
+                '{"prompt":"Investigate","model":"alpha::shared","background":{"delay":0}}',
+            },
+          ])
+        : finalResponse(state, "Done."),
+    );
+    await runtime.startUserTurnStreaming("Delegate");
+    await advanceRuntime(runtime, 500);
+    const task = manager.records().find((record) => record.kind === "subagent");
+    expect(task).toMatchObject({ status: "failed" });
+    expect(task?.error).toContain("Subagent model selection requires a native session delegate.");
     await runtime.shutdown();
   });
 });

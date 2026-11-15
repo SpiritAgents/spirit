@@ -458,6 +458,12 @@ export function buildBuiltinHostToolDefinitions(
                   description:
                     "Resume an existing session by ID. If the target is generating, its current foreground turn is interrupted before the new prompt; a target currently being prompted by another agent is left untouched and this call fails. Omit to create a new hidden subagent session.",
                 },
+                model: {
+                  type: "string",
+                  minLength: 1,
+                  description:
+                    "Optional model for the child agent in providerId::modelId format. Omit to inherit the current main agent model when creating a child or to keep the target session's current model when resuming session_id.",
+                },
                 ...(environment.backgroundTasksEnabled
                   ? { background: buildBackgroundOptionsSchema("subagent") }
                   : {}),
@@ -655,6 +661,54 @@ export function buildBuiltinHostToolDefinitions(
       },
     ),
   ];
+}
+
+/** Append the current host-owned language-model catalog to the core-owned subagent contract. */
+export function applySubagentLanguageModelSelectors(
+  definitions: JsonValue,
+  selectors: readonly string[],
+): JsonValue {
+  if (!Array.isArray(definitions) || selectors.length === 0) {
+    return definitions;
+  }
+  return definitions.map((definition) => {
+    if (readHostFunctionToolName(definition) !== "subagent") {
+      return definition;
+    }
+    const fn = (definition as JsonObject).function as JsonObject;
+    const parameters = fn.parameters;
+    if (typeof parameters !== "object" || parameters === null || Array.isArray(parameters)) {
+      return definition;
+    }
+    const properties = (parameters as JsonObject).properties;
+    if (typeof properties !== "object" || properties === null || Array.isArray(properties)) {
+      return definition;
+    }
+    const model = (properties as JsonObject).model;
+    if (typeof model !== "object" || model === null || Array.isArray(model)) {
+      return definition;
+    }
+    if (typeof (model as JsonObject).description !== "string") {
+      return definition;
+    }
+    const description = (model as JsonObject).description as string;
+    return {
+      ...(definition as JsonObject),
+      function: {
+        ...fn,
+        parameters: {
+          ...parameters,
+          properties: {
+            ...properties,
+            model: {
+              ...model,
+              description: `${description}\n\nAvailable language models: ${selectors.join(", ")}.`,
+            },
+          },
+        },
+      },
+    };
+  });
 }
 
 export function filterContributedToolDefinitionsForAgentMode(

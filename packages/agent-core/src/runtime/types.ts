@@ -539,6 +539,7 @@ export interface AgentRuntimeOptions<Config, State, ToolRequest> {
 
 export interface SubagentSessionExecutionRequest {
   prompt: string;
+  model?: string;
   parentToolCallId: string;
   sessionId?: string;
   worktree?: boolean;

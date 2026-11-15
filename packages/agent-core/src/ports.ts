@@ -659,6 +659,7 @@ export type AskQuestionsResult =
 
 export interface SubagentRequest {
   prompt: string;
+  model?: string;
   sessionId?: string;
   subagentType?: string;
   worktree?: boolean;
