@@ -15,10 +15,7 @@ import {
   summarizeToolRowsForDebug,
   truncateOneLineForDebug,
 } from "./message-ordering.js";
-import {
-  extractSubagentSessionStreamingText,
-  findSubagentToolPhase,
-} from "./subagent-stream-sync.js";
+import { extractSubagentSessionStreamingText } from "./subagent-stream-sync.js";
 
 type ContinuationOrchestration = {
   assistantMessages: {
@@ -267,13 +264,16 @@ export function syncSubagentToolStreamingOutput(
     if (existing.backgroundTask) {
       continue;
     }
+    // The parent tool result is authoritative. Native child archives can remain running until
+    // the next archive refresh, so stale progress must not reopen a terminal parent card.
+    if (existing.phase !== "preview" && existing.phase !== "running") {
+      continue;
+    }
 
     const streamingText = extractSubagentSessionStreamingText(session)?.trim();
-    const phase = findSubagentToolPhase(timelineMessages, toolCallId) ?? "running";
-    const nextPhase = phase === "preview" || phase === "running" ? phase : "running";
     const nextTool = {
       ...existing,
-      phase: nextPhase,
+      phase: existing.phase,
       ...(streamingText
         ? {
             outputExcerpt:

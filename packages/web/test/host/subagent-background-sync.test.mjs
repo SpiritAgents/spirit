@@ -132,3 +132,18 @@ test("a foreground Subagent keeps its existing streaming phase and output sync",
   assert.equal(tool.phase, "running");
   assert.equal(tool.outputExcerpt, "Child progress");
 });
+
+test("a completed foreground Subagent stays terminal while its child archive is still running", () => {
+  const harness = createHarness({
+    ...baseTool,
+    phase: "succeeded",
+    headline: "Subagent done",
+    outputExcerpt: "Final child response",
+  });
+
+  harness.sync();
+
+  const tool = harness.tool();
+  assert.equal(tool.phase, "succeeded");
+  assert.equal(tool.outputExcerpt, "Final child response");
+});
