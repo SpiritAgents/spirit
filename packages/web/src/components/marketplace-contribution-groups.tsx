@@ -9,6 +9,7 @@ import type { ElementType } from "react";
 import { getSpiritIconComponent } from "@spiritagent/icons";
 
 import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
+import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
 
 import { DESKTOP_LIST_ITEM_PRIMARY_CLASS } from "@/lib/desktop-typography";
 import { markdownToPlainText } from "@/lib/markdown-plain-text";
@@ -73,7 +74,9 @@ export function MarketplaceContributionGroups({
   const mcpItems: ContributionEntry[] = (contributions?.mcp ?? []).map((server) => ({
     key: `mcp:${server.name}`,
     icon: Plug,
-    title: server.displayName?.trim() || formatTitleFromId(server.name),
+    title:
+      server.displayName?.trim() ||
+      formatTitleFromId(server.name, { casingOverrides: WELL_KNOWN_CASING_OVERRIDES }),
   }));
   if (mcpItems.length > 0) {
     groups.push({ key: "mcps", label: t("settings.mcps"), items: mcpItems });
@@ -123,7 +126,7 @@ export function MarketplaceContributionGroups({
   const skillItems: ContributionEntry[] = (contributions?.skills ?? []).map((skill) => ({
     key: `skill:${skill.name}`,
     icon: Wand2,
-    title: formatTitleFromId(skill.name),
+    title: formatTitleFromId(skill.name, { casingOverrides: WELL_KNOWN_CASING_OVERRIDES }),
     ...(skill.description.trim() ? { overview: skill.description.trim() } : {}),
   }));
   if (skillItems.length > 0) {
@@ -139,7 +142,7 @@ export function MarketplaceContributionGroups({
   const toolItems: ContributionEntry[] = (item.contributedTools ?? []).map((tool) => ({
     key: `tool:${tool.name}`,
     icon: Wrench,
-    title: formatTitleFromId(tool.name),
+    title: formatTitleFromId(tool.name, { casingOverrides: WELL_KNOWN_CASING_OVERRIDES }),
     ...(tool.description.trim() ? { overview: tool.description.trim() } : {}),
   }));
   if (toolItems.length > 0) {
@@ -153,7 +156,9 @@ export function MarketplaceContributionGroups({
       items: item.authorizations.map((authorization) => ({
         key: `authorization:${authorization.id}`,
         icon: ShieldCheck,
-        title: formatTitleFromId(authorization.id),
+        title: formatTitleFromId(authorization.id, {
+          casingOverrides: WELL_KNOWN_CASING_OVERRIDES,
+        }),
       })),
     });
   }

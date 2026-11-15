@@ -138,7 +138,8 @@ test("authorizations render static ids without runtime configuration state", () 
     />,
   );
   expect(getByText("Authorization")).toBeTruthy();
-  expect(getByText("Oauth")).toBeTruthy();
+  expect(getByText("OAuth")).toBeTruthy();
+  expect(queryByText("Oauth")).toBeNull();
   expect(queryByText("Configured")).toBeNull();
   expect(document.querySelector("svg.lucide-shield-check")).toBeTruthy();
   expect(
