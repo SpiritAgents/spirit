@@ -104,7 +104,8 @@ describe("MarketplaceContributionGroups", () => {
     expect(container.querySelector("img")?.getAttribute("src")).toBe(
       "spirit://extension-ui/tab-icon/personal%2Fdemo/assets/preview.svg",
     );
-    expect(container.querySelector("img")?.classList.contains("text-muted-foreground")).toBe(true);
+    expect(container.querySelector("img")?.classList.contains("text-muted-foreground")).toBe(false);
+    expect(container.querySelector("img")?.classList.contains("text-foreground")).toBe(true);
   });
 
   test("nothing declared and nothing resolved renders nothing", () => {
@@ -140,6 +141,9 @@ test("authorizations render static ids without runtime configuration state", () 
   expect(getByText("Oauth")).toBeTruthy();
   expect(queryByText("Configured")).toBeNull();
   expect(document.querySelector("svg.lucide-shield-check")).toBeTruthy();
+  expect(
+    document.querySelector("svg.lucide-shield-check")?.classList.contains("text-foreground"),
+  ).toBe(true);
 });
 
 test("Automation trigger contributions render their names and descriptions", () => {

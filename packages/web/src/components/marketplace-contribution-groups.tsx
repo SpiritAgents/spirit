@@ -240,14 +240,11 @@ export function MarketplaceContributionGroups({
                   <img
                     aria-hidden
                     src={entry.iconUrl}
-                    className="size-4 shrink-0 object-contain text-muted-foreground"
+                    className="size-4 shrink-0 object-contain text-foreground"
                   />
                 ) : (
                   <entry.icon
-                    className={cn(
-                      "size-4 shrink-0",
-                      entry.iconClassName ?? "text-muted-foreground",
-                    )}
+                    className={cn("size-4 shrink-0", entry.iconClassName ?? "text-foreground")}
                     aria-hidden
                     strokeWidth={1.75}
                   />
