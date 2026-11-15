@@ -850,6 +850,14 @@ export async function installPreparedExtensionDirectory(
   if (!replaceExisting && (existsSync(targetDirectory) || registryEntries.has(manifest.id))) {
     throw new Error(`The extension already exists; remove it before importing: ${manifest.id}`);
   }
+  const previousManifest =
+    replaceExisting &&
+    existsSync(path.join(targetDirectory, SPIRIT_DIR_NAME, EXTENSION_DUMP_FILE_NAME))
+      ? await readInstalledExtensionDump(
+          path.join(targetDirectory, SPIRIT_DIR_NAME, EXTENSION_DUMP_FILE_NAME),
+          targetDirectory,
+        )
+      : undefined;
 
   if (manifest.main) {
     const mainFilePath = path.join(preparedDirectoryPath, ...manifest.main.split("/"));
@@ -872,8 +880,10 @@ export async function installPreparedExtensionDirectory(
     sourceDirectory,
     `.backup-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
   );
+  const hadExistingDirectory = replaceExisting && existsSync(targetDirectory);
   let renamedExisting = false;
   let movedIntoPlace = false;
+  let updateApplied = false;
 
   try {
     await cp(preparedDirectoryPath, stagedDirectory, {
@@ -882,25 +892,39 @@ export async function installPreparedExtensionDirectory(
       errorOnExist: true,
     });
 
-    if (replaceExisting && existsSync(targetDirectory)) {
+    if (hadExistingDirectory) {
       await rename(targetDirectory, backupDirectory);
       renamedExisting = true;
     }
 
     await rename(stagedDirectory, targetDirectory);
     movedIntoPlace = true;
-  } catch (error) {
-    if (!movedIntoPlace) {
-      await rm(targetDirectory, { recursive: true, force: true });
+
+    if (previousManifest) {
+      const removedSlots = (previousManifest.secretSlots ?? []).filter(
+        (key) => !(manifest.secretSlots ?? []).includes(key),
+      );
+      // Keep the old package restorable until cleanup finishes so a failed
+      // keyring operation can be retried from the old manifest.
+      await deleteExtensionSecretSlots(context, previousManifest.id, removedSlots);
     }
-    if (renamedExisting && !existsSync(targetDirectory) && existsSync(backupDirectory)) {
-      await rename(backupDirectory, targetDirectory);
-      renamedExisting = false;
+    updateApplied = true;
+  } catch (error) {
+    if (renamedExisting) {
+      if (movedIntoPlace) {
+        await rm(targetDirectory, { recursive: true, force: true });
+      }
+      if (existsSync(backupDirectory)) {
+        await rename(backupDirectory, targetDirectory);
+        renamedExisting = false;
+      }
+    } else if (!hadExistingDirectory) {
+      await rm(targetDirectory, { recursive: true, force: true });
     }
     throw error;
   } finally {
     await rm(stagingRoot, { recursive: true, force: true });
-    if (renamedExisting && existsSync(backupDirectory)) {
+    if (updateApplied && renamedExisting && existsSync(backupDirectory)) {
       await rm(backupDirectory, { recursive: true, force: true });
     }
   }
@@ -952,6 +976,7 @@ export async function removeInstalledExtension(
     throw new Error(`Extension not found: ${normalizedId}`);
   }
 
+  await deleteExtensionSecretSlots(context, target.id, target.manifest.secretSlots ?? []);
   await rm(target.directoryPath, { recursive: true, force: true });
   await writeExtensionRegistry(
     paths.extensionsIndexFile,
@@ -1464,6 +1489,20 @@ function createSecretsAccessor(
       await stateStore.deleteSecret?.(extension.id, key);
     },
   };
+}
+
+async function deleteExtensionSecretSlots(
+  context: ExtensionManagementContext,
+  extensionId: string,
+  keys: readonly string[],
+): Promise<void> {
+  const stateStore = context.stateStore ?? createFileExtensionStateStore(context);
+  if (!stateStore.deleteSecret) {
+    return;
+  }
+  for (const key of new Set(keys)) {
+    await stateStore.deleteSecret(extensionId, key);
+  }
 }
 
 async function hasExtensionSecret(
