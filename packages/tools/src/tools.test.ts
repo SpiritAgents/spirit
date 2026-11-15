@@ -611,7 +611,7 @@ test("requestFromFunctionCall parses grep glob", async () => {
   }
 });
 
-test("requestFromFunctionCall preserves the subagent continuation session ID", async () => {
+test("requestFromFunctionCall preserves the subagent continuation session ID and model", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-subagent-session-"));
   const spiritDataDir = join(workspaceRoot, ".spirit-data");
   const sessionId = "00000000-0000-4000-8000-000000000020";
@@ -623,6 +623,7 @@ test("requestFromFunctionCall preserves the subagent continuation session ID", a
       "subagent",
       JSON.stringify({
         prompt: "Continue the existing session",
+        model: "alpha::vendor/shared",
         session_id: sessionId,
         background: { type: false },
       }),
@@ -631,6 +632,7 @@ test("requestFromFunctionCall preserves the subagent continuation session ID", a
     assert.deepEqual(request, {
       name: "subagent",
       prompt: "Continue the existing session",
+      model: "alpha::vendor/shared",
       sessionId,
       background: { type: false },
     });

@@ -41,6 +41,8 @@ export interface BackgroundTaskRecord {
   error?: string;
   sessionId?: string;
   sessionTranscript?: string;
+  /** Fully-qualified providerId::modelId selected for a subagent run. */
+  model?: string;
   worktreePath?: string;
   worktreeBranch?: string;
   finalOutputPreview?: string;

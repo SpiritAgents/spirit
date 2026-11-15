@@ -101,6 +101,8 @@ import {
   overlayExtensionRulesAndSkills,
 } from "@spiritagent/instructions";
 import {
+  listSubagentLanguageModelSelectors,
+  loadSpiritConfig,
   tryResolveTransportConfig,
   unconfiguredTransportConfig,
   type ModelRef,
@@ -525,6 +527,9 @@ async function prepareServerRuntime(
       }));
   const toolExecutor = new HostToolExecutorProxy(createNoopPeer(), mcpService);
   try {
+    toolExecutor.setSubagentLanguageModelSelectorResolver(() =>
+      listSubagentLanguageModelSelectors(loadSpiritConfig(spiritDataDir)?.providers ?? []),
+    );
     toolExecutor.setBackgroundTaskExposure(!isDreamCollector);
     toolExecutor.setSubagentExposure(options.sessionKind !== "subagent");
 

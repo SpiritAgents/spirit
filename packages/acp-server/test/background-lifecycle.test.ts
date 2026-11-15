@@ -437,6 +437,217 @@ function delegatedContext() {
   };
 }
 
+async function writeModelSelectionConfig(config: AcpServerConfig) {
+  await writeFile(
+    path.join(config.spiritDataDir, "config.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      providers: [
+        {
+          id: "alpha",
+          transportKind: "openai-compatible",
+          sdk: "@ai-sdk/openai-compatible",
+          apiBase: "https://alpha.invalid/v1",
+          apiKey: "fixture-key",
+          capabilities: ["languageModel"],
+          models: [
+            { name: "shared" },
+            { name: "vendor/reasoning" },
+            { name: "image-only", capabilities: ["imageGeneration"] },
+          ],
+        },
+        {
+          id: "beta",
+          transportKind: "openai-compatible",
+          sdk: "@ai-sdk/openai-compatible",
+          apiBase: "https://beta.invalid/v1",
+          apiKey: "fixture-key",
+          models: [
+            { name: "shared", capabilities: ["languageModel"] },
+            { name: "image-only", capabilities: ["imageGeneration"] },
+          ],
+        },
+      ],
+      activeModel: { providerId: "alpha", name: "shared" },
+    }),
+  );
+}
+
+function subagentModelDescription(definitions: unknown): string {
+  const tools = definitions as Array<{
+    function: {
+      name: string;
+      parameters: { properties: { model: { description: string } } };
+    };
+  }>;
+  const subagent = tools.find((tool) => tool.function.name === "subagent");
+  if (!subagent) throw new Error("Missing subagent tool definition.");
+  return subagent.function.parameters.properties.model.description;
+}
+
+function captureModelCalls() {
+  const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
+  setLlmFetchTransportOverrideForTests(async (url, init) => {
+    const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    calls.push({ url: String(url), body });
+    return response();
+  });
+  return calls;
+}
+
+async function writeActiveModel(
+  config: AcpServerConfig,
+  modelRef: { providerId: string; name: string },
+) {
+  const configPath = path.join(config.spiritDataDir, "config.json");
+  const updated = JSON.parse(await readFile(configPath, "utf8")) as Record<string, unknown>;
+  updated.activeModel = modelRef;
+  await writeFile(configPath, JSON.stringify(updated));
+}
+
+it("refreshes the ACP subagent language-model catalog in live tool definitions", async () => {
+  const { config } = await fixture();
+  await writeModelSelectionConfig(config);
+  const manager = new SessionManager(config);
+  const parent = await manager.createSession(config.workspaceRoot, () => {});
+  const toolExecutor = manager.getSession(parent.sessionId)!.toolExecutor;
+
+  const initialDescription = subagentModelDescription(toolExecutor.toolDefinitionsJson());
+  expect(initialDescription).toContain(
+    "Available language models: alpha::shared, alpha::vendor/reasoning, beta::shared.",
+  );
+  expect(initialDescription).not.toContain("image-only");
+
+  const configPath = path.join(config.spiritDataDir, "config.json");
+  const updated = JSON.parse(await readFile(configPath, "utf8")) as {
+    providers: Array<Record<string, unknown>>;
+  };
+  updated.providers = updated.providers.filter((provider) => provider.id !== "beta");
+  updated.providers.push({
+    id: "gamma",
+    transportKind: "openai-compatible",
+    sdk: "@ai-sdk/openai-compatible",
+    apiBase: "https://gamma.invalid/v1",
+    apiKey: "fixture-key",
+    models: [{ name: "latest", capabilities: ["languageModel"] }],
+  });
+  await writeFile(configPath, JSON.stringify(updated));
+
+  const refreshedDescription = subagentModelDescription(toolExecutor.toolDefinitionsJson());
+  expect(refreshedDescription).toContain(
+    "Available language models: alpha::shared, alpha::vendor/reasoning, gamma::latest.",
+  );
+  expect(refreshedDescription).not.toContain("beta::shared");
+  await manager.shutdown();
+});
+
+it("selects and preserves exact provider models across ACP subagent continuations", async () => {
+  const { config } = await fixture();
+  await writeModelSelectionConfig(config);
+  const manager = new SessionManager(config);
+  const parent = await manager.createSession(config.workspaceRoot, () => {});
+  const calls = captureModelCalls();
+
+  const first = delegatedContext();
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    prompt: "Use the duplicate model from the second provider",
+    model: "beta::shared",
+    parentToolCallId: "call-explicit-new",
+    context: first.context,
+  });
+  const targetId = first.updates[0]?.sessionId;
+  if (!targetId) throw new Error("Missing delegated session ID.");
+  expect(first.updates[0]?.model).toBe("beta::shared");
+  expect(calls[0]).toMatchObject({ body: { model: "shared" } });
+  expect(calls[0]?.url).toContain("beta.invalid");
+
+  const switched = delegatedContext();
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: targetId,
+    prompt: "Switch to a slash-containing model on the first provider",
+    model: "alpha::vendor/reasoning",
+    parentToolCallId: "call-explicit-resume",
+    context: switched.context,
+  });
+  expect(switched.updates[0]?.model).toBe("alpha::vendor/reasoning");
+  expect(calls[1]).toMatchObject({ body: { model: "vendor/reasoning" } });
+  expect(calls[1]?.url).toContain("alpha.invalid");
+
+  await manager.closeSession(targetId);
+  const preserved = delegatedContext();
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: targetId,
+    prompt: "Preserve the restored target model",
+    parentToolCallId: "call-preserved-resume",
+    context: preserved.context,
+  });
+  expect(preserved.updates[0]?.model).toBe("alpha::vendor/reasoning");
+  expect(calls[2]).toMatchObject({ body: { model: "vendor/reasoning" } });
+  expect(calls[2]?.url).toContain("alpha.invalid");
+
+  const inherited = delegatedContext();
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    prompt: "Inherit the parent model for a new child",
+    parentToolCallId: "call-inherited-new",
+    context: inherited.context,
+  });
+  expect(inherited.updates[0]?.model).toBe("alpha::shared");
+  expect(calls[3]).toMatchObject({ body: { model: "shared" } });
+  expect(calls[3]?.url).toContain("alpha.invalid");
+
+  const history = JSON.stringify(manager.getSession(targetId)!.runtime.history());
+  for (const [index, model] of ["shared", "missing::shared", "alpha::image-only"].entries()) {
+    const invalid = delegatedContext();
+    await expect(
+      manager.delegateSubagentTurn(parent.sessionId, {
+        sessionId: targetId,
+        prompt: "Reject before any worktree or turn",
+        model,
+        worktree: true,
+        parentToolCallId: `call-invalid-${index}`,
+        context: invalid.context,
+      }),
+    ).rejects.toThrow(/subagent model/i);
+  }
+  expect(calls).toHaveLength(4);
+  expect(manager.getSession(targetId)?.workLocation).toBe("local");
+  expect(JSON.stringify(manager.getSession(targetId)!.runtime.history())).toBe(history);
+  await manager.shutdown();
+});
+
+it("pins an explicit resumed ACP model that matches the current active model", async () => {
+  const { config } = await fixture();
+  await writeModelSelectionConfig(config);
+  const manager = new SessionManager(config);
+  const parent = await manager.createSession(config.workspaceRoot, () => {});
+  const target = await manager.createSession(config.workspaceRoot, () => {});
+  const calls = captureModelCalls();
+
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: target.sessionId,
+    prompt: "Explicitly pin the current active model",
+    model: "alpha::shared",
+    parentToolCallId: "call-explicit-active",
+    context: delegatedContext().context,
+  });
+  expect(calls[0]?.url).toContain("alpha.invalid");
+
+  await writeActiveModel(config, { providerId: "beta", name: "shared" });
+  await manager.closeSession(target.sessionId);
+  const continued = delegatedContext();
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: target.sessionId,
+    prompt: "Keep the explicitly pinned model after the global selection changes",
+    parentToolCallId: "call-explicit-after-active-change",
+    context: continued.context,
+  });
+
+  expect(continued.updates[0]?.model).toBe("alpha::shared");
+  expect(calls[1]).toMatchObject({ body: { model: "shared" } });
+  expect(calls[1]?.url).toContain("alpha.invalid");
+  await manager.shutdown();
+});
+
 it("continues native subagent sessions with normal user turns", async () => {
   const { config } = await fixture();
   const manager = new SessionManager(config);

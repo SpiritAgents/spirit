@@ -841,6 +841,259 @@ function delegatedContext() {
   };
 }
 
+async function writeModelSelectionConfig(dataDir: string) {
+  await writeFile(
+    path.join(dataDir, "config.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      providers: [
+        {
+          id: "alpha",
+          transportKind: "openai-compatible",
+          sdk: "@ai-sdk/openai-compatible",
+          apiBase: "https://alpha.invalid/v1",
+          apiKey: "fixture-key",
+          capabilities: ["languageModel"],
+          models: [
+            { name: "shared" },
+            { name: "vendor/reasoning" },
+            { name: "image-only", capabilities: ["imageGeneration"] },
+          ],
+        },
+        {
+          id: "beta",
+          transportKind: "openai-compatible",
+          sdk: "@ai-sdk/openai-compatible",
+          apiBase: "https://beta.invalid/v1",
+          apiKey: "fixture-key",
+          models: [
+            { name: "shared", capabilities: ["languageModel"] },
+            { name: "image-only", capabilities: ["imageGeneration"] },
+          ],
+        },
+      ],
+      activeModel: { providerId: "alpha", name: "shared" },
+    }),
+  );
+}
+
+function subagentModelDescription(request: Record<string, unknown>): string {
+  const tools = request.tools as Array<{
+    function: {
+      name: string;
+      parameters: { properties: { model: { description: string } } };
+    };
+  }>;
+  const subagent = tools.find((tool) => tool.function.name === "subagent");
+  if (!subagent) throw new Error("Missing subagent tool definition.");
+  return subagent.function.parameters.properties.model.description;
+}
+
+function captureModelCalls() {
+  const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
+  setLlmFetchTransportOverrideForTests((url, init) => {
+    const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    calls.push({ url: String(url), body });
+    return Promise.resolve(response(`Reply ${calls.length}`));
+  });
+  return calls;
+}
+
+async function writeActiveModel(dataDir: string, modelRef: { providerId: string; name: string }) {
+  const configPath = path.join(dataDir, "config.json");
+  const config = JSON.parse(await readFile(configPath, "utf8")) as Record<string, unknown>;
+  config.activeModel = modelRef;
+  await writeFile(configPath, JSON.stringify(config));
+}
+
+it("refreshes the subagent language-model catalog in live tool definitions", async () => {
+  const { dataDir, workspaceRoot } = await fixture();
+  await writeModelSelectionConfig(dataDir);
+  const { manager, finished } = managerFor(dataDir);
+  const { sessionId } = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
+  const requests = scriptedModel(() => response("Catalog response."));
+
+  await manager.submitUserTurn(sessionId, { text: "Inspect the initial catalog." });
+  await waitUntil(() => finished.length === 1);
+  const initialDescription = subagentModelDescription(
+    requests.find((request) => Array.isArray(request.tools))!,
+  );
+  expect(initialDescription).toContain(
+    "Available language models: alpha::shared, alpha::vendor/reasoning, beta::shared.",
+  );
+  expect(initialDescription).not.toContain("image-only");
+
+  const configPath = path.join(dataDir, "config.json");
+  const config = JSON.parse(await readFile(configPath, "utf8")) as {
+    providers: Array<Record<string, unknown>>;
+  };
+  config.providers = config.providers.filter((provider) => provider.id !== "beta");
+  config.providers.push({
+    id: "gamma",
+    transportKind: "openai-compatible",
+    sdk: "@ai-sdk/openai-compatible",
+    apiBase: "https://gamma.invalid/v1",
+    apiKey: "fixture-key",
+    models: [{ name: "latest", capabilities: ["languageModel"] }],
+  });
+  await writeFile(configPath, JSON.stringify(config));
+
+  await manager.submitUserTurn(sessionId, { text: "Inspect the updated catalog." });
+  await waitUntil(() => finished.length === 2);
+  const refreshedDescription = subagentModelDescription(
+    requests.filter((request) => Array.isArray(request.tools))[1]!,
+  );
+  expect(refreshedDescription).toContain(
+    "Available language models: alpha::shared, alpha::vendor/reasoning, gamma::latest.",
+  );
+  expect(refreshedDescription).not.toContain("beta::shared");
+});
+
+it("selects and preserves exact provider models across native subagent continuations", async () => {
+  const { dataDir, workspaceRoot } = await fixture();
+  await writeModelSelectionConfig(dataDir);
+  const { manager } = managerFor(dataDir);
+  const parent = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
+  const calls = captureModelCalls();
+
+  const first = delegatedContext();
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    prompt: "Use the duplicate model from the second provider",
+    model: "beta::shared",
+    parentToolCallId: "call-explicit-new",
+    context: first.context,
+  });
+  const targetId = first.updates[0]?.sessionId;
+  if (!targetId) throw new Error("Missing delegated session ID.");
+  expect(first.updates[0]?.model).toBe("beta::shared");
+  expect(calls[0]).toMatchObject({ body: { model: "shared" } });
+  expect(calls[0]?.url).toContain("beta.invalid");
+
+  const switched = delegatedContext();
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: targetId,
+    prompt: "Switch to a slash-containing model on the first provider",
+    model: "alpha::vendor/reasoning",
+    parentToolCallId: "call-explicit-resume",
+    context: switched.context,
+  });
+  expect(switched.updates[0]?.model).toBe("alpha::vendor/reasoning");
+  expect(calls[1]).toMatchObject({ body: { model: "vendor/reasoning" } });
+  expect(calls[1]?.url).toContain("alpha.invalid");
+  expect(manager.getSession(targetId)?.model).toBe("vendor/reasoning");
+
+  await manager.closeSession(targetId);
+  const preserved = delegatedContext();
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: targetId,
+    prompt: "Preserve the restored target model",
+    parentToolCallId: "call-preserved-resume",
+    context: preserved.context,
+  });
+  expect(preserved.updates[0]?.model).toBe("alpha::vendor/reasoning");
+  expect(calls[2]).toMatchObject({ body: { model: "vendor/reasoning" } });
+  expect(calls[2]?.url).toContain("alpha.invalid");
+
+  const inherited = delegatedContext();
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    prompt: "Inherit the parent model for a new child",
+    parentToolCallId: "call-inherited-new",
+    context: inherited.context,
+  });
+  expect(inherited.updates[0]?.model).toBe("alpha::shared");
+  expect(calls[3]).toMatchObject({ body: { model: "shared" } });
+  expect(calls[3]?.url).toContain("alpha.invalid");
+
+  const sessionIds = manager
+    .listSessions({ includeSubagents: true })
+    .map((session) => session.sessionId)
+    .sort();
+  for (const [index, model] of ["shared", "missing::shared", "alpha::image-only"].entries()) {
+    const invalid = delegatedContext();
+    await expect(
+      manager.delegateSubagentTurn(parent.sessionId, {
+        prompt: "Reject before any worktree or turn",
+        model,
+        worktree: true,
+        parentToolCallId: `call-invalid-${index}`,
+        context: invalid.context,
+      }),
+    ).rejects.toThrow(/subagent model/i);
+  }
+  expect(calls).toHaveLength(4);
+  expect(
+    manager
+      .listSessions({ includeSubagents: true })
+      .map((session) => session.sessionId)
+      .sort(),
+  ).toEqual(sessionIds);
+});
+
+it("pins an inherited subagent model before a later active-model change", async () => {
+  const { dataDir, workspaceRoot } = await fixture();
+  await writeModelSelectionConfig(dataDir);
+  const { manager } = managerFor(dataDir);
+  const parent = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
+  const calls = captureModelCalls();
+
+  const inherited = delegatedContext();
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    prompt: "Inherit the current active model",
+    parentToolCallId: "call-inherited-active",
+    context: inherited.context,
+  });
+  const targetId = inherited.updates[0]?.sessionId;
+  if (!targetId) throw new Error("Missing delegated session ID.");
+  expect(calls[0]?.url).toContain("alpha.invalid");
+  expect(inherited.updates[0]?.model).toBe("alpha::shared");
+
+  await writeActiveModel(dataDir, { providerId: "beta", name: "shared" });
+  await manager.closeSession(targetId);
+  const continued = delegatedContext();
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: targetId,
+    prompt: "Keep the inherited model after the global selection changes",
+    parentToolCallId: "call-inherited-after-active-change",
+    context: continued.context,
+  });
+
+  expect(continued.updates[0]?.model).toBe("alpha::shared");
+  expect(calls[1]).toMatchObject({ body: { model: "shared" } });
+  expect(calls[1]?.url).toContain("alpha.invalid");
+});
+
+it("pins an explicit resumed model that matches the current active model", async () => {
+  const { dataDir, workspaceRoot } = await fixture();
+  await writeModelSelectionConfig(dataDir);
+  const { manager } = managerFor(dataDir);
+  const parent = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
+  const target = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
+  const calls = captureModelCalls();
+
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: target.sessionId,
+    prompt: "Explicitly pin the current active model",
+    model: "alpha::shared",
+    parentToolCallId: "call-explicit-active",
+    context: delegatedContext().context,
+  });
+  expect(calls[0]?.url).toContain("alpha.invalid");
+
+  await writeActiveModel(dataDir, { providerId: "beta", name: "shared" });
+  await manager.closeSession(target.sessionId);
+  const continued = delegatedContext();
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: target.sessionId,
+    prompt: "Keep the explicitly pinned model after the global selection changes",
+    parentToolCallId: "call-explicit-after-active-change",
+    context: continued.context,
+  });
+
+  expect(continued.updates[0]?.model).toBe("alpha::shared");
+  expect(calls[1]).toMatchObject({ body: { model: "shared" } });
+  expect(calls[1]?.url).toContain("alpha.invalid");
+});
+
 it("creates and continues native subagent sessions by ID", async () => {
   const { dataDir, workspaceRoot } = await fixture();
   const { manager, childEvents } = managerFor(dataDir);

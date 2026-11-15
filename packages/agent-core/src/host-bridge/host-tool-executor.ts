@@ -20,6 +20,7 @@ import {
 import type { AgentMode } from "../ports.js";
 import {
   applyHostToolDescriptionHints,
+  applySubagentLanguageModelSelectors,
   assertAgentModeAllowsHostTool,
   assertFinishTaskToolAllowed,
   buildBuiltinHostToolDefinitions,
@@ -103,6 +104,8 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
   private approvalLevel: LazyToolGatewayApprovalLevel = "default";
   private transportConfigForToolDefinitions: LlmTransportConfig | undefined;
   private hostToolDescriptionHints: HostToolDescriptionHint[] = [];
+  private subagentLanguageModelSelectorResolver: (() => readonly string[]) | undefined;
+  private subagentLanguageModelSelectors: readonly string[] = [];
   private mcpUiOpener: McpUiOpener | undefined;
 
   constructor(
@@ -122,6 +125,12 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
   setHostToolDescriptionHints(hints: HostToolDescriptionHint[] | undefined): void {
     this.hostToolDescriptionHints = Array.isArray(hints) ? [...hints] : [];
     this.refreshMergedToolDefinitions();
+  }
+
+  /** Resolve the current provider catalog whenever model-visible tool definitions are read. */
+  setSubagentLanguageModelSelectorResolver(resolver: (() => readonly string[]) | undefined): void {
+    this.subagentLanguageModelSelectorResolver = resolver;
+    this.refreshSubagentLanguageModelSelectors();
   }
 
   setLocalHostService(service: LocalHostToolService | undefined): void {
@@ -246,6 +255,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
   }
 
   toolDefinitionsJson(): JsonValue {
+    this.refreshSubagentLanguageModelSelectors();
     return this.toolDefinitionsCache;
   }
 
@@ -657,6 +667,10 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
       return;
     }
     let hostDefinitions = this.hostToolDefinitionsCache;
+    hostDefinitions = applySubagentLanguageModelSelectors(
+      hostDefinitions,
+      this.subagentLanguageModelSelectors,
+    );
     if (!this.imageGenerationAvailable && Array.isArray(hostDefinitions)) {
       hostDefinitions = filterToolDefinitionByName(hostDefinitions, "generate_image");
     }
@@ -702,6 +716,19 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
       ),
       this.hostToolDescriptionHints,
     );
+  }
+
+  private refreshSubagentLanguageModelSelectors(): void {
+    const resolved = this.subagentLanguageModelSelectorResolver?.() ?? [];
+    const next = [...new Set(resolved.map((selector) => selector.trim()).filter(Boolean))].sort();
+    if (
+      next.length === this.subagentLanguageModelSelectors.length &&
+      next.every((selector, index) => selector === this.subagentLanguageModelSelectors[index])
+    ) {
+      return;
+    }
+    this.subagentLanguageModelSelectors = next;
+    this.refreshMergedToolDefinitions();
   }
 
   private async executeLspDiagnosticsTool(

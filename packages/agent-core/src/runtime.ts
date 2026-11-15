@@ -3430,6 +3430,13 @@ export class AgentRuntime<Config, State, ToolRequest> {
     resumeAsStreaming = false,
     streamingEmitBeginResponse = true,
   ): Promise<SubagentToolExecutionResult<ToolRequest>> {
+    if (request.model !== undefined) {
+      return this.completedSubagentToolOutcome(
+        undefined,
+        "[subagent failed] Model selection requires managed native subagent execution.",
+        true,
+      );
+    }
     if (this.runtimeDepthStore >= 1) {
       return this.completedSubagentToolOutcome(
         undefined,
@@ -4071,11 +4078,15 @@ export class AgentRuntime<Config, State, ToolRequest> {
     if (this.options.subagentSessionDelegate) {
       return this.options.subagentSessionDelegate.execute({
         prompt: request.prompt,
+        ...(request.model !== undefined ? { model: request.model } : {}),
         parentToolCallId,
         ...(request.sessionId ? { sessionId: request.sessionId } : {}),
         ...(request.worktree !== undefined ? { worktree: request.worktree } : {}),
         context,
       });
+    }
+    if (request.model !== undefined) {
+      throw new Error("Subagent model selection requires a native session delegate.");
     }
     const tasks = this.options.backgroundTasks;
     if (!tasks) throw new Error("Background task support is not configured.");
@@ -4605,12 +4616,14 @@ function extractSubagentRequest<ToolRequest>(request: ToolRequest): SubagentRequ
   }
 
   const subagentType = readOptionalStringField(value, "subagent_type", "subagentType");
+  const model = readOptionalStringField(value, "model");
   const sessionId = readOptionalStringField(value, "session_id", "sessionId");
   const worktree = value.worktree === true ? true : undefined;
   const background = parseBackgroundOptions(value.background);
 
   return {
     prompt,
+    ...(model !== undefined ? { model } : {}),
     ...(sessionId !== undefined ? { sessionId } : {}),
     ...(subagentType !== undefined ? { subagentType } : {}),
     ...(worktree !== undefined ? { worktree } : {}),

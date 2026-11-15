@@ -154,6 +154,7 @@
   "tui.tool.detail.line_range": "Диапазон строк: %{start} - %{end}",
   "tui.tool.detail.query": "Запрос: %{query}",
   "tui.tool.detail.task": "Задача: %{task}",
+  "tui.tool.detail.model": "Модель: %{model}",
   "tui.tool.detail.question_count": "Вопросов: %{count}",
   "tui.tool.detail.command": "Команда: %{command}",
   "tui.tool.message.mcp_done": "[tool] MCP %{display} (%{server}) / %{tool} выполнено.\n%{output}",

@@ -154,6 +154,7 @@
   "tui.tool.detail.line_range": "行范围: %{start} - %{end}",
   "tui.tool.detail.query": "查询: %{query}",
   "tui.tool.detail.task": "任务: %{task}",
+  "tui.tool.detail.model": "模型: %{model}",
   "tui.tool.detail.question_count": "问题数: %{count}",
   "tui.tool.detail.command": "命令: %{command}",
   "tui.tool.message.mcp_done": "[tool] MCP %{display} (%{server}) / %{tool} 执行完成。\n%{output}",

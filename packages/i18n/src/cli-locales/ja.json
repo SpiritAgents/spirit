@@ -154,6 +154,7 @@
   "tui.tool.detail.line_range": "行範囲: %{start} - %{end}",
   "tui.tool.detail.query": "クエリ: %{query}",
   "tui.tool.detail.task": "タスク: %{task}",
+  "tui.tool.detail.model": "モデル: %{model}",
   "tui.tool.detail.question_count": "質問数: %{count}",
   "tui.tool.detail.command": "コマンド: %{command}",
   "tui.tool.message.mcp_done": "[tool] MCP %{display} (%{server}) / %{tool} が完了しました。\n%{output}",

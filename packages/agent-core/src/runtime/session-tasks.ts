@@ -23,7 +23,12 @@ export interface SessionTaskContext {
     metadata: Partial<
       Pick<
         BackgroundTaskRecord,
-        "sessionId" | "sessionTranscript" | "worktreePath" | "worktreeBranch" | "finalOutputPreview"
+        | "sessionId"
+        | "sessionTranscript"
+        | "model"
+        | "worktreePath"
+        | "worktreeBranch"
+        | "finalOutputPreview"
       >
     >,
     status?: "running" | "blocked" | "waiting-for-background",
