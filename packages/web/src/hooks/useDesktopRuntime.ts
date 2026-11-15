@@ -3342,6 +3342,33 @@ export function useDesktopRuntime() {
     [api, applySnapshot],
   );
 
+  const getWorkspaceToolTabs = useCallback(async () => {
+    if (!api) {
+      throw new Error("Desktop host is unavailable.");
+    }
+    return api.getWorkspaceToolTabs();
+  }, [api]);
+
+  const syncWorkspaceToolTabs = useCallback(
+    async (request: {
+      expectedRevision: number;
+      tabs: import("../types").DesktopWorkspaceToolTab[];
+      activeTabId: string;
+    }) => {
+      if (!api) {
+        throw new Error("Desktop host is unavailable.");
+      }
+      return api.syncWorkspaceToolTabs(request);
+    },
+    [api],
+  );
+
+  const subscribeWorkspaceToolTabsUpdates = useCallback(
+    (callback: (snapshot: import("../types").DesktopWorkspaceToolsSnapshot) => void) =>
+      api?.subscribeWorkspaceToolTabsUpdates?.(callback) ?? (() => {}),
+    [api],
+  );
+
   const replyWorkspaceCapabilityTrust = useCallback(
     async (decision: WorkspaceCapabilityTrustDecision) => {
       if (!api) {
@@ -4284,6 +4311,9 @@ export function useDesktopRuntime() {
     submitApproval,
     replyWorkspaceCapabilityTrust,
     resolveExtensionUi,
+    getWorkspaceToolTabs,
+    syncWorkspaceToolTabs,
+    subscribeWorkspaceToolTabsUpdates,
     submitQuestions,
   };
 }

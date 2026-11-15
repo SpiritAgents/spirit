@@ -96,6 +96,8 @@ export interface HostCommandDelegate {
     request: CommandPayloads["replyWorkspaceCapabilityTrust"]["request"],
   ): Promise<unknown>;
   resolveExtensionUi(request: CommandPayloads["resolveExtensionUi"]["request"]): Promise<unknown>;
+  getWorkspaceToolTabs(windowId: string): Promise<unknown>;
+  syncWorkspaceToolTabs(request: CommandPayloads["syncWorkspaceToolTabs"]): Promise<unknown>;
   resetSession(payload?: CommandPayloads["resetSession"]): Promise<unknown>;
   listSessions(): Promise<unknown>;
   openSession(
@@ -311,6 +313,8 @@ const hostCommandDispatch = {
   replyWorkspaceCapabilityTrust: (host, payload) =>
     host.replyWorkspaceCapabilityTrust(payload.request),
   resolveExtensionUi: (host, payload) => host.resolveExtensionUi(payload.request),
+  getWorkspaceToolTabs: (host, payload) => host.getWorkspaceToolTabs(payload.windowId),
+  syncWorkspaceToolTabs: (host, payload) => host.syncWorkspaceToolTabs(payload),
   resetSession: (host, payload) =>
     host.resetSession(
       payload && typeof payload === "object"

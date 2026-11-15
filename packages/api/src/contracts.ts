@@ -88,6 +88,8 @@ export type HostCommandName =
   | "replyPendingQuestions"
   | "replyWorkspaceCapabilityTrust"
   | "resolveExtensionUi"
+  | "getWorkspaceToolTabs"
+  | "syncWorkspaceToolTabs"
   | "resetSession"
   | "listSessions"
   | "openSession"

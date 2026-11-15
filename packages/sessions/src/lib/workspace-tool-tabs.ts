@@ -29,6 +29,7 @@ export type WorkspaceBuiltInToolTab = WorkspaceToolTabBase & {
   browserUrl?: string;
   /** Only used when builtInKind === "files"; workspace-relative path of the current file. */
   filesWorkspacePath?: string;
+  filesViewMode?: "edit" | "preview";
   /** Only used when builtInKind === "pr"; switches the tab icon to the current PR status. */
   prStatus?: PullRequestChipStatus;
   /** Only used when builtInKind === "task"; the resolved task key this tab belongs to. */
@@ -178,6 +179,19 @@ export function focusFirstTabOfKind(
   kind: WorkspaceToolTabKind,
 ): string | null {
   return tabs.find((tab) => isWorkspaceToolTabKind(tab, kind))?.id ?? null;
+}
+
+export function isWorkspaceToolTabVisibleInContext(
+  tab: WorkspaceToolTab,
+  context: { workspaceRoot: string; sessionKey: string },
+): boolean {
+  if (tab.kind === "built-in" || tab.scope.kind === "window-shared") {
+    return true;
+  }
+  if (tab.scope.kind === "workspace") {
+    return tab.scope.workspaceRoot === context.workspaceRoot;
+  }
+  return tab.scope.sessionKey === context.sessionKey;
 }
 
 export function findWorkspaceToolTab(

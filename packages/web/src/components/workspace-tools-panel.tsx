@@ -792,6 +792,19 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     [onTabsChange],
   );
 
+  const handleTabFilesViewModeChange = useCallback(
+    (tabId: string, viewMode: "edit" | "preview") => {
+      onTabsChange((prev) =>
+        prev.map((item) =>
+          isWorkspaceToolTabKind(item, "files") && item.id === tabId
+            ? { ...item, filesViewMode: viewMode }
+            : item,
+        ),
+      );
+    },
+    [onTabsChange],
+  );
+
   const handleTabPrStatusChange = useCallback(
     (tabId: string, status: PullRequestChipStatus | undefined) => {
       onTabsChange((prev) =>
@@ -1022,6 +1035,10 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
             isWorkspaceToolTabKind(item, "files") &&
             fileRevealTabId != null &&
             item.id === fileRevealTabId;
+          const restoredFileRevealEnabled =
+            isWorkspaceToolTabKind(item, "files") &&
+            !fileRevealEnabled &&
+            Boolean(item.filesWorkspacePath);
           const prRevealEnabled =
             isWorkspaceToolTabKind(item, "pr") &&
             prRevealTabId != null &&
@@ -1061,12 +1078,14 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     startImplementingDisabled={startImplementingDisabled}
                     autoRevealPlanNonce={planRevealEnabled ? autoRevealPlanNonce : 0}
                     planRevealEnabled={planRevealEnabled}
-                    autoRevealFileNonce={fileRevealEnabled ? autoRevealFileNonce : 0}
-                    fileRevealEnabled={fileRevealEnabled}
-                    fileRevealPath={fileRevealPath}
+                    autoRevealFileNonce={
+                      fileRevealEnabled ? autoRevealFileNonce : restoredFileRevealEnabled ? 1 : 0
+                    }
+                    fileRevealEnabled={fileRevealEnabled || restoredFileRevealEnabled}
+                    fileRevealPath={fileRevealEnabled ? fileRevealPath : item.filesWorkspacePath}
                     fileRevealAbsolutePath={fileRevealAbsolutePath}
                     fileRevealScope={fileRevealScope}
-                    fileRevealViewMode={fileRevealViewMode}
+                    fileRevealViewMode={fileRevealEnabled ? fileRevealViewMode : item.filesViewMode}
                     fileRevealDirectoryOnly={fileRevealDirectoryOnly}
                     fileRevealLine={fileRevealEnabled ? fileRevealLine : null}
                     fileRevealColumn={fileRevealEnabled ? fileRevealColumn : null}
@@ -1077,6 +1096,9 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     onOpenWorkspaceFileInNewTab={onOpenWorkspaceFileInNewTab}
                     onFilesWorkspacePathChange={(path) =>
                       handleTabFilesWorkspacePathChange(item.id, path)
+                    }
+                    onFilesViewModeChange={(viewMode) =>
+                      handleTabFilesViewModeChange(item.id, viewMode)
                     }
                     onFileSnippetAddToChat={
                       onFileSnippetAddToChat

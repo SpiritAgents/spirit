@@ -157,6 +157,13 @@ export type CommandPayloads = {
   replyPendingQuestions: { request: ReplyPendingQuestionsRequest };
   replyWorkspaceCapabilityTrust: { request: ReplyWorkspaceCapabilityTrustRequest };
   resolveExtensionUi: { request: import("./types.js").ResolveExtensionUiRequest };
+  getWorkspaceToolTabs: { windowId: string };
+  syncWorkspaceToolTabs: {
+    windowId: string;
+    expectedRevision: number;
+    tabs: import("./types.js").DesktopWorkspaceToolTab[];
+    activeTabId: string;
+  };
   resetSession:
     | { activate?: boolean; clientHost?: import("./types.js").DesktopClientHost }
     | undefined;

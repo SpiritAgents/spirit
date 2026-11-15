@@ -166,6 +166,7 @@ import {
   subscribeDesktopDreamUpdates,
   subscribeDesktopSessionListUpdates,
   subscribeDesktopTasksUpdates,
+  subscribeDesktopWorkspaceToolTabsUpdates,
 } from "@spiritagent/workbench/host/service";
 import {
   chatsDirPath,
@@ -230,6 +231,7 @@ let unsubscribeDesktopDreamUpdates: (() => void) | undefined;
 let unsubscribeDesktopAutomationsUpdates: (() => void) | undefined;
 let unsubscribeDesktopSessionListUpdates: (() => void) | undefined;
 let unsubscribeDesktopTasksUpdates: (() => void) | undefined;
+let unsubscribeDesktopWorkspaceToolTabsUpdates: (() => void) | undefined;
 /** Last snapshot pushed to each webContents; basis for incremental (delta) live updates. Reset on renderer reload. */
 const lastLivePushByWebContents = new WeakMap<Electron.WebContents, DesktopSnapshot>();
 let desktopHostShutdownComplete = false;
@@ -390,6 +392,12 @@ async function handleApprovalNotificationAction(
   } catch (error) {
     console.error("[spirit-desktop] approval notification action failed:", error);
   }
+}
+
+function workspaceWindowIdForWebContents(webContents: Electron.WebContents): string {
+  const owner = BrowserWindow.fromWebContents(webContents);
+  const primary = BrowserWindow.getAllWindows().find((window) => !window.isDestroyed());
+  return owner && primary === owner ? "main" : `window-${owner?.id ?? webContents.id}`;
 }
 
 async function invokeMainDesktopHostCommand(
@@ -1201,10 +1209,30 @@ if (gotSpiritSingleInstanceLock) {
       refreshMacOSDockMenu();
     });
 
+    unsubscribeDesktopWorkspaceToolTabsUpdates = subscribeDesktopWorkspaceToolTabsUpdates(
+      (windowId, snapshot) => {
+        for (const window of BrowserWindow.getAllWindows()) {
+          if (
+            !window.isDestroyed() &&
+            workspaceWindowIdForWebContents(window.webContents) === windowId
+          ) {
+            window.webContents.send("desktop:workspace-tool-tabs-updated", snapshot);
+          }
+        }
+      },
+    );
+
     ipcMain.handle(
       "desktop:invoke",
-      (_event, command: Parameters<typeof invokeDesktopHostCommand>[0], payload?: unknown) =>
-        invokeMainDesktopHostCommand(command, payload),
+      (event, command: Parameters<typeof invokeDesktopHostCommand>[0], payload?: unknown) => {
+        if (command === "getWorkspaceToolTabs" || command === "syncWorkspaceToolTabs") {
+          return invokeMainDesktopHostCommand(command, {
+            ...(payload as Record<string, unknown> | undefined),
+            windowId: workspaceWindowIdForWebContents(event.sender),
+          });
+        }
+        return invokeMainDesktopHostCommand(command, payload);
+      },
     );
 
     ipcMain.handle("desktop:remote-control", (_event, method: string, params: unknown) =>
@@ -1847,6 +1875,8 @@ app.on("before-quit", (event) => {
   unsubscribeDesktopSessionListUpdates = undefined;
   unsubscribeDesktopTasksUpdates?.();
   unsubscribeDesktopTasksUpdates = undefined;
+  unsubscribeDesktopWorkspaceToolTabsUpdates?.();
+  unsubscribeDesktopWorkspaceToolTabsUpdates = undefined;
   unsubscribeDesktopRemoteControl?.();
   unsubscribeDesktopRemoteControl = undefined;
   if (quittingAfterDesktopWebHostStop && desktopHostShutdownComplete) {

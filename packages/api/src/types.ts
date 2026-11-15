@@ -675,6 +675,58 @@ export interface DesktopExtensionDesktopTab {
   defaultScope: DesktopExtensionDesktopTabScope;
 }
 
+export type DesktopWorkspaceBuiltInToolTabKind =
+  | "files"
+  | "terminal"
+  | "git"
+  | "browser"
+  | "pr"
+  | "task";
+
+export type DesktopWorkspaceExtensionToolTabScope =
+  | { kind: "window-shared" }
+  | { kind: "workspace"; workspaceRoot: string }
+  | { kind: "session"; sessionKey: string };
+
+interface DesktopWorkspaceToolTabBase {
+  id: string;
+  tabTitle?: string;
+  tabDirty?: boolean;
+}
+
+export interface DesktopWorkspaceBuiltInToolTab extends DesktopWorkspaceToolTabBase {
+  kind: "built-in";
+  builtInKind: DesktopWorkspaceBuiltInToolTabKind;
+  browserUrl?: string;
+  filesWorkspacePath?: string;
+  filesViewMode?: "edit" | "preview";
+  prStatus?: import("@spiritagent/ui/composer").PullRequestChipStatus;
+  taskKey?: string;
+  pinnedTitle?: boolean;
+}
+
+export interface DesktopWorkspaceExtensionToolTab extends DesktopWorkspaceToolTabBase {
+  kind: "extension";
+  extensionId: string;
+  contributionId: string;
+  instanceId: string;
+  scope: DesktopWorkspaceExtensionToolTabScope;
+  initialParams?: unknown;
+  icon?: DesktopExtensionDesktopTabRuntimeIcon;
+}
+
+export type DesktopWorkspaceToolTab =
+  | DesktopWorkspaceBuiltInToolTab
+  | DesktopWorkspaceExtensionToolTab;
+
+export interface DesktopWorkspaceToolsSnapshot {
+  windowId: string;
+  tabs: DesktopWorkspaceToolTab[];
+  activeTabId: string;
+  restoreReady: boolean;
+  revision: number;
+}
+
 export interface DesktopExtensionDesktopView {
   id: string;
   path: string;

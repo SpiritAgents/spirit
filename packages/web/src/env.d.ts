@@ -172,6 +172,15 @@ declare global {
     resolveExtensionUi(
       request: import("./types").ResolveExtensionUiRequest,
     ): Promise<DesktopSnapshot>;
+    getWorkspaceToolTabs(): Promise<import("./types").DesktopWorkspaceToolsSnapshot>;
+    syncWorkspaceToolTabs(request: {
+      expectedRevision: number;
+      tabs: import("./types").DesktopWorkspaceToolTab[];
+      activeTabId: string;
+    }): Promise<import("./types").DesktopWorkspaceToolsSnapshot>;
+    subscribeWorkspaceToolTabsUpdates(
+      callback: (snapshot: import("./types").DesktopWorkspaceToolsSnapshot) => void,
+    ): () => void;
     openPathInDefaultApp(absolutePath: string): Promise<void>;
     resetSession(): Promise<DesktopSnapshot>;
     listSessions(): Promise<SessionListItem[]>;

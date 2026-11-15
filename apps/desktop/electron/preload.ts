@@ -371,6 +371,19 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   resolveExtensionUi(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "resolveExtensionUi", { request });
   },
+  getWorkspaceToolTabs() {
+    return ipcRenderer.invoke("desktop:invoke", "getWorkspaceToolTabs", {});
+  },
+  syncWorkspaceToolTabs(request: { expectedRevision: number; tabs: unknown; activeTabId: string }) {
+    return ipcRenderer.invoke("desktop:invoke", "syncWorkspaceToolTabs", request);
+  },
+  subscribeWorkspaceToolTabsUpdates(callback: (snapshot: unknown) => void) {
+    const onUpdate = (_event: Electron.IpcRendererEvent, snapshot: unknown) => callback(snapshot);
+    ipcRenderer.on("desktop:workspace-tool-tabs-updated", onUpdate);
+    return () => {
+      ipcRenderer.removeListener("desktop:workspace-tool-tabs-updated", onUpdate);
+    };
+  },
   openPathInDefaultApp(absolutePath: string) {
     return ipcRenderer.invoke("desktop:invoke", "openPathInDefaultApp", { absolutePath });
   },

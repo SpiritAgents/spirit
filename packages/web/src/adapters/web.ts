@@ -463,6 +463,28 @@ export function createWebHostApi(): HostApi {
     resolveExtensionUi(request: import("../types").ResolveExtensionUiRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extension-ui", request);
     },
+    getWorkspaceToolTabs() {
+      return Promise.resolve({
+        windowId: "web",
+        tabs: [],
+        activeTabId: "",
+        restoreReady: true,
+        revision: 0,
+      });
+    },
+    syncWorkspaceToolTabs(request: {
+      expectedRevision: number;
+      tabs: import("../types").DesktopWorkspaceToolTab[];
+      activeTabId: string;
+    }) {
+      return Promise.resolve({
+        windowId: "web",
+        tabs: request.tabs,
+        activeTabId: request.activeTabId,
+        restoreReady: true,
+        revision: 0,
+      });
+    },
     openPathInDefaultApp() {
       return Promise.reject(new Error("openPathInDefaultApp is not available on web host"));
     },

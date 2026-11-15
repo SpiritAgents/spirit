@@ -252,6 +252,15 @@ export interface HostApi {
   resolveExtensionUi(
     request: import("./types.js").ResolveExtensionUiRequest,
   ): Promise<DesktopSnapshot>;
+  getWorkspaceToolTabs(): Promise<import("./types.js").DesktopWorkspaceToolsSnapshot>;
+  syncWorkspaceToolTabs(request: {
+    expectedRevision: number;
+    tabs: import("./types.js").DesktopWorkspaceToolTab[];
+    activeTabId: string;
+  }): Promise<import("./types.js").DesktopWorkspaceToolsSnapshot>;
+  subscribeWorkspaceToolTabsUpdates?(
+    callback: (snapshot: import("./types.js").DesktopWorkspaceToolsSnapshot) => void,
+  ): () => void;
   openPathInDefaultApp(absolutePath: string): Promise<void>;
   resetSession(): Promise<DesktopSnapshot>;
   listSessions(): Promise<SessionListItem[]>;

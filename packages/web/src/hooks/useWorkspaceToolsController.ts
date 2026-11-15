@@ -8,8 +8,10 @@ import { readWorkspaceToolsWidthRatio } from "@/lib/layout-prefs";
 import {
   addWorkspaceToolTab,
   createInitialWorkspaceToolsState,
+  defaultActiveWorkspaceToolTabId,
   findWorkspaceToolTab,
   isWorkspaceToolTabKind,
+  isWorkspaceToolTabVisibleInContext,
   focusFirstTabOfKind,
   normalizeWorkspaceToolTabsForHost,
   openBrowserUrlInWorkspaceTabs,
@@ -61,6 +63,9 @@ export function useWorkspaceToolsController({
   const getWorkspaceToolTabs = useCallback(() => workspaceToolTabsRef.current, []);
   const getActiveWorkspaceToolTabId = useCallback(() => activeWorkspaceToolTabIdRef.current, []);
   const workspaceToolsHostSyncedRef = useRef<typeof runtime.hostKind | null>(null);
+  const workspaceToolsHostReadyRef = useRef(false);
+  const workspaceToolsHostSignatureRef = useRef("");
+  const workspaceToolsHostRevisionRef = useRef(-1);
   const browserTabEnabled = runtime.hostKind === "electron";
   const prTabEnabled = runtime.hostKind === "electron";
   const [workspaceFilesPlanRevealNonce, setWorkspaceFilesPlanRevealNonce] = useState(0);
@@ -387,6 +392,97 @@ export function useWorkspaceToolsController({
     setWorkspaceFilesPlanRevealTargetId(targetFilesTabId);
     setWorkspaceFilesPlanRevealNonce((value) => value + 1);
   }, [setWorkspaceToolsOpen]);
+
+  useEffect(() => {
+    workspaceToolsHostReadyRef.current = false;
+    workspaceToolsHostRevisionRef.current = -1;
+    if (!runtime.apiReady || runtime.hostKind !== "electron") {
+      return;
+    }
+    let disposed = false;
+    const applySnapshot = (snapshot: import("@/types").DesktopWorkspaceToolsSnapshot) => {
+      if (disposed || snapshot.revision < workspaceToolsHostRevisionRef.current) {
+        return;
+      }
+      workspaceToolsHostRevisionRef.current = snapshot.revision;
+      workspaceToolsHostSignatureRef.current = JSON.stringify({
+        tabs: snapshot.tabs,
+        activeTabId: snapshot.activeTabId,
+      });
+      setWorkspaceToolTabs(snapshot.tabs);
+      setActiveWorkspaceToolTabId(snapshot.activeTabId);
+      workspaceToolsHostReadyRef.current = true;
+    };
+    const unsubscribe = runtime.subscribeWorkspaceToolTabsUpdates(applySnapshot);
+    void runtime
+      .getWorkspaceToolTabs()
+      .then(applySnapshot)
+      .catch((error: unknown) => {
+        console.error("[workspace-tabs] failed to restore Desktop tabs", error);
+      });
+    return () => {
+      disposed = true;
+      workspaceToolsHostReadyRef.current = false;
+      unsubscribe();
+    };
+  }, [
+    runtime.apiReady,
+    runtime.hostKind,
+    runtime.getWorkspaceToolTabs,
+    runtime.subscribeWorkspaceToolTabsUpdates,
+  ]);
+
+  useEffect(() => {
+    if (runtime.hostKind !== "electron" || !workspaceToolsHostReadyRef.current) {
+      return;
+    }
+    const signature = JSON.stringify({
+      tabs: workspaceToolTabs,
+      activeTabId: activeWorkspaceToolTabId,
+    });
+    if (signature === workspaceToolsHostSignatureRef.current) {
+      return;
+    }
+    workspaceToolsHostSignatureRef.current = signature;
+    void runtime
+      .syncWorkspaceToolTabs({
+        expectedRevision: workspaceToolsHostRevisionRef.current,
+        tabs: workspaceToolTabs,
+        activeTabId: activeWorkspaceToolTabId,
+      })
+      .catch((error: unknown) => {
+        workspaceToolsHostSignatureRef.current = "";
+        console.error("[workspace-tabs] failed to persist Desktop tabs", error);
+      });
+  }, [
+    activeWorkspaceToolTabId,
+    runtime.hostKind,
+    runtime.syncWorkspaceToolTabs,
+    workspaceToolTabs,
+  ]);
+
+  useEffect(() => {
+    const activeTab = findWorkspaceToolTab(workspaceToolTabs, activeWorkspaceToolTabId);
+    if (!activeTab || activeTab.kind !== "extension") {
+      return;
+    }
+    const context = {
+      workspaceRoot: snapshot?.workspaceRoot ?? "",
+      sessionKey: snapshot?.composerSessionKey ?? "",
+    };
+    if (isWorkspaceToolTabVisibleInContext(activeTab, context)) {
+      return;
+    }
+    const visibleTabs = workspaceToolTabs.filter((tab) =>
+      isWorkspaceToolTabVisibleInContext(tab, context),
+    );
+    setActiveWorkspaceToolTabId(defaultActiveWorkspaceToolTabId(visibleTabs));
+  }, [
+    activeWorkspaceToolTabId,
+    snapshot?.composerSessionKey,
+    snapshot?.workspaceRoot,
+    workspaceToolTabs,
+  ]);
 
   useEffect(() => {
     if (!runtime.apiReady || runtime.hostKind == null) {

@@ -573,6 +573,7 @@ import {
 } from "@spiritagent/sessions/host/lsp-snapshot";
 import {
   basicInfoHostFromClientHost,
+  buildAvailableWorkspaces,
   currentApiBase,
   mapPendingQuestions,
   sameDreamCollectorSnapshot,
@@ -612,6 +613,7 @@ import { generateWorktreeNamesFromModelTask } from "./ephemeral-llm-tasks.js";
 import { buildSubagentViewerSnapshot } from "@spiritagent/sessions/host/subagent-viewer";
 import { persistDesktopSessionBundle } from "@spiritagent/sessions/host/session-persistence";
 import { SessionRegistry } from "@spiritagent/sessions/host/session-registry";
+import { WorkspaceToolTabsStore } from "@spiritagent/sessions/host/workspace-tool-tabs-store";
 import type { SessionBundle } from "@spiritagent/sessions/host/session-bundle";
 import {
   loadRewindCheckpointSnapshot,
@@ -683,6 +685,9 @@ export class DesktopHostService {
     stateStore: this.extensionStateStore,
   });
   private readonly extensionWarmup = new ExtensionWarmupCoordinator();
+  private readonly workspaceToolTabs = new WorkspaceToolTabsStore(
+    path.join(spiritDataDir(), "workspace-tool-tabs.json"),
+  );
   private state: HostState | undefined;
   private readonly sessionRegistry = new SessionRegistry((bundle) => {
     void closeRemoteDesktopRuntime(bundle.runtime);
@@ -1605,6 +1610,7 @@ export class DesktopHostService {
       }
       return this.buildSnapshot();
     }, "bootstrap");
+    await this.prepareWorkspaceToolTabsRestore();
     this.scheduleExtensionWarmup({ type: "startup", workspaceRoot: snapshot.workspaceRoot });
     this.scheduleModelCatalogStartupRefresh();
     return snapshot;
@@ -2673,6 +2679,51 @@ export class DesktopHostService {
 
   async listSessions(): Promise<SessionListItem[]> {
     return listSessionsCommand(this.workspaceGitCommandContext());
+  }
+
+  async getWorkspaceToolTabs(
+    windowId: string,
+  ): Promise<import("@spiritagent/api/types").DesktopWorkspaceToolsSnapshot> {
+    await this.ensureInitialized();
+    return this.workspaceToolTabs.getSnapshot(windowId);
+  }
+
+  async syncWorkspaceToolTabs(request: {
+    windowId: string;
+    expectedRevision: number;
+    tabs: import("@spiritagent/api/types").DesktopWorkspaceToolTab[];
+    activeTabId: string;
+  }): Promise<import("@spiritagent/api/types").DesktopWorkspaceToolsSnapshot> {
+    await this.ensureInitialized(undefined, { fastPath: true });
+    return this.workspaceToolTabs.setSnapshot(request);
+  }
+
+  subscribeWorkspaceToolTabsUpdates(
+    listener: (
+      windowId: string,
+      snapshot: import("@spiritagent/api/types").DesktopWorkspaceToolsSnapshot,
+    ) => void,
+  ): () => void {
+    return this.workspaceToolTabs.subscribe(listener);
+  }
+
+  private async prepareWorkspaceToolTabsRestore(): Promise<void> {
+    const state = this.requireState();
+    const sessions = await this.listSessions();
+    const sessionKeys = new Set(sessions.map((session) => session.path));
+    sessionKeys.add(this.resolveTodoSessionKeyForBundle(this.activeBundle()));
+    const workspaceRoots = new Set(
+      buildAvailableWorkspaces(
+        state.workspaceRoot,
+        state.config.recentWorkspaces,
+        state.workspaceBinding,
+      ).map((workspace) => workspace.path),
+    );
+    await this.workspaceToolTabs.markRestoreReady({
+      workspaceRoots,
+      sessionKeys,
+      extensions: state.extensionsList,
+    });
   }
 
   async listDreamsOverview(): Promise<DesktopDreamOverviewItem[]> {
@@ -4080,10 +4131,14 @@ export class DesktopHostService {
     bundle: SessionBundle,
     previousSessionKey: string,
   ): Promise<void> {
-    return reconcileTodoScopeAfterSessionPathChangeFromService(
+    await reconcileTodoScopeAfterSessionPathChangeFromService(
       this.sessionTodosContext(),
       bundle,
       previousSessionKey,
+    );
+    await this.workspaceToolTabs.rebindSessionScope(
+      previousSessionKey,
+      this.resolveTodoSessionKeyForBundle(bundle),
     );
   }
 
@@ -4680,6 +4735,7 @@ export class DesktopHostService {
     const manager = this.extensionManager();
     const extensions = await manager.list();
     state.extensionsList = await buildDesktopExtensionListItems(manager, extensions, options);
+    await this.workspaceToolTabs.reconcileExtensions(state.extensionsList);
 
     // Multi-source marketplace: refresh every source, then read its catalog.
     const marketplaceContext = { spiritDataDir: spiritDataDir(), hostKind: "desktop" as const };
@@ -5393,6 +5449,15 @@ export function subscribeDesktopAutomationsUpdates(
 
 export function subscribeDesktopSessionListUpdates(listener: () => void): () => void {
   return desktopHostService.subscribeSessionListUpdates(listener);
+}
+
+export function subscribeDesktopWorkspaceToolTabsUpdates(
+  listener: (
+    windowId: string,
+    snapshot: import("@spiritagent/api/types").DesktopWorkspaceToolsSnapshot,
+  ) => void,
+): () => void {
+  return desktopHostService.subscribeWorkspaceToolTabsUpdates(listener);
 }
 
 export function subscribeDesktopTasksUpdates(

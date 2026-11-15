@@ -52,6 +52,7 @@
     "src/lib/automation-schedule.ts",
     "src/lib/automation-trigger.ts",
     "src/lib/i18n-host.ts",
-    "src/lib/ui-locale.ts"
+    "src/lib/ui-locale.ts",
+    "src/lib/workspace-tool-tabs.ts"
   ]
 }

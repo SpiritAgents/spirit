@@ -387,6 +387,7 @@ export type WorkspaceFilesTabProps = {
   ) => void;
   /** Currently open workspace-relative path; undefined when no workspace file is selected */
   onFilesWorkspacePathChange?: (relativePath: string | undefined) => void;
+  onFilesViewModeChange?: (viewMode: WorkspaceEditorViewMode) => void;
   onFileSnippetAddToChat?: (attachment: FileSnippetAttachment) => void;
   onWorkspaceFileAddToChat?: (relativePath: string) => void;
   gitRevision?: number;
@@ -425,6 +426,7 @@ export function WorkspaceFilesTab({
   onOpenWorkspaceFile,
   onOpenWorkspaceFileInNewTab,
   onFilesWorkspacePathChange,
+  onFilesViewModeChange,
   onFileSnippetAddToChat,
   onWorkspaceFileAddToChat,
   gitRevision,
@@ -471,10 +473,12 @@ export function WorkspaceFilesTab({
   const onTitleChangeRef = useRef(onTitleChange);
   const onDirtyChangeRef = useRef(onDirtyChange);
   const onFilesWorkspacePathChangeRef = useRef(onFilesWorkspacePathChange);
+  const onFilesViewModeChangeRef = useRef(onFilesViewModeChange);
   useLayoutEffect(() => {
     onTitleChangeRef.current = onTitleChange;
     onDirtyChangeRef.current = onDirtyChange;
     onFilesWorkspacePathChangeRef.current = onFilesWorkspacePathChange;
+    onFilesViewModeChangeRef.current = onFilesViewModeChange;
   });
   const prevSelectedEntryRef = useRef(selectedEntry);
   const journalFlushRef = useRef<{ path: string; baseline: string; current: string } | null>(null);
@@ -1037,6 +1041,10 @@ export function WorkspaceFilesTab({
 
   const selectionEnabled =
     doc?.status === "ready" && Boolean(onFileSnippetAddToChat && selectedPath);
+
+  useEffect(() => {
+    onFilesViewModeChangeRef.current?.(markdownViewMode);
+  }, [markdownViewMode]);
 
   const onToggleMarkdownViewMode = useCallback((value: string) => {
     if (value === "preview" || value === "edit") {
