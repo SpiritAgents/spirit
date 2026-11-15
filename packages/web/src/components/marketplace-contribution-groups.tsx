@@ -4,7 +4,7 @@
 
 import { useTranslation } from "react-i18next";
 
-import { Monitor, Plug, ScrollText, Wand2, Webhook, Wrench } from "lucide-react";
+import { Monitor, Plug, ScrollText, ShieldCheck, Wand2, Webhook, Wrench } from "lucide-react";
 import type { ElementType } from "react";
 import { getSpiritIconComponent } from "@spiritagent/icons";
 
@@ -26,6 +26,7 @@ type ContributionItem = Pick<
   | "desktopSettingsPage"
   | "desktopViews"
   | "desktopTabs"
+  | "authorizations"
   | "requestedCapabilities"
 >;
 
@@ -142,6 +143,18 @@ export function MarketplaceContributionGroups({
   }));
   if (toolItems.length > 0) {
     groups.push({ key: "tools", label: t("marketplace.contributionGroupTools"), items: toolItems });
+  }
+
+  if (item.authorizations?.length) {
+    groups.push({
+      key: "authorizations",
+      label: t("marketplace.contributionGroupAuthorization"),
+      items: item.authorizations.map((authorization) => ({
+        key: `authorization:${authorization.id}`,
+        icon: ShieldCheck,
+        title: formatTitleFromId(authorization.id),
+      })),
+    });
   }
 
   const desktopItems: ContributionEntry[] = [];

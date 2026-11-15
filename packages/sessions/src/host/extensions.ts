@@ -19,6 +19,7 @@ import {
   type HostExtensionDesktopTabDefinition,
   type HostExtensionManager,
   type HostInstalledExtension,
+  type HostExtensionManifest,
   type HostMarketplaceCatalogItem,
   type MarketplaceCatalogItem,
 } from "@spiritagent/extensions";
@@ -41,6 +42,23 @@ export function buildDesktopExtensionToolDefinitions(
       inputSchema: tool.inputSchema as JsonObject,
     })),
   );
+}
+
+function mapDesktopAuthorizations(
+  manifest: HostExtensionManifest,
+  configurations?: Record<string, boolean | undefined>,
+): import("../types.js").DesktopExtensionAuthorization[] | undefined {
+  const authorizations = manifest.contributes?.authorizations;
+  if (!authorizations?.length) {
+    return undefined;
+  }
+  return authorizations.map((authorization) => ({
+    id: authorization.id,
+    action: authorization.action,
+    ...(configurations?.[authorization.id] === undefined
+      ? {}
+      : { configured: configurations[authorization.id] }),
+  }));
 }
 
 export async function buildDesktopExtensionListItems(
@@ -72,6 +90,14 @@ export async function buildDesktopExtensionListItems(
           : {}),
         ...(item.manifest.main ? { main: item.manifest.main } : {}),
         supportedHosts: [...item.manifest.supportedHosts],
+        ...(item.manifest.contributes?.authorizations?.length
+          ? {
+              authorizations: mapDesktopAuthorizations(
+                item.manifest,
+                skipLiveState ? undefined : await manager.getAuthorizationConfigurations(item.id),
+              ),
+            }
+          : {}),
         ...(item.manifest.activationEvents?.length
           ? { activationEvents: [...item.manifest.activationEvents] }
           : {}),
@@ -180,7 +206,9 @@ function isMarketplaceCatalogInstalled(item: HostInstalledExtension): boolean {
  */
 export async function buildDesktopMarketplaceCatalogEntries(
   items: readonly MarketplaceCatalogItem[],
+  installedExtensions: readonly import("../types.js").DesktopExtensionListItem[] = [],
 ): Promise<DesktopMarketplaceCatalogEntry[]> {
+  const installedById = new Map(installedExtensions.map((extension) => [extension.id, extension]));
   return Promise.all(
     items.map(async (item) => {
       const { entry, source } = item;
@@ -247,6 +275,18 @@ export async function buildDesktopMarketplaceCatalogEntries(
         artifactKind: typeof entry.source === "string" ? "local" : "npm",
         ...(iconUrl ? { iconUrl } : {}),
         supportedHosts: [...manifest.supportedHosts],
+        ...(manifest.contributes?.authorizations?.length
+          ? {
+              authorizations: mapDesktopAuthorizations(
+                manifest,
+                Object.fromEntries(
+                  (installedById.get(`${source.id}/${entry.name}`)?.authorizations ?? []).map(
+                    (authorization) => [authorization.id, authorization.configured],
+                  ),
+                ),
+              ),
+            }
+          : {}),
         ...(manifest.activationEvents?.length
           ? { activationEvents: [...manifest.activationEvents] }
           : {}),

@@ -5037,7 +5037,10 @@ export class DesktopHostService {
     for (const source of sources) {
       try {
         const read = await readMarketplaceCatalogForSource(marketplaceContext, source);
-        catalogs[source.id] = await buildDesktopMarketplaceCatalogEntries(read.items);
+        catalogs[source.id] = await buildDesktopMarketplaceCatalogEntries(
+          read.items,
+          state.extensionsList,
+        );
         if (read.warning) {
           warnings.push(read.warning);
         }

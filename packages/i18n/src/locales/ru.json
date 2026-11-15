@@ -667,6 +667,7 @@
     "noMatches": "Нет подходящих расширений.",
     "extensionNotFound": "Расширение не найдено. Вернитесь к списку.",
     "install": "Установить",
+    "authorize": "Авторизовать",
     "httpLocalSourceInstallUnsupported": "HTTP-каталоги не поддерживают установку расширений с локальным путём",
     "enable": "Включить",
     "disable": "Отключить",
@@ -675,6 +676,7 @@
     "uninstallExtension": "Удалить расширение",
     "empty": "Нет расширений",
     "contributionGroupTools": "Инструменты",
+    "contributionGroupAuthorization": "Авторизация",
     "contributionGroupDesktop": "Рабочий стол",
     "contributionRuleTitle": "Правило",
     "contributionStyleTitle": "Стиль",
@@ -724,7 +726,9 @@
     "uninstallPersonalConfirmTitle": "Удалить «{{name}}»?",
     "uninstallPersonalConfirmDescription": "Локальная установка и запись в личном маркетплейсе будут удалены.",
     "removeMarketplaceConfirmTitle": "Удалить «{{name}}»?",
-    "removeMarketplaceConfirmDescription": "Это действие необратимо."
+    "removeMarketplaceConfirmDescription": "Это действие необратимо.",
+    "authorizationOptions": "Параметры авторизации",
+    "authorizationOptionsFor": "Параметры авторизации {{name}}"
   },
   "dreams": {
     "collectorRunning": "Сбор снов выполняется. Скоро здесь появятся новые последние тренды.",

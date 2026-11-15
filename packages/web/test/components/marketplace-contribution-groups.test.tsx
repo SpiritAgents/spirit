@@ -127,3 +127,17 @@ describe("MarketplaceContributionGroups", () => {
     expect(container.querySelector(".divide-y")).toBeNull();
   });
 });
+
+test("authorizations render static ids without runtime configuration state", () => {
+  const { getByText, queryByText } = render(
+    <MarketplaceContributionGroups
+      item={{
+        authorizations: [{ id: "oauth", action: "authorize", configured: true }],
+      }}
+    />,
+  );
+  expect(getByText("Authorization")).toBeTruthy();
+  expect(getByText("Oauth")).toBeTruthy();
+  expect(queryByText("Configured")).toBeNull();
+  expect(document.querySelector("svg.lucide-shield-check")).toBeTruthy();
+});

@@ -663,6 +663,7 @@
     "noMatches": "No se encontraron extensiones.",
     "extensionNotFound": "Extensión no encontrada. Regresa a la lista.",
     "install": "Instalar",
+    "authorize": "Autorizar",
     "httpLocalSourceInstallUnsupported": "Los mercados HTTP no permiten instalar extensiones con una ruta de origen local",
     "enable": "Activar",
     "disable": "Desactivar",
@@ -671,6 +672,7 @@
     "uninstallExtension": "Desinstalar extensión",
     "empty": "No hay extensiones",
     "contributionGroupTools": "Herramientas",
+    "contributionGroupAuthorization": "Autorización",
     "contributionGroupDesktop": "Escritorio",
     "contributionRuleTitle": "Regla",
     "contributionStyleTitle": "Estilo",
@@ -720,7 +722,9 @@
     "uninstallPersonalConfirmTitle": "¿Desinstalar \"{{name}}\"?",
     "uninstallPersonalConfirmDescription": "Se eliminará la instalación local y su registro del marketplace Personal.",
     "removeMarketplaceConfirmTitle": "¿Quitar \"{{name}}\"?",
-    "removeMarketplaceConfirmDescription": "Esta acción no se puede deshacer."
+    "removeMarketplaceConfirmDescription": "Esta acción no se puede deshacer.",
+    "authorizationOptions": "Opciones de autorización",
+    "authorizationOptionsFor": "Opciones de autorización de {{name}}"
   },
   "dreams": {
     "collectorRunning": "Se están recolectando Dreams. Las nuevas tendencias recientes aparecerán aquí pronto.",

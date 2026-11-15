@@ -146,6 +146,7 @@ export interface HostExtensionContributedToolDefinition {
 
 export interface HostExtensionAuthorizationDefinition {
   id: string;
+  /** Handles initial authorization and subsequent credential management for this contribution. */
   action: string;
   secretSlots: string[];
 }
@@ -590,6 +591,7 @@ export interface HostExtensionManager {
   invokeTool<THostApi>(request: InvokeExtensionToolRequest<THostApi>): Promise<string>;
   invokeTabRequest<THostApi>(request: InvokeExtensionTabRequest<THostApi>): Promise<unknown>;
   invokeAction<THostApi>(request: InvokeExtensionActionRequest<THostApi>): Promise<unknown>;
+  getAuthorizationConfigurations(id: string): Promise<Record<string, boolean>>;
   getSettingsValues(id: string): Promise<HostExtensionSettingsValues>;
   setSettingsValues(request: UpdateExtensionSettingsRequest): Promise<HostExtensionSettingsValues>;
   collectSystemPromptContributions<THostApi>(
@@ -659,6 +661,9 @@ export function createHostExtensionManager(
     },
     async invokeAction(request) {
       return invokeExtensionAction(context, activatedExtensions, stateStore, request);
+    },
+    async getAuthorizationConfigurations(id) {
+      return loadExtensionAuthorizationConfigurations(context, stateStore, id);
     },
     async getSettingsValues(id) {
       return loadExtensionSettingsValues(context, stateStore, id);
@@ -1234,6 +1239,22 @@ export async function saveExtensionSettingsValues(
 ): Promise<HostExtensionSettingsValues> {
   const extension = await requireInstalledExtension(context, request.id);
   return saveSettingsValuesForExtension(extension, stateStore, request.values);
+}
+
+export async function loadExtensionAuthorizationConfigurations(
+  context: ExtensionManagementContext,
+  stateStore: ExtensionStateStore,
+  id: string,
+): Promise<Record<string, boolean>> {
+  const extension = await requireInstalledExtension(context, id);
+  const result: Record<string, boolean> = {};
+  for (const authorization of extension.manifest.contributes?.authorizations ?? []) {
+    const configured = await Promise.all(
+      authorization.secretSlots.map((key) => hasExtensionSecret(stateStore, extension.id, key)),
+    );
+    result[authorization.id] = configured.every(Boolean);
+  }
+  return result;
 }
 
 export async function dispatchExtensionEvent<THostApi>(

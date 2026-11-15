@@ -663,6 +663,7 @@
     "noMatches": "Keine passenden Erweiterungen.",
     "extensionNotFound": "Erweiterung nicht gefunden. Bitte zurück zur Liste.",
     "install": "Installieren",
+    "authorize": "Autorisieren",
     "httpLocalSourceInstallUnsupported": "HTTP-Marktplätze können Erweiterungen mit lokalem Pfad nicht installieren",
     "enable": "Aktivieren",
     "disable": "Deaktivieren",
@@ -671,6 +672,7 @@
     "uninstallExtension": "Erweiterung deinstallieren",
     "empty": "Keine Erweiterungen vorhanden",
     "contributionGroupTools": "Tools",
+    "contributionGroupAuthorization": "Autorisierung",
     "contributionGroupDesktop": "Desktop",
     "contributionRuleTitle": "Regel",
     "contributionStyleTitle": "Stil",
@@ -720,7 +722,9 @@
     "uninstallPersonalConfirmTitle": "„{{name}}“ deinstallieren?",
     "uninstallPersonalConfirmDescription": "Die lokale Installation und der Eintrag im persönlichen Marketplace werden entfernt.",
     "removeMarketplaceConfirmTitle": "„{{name}}“ entfernen?",
-    "removeMarketplaceConfirmDescription": "Dies kann nicht rückgängig gemacht werden."
+    "removeMarketplaceConfirmDescription": "Dies kann nicht rückgängig gemacht werden.",
+    "authorizationOptions": "Autorisierungsoptionen",
+    "authorizationOptionsFor": "{{name}}-Autorisierungsoptionen"
   },
   "dreams": {
     "collectorRunning": "Dreams werden gesammelt. Neue aktuelle Trends erscheinen in Kürze hier.",

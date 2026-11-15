@@ -138,3 +138,36 @@ test("authorization declarations must reference declared secret slots", async ()
     await rm(preparedRoot, { recursive: true, force: true });
   }
 });
+
+test("authorization configuration reports only secret presence", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-action-data-"));
+  const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-action-package-"));
+  const values = new Map<string, string>();
+  try {
+    const packageDir = join(preparedRoot, "action-demo");
+    await writeActionPackage(packageDir);
+    const installed = await installPreparedExtensionDirectory(
+      { spiritDataDir, hostKind: "desktop" },
+      { preparedDirectoryPath: packageDir },
+    );
+    const stateStore: ExtensionStateStore = {
+      async loadSettings() {
+        return {};
+      },
+      async saveSettings() {},
+      async loadSecret(_extensionId, key) {
+        return values.get(key);
+      },
+      async saveSecret(_extensionId, key, value) {
+        values.set(key, value);
+      },
+    };
+    const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop", stateStore });
+    assert.deepEqual(await manager.getAuthorizationConfigurations(installed.id), { oauth: false });
+    values.set("oauthAccessToken", "not-returned-by-the-api");
+    assert.deepEqual(await manager.getAuthorizationConfigurations(installed.id), { oauth: true });
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(preparedRoot, { recursive: true, force: true });
+  }
+});

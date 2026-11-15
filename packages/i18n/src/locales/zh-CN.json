@@ -671,6 +671,7 @@
     "noMatches": "没有匹配的扩展。",
     "extensionNotFound": "找不到该扩展，请返回列表。",
     "install": "安装",
+    "authorize": "授权",
     "httpLocalSourceInstallUnsupported": "HTTP 市场不支持安装本地路径源的扩展",
     "enable": "启用",
     "disable": "禁用",
@@ -679,6 +680,7 @@
     "uninstallExtension": "卸载扩展",
     "empty": "暂无扩展",
     "contributionGroupTools": "工具",
+    "contributionGroupAuthorization": "授权",
     "contributionGroupDesktop": "桌面",
     "contributionRuleTitle": "规则",
     "contributionStyleTitle": "样式",
@@ -728,7 +730,9 @@
     "uninstallPersonalConfirmTitle": "卸载“{{name}}”？",
     "uninstallPersonalConfirmDescription": "这会移除本地安装目录，并从个人市场中删除其记录。",
     "removeMarketplaceConfirmTitle": "移除“{{name}}”？",
-    "removeMarketplaceConfirmDescription": "此操作无法撤销。"
+    "removeMarketplaceConfirmDescription": "此操作无法撤销。",
+    "authorizationOptions": "授权选项",
+    "authorizationOptionsFor": "{{name}}授权选项"
   },
   "dreams": {
     "collectorRunning": "梦境正在收集中，新的近期动向会很快出现在这里",

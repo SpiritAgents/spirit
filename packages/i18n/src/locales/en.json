@@ -696,6 +696,7 @@
     "noMatches": "No matching extensions.",
     "extensionNotFound": "Extension not found. Please return to the list.",
     "install": "Install",
+    "authorize": "Authorize",
     "httpLocalSourceInstallUnsupported": "HTTP marketplaces can't install extensions that use a local path source",
     "enable": "Enable",
     "disable": "Disable",
@@ -704,6 +705,7 @@
     "uninstallExtension": "Uninstall Extension",
     "empty": "No extensions",
     "contributionGroupTools": "Tools",
+    "contributionGroupAuthorization": "Authorization",
     "contributionGroupDesktop": "Desktop",
     "contributionRuleTitle": "Rule",
     "contributionStyleTitle": "Style",
@@ -753,7 +755,9 @@
     "uninstallPersonalConfirmTitle": "Uninstall \"{{name}}\"?",
     "uninstallPersonalConfirmDescription": "This will remove the local installation and delete its record from the Personal marketplace.",
     "removeMarketplaceConfirmTitle": "Remove \"{{name}}\"?",
-    "removeMarketplaceConfirmDescription": "This cannot be undone."
+    "removeMarketplaceConfirmDescription": "This cannot be undone.",
+    "authorizationOptions": "Authorization Options",
+    "authorizationOptionsFor": "{{name}} Authorization Options"
   },
   "dreams": {
     "collectorRunning": "Dreams are being collected. New recent trends will appear here soon.",

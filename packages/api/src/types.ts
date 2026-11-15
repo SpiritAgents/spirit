@@ -542,6 +542,7 @@ export interface DesktopMarketplaceCatalogEntry {
   /** Renderable icon: data URL (local/git registries) or https URL (index direct-links). */
   iconUrl?: string;
   supportedHosts: DesktopExtensionHostKind[];
+  authorizations?: DesktopExtensionAuthorization[];
   activationEvents?: string[];
   requestedCapabilities?: string[];
   contributedTools?: DesktopExtensionContributedTool[];
@@ -855,6 +856,12 @@ export interface DesktopExtensionAuthor {
   url?: string;
 }
 
+export interface DesktopExtensionAuthorization {
+  id: string;
+  action: string;
+  configured?: boolean;
+}
+
 export interface DesktopExtensionListItem {
   id: string;
   displayName: string;
@@ -865,6 +872,7 @@ export interface DesktopExtensionListItem {
   author?: DesktopExtensionAuthor;
   main?: string;
   supportedHosts: DesktopExtensionHostKind[];
+  authorizations?: DesktopExtensionAuthorization[];
   activationEvents?: string[];
   requestedCapabilities?: string[];
   contributedTools?: DesktopExtensionContributedTool[];

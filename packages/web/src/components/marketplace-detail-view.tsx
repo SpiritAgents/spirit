@@ -1,22 +1,14 @@
 // Extension detail page backed by the marketplace catalog entry (registry data + install state).
-import { Ellipsis } from "@spiritagent/icons/ellipsis";
-
 import { useTranslation } from "react-i18next";
 
-import { ArrowLeft, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 
 import { MarketplaceContributionGroups } from "@/components/marketplace-contribution-groups";
+import { MarketplaceInstalledExtensionActions } from "@/components/marketplace-installed-extension-actions";
 import { MarketplaceInformationSection } from "@/components/marketplace-information-section";
 import { reviewStatusBadgeVariant } from "@/components/marketplace-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { instantHoverMotionClass } from "@/lib/desktop-chrome";
@@ -26,7 +18,7 @@ import {
   CONVERSATION_GUTTER_X,
   CONVERSATION_MESSAGE_LIST_MAX_W,
 } from "@/lib/conversation-layout-constants";
-import type { DesktopMarketplaceCatalogEntry } from "@/types";
+import type { DesktopExtensionAuthorization, DesktopMarketplaceCatalogEntry } from "@/types";
 
 type MarketplaceDetailViewProps = {
   item: DesktopMarketplaceCatalogEntry;
@@ -39,6 +31,10 @@ type MarketplaceDetailViewProps = {
   onUpdate: () => void;
   onToggleEnabled: () => void;
   onRequestUninstall: () => void;
+  onAuthorize?: (
+    item: DesktopMarketplaceCatalogEntry,
+    authorization: DesktopExtensionAuthorization,
+  ) => void;
   /** Windows Mica / macOS Vibrancy: the inner layer is transparent to avoid double-tint darkening with marketplace-layout. */
   useTranslucency?: boolean;
 };
@@ -52,6 +48,7 @@ export function MarketplaceDetailView({
   onUpdate,
   onToggleEnabled,
   onRequestUninstall,
+  onAuthorize,
   useTranslucency = false,
 }: MarketplaceDetailViewProps) {
   const { t } = useTranslation();
@@ -122,40 +119,6 @@ export function MarketplaceDetailView({
             <div className="flex shrink-0 items-center gap-1.5">
               {item.installed ? (
                 <>
-                  {/* The installed-state overflow menu sits left of the update button. */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 shrink-0 self-center"
-                        title={t("marketplace.moreActions")}
-                      >
-                        <Ellipsis className="size-4" aria-hidden strokeWidth={1.75} />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-40 p-0">
-                      <div className="p-1">
-                        <DropdownMenuItem className="gap-2" onSelect={onToggleEnabled}>
-                          <span>
-                            {item.enabled ? t("marketplace.disable") : t("marketplace.enable")}
-                          </span>
-                        </DropdownMenuItem>
-                      </div>
-                      <DropdownMenuSeparator />
-                      <div className="p-1">
-                        <DropdownMenuItem
-                          variant="destructive"
-                          className="gap-2"
-                          onSelect={onRequestUninstall}
-                        >
-                          <Trash2 className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
-                          <span>{t("marketplace.uninstall")}</span>
-                        </DropdownMenuItem>
-                      </div>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                   {item.updateAvailable ? (
                     <Button
                       type="button"
@@ -167,6 +130,14 @@ export function MarketplaceDetailView({
                       {t("marketplace.update")}
                     </Button>
                   ) : null}
+                  <MarketplaceInstalledExtensionActions
+                    item={item}
+                    authorizationVariant="default"
+                    disabled={itemActionBusy}
+                    onToggleEnabled={onToggleEnabled}
+                    onRequestUninstall={onRequestUninstall}
+                    onAuthorize={onAuthorize}
+                  />
                 </>
               ) : installUnsupported ? (
                 <Tooltip delayDuration={300} disableHoverableContent>
