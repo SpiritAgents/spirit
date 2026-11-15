@@ -606,11 +606,37 @@ export class HostAutomationStore {
       if (file.definition.trigger.kind === "time") {
         throw new Error("Time triggers do not have provider errors.");
       }
-      if (error?.trim()) {
-        file.definition.triggerError = error.trim();
+      const nextError = error?.trim() || undefined;
+      if (file.definition.triggerError === nextError) {
+        return { ...file.definition };
+      }
+      if (nextError) {
+        file.definition.triggerError = nextError;
       } else {
         delete file.definition.triggerError;
       }
+      file.definition.updatedAtUnixMs = Date.now();
+      return { ...file.definition };
+    });
+  }
+
+  async updateAutomationTriggerCheckpoint(
+    automationId: string,
+    checkpoint: JsonObject,
+  ): Promise<HostAutomationDefinition> {
+    return this.mutateFile(automationId, (file) => {
+      if (file.definition.trigger.kind === "github") {
+        const lastSeenNumber = checkpoint.lastSeenNumber;
+        if (typeof lastSeenNumber !== "number" || !Number.isFinite(lastSeenNumber)) {
+          throw new Error("GitHub trigger checkpoint requires lastSeenNumber.");
+        }
+        file.definition.trigger.poll = { lastSeenNumber };
+      } else if (file.definition.trigger.kind !== "time") {
+        file.definition.trigger.state = checkpoint;
+      } else {
+        throw new Error("Time triggers do not have provider checkpoints.");
+      }
+      delete file.definition.triggerError;
       file.definition.updatedAtUnixMs = Date.now();
       return { ...file.definition };
     });
@@ -644,8 +670,8 @@ export class HostAutomationStore {
     input: { eventId: string; checkpoint: JsonObject },
   ): Promise<{ run: HostAutomationRun; created: boolean }> {
     return this.mutateFile(automationId, (file) => {
-      if (file.definition.trigger.kind === "time" || file.definition.trigger.kind === "github") {
-        throw new Error("Automation trigger is not extension-contributed.");
+      if (file.definition.trigger.kind === "time") {
+        throw new Error("Time triggers do not consume provider events.");
       }
       const eventId = normalizeNonEmpty(input.eventId, "triggerEventId");
       const duplicate = file.runs.find((entry) => entry.triggerEventId === eventId);
@@ -657,7 +683,15 @@ export class HostAutomationStore {
         throw new Error("Invalid automation run.");
       }
       file.runs.push(normalized);
-      file.definition.trigger.state = input.checkpoint;
+      if (file.definition.trigger.kind === "github") {
+        const lastSeenNumber = input.checkpoint.lastSeenNumber;
+        if (typeof lastSeenNumber !== "number" || !Number.isFinite(lastSeenNumber)) {
+          throw new Error("GitHub trigger checkpoint requires lastSeenNumber.");
+        }
+        file.definition.trigger.poll = { lastSeenNumber };
+      } else {
+        file.definition.trigger.state = input.checkpoint;
+      }
       delete file.definition.triggerError;
       file.definition.updatedAtUnixMs = Date.now();
       return { run: { ...normalized }, created: true };

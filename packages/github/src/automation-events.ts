@@ -36,7 +36,7 @@ export async function listRepositoryIssuesForAutomation(
   accessToken: string,
   owner: string,
   repo: string,
-  options?: { sinceNumber?: number; perPage?: number; maxPages?: number },
+  options?: { sinceNumber?: number; perPage?: number; maxPages?: number; signal?: AbortSignal },
 ): Promise<GitHubAutomationIssueItem[]> {
   const sinceNumber = options?.sinceNumber ?? 0;
   const perPage = options?.perPage ?? 100;
@@ -53,7 +53,10 @@ export async function listRepositoryIssuesForAutomation(
     url.searchParams.set("per_page", String(perPage));
     url.searchParams.set("page", String(page));
 
-    const response = await githubFetch(url, { headers: githubApiHeaders(accessToken) });
+    const response = await githubFetch(url, {
+      headers: githubApiHeaders(accessToken),
+      signal: options?.signal,
+    });
     const payload = await readGitHubJson<GitHubIssueApiItem[]>(response);
     const pageItems = payload
       .map((item) => mapIssueItem(item))
@@ -86,6 +89,7 @@ export async function fetchRepositoryMaxIssueNumber(
   accessToken: string,
   owner: string,
   repo: string,
+  options?: { signal?: AbortSignal },
 ): Promise<number> {
   const url = new URL(
     `${GITHUB_API_BASE_URL}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues`,
@@ -95,7 +99,10 @@ export async function fetchRepositoryMaxIssueNumber(
   url.searchParams.set("direction", "desc");
   url.searchParams.set("per_page", "1");
 
-  const response = await githubFetch(url, { headers: githubApiHeaders(accessToken) });
+  const response = await githubFetch(url, {
+    headers: githubApiHeaders(accessToken),
+    signal: options?.signal,
+  });
   const payload = await readGitHubJson<GitHubIssueApiItem[]>(response);
   const first = payload[0];
   if (!first || typeof first.number !== "number") {

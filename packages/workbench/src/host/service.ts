@@ -64,6 +64,7 @@ import {
 } from "@spiritagent/api/workspace-trust";
 import {
   createHostExtensionManager,
+  collectAutomationTriggerContributions,
   collectEnabledExtensionInstructionContributions,
   ensureBuiltInExtensions,
   listAllMarketplaceSources,
@@ -739,6 +740,7 @@ export class DesktopHostService {
   private dreamCollectorMonitorTimer: ReturnType<typeof setInterval> | undefined;
   private automationMonitorTimer: ReturnType<typeof setInterval> | undefined;
   private readonly runningAutomationIds = new Set<string>();
+  private readonly automationTriggerPollControllers = new Map<string, Set<AbortController>>();
   private automationsListCache: DesktopAutomationListItem[] = [];
   private readonly dreamUpdateListeners = new Set<(snapshot: DesktopSnapshot) => void>();
   private readonly automationUpdateListeners = new Set<(snapshot: DesktopSnapshot) => void>();
@@ -1820,10 +1822,14 @@ export class DesktopHostService {
   }
 
   async deleteExtension(request: DeleteExtensionRequest): Promise<DesktopSnapshot> {
+    this.abortAutomationTriggerPolls(request.id);
     return deleteExtensionCommand(this.extensionCommandContext(), request);
   }
 
   async setExtensionEnabled(request: SetExtensionEnabledRequest): Promise<DesktopSnapshot> {
+    if (!request.enabled) {
+      this.abortAutomationTriggerPolls(request.id);
+    }
     return setExtensionEnabledCommand(this.extensionCommandContext(), request);
   }
 
@@ -3969,6 +3975,20 @@ export class DesktopHostService {
           this.runningAutomationIds.delete(automationId);
         }
       },
+      listAutomationTriggerContributions: async () => {
+        if (!getDesktopExtensionHostAdapter()) {
+          return [];
+        }
+        return collectAutomationTriggerContributions(await this.extensionManager().list());
+      },
+      pollAutomationTrigger: (request) =>
+        this.extensionManager().invokeAutomationTriggerPoll({
+          ...request,
+          host: this.requireExtensionHostAdapter(),
+          logger: console,
+        }),
+      trackAutomationTriggerPoll: (ownerId, controller) =>
+        this.trackAutomationTriggerPoll(ownerId, controller),
       onAutomationUpdated: (automationId) => {
         void this.runSerialized(async () => {
           await this.refreshAutomationsListCache();
@@ -3981,6 +4001,34 @@ export class DesktopHostService {
       },
       syncSessionFromDisk: (sessionPath) => this.syncAutomationSessionFromDisk(sessionPath),
     };
+  }
+
+  private trackAutomationTriggerPoll(ownerId: string, controller: AbortController): () => void {
+    const controllers = this.automationTriggerPollControllers.get(ownerId) ?? new Set();
+    controllers.add(controller);
+    this.automationTriggerPollControllers.set(ownerId, controllers);
+    return () => {
+      controllers.delete(controller);
+      if (controllers.size === 0) {
+        this.automationTriggerPollControllers.delete(ownerId);
+      }
+    };
+  }
+
+  private abortAutomationTriggerPolls(ownerId?: string): void {
+    const groups = ownerId
+      ? [this.automationTriggerPollControllers.get(ownerId)]
+      : [...this.automationTriggerPollControllers.values()];
+    for (const controllers of groups) {
+      for (const controller of controllers ?? []) {
+        controller.abort();
+      }
+    }
+    if (ownerId) {
+      this.automationTriggerPollControllers.delete(ownerId);
+    } else {
+      this.automationTriggerPollControllers.clear();
+    }
   }
 
   private async syncAutomationSessionFromDisk(sessionPath: string): Promise<void> {
@@ -5656,6 +5704,7 @@ export class DesktopHostService {
   }
 
   async shutdown(): Promise<void> {
+    this.abortAutomationTriggerPolls();
     this.tasksWatcher.close();
     for (const bundle of this.sessionRegistry.all()) {
       if (!bundle.activeSession || bundle.activeSession.kind === "ephemeral") {

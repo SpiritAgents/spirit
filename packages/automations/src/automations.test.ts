@@ -447,12 +447,11 @@ test("event consumption atomically stores the run and checkpoint and dedupes aft
     assert.equal(first.created, true);
     assert.equal(first.run.triggerEventId, "event-1");
     assert.deepEqual(first.run, (await store.get(created.id))?.runs[0]);
-    assert.deepEqual(
-      (await store.get(created.id))?.definition.trigger.kind === kind
-        ? (await store.get(created.id))?.definition.trigger.state
-        : undefined,
-      { cursor: 1 },
-    );
+    const afterFirst = await store.get(created.id);
+    assert.equal(afterFirst?.definition.trigger.kind, kind);
+    if (afterFirst?.definition.trigger.kind === kind) {
+      assert.deepEqual(afterFirst.definition.trigger.state, { cursor: 1 });
+    }
 
     const duplicate = await store.consumeAutomationTriggerEvent(
       created.id,
