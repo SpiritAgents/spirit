@@ -560,6 +560,79 @@ test("tab requests activate the owning backend with its declared contribution", 
   }
 });
 
+test("WebView events activate the owning backend handler", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-web-view-data-"));
+  const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-web-view-prepared-"));
+  const eventKey = "__spiritExtensionWebViewEvent";
+  try {
+    const packageDir = join(preparedRoot, "web-view-events");
+    await writeExtensionDumpPackage(
+      packageDir,
+      {
+        name: "web-view-events",
+        displayName: "WebView events",
+        main: "index.mjs",
+        manifest: {
+          supportedHosts: ["desktop"],
+          requestedCapabilities: [
+            "desktop-ui",
+            "desktop-webview-display",
+            "desktop-webview-control",
+          ],
+          contributes: {
+            desktop: {
+              tabs: [
+                {
+                  id: "browser",
+                  name: "Browser",
+                  path: "browser.html",
+                  icon: { type: "spirit", name: "globe" },
+                },
+              ],
+            },
+          },
+        },
+      },
+      {
+        "index.mjs": `export function activate() {}
+export function onWebViewEvent(event) {
+  globalThis.${eventKey} = {
+    viewId: event.state.viewId,
+    url: event.state.url,
+  };
+}
+`,
+      },
+    );
+    const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
+    const installed = await manager.installPreparedDirectory({ preparedDirectoryPath: packageDir });
+    await manager.dispatchWebViewEvent({
+      event: {
+        extensionId: installed.id,
+        contributionId: "browser",
+        instanceId: "instance-1",
+        state: {
+          viewId: "view-1",
+          url: "http://127.0.0.1:4173",
+          title: "Fixture",
+          isLoading: false,
+          canGoBack: false,
+          canGoForward: false,
+        },
+      },
+      host: { marker: "bound" },
+    });
+    assert.deepEqual((globalThis as Record<string, unknown>)[eventKey], {
+      viewId: "view-1",
+      url: "http://127.0.0.1:4173",
+    });
+  } finally {
+    delete (globalThis as Record<string, unknown>)[eventKey];
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(preparedRoot, { recursive: true, force: true });
+  }
+});
+
 test("desktop tabs parse contributions and reject invalid entries", async () => {
   const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-tabs-data-"));
   const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-tabs-prepared-"));

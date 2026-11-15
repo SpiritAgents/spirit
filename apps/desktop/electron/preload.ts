@@ -383,6 +383,16 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   setExtensionTabChrome(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "setExtensionTabChrome", request);
   },
+  invokeExtensionWebView(request: unknown) {
+    return ipcRenderer.invoke("desktop:extension-web-view", request);
+  },
+  subscribeExtensionWebViewEvents(callback: (event: unknown) => void) {
+    const onEvent = (_event: Electron.IpcRendererEvent, payload: unknown) => callback(payload);
+    ipcRenderer.on("desktop:extension-web-view-event", onEvent);
+    return () => {
+      ipcRenderer.removeListener("desktop:extension-web-view-event", onEvent);
+    };
+  },
   subscribeExtensionTabEvents(callback: (event: unknown) => void) {
     const onEvent = (_event: Electron.IpcRendererEvent, payload: unknown) => callback(payload);
     ipcRenderer.on("desktop:extension-tab-event", onEvent);

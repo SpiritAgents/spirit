@@ -689,6 +689,9 @@ export class DesktopHostService {
     stateStore: this.extensionStateStore,
   });
   private readonly extensionWarmup = new ExtensionWarmupCoordinator();
+  private readonly extensionWebViewEventListeners = new Set<
+    (event: import("@spiritagent/api/types").DesktopExtensionWebViewEvent) => void
+  >();
   private readonly extensionTabEventListeners = new Set<
     (event: import("@spiritagent/api/types").DesktopExtensionTabEvent) => void
   >();
@@ -2901,6 +2904,65 @@ export class DesktopHostService {
   ): () => void {
     this.extensionTabEventListeners.add(listener);
     return () => this.extensionTabEventListeners.delete(listener);
+  }
+
+  async resolveExtensionWebViewOwner(request: {
+    extensionId: string;
+    instanceId: string;
+    windowId: string;
+  }): Promise<
+    | import("@spiritagent/sessions/host/extension-web-view-contracts").DesktopExtensionWebViewOwner
+    | null
+  > {
+    await this.ensureInitialized(undefined, { fastPath: true });
+    const snapshot = await this.workspaceToolTabs.getSnapshot(request.windowId);
+    const tab = snapshot.tabs.find(
+      (candidate) => candidate.kind === "extension" && candidate.instanceId === request.instanceId,
+    );
+    if (!tab || tab.kind !== "extension" || tab.extensionId !== request.extensionId) {
+      return null;
+    }
+    const { extension, contribution } = await this.requireExtensionTabContribution(
+      tab.extensionId,
+      tab.contributionId,
+    );
+    return {
+      extensionId: extension.id,
+      contributionId: contribution.id,
+      instanceId: tab.instanceId,
+      channelId: tab.channelId,
+      capabilities: new Set(extension.manifest.requestedCapabilities ?? []),
+    };
+  }
+
+  publishExtensionWebViewEvent(
+    event: import("@spiritagent/api/types").DesktopExtensionWebViewEvent,
+  ): void {
+    for (const listener of this.extensionWebViewEventListeners) {
+      listener(event);
+    }
+    const backendEvent = {
+      extensionId: event.extensionId,
+      contributionId: event.contributionId,
+      instanceId: event.instanceId,
+      state: event.state,
+    };
+    void this.extensionManager()
+      .dispatchWebViewEvent({
+        event: backendEvent,
+        host: this.requireExtensionHostAdapter().forExtension(event.extensionId, event.windowId),
+        logger: console,
+      })
+      .catch((error: unknown) => {
+        console.error("[extensions] WebView backend event failed", error);
+      });
+  }
+
+  subscribeExtensionWebViewEvents(
+    listener: (event: import("@spiritagent/api/types").DesktopExtensionWebViewEvent) => void,
+  ): () => void {
+    this.extensionWebViewEventListeners.add(listener);
+    return () => this.extensionWebViewEventListeners.delete(listener);
   }
 
   private async requireExtensionTabContribution(extensionId: string, contributionId: string) {
@@ -5737,6 +5799,29 @@ export function subscribeDesktopExtensionTabEvents(
   listener: (event: import("@spiritagent/api/types").DesktopExtensionTabEvent) => void,
 ): () => void {
   return desktopHostService.subscribeExtensionTabEvents(listener);
+}
+
+export async function resolveDesktopExtensionWebViewOwner(request: {
+  extensionId: string;
+  instanceId: string;
+  windowId: string;
+}): Promise<
+  | import("@spiritagent/sessions/host/extension-web-view-contracts").DesktopExtensionWebViewOwner
+  | null
+> {
+  return desktopHostService.resolveExtensionWebViewOwner(request);
+}
+
+export function publishDesktopExtensionWebViewEvent(
+  event: import("@spiritagent/api/types").DesktopExtensionWebViewEvent,
+): void {
+  return desktopHostService.publishExtensionWebViewEvent(event);
+}
+
+export function subscribeDesktopExtensionWebViewEvents(
+  listener: (event: import("@spiritagent/api/types").DesktopExtensionWebViewEvent) => void,
+): () => void {
+  return desktopHostService.subscribeExtensionWebViewEvents(listener);
 }
 
 export function subscribeDesktopWorkspaceToolTabsUpdates(

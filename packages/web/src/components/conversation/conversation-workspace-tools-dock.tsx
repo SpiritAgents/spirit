@@ -68,6 +68,8 @@ export function ConversationWorkspaceToolsDock({
         onExtensionTabRequest={runtime.invokeExtensionTabRequest}
         onExtensionTabChrome={runtime.setExtensionTabChrome}
         subscribeExtensionTabEvents={runtime.subscribeExtensionTabEvents}
+        onExtensionWebView={runtime.invokeExtensionWebView}
+        subscribeExtensionWebViewEvents={runtime.subscribeExtensionWebViewEvents}
         listExplorerChildren={runtime.listWorkspaceExplorerChildren}
         readWorkspaceTextFile={runtime.readWorkspaceTextFile}
         writeWorkspaceTextFile={runtime.writeWorkspaceTextFile}

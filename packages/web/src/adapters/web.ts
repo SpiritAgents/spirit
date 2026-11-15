@@ -491,6 +491,9 @@ export function createWebHostApi(): HostApi {
     setExtensionTabChrome() {
       return Promise.reject(new Error("Extension tabs are not available on web host"));
     },
+    invokeExtensionWebView() {
+      return Promise.reject(new Error("Native extension web views are not available on web host"));
+    },
     openPathInDefaultApp() {
       return Promise.reject(new Error("openPathInDefaultApp is not available on web host"));
     },

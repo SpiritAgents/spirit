@@ -162,6 +162,12 @@ export type WorkspaceToolsDockProps = {
   subscribeExtensionTabEvents?: (
     callback: (event: import("@/types").DesktopExtensionTabEvent) => void,
   ) => () => void;
+  onExtensionWebView?: (
+    request: import("@/types").DesktopExtensionWebViewRequest,
+  ) => Promise<unknown>;
+  subscribeExtensionWebViewEvents?: (
+    callback: (event: import("@/types").DesktopExtensionWebViewEvent) => void,
+  ) => () => void;
   listExplorerChildren: (relativePath: string) => Promise<WorkspaceExplorerListResult>;
   readWorkspaceTextFile: (relativePath: string) => Promise<WorkspaceReadTextFileResult>;
   writeWorkspaceTextFile: (request: WriteWorkspaceTextFileRequest) => Promise<void>;
@@ -558,6 +564,8 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   onExtensionTabRequest,
   onExtensionTabChrome,
   subscribeExtensionTabEvents,
+  onExtensionWebView,
+  subscribeExtensionWebViewEvents,
   listExplorerChildren,
   readWorkspaceTextFile,
   writeWorkspaceTextFile,
@@ -1157,9 +1165,13 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   tab={item}
                   contribution={entry.contribution}
                   active={selected}
+                  workspaceRoot={workspaceRoot}
+                  sessionKey={sessionKey}
                   onRequest={onExtensionTabRequest}
                   onChrome={onExtensionTabChrome}
                   subscribeEvents={subscribeExtensionTabEvents}
+                  onWebView={onExtensionWebView}
+                  subscribeWebViewEvents={subscribeExtensionWebViewEvents}
                 />
               </div>
             );

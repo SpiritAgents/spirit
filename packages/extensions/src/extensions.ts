@@ -80,6 +80,9 @@ export const SUPPORTED_HOST_EXTENSION_REQUESTED_CAPABILITIES = [
   "secret-storage",
   "structured-results",
   "desktop-ui",
+  "desktop-webview-display",
+  "desktop-webview-control",
+  "desktop-webview-script",
   "cli-ui",
   "mcp",
   "hooks",
@@ -484,7 +487,29 @@ export interface InvokeExtensionTabRequest<THostApi> {
   logger?: Pick<Console, "error" | "log">;
 }
 
+export interface HostExtensionWebViewEvent {
+  extensionId: string;
+  contributionId: string;
+  instanceId: string;
+  state: {
+    viewId: string;
+    url: string;
+    title: string;
+    isLoading: boolean;
+    canGoBack: boolean;
+    canGoForward: boolean;
+    error?: string;
+  };
+}
+
+export interface DispatchExtensionWebViewEventRequest<THostApi> {
+  event: HostExtensionWebViewEvent;
+  host: THostApi;
+  logger?: Pick<Console, "error" | "log">;
+}
+
 export interface HostActivatedExtension {
+  onWebViewEvent?(event: HostExtensionWebViewEvent): Promise<void> | void;
   onTabRequest?<THostApi>(
     request: HostExtensionTabRequestContext<THostApi>,
   ): Promise<unknown> | unknown;
@@ -554,6 +579,9 @@ export interface HostExtensionManager {
     request: CollectExtensionSystemPromptContributionsRequest<THostApi>,
   ): Promise<HostExtensionSystemPromptContribution[]>;
   dispatchEvent<THostApi>(request: DispatchExtensionEventRequest<THostApi>): Promise<void>;
+  dispatchWebViewEvent<THostApi>(
+    request: DispatchExtensionWebViewEventRequest<THostApi>,
+  ): Promise<void>;
   deactivateAll(): Promise<void>;
 }
 
@@ -634,6 +662,9 @@ export function createHostExtensionManager(
     },
     async dispatchEvent(request) {
       await dispatchExtensionEvent(context, activatedExtensions, stateStore, request);
+    },
+    async dispatchWebViewEvent(request) {
+      await dispatchExtensionWebViewEvent(context, activatedExtensions, stateStore, request);
     },
     async deactivateAll() {
       await deactivateAllExtensions(activatedExtensions);
@@ -1216,6 +1247,26 @@ export async function dispatchExtensionEvent<THostApi>(
       );
     }
   }
+}
+
+export async function dispatchExtensionWebViewEvent<THostApi>(
+  context: ExtensionManagementContext,
+  activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
+  stateStore: ExtensionStateStore,
+  request: DispatchExtensionWebViewEventRequest<THostApi>,
+): Promise<void> {
+  const target = await requireInstalledExtension(context, request.event.extensionId);
+  if (!target.enabled) {
+    throw new Error(`The extension is disabled: ${target.id}`);
+  }
+  const entry = await ensureActivatedExtension(target, activatedExtensions, stateStore, {
+    host: request.host,
+    ...(request.logger ? { logger: request.logger } : {}),
+    log: (message) => {
+      request.logger?.log(`[extension:${target.id}] ${message}`);
+    },
+  });
+  await entry.activatedExtension?.onWebViewEvent?.(request.event);
 }
 
 export async function collectExtensionSystemPromptContributions<THostApi>(
@@ -2103,6 +2154,8 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
       : undefined;
   const onEvent = typeof value.onEvent === "function" ? value.onEvent : undefined;
   const onTabRequest = typeof value.onTabRequest === "function" ? value.onTabRequest : undefined;
+  const onWebViewEvent =
+    typeof value.onWebViewEvent === "function" ? value.onWebViewEvent : undefined;
   const dispose = typeof value.dispose === "function" ? value.dispose : undefined;
   if (
     !tools &&
@@ -2111,6 +2164,7 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
     !getSystemPrompt &&
     !onEvent &&
     !onTabRequest &&
+    !onWebViewEvent &&
     !dispose
   ) {
     return undefined;
@@ -2124,6 +2178,9 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
     getSystemPrompt ? { getSystemPrompt } : {},
     onEvent ? { onEvent: onEvent as HostActivatedExtension["onEvent"] } : {},
     onTabRequest ? { onTabRequest: onTabRequest as HostActivatedExtension["onTabRequest"] } : {},
+    onWebViewEvent
+      ? { onWebViewEvent: onWebViewEvent as HostActivatedExtension["onWebViewEvent"] }
+      : {},
     dispose ? { dispose: dispose as HostActivatedExtension["dispose"] } : {},
   ) as HostActivatedExtension;
 }

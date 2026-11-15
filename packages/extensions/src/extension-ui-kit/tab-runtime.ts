@@ -8,6 +8,8 @@ type ExtensionTabIdentity = {
 type ExtensionTabContext = ExtensionTabIdentity & {
   initialParams?: unknown;
   scope: unknown;
+  workspaceRoot: string;
+  sessionKey: string;
   visible: boolean;
   theme: {
     htmlClassName: string;
@@ -112,6 +114,12 @@ window.addEventListener("message", (event) => {
       pending.reject(error);
     }
     pendingRequests.clear();
+    for (const pending of nativePending.values()) {
+      pending.reject(error);
+    }
+    nativePending.clear();
+    nativeProxies.clear();
+    nativeListeners.clear();
   }
 });
 
@@ -144,5 +152,139 @@ const tab = {
   },
 };
 
-Object.assign(window, { spirit: { tab } });
+type NativeRequest = {
+  resolve: (value: any) => void;
+  reject: (error: Error) => void;
+};
+type NativeProxy = {
+  viewId: string;
+  navigate: (url: string) => Promise<unknown>;
+  getState: () => Promise<unknown>;
+  capture: () => Promise<string>;
+  executeScript: (code: string) => Promise<unknown>;
+  destroy: () => Promise<void>;
+  onEvent: (listener: (state: unknown) => void) => () => void;
+};
+
+const nativePending = new Map<string, NativeRequest>();
+const nativeProxies = new Map<string, NativeProxy>();
+const nativeListeners = new Map<string, Set<(state: unknown) => void>>();
+
+function nativeRequest(operation: string, payload: Record<string, unknown>): Promise<any> {
+  const requestId =
+    typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `native-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const promise = new Promise((resolve, reject) => {
+    nativePending.set(requestId, { resolve, reject });
+  });
+  post("spirit-extension-web-view-request", { requestId, operation, ...payload });
+  return promise;
+}
+
+function localRect(element: Element): Record<string, number> {
+  const rect = element.getBoundingClientRect();
+  return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+}
+
+function createNativeWebView(
+  element: Element,
+  options: { url?: string } = {},
+): Promise<NativeProxy> {
+  return nativeRequest("create", {
+    localRect: localRect(element),
+    visible: element.getClientRects().length > 0,
+    url: options.url ?? "about:blank",
+  }).then(({ viewId }) => {
+    const listeners = new Set<(state: unknown) => void>();
+    nativeListeners.set(viewId, listeners);
+    let destroyed = false;
+    const sendBounds = () => {
+      if (!destroyed) {
+        void nativeRequest("bounds", {
+          viewId,
+          localRect: localRect(element),
+          visible: element.getClientRects().length > 0,
+        }).catch(() => undefined);
+      }
+    };
+    const observer = new ResizeObserver(sendBounds);
+    observer.observe(element);
+    window.addEventListener("resize", sendBounds);
+    window.addEventListener("scroll", sendBounds, true);
+    const cleanup = () => {
+      if (destroyed) {
+        return;
+      }
+      destroyed = true;
+      observer.disconnect();
+      window.removeEventListener("resize", sendBounds);
+      window.removeEventListener("scroll", sendBounds, true);
+      nativeProxies.delete(viewId);
+      nativeListeners.delete(viewId);
+    };
+    const proxy: NativeProxy = {
+      viewId,
+      navigate: (url) => nativeRequest("navigate", { viewId, url }),
+      getState: () => nativeRequest("getState", { viewId }),
+      capture: () => nativeRequest("capture", { viewId }),
+      executeScript: (code) => nativeRequest("executeScript", { viewId, code }),
+      destroy: async () => {
+        try {
+          await nativeRequest("destroy", { viewId });
+        } finally {
+          cleanup();
+        }
+      },
+      onEvent: (listener) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+    };
+    nativeProxies.set(viewId, proxy);
+    sendBounds();
+    return proxy;
+  });
+}
+
+window.addEventListener("message", (event) => {
+  if (event.source !== parent) {
+    return;
+  }
+  const data = event.data as Record<string, unknown> & { type?: string };
+  if (
+    data.extensionId !== identity.extensionId ||
+    data.contributionId !== identity.contributionId ||
+    data.instanceId !== identity.instanceId ||
+    data.channelId !== identity.channelId
+  ) {
+    return;
+  }
+  if (data.type === "spirit-extension-web-view-result") {
+    const requestId = String(data.requestId ?? "");
+    const pending = nativePending.get(requestId);
+    if (!pending) {
+      return;
+    }
+    nativePending.delete(requestId);
+    if (data.ok === true) {
+      pending.resolve(data.result);
+    } else {
+      pending.reject(new Error(String(data.error ?? "Native WebView request failed.")));
+    }
+    return;
+  }
+  if (data.type === "spirit-extension-web-view-event") {
+    const state = data.state as { viewId?: string };
+    const listeners = nativeListeners.get(String(state?.viewId ?? ""));
+    if (listeners) {
+      for (const listener of listeners) {
+        listener(state);
+      }
+    }
+  }
+});
+
+const webViews = { create: createNativeWebView };
+Object.assign(window, { spirit: { tab, webViews } });
 void ready();

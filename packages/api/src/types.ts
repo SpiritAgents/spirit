@@ -749,6 +749,54 @@ export interface DesktopExtensionTabEvent {
   params?: unknown;
 }
 
+export interface DesktopExtensionWebViewBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface DesktopExtensionWebViewState {
+  viewId: string;
+  url: string;
+  title: string;
+  isLoading: boolean;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  error?: string;
+}
+
+export interface DesktopExtensionWebViewEvent {
+  windowId: string;
+  extensionId: string;
+  contributionId: string;
+  instanceId: string;
+  channelId: string;
+  state: DesktopExtensionWebViewState;
+}
+
+export type DesktopExtensionWebViewRequest =
+  | {
+      operation: "create";
+      extensionId: string;
+      contributionId: string;
+      instanceId: string;
+      url: string;
+      bounds: DesktopExtensionWebViewBounds;
+      visible: boolean;
+    }
+  | {
+      operation: "bounds";
+      viewId: string;
+      bounds: DesktopExtensionWebViewBounds;
+      visible: boolean;
+    }
+  | { operation: "navigate"; viewId: string; url: string }
+  | { operation: "getState"; viewId: string }
+  | { operation: "capture"; viewId: string }
+  | { operation: "executeScript"; viewId: string; code: string }
+  | { operation: "destroy"; viewId: string };
+
 export interface DesktopWorkspaceToolsSnapshot {
   windowId: string;
   tabs: DesktopWorkspaceToolTab[];

@@ -72,6 +72,7 @@ import {
   startLocalListenersScan,
 } from "@spiritagent/http/local-listeners";
 import { shouldBlockExtensionTabNavigation } from "./extension-ui-protocol.js";
+import { ExtensionWebViewManager } from "./extension-web-view.js";
 import {
   bindBrowserGuestDevtools,
   closeBrowserGuestDevtools,
@@ -157,6 +158,9 @@ import {
   invokeDesktopHostCommand,
   resolveDesktopExtensionViewFile,
   resolveDesktopExtensionTabFile,
+  resolveDesktopExtensionWebViewOwner,
+  publishDesktopExtensionWebViewEvent,
+  subscribeDesktopExtensionWebViewEvents,
   resolveDesktopExtensionTabIconFile,
   openDesktopHostExtensionUi,
   openDesktopExtensionTab,
@@ -242,12 +246,17 @@ let unsubscribeDesktopSessionListUpdates: (() => void) | undefined;
 let unsubscribeDesktopTasksUpdates: (() => void) | undefined;
 let unsubscribeDesktopWorkspaceToolTabsUpdates: (() => void) | undefined;
 let unsubscribeDesktopExtensionTabEvents: (() => void) | undefined;
+let unsubscribeDesktopExtensionWebViewEvents: (() => void) | undefined;
 /** Last snapshot pushed to each webContents; basis for incremental (delta) live updates. Reset on renderer reload. */
 const lastLivePushByWebContents = new WeakMap<Electron.WebContents, DesktopSnapshot>();
 let desktopHostShutdownComplete = false;
 let desktopHostShutdownPromise: Promise<void> | undefined;
 
 const workspacePtyManager = new WorkspacePtyManager();
+const extensionWebViewManager = new ExtensionWebViewManager({
+  resolveOwner: resolveDesktopExtensionWebViewOwner,
+  publish: publishDesktopExtensionWebViewEvent,
+});
 
 const desktopExtensionHostAdapter: NonNullable<
   Parameters<typeof setDesktopExtensionHostAdapter>[0]
@@ -304,6 +313,20 @@ const desktopExtensionHostAdapter: NonNullable<
       throw new Error("Extension identity is not bound to the tab API.");
     },
   },
+  webViews: {
+    async navigate() {
+      throw new Error("Extension identity is not bound to the WebView API.");
+    },
+    async getState() {
+      throw new Error("Extension identity is not bound to the WebView API.");
+    },
+    async capture() {
+      throw new Error("Extension identity is not bound to the WebView API.");
+    },
+    async executeScript() {
+      throw new Error("Extension identity is not bound to the WebView API.");
+    },
+  },
   forExtension(extensionId, windowId) {
     const resolveWindowId = (requested?: string) => {
       if (requested) return requested;
@@ -342,6 +365,14 @@ const desktopExtensionHostAdapter: NonNullable<
             event,
             ...(params === undefined ? {} : { params }),
           }),
+      },
+      webViews: {
+        navigate: (viewId, url) =>
+          extensionWebViewManager.navigateBackend(extensionId, viewId, url),
+        getState: (viewId) => extensionWebViewManager.getStateBackend(extensionId, viewId),
+        capture: (viewId) => extensionWebViewManager.captureBackend(extensionId, viewId),
+        executeScript: (viewId, code) =>
+          extensionWebViewManager.executeScriptBackend(extensionId, viewId, code),
       },
       forExtension: (_nextExtensionId, nextWindowId) =>
         desktopExtensionHostAdapter.forExtension(extensionId, nextWindowId ?? windowId),
@@ -1136,15 +1167,18 @@ async function createMainWindow(): Promise<BrowserWindow> {
     broadcastWindowFullscreen();
   }
 
-  const webContentsId = window.webContents.id;
+  const webContents = window.webContents;
+  const webContentsId = webContents.id;
   window.once("closed", () => {
     workspacePtyManager.disposeAllForWebContents(webContentsId);
+    extensionWebViewManager.disposeAllForWebContents(webContents);
   });
   // After a renderer crash or main-frame re-navigation (reload / loading a new page), the old
   // renderer-side PTY sessions and their 500ms polling timers are orphaned and must be
   // reclaimed here; same-document navigation (SPA routing) does not trigger this.
   window.webContents.on("render-process-gone", () => {
     workspacePtyManager.disposeAllForWebContents(webContentsId);
+    extensionWebViewManager.disposeAllForWebContents(window.webContents);
   });
   registerRendererCrashPage(window);
   window.webContents.on("did-finish-load", () => {
@@ -1165,6 +1199,7 @@ async function createMainWindow(): Promise<BrowserWindow> {
   window.webContents.on("did-start-navigation", (details) => {
     if (details.isMainFrame && !details.isSameDocument) {
       workspacePtyManager.disposeAllForWebContents(webContentsId);
+      extensionWebViewManager.disposeAllForWebContents(window.webContents);
     }
   });
 
@@ -1317,6 +1352,25 @@ if (gotSpiritSingleInstanceLock) {
         }
       }
     });
+
+    unsubscribeDesktopExtensionWebViewEvents = subscribeDesktopExtensionWebViewEvents((event) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (
+          !window.isDestroyed() &&
+          workspaceWindowIdForWebContents(window.webContents) === event.windowId
+        ) {
+          window.webContents.send("desktop:extension-web-view-event", event);
+        }
+      }
+    });
+
+    ipcMain.handle("desktop:extension-web-view", (event, request) =>
+      extensionWebViewManager.handleRenderer(
+        event.sender,
+        request,
+        workspaceWindowIdForWebContents(event.sender),
+      ),
+    );
 
     ipcMain.handle(
       "desktop:invoke",
@@ -1980,6 +2034,8 @@ app.on("before-quit", (event) => {
   unsubscribeDesktopWorkspaceToolTabsUpdates = undefined;
   unsubscribeDesktopExtensionTabEvents?.();
   unsubscribeDesktopExtensionTabEvents = undefined;
+  unsubscribeDesktopExtensionWebViewEvents?.();
+  unsubscribeDesktopExtensionWebViewEvents = undefined;
   unsubscribeDesktopRemoteControl?.();
   unsubscribeDesktopRemoteControl = undefined;
   if (quittingAfterDesktopWebHostStop && desktopHostShutdownComplete) {

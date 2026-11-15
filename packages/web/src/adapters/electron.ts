@@ -279,6 +279,12 @@ export async function createElectronHostApi(): Promise<HostApi> {
     subscribeExtensionTabEvents(callback) {
       return bridge.subscribeExtensionTabEvents(callback);
     },
+    invokeExtensionWebView(request) {
+      return bridge.invokeExtensionWebView(request);
+    },
+    subscribeExtensionWebViewEvents(callback) {
+      return bridge.subscribeExtensionWebViewEvents(callback);
+    },
     openPathInDefaultApp(absolutePath) {
       return bridge.openPathInDefaultApp(absolutePath);
     },

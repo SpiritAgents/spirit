@@ -98,11 +98,14 @@ test("the runtime ready handshake clears the loading timeout", () => {
 });
 
 test("ready requests receive initial parameters, scope, visibility, and host theme", () => {
-  const { container } = render(
+  const tabWithParams = { ...tab, initialParams: { text: "hello" } };
+  const { container, rerender } = render(
     <ExtensionTabHost
-      tab={{ ...tab, initialParams: { text: "hello" } }}
+      tab={tabWithParams}
       contribution={contribution}
       active
+      workspaceRoot="/repo-one"
+      sessionKey="session-one"
     />,
   );
   const iframe = container.querySelector("iframe")!;
@@ -117,11 +120,30 @@ test("ready requests receive initial parameters, scope, visibility, and host the
     instanceId: "instance-1",
     initialParams: { text: "hello" },
     scope: { kind: "window-shared" },
+    workspaceRoot: "/repo-one",
+    sessionKey: "session-one",
     visible: true,
   });
   expect(context.theme).toHaveProperty("htmlClassName");
   expect(context.theme).toHaveProperty("htmlStyle");
   expect(context.theme).toHaveProperty("cssText");
+
+  postMessage.mockClear();
+  dispatchFrameMessage(iframe, SPIRIT_EXTENSION_TAB_READY);
+  rerender(
+    <ExtensionTabHost
+      tab={tabWithParams}
+      contribution={contribution}
+      active
+      workspaceRoot="/repo-two"
+      sessionKey="session-two"
+    />,
+  );
+  const [changedContext] = postMessage.mock.calls.at(-1)!;
+  expect(changedContext).toMatchObject({
+    workspaceRoot: "/repo-two",
+    sessionKey: "session-two",
+  });
 });
 
 test("page requests are identity checked and answered on the same channel", async () => {

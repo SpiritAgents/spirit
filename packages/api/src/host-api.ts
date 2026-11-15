@@ -276,6 +276,12 @@ export interface HostApi {
   subscribeExtensionTabEvents?(
     callback: (event: import("./types.js").DesktopExtensionTabEvent) => void,
   ): () => void;
+  invokeExtensionWebView(
+    request: import("./types.js").DesktopExtensionWebViewRequest,
+  ): Promise<unknown>;
+  subscribeExtensionWebViewEvents?(
+    callback: (event: import("./types.js").DesktopExtensionWebViewEvent) => void,
+  ): () => void;
   openPathInDefaultApp(absolutePath: string): Promise<void>;
   resetSession(): Promise<DesktopSnapshot>;
   listSessions(): Promise<SessionListItem[]>;

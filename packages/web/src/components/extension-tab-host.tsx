@@ -18,10 +18,13 @@ import {
   collectHostStylesheetCssText,
 } from "@/lib/extension-view-tokens";
 import { cn } from "@/lib/utils";
+import { useExtensionWebViewBridge } from "@/hooks/useExtensionWebViewBridge";
 import type {
   DesktopExtensionDesktopTab,
   DesktopExtensionTabChromePatch,
   DesktopExtensionTabEvent,
+  DesktopExtensionWebViewEvent,
+  DesktopExtensionWebViewRequest,
   WorkspaceExtensionToolTab,
 } from "@/types";
 
@@ -29,13 +32,19 @@ export function ExtensionTabHost({
   tab,
   contribution,
   active,
+  workspaceRoot,
+  sessionKey,
   onRequest,
   onChrome,
   subscribeEvents,
+  onWebView,
+  subscribeWebViewEvents,
 }: {
   tab: WorkspaceExtensionToolTab;
   contribution: DesktopExtensionDesktopTab;
   active: boolean;
+  workspaceRoot?: string;
+  sessionKey?: string;
   onRequest?: (request: {
     extensionId: string;
     contributionId: string;
@@ -49,6 +58,8 @@ export function ExtensionTabHost({
     patch: DesktopExtensionTabChromePatch;
   }) => Promise<void>;
   subscribeEvents?: (callback: (event: DesktopExtensionTabEvent) => void) => () => void;
+  onWebView?: (request: DesktopExtensionWebViewRequest) => Promise<unknown>;
+  subscribeWebViewEvents?: (callback: (event: DesktopExtensionWebViewEvent) => void) => () => void;
 }) {
   const { t } = useTranslation();
   const [attempt, setAttempt] = useState(0);
@@ -78,12 +89,23 @@ export function ExtensionTabHost({
         channelId: tab.channelId,
         initialParams: tab.initialParams ?? null,
         scope: tab.scope,
+        workspaceRoot: workspaceRoot ?? "",
+        sessionKey: sessionKey ?? "",
         visible: active,
         theme: { ...chrome, cssText: collectHostStylesheetCssText() },
       },
       "*",
     );
-  }, [active, tab]);
+  }, [active, sessionKey, tab, workspaceRoot]);
+
+  const handleWebViewMessage = useExtensionWebViewBridge({
+    tab,
+    active,
+    attempt,
+    iframeRef,
+    onWebView,
+    subscribeEvents: subscribeWebViewEvents,
+  });
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -100,6 +122,9 @@ export function ExtensionTabHost({
         event.data?.instanceId !== tab.instanceId ||
         event.data?.channelId !== tab.channelId
       ) {
+        return;
+      }
+      if (handleWebViewMessage(event.data)) {
         return;
       }
       if (event.data.type === SPIRIT_EXTENSION_TAB_READY_REQUEST) {
@@ -155,7 +180,7 @@ export function ExtensionTabHost({
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [attempt, onRequest, onChrome, sendContext, tab]);
+  }, [attempt, handleWebViewMessage, onRequest, onChrome, sendContext, tab]);
 
   useEffect(() => {
     if (status === "ready") {

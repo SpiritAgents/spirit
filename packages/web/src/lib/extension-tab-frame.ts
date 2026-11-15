@@ -26,3 +26,6 @@ export const SPIRIT_EXTENSION_TAB_RESULT = "spirit-extension-tab-result";
 export const SPIRIT_EXTENSION_TAB_EVENT = "spirit-extension-tab-event";
 export const SPIRIT_EXTENSION_TAB_CHROME = "spirit-extension-tab-chrome";
 export const SPIRIT_EXTENSION_TAB_CLOSED = "spirit-extension-tab-closed";
+export const SPIRIT_EXTENSION_WEB_VIEW_REQUEST = "spirit-extension-web-view-request";
+export const SPIRIT_EXTENSION_WEB_VIEW_RESULT = "spirit-extension-web-view-result";
+export const SPIRIT_EXTENSION_WEB_VIEW_EVENT = "spirit-extension-web-view-event";

@@ -196,6 +196,12 @@ declare global {
     subscribeExtensionTabEvents(
       callback: (event: import("./types").DesktopExtensionTabEvent) => void,
     ): () => void;
+    invokeExtensionWebView(
+      request: import("./types").DesktopExtensionWebViewRequest,
+    ): Promise<unknown>;
+    subscribeExtensionWebViewEvents(
+      callback: (event: import("./types").DesktopExtensionWebViewEvent) => void,
+    ): () => void;
     openPathInDefaultApp(absolutePath: string): Promise<void>;
     resetSession(): Promise<DesktopSnapshot>;
     listSessions(): Promise<SessionListItem[]>;

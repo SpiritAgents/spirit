@@ -4,6 +4,7 @@ import type {
   DesktopWorkspaceExtensionToolTab,
 } from "../types.js";
 import i18n from "../lib/i18n-host.js";
+import type { DesktopExtensionWebViews } from "./extension-web-view-contracts.js";
 
 export interface DesktopExtensionMessageBoxRequest {
   title: string;
@@ -35,6 +36,7 @@ export interface DesktopExtensionHostAdapter {
   showMessageBox(request: DesktopExtensionMessageBoxRequest): Promise<void>;
   ui: DesktopExtensionHostUi;
   tabs: DesktopExtensionHostTabs;
+  webViews: DesktopExtensionWebViews;
   forExtension(extensionId: string, windowId?: string): DesktopExtensionHostAdapter;
 }
 

@@ -3405,6 +3405,22 @@ export function useDesktopRuntime() {
     [api],
   );
 
+  const invokeExtensionWebView = useCallback(
+    async (request: import("../types").DesktopExtensionWebViewRequest) => {
+      if (!api) {
+        throw new Error("Desktop host is unavailable.");
+      }
+      return api.invokeExtensionWebView(request);
+    },
+    [api],
+  );
+
+  const subscribeExtensionWebViewEvents = useCallback(
+    (callback: (event: import("../types").DesktopExtensionWebViewEvent) => void) =>
+      api?.subscribeExtensionWebViewEvents?.(callback) ?? (() => {}),
+    [api],
+  );
+
   const replyWorkspaceCapabilityTrust = useCallback(
     async (decision: WorkspaceCapabilityTrustDecision) => {
       if (!api) {
@@ -4353,6 +4369,8 @@ export function useDesktopRuntime() {
     invokeExtensionTabRequest,
     setExtensionTabChrome,
     subscribeExtensionTabEvents,
+    invokeExtensionWebView,
+    subscribeExtensionWebViewEvents,
     submitQuestions,
   };
 }
