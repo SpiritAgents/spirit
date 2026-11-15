@@ -905,6 +905,7 @@
       "createAutomationDaily": "毎日 {{time}} に実行する{{title}}の作成",
       "createAutomationWeekly": "毎週{{weekday}} {{time}} に実行する{{title}}の作成",
       "createAutomationGithubIssue": "GitHub リポジトリ {{repo}} で新しい Issue が作成されたときに実行する{{title}}の作成",
+      "createAutomationWithTrigger": "{title} を作成して {trigger} を実行",
       "createAutomationGithubPullRequest": "GitHub リポジトリ {{repo}} で新しいプルリクエストが作成されたときに実行する{{title}}の作成",
       "editFile": "ファイルの編集",
       "deleteFile": "ファイルの削除",

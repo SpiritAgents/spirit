@@ -905,6 +905,7 @@
       "createAutomationDaily": "매일 {{time}}에 실행하는 {{title}} 생성",
       "createAutomationWeekly": "매주 {{weekday}} {{time}}에 실행하는 {{title}} 생성",
       "createAutomationGithubIssue": "GitHub 저장소 {{repo}}에 새 이슈가 생성되면 실행하는 {{title}} 생성",
+      "createAutomationWithTrigger": "{title}을(를) 생성하여 {trigger} 실행",
       "createAutomationGithubPullRequest": "GitHub 저장소 {{repo}}에 새 풀 리퀘스트가 생성되면 실행하는 {{title}} 생성",
       "editFile": "파일 편집",
       "deleteFile": "파일 삭제",

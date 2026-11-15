@@ -63,8 +63,10 @@ import {
 } from "@spiritagent/automations/automation-host-tool";
 import { normalizeApprovalLevel } from "@spiritagent/permissions/approval-level";
 import {
-  CREATE_AUTOMATION_CONTRIBUTED_TOOL,
+  createAutomationContributedTool,
   previewCreateAutomationFromArguments,
+  type AutomationTriggerToolContribution,
+  type AutomationTriggerValidator,
   type HostAutomationDefinition,
 } from "@spiritagent/automations";
 import { type HostAutomationCreateDefaults } from "@spiritagent/tools/tools";
@@ -96,8 +98,6 @@ import type { DesktopToolRequest } from "./contracts.js";
 type DesktopDreamToolMode = "read-only" | "collector";
 
 const READ_ONLY_DREAM_TOOL_NAMES = new Set<DreamHostToolName>(["dream_list", "dream_read"]);
-
-const DESKTOP_BUILT_IN_LAZY_TOOL_DEFINITIONS = [CREATE_AUTOMATION_CONTRIBUTED_TOOL];
 
 function isDreamToolRequest(
   request: DesktopToolRequest,
@@ -131,6 +131,10 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
   private videoGenerationAvailable = false;
   private approvalLevel: ApprovalLevel = "default";
   private readonly mcpUiOpener: McpUiOpener | undefined;
+  private readonly automationTriggerContributions:
+    | (() => readonly AutomationTriggerToolContribution[])
+    | undefined;
+  private readonly validateAutomationTrigger: AutomationTriggerValidator | undefined;
 
   constructor(
     private readonly workspaceRoot: string,
@@ -149,11 +153,15 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
       webFetchEnabled?: boolean;
       getAutomationCreateDefaults?: () => HostAutomationCreateDefaults;
       onAutomationCreated?: (definition: HostAutomationDefinition) => void;
+      automationTriggerContributions?: () => readonly AutomationTriggerToolContribution[];
+      validateAutomationTrigger?: AutomationTriggerValidator;
       mcpUiOpener?: McpUiOpener;
     } = {},
   ) {
     this.mcp = options.mcp ?? createHostMcpService(workspaceRoot, spiritDataDir());
     this.mcpUiOpener = options.mcpUiOpener;
+    this.automationTriggerContributions = options.automationTriggerContributions;
+    this.validateAutomationTrigger = options.validateAutomationTrigger;
     this.lsp = options.lsp;
     this.extensionToolDefinitions = [...(options.extensionToolDefinitions ?? [])];
     this.hostContributedToolsEnabled = options.hostContributedToolsEnabled === true;
@@ -190,6 +198,9 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
           : {}),
         ...(options.onAutomationCreated
           ? { onAutomationCreated: options.onAutomationCreated }
+          : {}),
+        ...(options.validateAutomationTrigger
+          ? { validateAutomationTrigger: options.validateAutomationTrigger }
           : {}),
         availableToolDefinitions: () => this.toolDefinitionsJson(),
       },
@@ -568,7 +579,7 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
     }
 
     return filterContributedToolDefinitionsForAgentMode(
-      DESKTOP_BUILT_IN_LAZY_TOOL_DEFINITIONS,
+      [createAutomationContributedTool(this.automationTriggerContributions?.() ?? [])],
       this.agentMode,
     ).map((definition) => toBuiltInLazyToolIndexEntry(definition));
   }
@@ -602,7 +613,9 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
     });
   }
 
-  private authorizeLazyToolGateway(request: LazyToolGatewayToolRequest): AuthorizationDecision {
+  private async authorizeLazyToolGateway(
+    request: LazyToolGatewayToolRequest,
+  ): Promise<AuthorizationDecision> {
     if (request.name === TOOL_CALL_TOOL_NAME && this.approvalLevel !== "bypass-approval") {
       const parsed = parseLazyToolGatewayArguments(request.name, request.argumentsJson);
       if (
@@ -612,8 +625,9 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
         "arguments" in parsed
       ) {
         try {
-          const preview = previewCreateAutomationFromArguments(
+          const preview = await previewCreateAutomationFromArguments(
             parseBuiltInLazyToolCallArguments(parsed),
+            this.validateAutomationTrigger,
           );
           return {
             kind: "need-approval",

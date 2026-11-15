@@ -905,6 +905,7 @@
       "createAutomationDaily": "建立每天 {{time}} 執行的{{title}}",
       "createAutomationWeekly": "建立每{{weekday}} {{time}} 執行的{{title}}",
       "createAutomationGithubIssue": "建立每當 GitHub 儲存庫 {{repo}} 有新 Issue 時執行的{{title}}",
+      "createAutomationWithTrigger": "建立「{title}」以執行{trigger}",
       "createAutomationGithubPullRequest": "建立每當 GitHub 儲存庫 {{repo}} 有新 Pull Request 時執行的{{title}}",
       "editFile": "編輯檔案",
       "deleteFile": "刪除檔案",

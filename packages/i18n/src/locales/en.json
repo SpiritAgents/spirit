@@ -938,6 +938,7 @@
       "createAutomationDaily": "Create {{title}} to run daily at {{time}}",
       "createAutomationWeekly": "Create {{title}} to run every {{weekday}} at {{time}}",
       "createAutomationGithubIssue": "Create {{title}} to run when an issue is opened in {{repo}}",
+      "createAutomationWithTrigger": "Create {title} to run {trigger}",
       "createAutomationGithubPullRequest": "Create {{title}} to run when a pull request is opened in {{repo}}",
       "editFile": "Edit File",
       "deleteFile": "Delete File",

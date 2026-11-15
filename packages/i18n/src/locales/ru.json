@@ -909,6 +909,7 @@
       "createAutomationDaily": "Создание {{title}} с запуском каждый день в {{time}}",
       "createAutomationWeekly": "Создание {{title}} с запуском каждый {{weekday}} в {{time}}",
       "createAutomationGithubIssue": "Создание {{title}} с запуском при новом Issue в {{repo}}",
+      "createAutomationWithTrigger": "Создать {title} для запуска {trigger}",
       "createAutomationGithubPullRequest": "Создание {{title}} с запуском при новом Pull Request в {{repo}}",
       "editFile": "Изменение файла",
       "deleteFile": "Удаление файла",

@@ -905,6 +905,7 @@
       "createAutomationDaily": "Criar {{title}} para executar diariamente às {{time}}",
       "createAutomationWeekly": "Criar {{title}} para executar cada {{weekday}} às {{time}}",
       "createAutomationGithubIssue": "Criar {{title}} para executar quando uma issue for criada em {{repo}}",
+      "createAutomationWithTrigger": "Criar {title} para executar {trigger}",
       "createAutomationGithubPullRequest": "Criar {{title}} para executar quando um pull request for criado em {{repo}}",
       "editFile": "Editar arquivo",
       "deleteFile": "Excluir arquivo",

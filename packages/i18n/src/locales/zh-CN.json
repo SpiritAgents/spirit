@@ -913,6 +913,7 @@
       "createAutomationDaily": "创建每天 {{time}} 运行的{{title}}",
       "createAutomationWeekly": "创建每{{weekday}} {{time}} 运行的{{title}}",
       "createAutomationGithubIssue": "创建每当 GitHub 仓库 {{repo}} 有新 Issue 时运行的{{title}}",
+      "createAutomationWithTrigger": "创建“{title}”以运行{trigger}",
       "createAutomationGithubPullRequest": "创建每当 GitHub 仓库 {{repo}} 有新 Pull Request 时运行的{{title}}",
       "editFile": "编辑文件",
       "deleteFile": "删除文件",

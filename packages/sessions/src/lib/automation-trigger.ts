@@ -49,7 +49,7 @@ export function formatDesktopAutomationTriggerLabel(
     return formatDesktopAutomationScheduleLabel(trigger.schedule, labels);
   }
   if (trigger.kind !== "github") {
-    return trigger.label;
+    return trigger.label.trim() || trigger.kind;
   }
   const eventLabel =
     trigger.event === "pull_request_created"
@@ -71,5 +71,7 @@ export function isValidDesktopAutomationTrigger(trigger: DesktopAutomationTrigge
   if (trigger.kind === "github") {
     return Boolean(trigger.owner.trim() && trigger.repo.trim());
   }
-  return Boolean(trigger.label.trim() && trigger.config && !Array.isArray(trigger.config));
+  return Boolean(
+    trigger.kind.startsWith("extension:") && trigger.config && !Array.isArray(trigger.config),
+  );
 }

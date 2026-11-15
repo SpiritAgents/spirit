@@ -866,7 +866,7 @@ export interface DesktopExtensionAutomationTrigger {
   description: string;
   icon: DesktopExtensionDesktopTabRuntimeIcon;
   configuration: "menu" | "none";
-  inputSchema: Record<string, unknown>;
+  inputSchema: JsonObject;
   authorization?: { id: string; action: string; configured?: boolean };
 }
 

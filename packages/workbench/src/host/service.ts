@@ -3836,6 +3836,25 @@ export class DesktopHostService {
           }
         : {}),
       hostContributedToolsEnabled: true,
+      automationTriggerContributions: () =>
+        this.requireState()
+          .extensionsList.filter((extension) => extension.enabled)
+          .flatMap((extension) =>
+            (extension.automationTriggers ?? []).map((trigger) => ({
+              kind: trigger.kind,
+              inputSchema: trigger.inputSchema,
+            })),
+          ),
+      validateAutomationTrigger: (request) => {
+        if (request.kind === "time") {
+          return Promise.resolve(request);
+        }
+        if (request.kind === "github") {
+          const { kind: _kind, ...config } = request;
+          return this.validateAutomationTrigger({ kind: request.kind, config });
+        }
+        return this.validateAutomationTrigger({ kind: request.kind, config: request.config });
+      },
       getAutomationCreateDefaults: () => {
         const currentState = this.requireState();
         const secondaryModel = resolveSecondaryLanguageModelProfile(currentState.config);
