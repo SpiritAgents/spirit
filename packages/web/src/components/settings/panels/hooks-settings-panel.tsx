@@ -223,7 +223,7 @@ export function HooksSettingsPanel({
               </div>
               <Button
                 type="button"
-                variant="destructive"
+                variant="secondary"
                 size="sm"
                 className="shrink-0 self-start sm:self-center"
                 disabled={hooksBusy}

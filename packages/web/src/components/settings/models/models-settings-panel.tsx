@@ -494,7 +494,7 @@ export function ModelsSettingsPanel({
                     </div>
                     <Button
                       type="button"
-                      variant="destructive"
+                      variant="secondary"
                       size="sm"
                       className="shrink-0"
                       disabled={modelsBusy || modelsPreviewBusy}

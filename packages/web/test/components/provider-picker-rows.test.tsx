@@ -91,7 +91,9 @@ test("settings keeps a connected provider visible when its catalog is empty", ()
 
   expect(screen.getByText("Mistral")).toBeTruthy();
   expect(screen.getByText("0 models")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Disconnect" }));
+  const disconnectButton = screen.getByRole("button", { name: "Disconnect" });
+  expect(disconnectButton.getAttribute("data-variant")).toBe("secondary");
+  fireEvent.click(disconnectButton);
   const dialog = screen.getByRole("alertdialog", { name: 'Disconnect "Mistral"?' });
   expect(
     within(dialog).getByText("Its models, configuration, and key will be removed from Spirit."),
