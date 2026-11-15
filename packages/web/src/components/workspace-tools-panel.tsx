@@ -147,6 +147,21 @@ export type WorkspaceToolsDockProps = {
   workspaceRoot: string;
   sessionKey?: string;
   extensionsList?: readonly DesktopExtensionListItem[];
+  onExtensionTabRequest?: (request: {
+    extensionId: string;
+    contributionId: string;
+    instanceId: string;
+    method: string;
+    params?: unknown;
+  }) => Promise<unknown>;
+  onExtensionTabChrome?: (request: {
+    extensionId: string;
+    instanceId: string;
+    patch: import("@/types").DesktopExtensionTabChromePatch;
+  }) => Promise<void>;
+  subscribeExtensionTabEvents?: (
+    callback: (event: import("@/types").DesktopExtensionTabEvent) => void,
+  ) => () => void;
   listExplorerChildren: (relativePath: string) => Promise<WorkspaceExplorerListResult>;
   readWorkspaceTextFile: (relativePath: string) => Promise<WorkspaceReadTextFileResult>;
   writeWorkspaceTextFile: (request: WriteWorkspaceTextFileRequest) => Promise<void>;
@@ -540,6 +555,9 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   workspaceRoot,
   sessionKey = "",
   extensionsList = [],
+  onExtensionTabRequest,
+  onExtensionTabChrome,
+  subscribeExtensionTabEvents,
   listExplorerChildren,
   readWorkspaceTextFile,
   writeWorkspaceTextFile,
@@ -1135,7 +1153,14 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   !selected && "invisible",
                 )}
               >
-                <ExtensionTabHost tab={item} contribution={entry.contribution} active={selected} />
+                <ExtensionTabHost
+                  tab={item}
+                  contribution={entry.contribution}
+                  active={selected}
+                  onRequest={onExtensionTabRequest}
+                  onChrome={onExtensionTabChrome}
+                  subscribeEvents={subscribeExtensionTabEvents}
+                />
               </div>
             );
           }

@@ -8,14 +8,21 @@ export function extensionTabPageUrl(input: {
   extensionId: string;
   contributionId: string;
   instanceId: string;
+  channelId: string;
 }): string {
   const extension = encodeURIComponent(input.extensionId);
   const contribution = encodeURIComponent(input.contributionId);
   const instance = encodeURIComponent(input.instanceId);
-  return `${SPIRIT_EXTENSION_UI_ORIGIN}/tab/${extension}/${contribution}/${instance}/index.html`;
+  return `${SPIRIT_EXTENSION_UI_ORIGIN}/tab/${extension}/${contribution}/${instance}/index.html?channelId=${encodeURIComponent(input.channelId)}`;
 }
 
 export function extensionTabPackagedIconUrl(extensionId: string, iconPath: string): string {
   const path = iconPath.split("/").map(encodeURIComponent).join("/");
   return `${SPIRIT_EXTENSION_UI_ORIGIN}/tab-icon/${encodeURIComponent(extensionId)}/${path}`;
 }
+
+export const SPIRIT_EXTENSION_TAB_REQUEST = "spirit-extension-tab-request";
+export const SPIRIT_EXTENSION_TAB_RESULT = "spirit-extension-tab-result";
+export const SPIRIT_EXTENSION_TAB_EVENT = "spirit-extension-tab-event";
+export const SPIRIT_EXTENSION_TAB_CHROME = "spirit-extension-tab-chrome";
+export const SPIRIT_EXTENSION_TAB_CLOSED = "spirit-extension-tab-closed";

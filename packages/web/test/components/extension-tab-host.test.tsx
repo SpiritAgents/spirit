@@ -9,6 +9,11 @@ import { ExtensionTabHost } from "@/components/extension-tab-host";
 import {
   SPIRIT_EXTENSION_TAB_READY,
   SPIRIT_EXTENSION_TAB_READY_REQUEST,
+  SPIRIT_EXTENSION_TAB_REQUEST,
+  SPIRIT_EXTENSION_TAB_RESULT,
+  SPIRIT_EXTENSION_TAB_EVENT,
+  SPIRIT_EXTENSION_TAB_CHROME,
+  SPIRIT_EXTENSION_TAB_CLOSED,
 } from "@/lib/extension-tab-frame";
 
 const tab = {
@@ -17,6 +22,7 @@ const tab = {
   extensionId: "personal/demo",
   contributionId: "notes",
   instanceId: "instance-1",
+  channelId: "channel-1",
   scope: { kind: "window-shared" as const },
 };
 const contribution = {
@@ -116,4 +122,129 @@ test("ready requests receive initial parameters, scope, visibility, and host the
   expect(context.theme).toHaveProperty("htmlClassName");
   expect(context.theme).toHaveProperty("htmlStyle");
   expect(context.theme).toHaveProperty("cssText");
+});
+
+test("page requests are identity checked and answered on the same channel", async () => {
+  const onRequest = vi.fn().mockResolvedValue({ answer: 42 });
+  const onChrome = vi.fn().mockResolvedValue(undefined);
+  const { container } = render(
+    <ExtensionTabHost
+      tab={tab}
+      contribution={contribution}
+      active
+      onRequest={onRequest}
+      onChrome={onChrome}
+    />,
+  );
+  const iframe = container.querySelector("iframe")!;
+  const postMessage = vi.spyOn(iframe.contentWindow!, "postMessage");
+
+  act(() => {
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        data: {
+          ...tab,
+          channelId: "forged",
+          type: SPIRIT_EXTENSION_TAB_REQUEST,
+          requestId: "bad",
+          method: "echo",
+        },
+        source: iframe.contentWindow,
+      }),
+    );
+  });
+  expect(onRequest).not.toHaveBeenCalled();
+
+  act(() => {
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        data: {
+          ...tab,
+          type: SPIRIT_EXTENSION_TAB_REQUEST,
+          requestId: "request-1",
+          method: "echo",
+          params: { value: 1 },
+        },
+        source: iframe.contentWindow,
+      }),
+    );
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        data: {
+          ...tab,
+          type: SPIRIT_EXTENSION_TAB_CHROME,
+          patch: { dirty: true, title: "Changed" },
+        },
+        source: iframe.contentWindow,
+      }),
+    );
+  });
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  expect(onRequest).toHaveBeenCalledWith({
+    extensionId: tab.extensionId,
+    contributionId: tab.contributionId,
+    instanceId: tab.instanceId,
+    method: "echo",
+    params: { value: 1 },
+  });
+  expect(onChrome).toHaveBeenCalledWith({
+    extensionId: tab.extensionId,
+    instanceId: tab.instanceId,
+    patch: { dirty: true, title: "Changed" },
+  });
+  expect(postMessage).toHaveBeenCalledWith(
+    expect.objectContaining({
+      type: SPIRIT_EXTENSION_TAB_RESULT,
+      requestId: "request-1",
+      channelId: tab.channelId,
+      ok: true,
+      result: { answer: 42 },
+    }),
+    "*",
+  );
+});
+
+test("backend events and teardown reach only the owning page channel", () => {
+  let publish: ((event: unknown) => void) | undefined;
+  const subscribeEvents = vi.fn((callback) => {
+    publish = callback;
+    return () => {};
+  });
+  const { container, unmount } = render(
+    <ExtensionTabHost
+      tab={tab}
+      contribution={contribution}
+      active
+      subscribeEvents={subscribeEvents}
+    />,
+  );
+  const iframe = container.querySelector("iframe")!;
+  const postMessage = vi.spyOn(iframe.contentWindow!, "postMessage");
+  act(() => {
+    publish?.({
+      windowId: "main",
+      extensionId: tab.extensionId,
+      contributionId: tab.contributionId,
+      instanceId: tab.instanceId,
+      channelId: tab.channelId,
+      event: "refresh",
+      params: { value: 2 },
+    });
+  });
+  expect(postMessage).toHaveBeenCalledWith(
+    expect.objectContaining({
+      type: SPIRIT_EXTENSION_TAB_EVENT,
+      event: "refresh",
+      channelId: tab.channelId,
+    }),
+    "*",
+  );
+  unmount();
+  expect(postMessage).toHaveBeenCalledWith(
+    expect.objectContaining({ type: SPIRIT_EXTENSION_TAB_CLOSED, channelId: tab.channelId }),
+    "*",
+  );
 });

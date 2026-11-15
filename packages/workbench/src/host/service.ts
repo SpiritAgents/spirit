@@ -71,6 +71,8 @@ import {
   readMarketplaceCatalogForSource,
   type HostExtensionEvent,
   type HostExtensionInstructionContributions,
+  assertHostExtensionJsonValue,
+  parseHostExtensionTabRuntimeIcon,
 } from "@spiritagent/extensions";
 import {
   computeWorkspaceTasksContentHash,
@@ -687,6 +689,9 @@ export class DesktopHostService {
     stateStore: this.extensionStateStore,
   });
   private readonly extensionWarmup = new ExtensionWarmupCoordinator();
+  private readonly extensionTabEventListeners = new Set<
+    (event: import("@spiritagent/api/types").DesktopExtensionTabEvent) => void
+  >();
   private readonly workspaceToolTabs = new WorkspaceToolTabsStore(
     path.join(spiritDataDir(), "workspace-tool-tabs.json"),
   );
@@ -2707,6 +2712,209 @@ export class DesktopHostService {
     ) => void,
   ): () => void {
     return this.workspaceToolTabs.subscribe(listener);
+  }
+
+  async openExtensionTab(
+    request: import("@spiritagent/api/types").DesktopExtensionTabOpenRequest & {
+      extensionId: string;
+      windowId: string;
+    },
+  ): Promise<import("@spiritagent/api/types").DesktopWorkspaceExtensionToolTab> {
+    await this.ensureInitialized(undefined, { fastPath: true });
+    if (request.reuse === "context" && request.initialParams !== undefined) {
+      throw new Error("initialParams is only allowed when opening a new extension tab.");
+    }
+    if (request.initialParams !== undefined) {
+      assertHostExtensionJsonValue(request.initialParams, "initialParams");
+    }
+    const { contribution } = await this.requireExtensionTabContribution(
+      request.extensionId,
+      request.contributionId,
+    );
+    const state = this.requireState();
+    const requestedScope = request.scope?.kind ?? contribution.defaultScope ?? "window-shared";
+    const scope: import("@spiritagent/api/types").DesktopWorkspaceExtensionToolTab["scope"] =
+      requestedScope === "workspace"
+        ? {
+            kind: "workspace",
+            workspaceRoot:
+              request.scope?.kind === "workspace"
+                ? (request.scope.workspaceRoot ?? state.workspaceRoot)
+                : state.workspaceRoot,
+          }
+        : requestedScope === "session"
+          ? {
+              kind: "session",
+              sessionKey:
+                request.scope?.kind === "session"
+                  ? (request.scope.sessionKey ??
+                    this.resolveTodoSessionKeyForBundle(this.activeBundle()))
+                  : this.resolveTodoSessionKeyForBundle(this.activeBundle()),
+            }
+          : { kind: "window-shared" };
+    if (scope.kind === "workspace" && !scope.workspaceRoot) {
+      throw new Error("A workspace-scoped extension tab requires an active workspace.");
+    }
+    if (scope.kind === "session" && !scope.sessionKey) {
+      throw new Error("A session-scoped extension tab requires an active session.");
+    }
+    return this.workspaceToolTabs.openExtensionTab({
+      windowId: request.windowId,
+      extensionId: request.extensionId,
+      contributionId: request.contributionId,
+      scope,
+      ...(request.initialParams === undefined ? {} : { initialParams: request.initialParams }),
+      title: contribution.name,
+      icon: contribution.icon,
+      reuse: request.reuse,
+    });
+  }
+
+  async focusExtensionTab(request: {
+    extensionId: string;
+    windowId: string;
+    instanceId: string;
+  }): Promise<void> {
+    await this.ensureInitialized(undefined, { fastPath: true });
+    await this.workspaceToolTabs.focusExtensionTab(request);
+  }
+
+  async closeExtensionTab(request: {
+    extensionId: string;
+    windowId: string;
+    instanceId: string;
+  }): Promise<void> {
+    await this.ensureInitialized(undefined, { fastPath: true });
+    await this.workspaceToolTabs.closeExtensionTab(request);
+  }
+
+  async updateExtensionTab(request: {
+    extensionId: string;
+    windowId: string;
+    instanceId: string;
+    patch: import("@spiritagent/api/types").DesktopExtensionTabChromePatch;
+  }): Promise<void> {
+    await this.ensureInitialized(undefined, { fastPath: true });
+    const snapshot = await this.workspaceToolTabs.getSnapshot(request.windowId);
+    const tab = snapshot.tabs.find(
+      (candidate) => candidate.kind === "extension" && candidate.instanceId === request.instanceId,
+    );
+    if (!tab || tab.kind !== "extension" || tab.extensionId !== request.extensionId) {
+      throw new Error(`Extension tab not found or not owned by the caller: ${request.instanceId}`);
+    }
+    if (request.patch.title !== undefined && typeof request.patch.title !== "string") {
+      throw new Error("Extension tab title must be a string.");
+    }
+    if (request.patch.dirty !== undefined && typeof request.patch.dirty !== "boolean") {
+      throw new Error("Extension tab dirty state must be a boolean.");
+    }
+    await this.workspaceToolTabs.updateExtensionTab({
+      ...request,
+      patch: {
+        ...(request.patch.title === undefined ? {} : { title: request.patch.title.trim() }),
+        ...(request.patch.icon === undefined
+          ? {}
+          : { icon: parseHostExtensionTabRuntimeIcon(request.patch.icon) }),
+        ...(request.patch.dirty === undefined ? {} : { dirty: request.patch.dirty }),
+      },
+    });
+  }
+
+  async invokeExtensionTabRequest(request: {
+    windowId: string;
+    extensionId: string;
+    contributionId: string;
+    instanceId: string;
+    method: string;
+    params?: unknown;
+  }): Promise<unknown> {
+    await this.ensureInitialized(undefined, { fastPath: true });
+    const method = request.method.trim();
+    if (!method) {
+      throw new Error("Extension tab request method is required.");
+    }
+    const snapshot = await this.workspaceToolTabs.getSnapshot(request.windowId);
+    const tab = snapshot.tabs.find(
+      (candidate) => candidate.kind === "extension" && candidate.instanceId === request.instanceId,
+    );
+    if (
+      !tab ||
+      tab.kind !== "extension" ||
+      tab.extensionId !== request.extensionId ||
+      tab.contributionId !== request.contributionId
+    ) {
+      throw new Error("Extension tab identity does not match a live instance.");
+    }
+    await this.requireExtensionTabContribution(request.extensionId, request.contributionId);
+    return this.extensionManager().invokeTabRequest({
+      ...request,
+      method,
+      host: this.requireExtensionHostAdapter().forExtension(request.extensionId, request.windowId),
+      logger: console,
+    });
+  }
+
+  emitExtensionTabEvent(request: {
+    windowId: string;
+    extensionId: string;
+    instanceId: string;
+    event: string;
+    params?: unknown;
+  }): void {
+    const eventName = request.event.trim();
+    if (!eventName) {
+      throw new Error("Extension tab event name is required.");
+    }
+    if (request.params !== undefined) {
+      assertHostExtensionJsonValue(request.params, "event.params");
+    }
+    void this.workspaceToolTabs
+      .getSnapshot(request.windowId)
+      .then((snapshot) => {
+        const tab = snapshot.tabs.find(
+          (candidate) =>
+            candidate.kind === "extension" && candidate.instanceId === request.instanceId,
+        );
+        if (!tab || tab.kind !== "extension" || tab.extensionId !== request.extensionId) {
+          throw new Error("Extension tab event target is not owned by the caller.");
+        }
+        const event: import("@spiritagent/api/types").DesktopExtensionTabEvent = {
+          windowId: request.windowId,
+          extensionId: tab.extensionId,
+          contributionId: tab.contributionId,
+          instanceId: tab.instanceId,
+          channelId: tab.channelId,
+          event: eventName,
+          ...(request.params === undefined ? {} : { params: request.params }),
+        };
+        for (const listener of this.extensionTabEventListeners) {
+          listener(event);
+        }
+      })
+      .catch((error: unknown) => {
+        console.error("[extensions] failed to emit tab event", error);
+      });
+  }
+
+  subscribeExtensionTabEvents(
+    listener: (event: import("@spiritagent/api/types").DesktopExtensionTabEvent) => void,
+  ): () => void {
+    this.extensionTabEventListeners.add(listener);
+    return () => this.extensionTabEventListeners.delete(listener);
+  }
+
+  private async requireExtensionTabContribution(extensionId: string, contributionId: string) {
+    const installed = await this.extensionManager().list();
+    const extension = installed.find((item) => item.id === extensionId && item.enabled);
+    const contribution = extension?.manifest.contributes?.desktop?.tabs?.find(
+      (tab) => tab.id === contributionId,
+    );
+    if (!extension || !contribution) {
+      throw new Error(
+        `Unknown or disabled extension tab contribution: ${extensionId}:${contributionId}`,
+      );
+    }
+    return { extension, contribution };
   }
 
   private async prepareWorkspaceToolTabsRestore(): Promise<void> {
@@ -5479,6 +5687,56 @@ export function subscribeDesktopAutomationsUpdates(
 
 export function subscribeDesktopSessionListUpdates(listener: () => void): () => void {
   return desktopHostService.subscribeSessionListUpdates(listener);
+}
+
+export async function openDesktopExtensionTab(
+  request: import("@spiritagent/api/types").DesktopExtensionTabOpenRequest & {
+    extensionId: string;
+    windowId: string;
+  },
+): Promise<import("@spiritagent/api/types").DesktopWorkspaceExtensionToolTab> {
+  return desktopHostService.openExtensionTab(request);
+}
+
+export async function focusDesktopExtensionTab(request: {
+  extensionId: string;
+  windowId: string;
+  instanceId: string;
+}): Promise<void> {
+  return desktopHostService.focusExtensionTab(request);
+}
+
+export async function closeDesktopExtensionTab(request: {
+  extensionId: string;
+  windowId: string;
+  instanceId: string;
+}): Promise<void> {
+  return desktopHostService.closeExtensionTab(request);
+}
+
+export async function updateDesktopExtensionTab(request: {
+  extensionId: string;
+  windowId: string;
+  instanceId: string;
+  patch: import("@spiritagent/api/types").DesktopExtensionTabChromePatch;
+}): Promise<void> {
+  return desktopHostService.updateExtensionTab(request);
+}
+
+export function emitDesktopExtensionTabEvent(request: {
+  windowId: string;
+  extensionId: string;
+  instanceId: string;
+  event: string;
+  params?: unknown;
+}): void {
+  return desktopHostService.emitExtensionTabEvent(request);
+}
+
+export function subscribeDesktopExtensionTabEvents(
+  listener: (event: import("@spiritagent/api/types").DesktopExtensionTabEvent) => void,
+): () => void {
+  return desktopHostService.subscribeExtensionTabEvents(listener);
 }
 
 export function subscribeDesktopWorkspaceToolTabsUpdates(

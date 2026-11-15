@@ -5,3 +5,4 @@ export * from "./built-in/skills.js";
 export * from "./built-in/state.js";
 export * from "./built-in/extensions.js";
 export * from "./storage.js";
+export * from "./extension-tab-values.js";

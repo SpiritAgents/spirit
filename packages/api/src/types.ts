@@ -710,6 +710,7 @@ export interface DesktopWorkspaceExtensionToolTab extends DesktopWorkspaceToolTa
   extensionId: string;
   contributionId: string;
   instanceId: string;
+  channelId: string;
   scope: DesktopWorkspaceExtensionToolTabScope;
   initialParams?: unknown;
   icon?: DesktopExtensionDesktopTabRuntimeIcon;
@@ -718,6 +719,35 @@ export interface DesktopWorkspaceExtensionToolTab extends DesktopWorkspaceToolTa
 export type DesktopWorkspaceToolTab =
   | DesktopWorkspaceBuiltInToolTab
   | DesktopWorkspaceExtensionToolTab;
+
+export type DesktopExtensionTabOpenScope =
+  | { kind: "window-shared" }
+  | { kind: "workspace"; workspaceRoot?: string }
+  | { kind: "session"; sessionKey?: string };
+
+export interface DesktopExtensionTabOpenRequest {
+  contributionId: string;
+  scope?: DesktopExtensionTabOpenScope;
+  initialParams?: unknown;
+  reuse: "new" | "context";
+  windowId?: string;
+}
+
+export interface DesktopExtensionTabChromePatch {
+  title?: string;
+  icon?: DesktopExtensionDesktopTabRuntimeIcon;
+  dirty?: boolean;
+}
+
+export interface DesktopExtensionTabEvent {
+  windowId: string;
+  extensionId: string;
+  contributionId: string;
+  instanceId: string;
+  channelId: string;
+  event: string;
+  params?: unknown;
+}
 
 export interface DesktopWorkspaceToolsSnapshot {
   windowId: string;

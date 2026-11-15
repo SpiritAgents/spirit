@@ -3369,6 +3369,42 @@ export function useDesktopRuntime() {
     [api],
   );
 
+  const invokeExtensionTabRequest = useCallback(
+    async (request: {
+      extensionId: string;
+      contributionId: string;
+      instanceId: string;
+      method: string;
+      params?: unknown;
+    }) => {
+      if (!api) {
+        throw new Error("Desktop host is unavailable.");
+      }
+      return api.invokeExtensionTabRequest(request);
+    },
+    [api],
+  );
+
+  const setExtensionTabChrome = useCallback(
+    async (request: {
+      extensionId: string;
+      instanceId: string;
+      patch: import("../types").DesktopExtensionTabChromePatch;
+    }) => {
+      if (!api) {
+        throw new Error("Desktop host is unavailable.");
+      }
+      return api.setExtensionTabChrome(request);
+    },
+    [api],
+  );
+
+  const subscribeExtensionTabEvents = useCallback(
+    (callback: (event: import("../types").DesktopExtensionTabEvent) => void) =>
+      api?.subscribeExtensionTabEvents?.(callback) ?? (() => {}),
+    [api],
+  );
+
   const replyWorkspaceCapabilityTrust = useCallback(
     async (decision: WorkspaceCapabilityTrustDecision) => {
       if (!api) {
@@ -4314,6 +4350,9 @@ export function useDesktopRuntime() {
     getWorkspaceToolTabs,
     syncWorkspaceToolTabs,
     subscribeWorkspaceToolTabsUpdates,
+    invokeExtensionTabRequest,
+    setExtensionTabChrome,
+    subscribeExtensionTabEvents,
     submitQuestions,
   };
 }

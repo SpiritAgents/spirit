@@ -377,6 +377,19 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   syncWorkspaceToolTabs(request: { expectedRevision: number; tabs: unknown; activeTabId: string }) {
     return ipcRenderer.invoke("desktop:invoke", "syncWorkspaceToolTabs", request);
   },
+  invokeExtensionTabRequest(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "invokeExtensionTabRequest", request);
+  },
+  setExtensionTabChrome(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "setExtensionTabChrome", request);
+  },
+  subscribeExtensionTabEvents(callback: (event: unknown) => void) {
+    const onEvent = (_event: Electron.IpcRendererEvent, payload: unknown) => callback(payload);
+    ipcRenderer.on("desktop:extension-tab-event", onEvent);
+    return () => {
+      ipcRenderer.removeListener("desktop:extension-tab-event", onEvent);
+    };
+  },
   subscribeWorkspaceToolTabsUpdates(callback: (snapshot: unknown) => void) {
     const onUpdate = (_event: Electron.IpcRendererEvent, snapshot: unknown) => callback(snapshot);
     ipcRenderer.on("desktop:workspace-tool-tabs-updated", onUpdate);

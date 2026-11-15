@@ -465,7 +465,29 @@ export interface CollectExtensionSystemPromptContributionsRequest<THostApi> {
   logger?: Pick<Console, "error" | "log">;
 }
 
+export interface HostExtensionTabRequestContext<THostApi> {
+  extension: HostExtensionRuntimeInfo;
+  host: THostApi;
+  contributionId: string;
+  instanceId: string;
+  method: string;
+  params?: unknown;
+}
+
+export interface InvokeExtensionTabRequest<THostApi> {
+  extensionId: string;
+  contributionId: string;
+  instanceId: string;
+  method: string;
+  params?: unknown;
+  host: THostApi;
+  logger?: Pick<Console, "error" | "log">;
+}
+
 export interface HostActivatedExtension {
+  onTabRequest?<THostApi>(
+    request: HostExtensionTabRequestContext<THostApi>,
+  ): Promise<unknown> | unknown;
   tools?: Record<string, HostExtensionToolHandler<unknown>>;
   invokeTool?<THostApi>(
     request: HostExtensionToolExecutionContext<THostApi>,
@@ -523,6 +545,7 @@ export interface HostExtensionManager {
   setEnabled(id: string, enabled: boolean): Promise<void>;
   run<THostApi>(request: RunExtensionRequest<THostApi>): Promise<void>;
   invokeTool<THostApi>(request: InvokeExtensionToolRequest<THostApi>): Promise<string>;
+  invokeTabRequest<THostApi>(request: InvokeExtensionTabRequest<THostApi>): Promise<unknown>;
   getSettingsValues(id: string): Promise<HostExtensionSettingsValues>;
   setSettingsValues(request: UpdateExtensionSettingsRequest): Promise<HostExtensionSettingsValues>;
   getSecretStatus(id: string): Promise<Record<string, boolean>>;
@@ -585,6 +608,9 @@ export function createHostExtensionManager(
     },
     async invokeTool(request) {
       return invokeExtensionTool(context, activatedExtensions, stateStore, request);
+    },
+    async invokeTabRequest(request) {
+      return invokeExtensionTabRequest(context, activatedExtensions, stateStore, request);
     },
     async getSettingsValues(id) {
       return loadExtensionSettingsValues(context, stateStore, id);
@@ -1037,7 +1063,7 @@ export async function invokeExtensionTool<THostApi>(
   });
 
   const result = await invokeActivatedExtensionTool(target, entry, stateStore, {
-    host: request.host,
+    host: bindHostForExtension(request.host, target.id),
     toolName: tool.name,
     arguments: request.arguments,
     ...(request.logger ? { logger: request.logger } : {}),
@@ -1045,6 +1071,43 @@ export async function invokeExtensionTool<THostApi>(
     ...(request.questionsResult !== undefined ? { questionsResult: request.questionsResult } : {}),
   });
   return renderExtensionToolResult(result);
+}
+
+export async function invokeExtensionTabRequest<THostApi>(
+  context: ExtensionManagementContext,
+  activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
+  stateStore: ExtensionStateStore,
+  request: InvokeExtensionTabRequest<THostApi>,
+): Promise<unknown> {
+  const target = await requireInstalledExtension(context, request.extensionId);
+  if (!target.enabled) {
+    throw new Error(`The extension is disabled: ${target.id}`);
+  }
+  const contribution = target.manifest.contributes?.desktop?.tabs?.find(
+    (entry) => entry.id === request.contributionId,
+  );
+  if (!contribution) {
+    throw new Error(`The extension does not declare the tab: ${request.contributionId}`);
+  }
+  const entry = await ensureActivatedExtension(target, activatedExtensions, stateStore, {
+    host: request.host,
+    ...(request.logger ? { logger: request.logger } : {}),
+    log: (message) => {
+      request.logger?.log(`[extension:${target.id}] ${message}`);
+    },
+  });
+  const handler = entry.activatedExtension?.onTabRequest;
+  if (!handler) {
+    throw new Error(`The extension does not export onTabRequest: ${target.id}`);
+  }
+  return handler({
+    extension: entry.runtimeInfo,
+    host: bindHostForExtension(request.host, target.id),
+    contributionId: request.contributionId,
+    instanceId: request.instanceId,
+    method: request.method,
+    ...(request.params === undefined ? {} : { params: request.params }),
+  });
 }
 
 export async function loadExtensionSettingsValues(
@@ -1198,6 +1261,19 @@ export async function collectExtensionSystemPromptContributions<THostApi>(
   return contributions;
 }
 
+type BindableExtensionHost = {
+  boundExtensionId?: string;
+  forExtension?: (extensionId: string) => unknown;
+};
+
+function bindHostForExtension<THostApi>(host: THostApi, extensionId: string): THostApi {
+  const candidate = host as BindableExtensionHost;
+  if (candidate.boundExtensionId === extensionId || typeof candidate.forExtension !== "function") {
+    return host;
+  }
+  return candidate.forExtension(extensionId) as THostApi;
+}
+
 async function ensureActivatedExtension<THostApi>(
   target: HostInstalledExtension,
   activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
@@ -1230,8 +1306,9 @@ async function ensureActivatedExtension<THostApi>(
   }
 
   const runtimeInfo = createRuntimeInfo(target);
+  const host = bindHostForExtension(options.host, target.id);
   const activatedExtension = await activateExtension(target, mainFilePath, {
-    host: options.host,
+    host,
     ...(options.logger ? { logger: options.logger } : {}),
     log: options.log,
     settings: createSettingsAccessor(target, stateStore),
@@ -2025,8 +2102,17 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
       ? (value.getSystemPrompt as HostActivatedExtension["getSystemPrompt"])
       : undefined;
   const onEvent = typeof value.onEvent === "function" ? value.onEvent : undefined;
+  const onTabRequest = typeof value.onTabRequest === "function" ? value.onTabRequest : undefined;
   const dispose = typeof value.dispose === "function" ? value.dispose : undefined;
-  if (!tools && !invokeTool && !systemPrompt && !getSystemPrompt && !onEvent && !dispose) {
+  if (
+    !tools &&
+    !invokeTool &&
+    !systemPrompt &&
+    !getSystemPrompt &&
+    !onEvent &&
+    !onTabRequest &&
+    !dispose
+  ) {
     return undefined;
   }
 
@@ -2037,6 +2123,7 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
     systemPrompt ? { systemPrompt } : {},
     getSystemPrompt ? { getSystemPrompt } : {},
     onEvent ? { onEvent: onEvent as HostActivatedExtension["onEvent"] } : {},
+    onTabRequest ? { onTabRequest: onTabRequest as HostActivatedExtension["onTabRequest"] } : {},
     dispose ? { dispose: dispose as HostActivatedExtension["dispose"] } : {},
   ) as HostActivatedExtension;
 }

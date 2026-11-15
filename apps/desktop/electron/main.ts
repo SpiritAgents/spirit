@@ -159,6 +159,12 @@ import {
   resolveDesktopExtensionTabFile,
   resolveDesktopExtensionTabIconFile,
   openDesktopHostExtensionUi,
+  openDesktopExtensionTab,
+  focusDesktopExtensionTab,
+  closeDesktopExtensionTab,
+  updateDesktopExtensionTab,
+  emitDesktopExtensionTabEvent,
+  subscribeDesktopExtensionTabEvents,
   closeDesktopHostExtensionUi,
   resolveDesktopExtensionViewOwner,
   setDesktopGitHubFetchImplementation,
@@ -235,6 +241,7 @@ let unsubscribeDesktopAutomationsUpdates: (() => void) | undefined;
 let unsubscribeDesktopSessionListUpdates: (() => void) | undefined;
 let unsubscribeDesktopTasksUpdates: (() => void) | undefined;
 let unsubscribeDesktopWorkspaceToolTabsUpdates: (() => void) | undefined;
+let unsubscribeDesktopExtensionTabEvents: (() => void) | undefined;
 /** Last snapshot pushed to each webContents; basis for incremental (delta) live updates. Reset on renderer reload. */
 const lastLivePushByWebContents = new WeakMap<Electron.WebContents, DesktopSnapshot>();
 let desktopHostShutdownComplete = false;
@@ -242,7 +249,9 @@ let desktopHostShutdownPromise: Promise<void> | undefined;
 
 const workspacePtyManager = new WorkspacePtyManager();
 
-setDesktopExtensionHostAdapter({
+const desktopExtensionHostAdapter: NonNullable<
+  Parameters<typeof setDesktopExtensionHostAdapter>[0]
+> = {
   async showMessageBox(request) {
     const targetWindow = BrowserWindow.getAllWindows().find((window) => !window.isDestroyed());
     const options = {
@@ -252,15 +261,13 @@ setDesktopExtensionHostAdapter({
       ...(request.buttons?.length ? { buttons: request.buttons } : {}),
       ...(request.cancelId !== undefined ? { cancelId: request.cancelId } : {}),
       ...(request.defaultId !== undefined ? { defaultId: request.defaultId } : {}),
-      ...(request.noLink !== undefined ? { noLink: request.noLink } : {}),
+      ...(request.noLink ? { noLink: request.noLink } : {}),
       ...(request.type ? { type: request.type } : {}),
     };
-
     if (targetWindow) {
       await dialog.showMessageBox(targetWindow, options);
       return;
     }
-
     await dialog.showMessageBox(options);
   },
   ui: {
@@ -280,7 +287,68 @@ setDesktopExtensionHostAdapter({
       closeDesktopHostExtensionUi();
     },
   },
-});
+  tabs: {
+    async open() {
+      throw new Error("Extension identity is not bound to the tab API.");
+    },
+    async focus() {
+      throw new Error("Extension identity is not bound to the tab API.");
+    },
+    async close() {
+      throw new Error("Extension identity is not bound to the tab API.");
+    },
+    async update() {
+      throw new Error("Extension identity is not bound to the tab API.");
+    },
+    emit() {
+      throw new Error("Extension identity is not bound to the tab API.");
+    },
+  },
+  forExtension(extensionId, windowId) {
+    const resolveWindowId = (requested?: string) => {
+      if (requested) return requested;
+      if (windowId) return windowId;
+      const target = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+      if (!target) throw new Error("No Desktop window is available for the extension tab.");
+      return workspaceWindowIdForWebContents(target.webContents);
+    };
+    return {
+      boundExtensionId: extensionId,
+      showMessageBox: (request) => desktopExtensionHostAdapter.showMessageBox(request),
+      ui: desktopExtensionHostAdapter.ui,
+      tabs: {
+        open: (request) =>
+          openDesktopExtensionTab({
+            ...request,
+            extensionId,
+            windowId: resolveWindowId(request.windowId),
+          }),
+        focus: (instanceId) =>
+          focusDesktopExtensionTab({ extensionId, windowId: resolveWindowId(), instanceId }),
+        close: (instanceId) =>
+          closeDesktopExtensionTab({ extensionId, windowId: resolveWindowId(), instanceId }),
+        update: (instanceId, patch) =>
+          updateDesktopExtensionTab({
+            extensionId,
+            windowId: resolveWindowId(),
+            instanceId,
+            patch,
+          }),
+        emit: (instanceId, event, params) =>
+          emitDesktopExtensionTabEvent({
+            extensionId,
+            windowId: resolveWindowId(),
+            instanceId,
+            event,
+            ...(params === undefined ? {} : { params }),
+          }),
+      },
+      forExtension: (_nextExtensionId, nextWindowId) =>
+        desktopExtensionHostAdapter.forExtension(extensionId, nextWindowId ?? windowId),
+    };
+  },
+};
+setDesktopExtensionHostAdapter(desktopExtensionHostAdapter);
 
 function shouldStartDesktopWebHostFromEnv(): boolean {
   return process.env.SPIRIT_DESKTOP_WEB_HOST === "1";
@@ -1239,10 +1307,26 @@ if (gotSpiritSingleInstanceLock) {
       },
     );
 
+    unsubscribeDesktopExtensionTabEvents = subscribeDesktopExtensionTabEvents((event) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (
+          !window.isDestroyed() &&
+          workspaceWindowIdForWebContents(window.webContents) === event.windowId
+        ) {
+          window.webContents.send("desktop:extension-tab-event", event);
+        }
+      }
+    });
+
     ipcMain.handle(
       "desktop:invoke",
       (event, command: Parameters<typeof invokeDesktopHostCommand>[0], payload?: unknown) => {
-        if (command === "getWorkspaceToolTabs" || command === "syncWorkspaceToolTabs") {
+        if (
+          command === "getWorkspaceToolTabs" ||
+          command === "syncWorkspaceToolTabs" ||
+          command === "invokeExtensionTabRequest" ||
+          command === "setExtensionTabChrome"
+        ) {
           return invokeMainDesktopHostCommand(command, {
             ...(payload as Record<string, unknown> | undefined),
             windowId: workspaceWindowIdForWebContents(event.sender),
@@ -1894,6 +1978,8 @@ app.on("before-quit", (event) => {
   unsubscribeDesktopTasksUpdates = undefined;
   unsubscribeDesktopWorkspaceToolTabsUpdates?.();
   unsubscribeDesktopWorkspaceToolTabsUpdates = undefined;
+  unsubscribeDesktopExtensionTabEvents?.();
+  unsubscribeDesktopExtensionTabEvents = undefined;
   unsubscribeDesktopRemoteControl?.();
   unsubscribeDesktopRemoteControl = undefined;
   if (quittingAfterDesktopWebHostStop && desktopHostShutdownComplete) {

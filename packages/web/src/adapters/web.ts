@@ -485,6 +485,12 @@ export function createWebHostApi(): HostApi {
         revision: 0,
       });
     },
+    invokeExtensionTabRequest() {
+      return Promise.reject(new Error("Extension tabs are not available on web host"));
+    },
+    setExtensionTabChrome() {
+      return Promise.reject(new Error("Extension tabs are not available on web host"));
+    },
     openPathInDefaultApp() {
       return Promise.reject(new Error("openPathInDefaultApp is not available on web host"));
     },

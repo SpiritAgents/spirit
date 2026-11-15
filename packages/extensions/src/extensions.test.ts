@@ -480,6 +480,86 @@ test("desktop views-only contributions parse and reject illegal view paths", asy
   }
 });
 
+test("tab requests activate the owning backend with its declared contribution", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-tab-request-data-"));
+  const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-tab-request-prepared-"));
+  try {
+    const packageDir = join(preparedRoot, "tab-request");
+    await writeExtensionDumpPackage(
+      packageDir,
+      {
+        name: "tab-request",
+        displayName: "Tab request",
+        main: "index.mjs",
+        manifest: {
+          supportedHosts: ["desktop"],
+          requestedCapabilities: ["desktop-ui"],
+          contributes: {
+            desktop: {
+              tabs: [
+                {
+                  id: "notes",
+                  name: "Notes",
+                  path: "notes.html",
+                  icon: { type: "spirit", name: "globe" },
+                },
+              ],
+            },
+          },
+        },
+      },
+      {
+        "index.mjs": `export function activate() {
+          return {
+            onTabRequest(request) {
+              return {
+                method: request.method,
+                instanceId: request.instanceId,
+                params: request.params,
+                host: request.host.marker,
+              };
+            },
+          };
+        }
+`,
+      },
+    );
+    const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
+    const installed = await manager.installPreparedDirectory({ preparedDirectoryPath: packageDir });
+    const result = await manager.invokeTabRequest({
+      extensionId: installed.id,
+      contributionId: "notes",
+      instanceId: "instance-1",
+      method: "echo",
+      params: { value: 42 },
+      host: {
+        forExtension(extensionId: string) {
+          return { marker: `bound:${extensionId}` };
+        },
+      },
+    });
+    assert.deepEqual(result, {
+      method: "echo",
+      instanceId: "instance-1",
+      params: { value: 42 },
+      host: "bound:personal/tab-request",
+    });
+    await assert.rejects(
+      manager.invokeTabRequest({
+        extensionId: installed.id,
+        contributionId: "missing",
+        instanceId: "instance-1",
+        method: "echo",
+        host: {},
+      }),
+      /does not declare the tab/,
+    );
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(preparedRoot, { recursive: true, force: true });
+  }
+});
+
 test("desktop tabs parse contributions and reject invalid entries", async () => {
   const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-tabs-data-"));
   const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-tabs-prepared-"));

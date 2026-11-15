@@ -261,6 +261,21 @@ export interface HostApi {
   subscribeWorkspaceToolTabsUpdates?(
     callback: (snapshot: import("./types.js").DesktopWorkspaceToolsSnapshot) => void,
   ): () => void;
+  invokeExtensionTabRequest(request: {
+    extensionId: string;
+    contributionId: string;
+    instanceId: string;
+    method: string;
+    params?: unknown;
+  }): Promise<unknown>;
+  setExtensionTabChrome(request: {
+    extensionId: string;
+    instanceId: string;
+    patch: import("./types.js").DesktopExtensionTabChromePatch;
+  }): Promise<void>;
+  subscribeExtensionTabEvents?(
+    callback: (event: import("./types.js").DesktopExtensionTabEvent) => void,
+  ): () => void;
   openPathInDefaultApp(absolutePath: string): Promise<void>;
   resetSession(): Promise<DesktopSnapshot>;
   listSessions(): Promise<SessionListItem[]>;

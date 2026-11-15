@@ -5,6 +5,11 @@ import { Button } from "@/components/ui/button";
 import {
   extensionTabPageUrl,
   SPIRIT_EXTENSION_TAB_CONTEXT,
+  SPIRIT_EXTENSION_TAB_REQUEST,
+  SPIRIT_EXTENSION_TAB_RESULT,
+  SPIRIT_EXTENSION_TAB_EVENT,
+  SPIRIT_EXTENSION_TAB_CHROME,
+  SPIRIT_EXTENSION_TAB_CLOSED,
   SPIRIT_EXTENSION_TAB_READY,
   SPIRIT_EXTENSION_TAB_READY_REQUEST,
 } from "@/lib/extension-tab-frame";
@@ -13,16 +18,37 @@ import {
   collectHostStylesheetCssText,
 } from "@/lib/extension-view-tokens";
 import { cn } from "@/lib/utils";
-import type { DesktopExtensionDesktopTab, WorkspaceExtensionToolTab } from "@/types";
+import type {
+  DesktopExtensionDesktopTab,
+  DesktopExtensionTabChromePatch,
+  DesktopExtensionTabEvent,
+  WorkspaceExtensionToolTab,
+} from "@/types";
 
 export function ExtensionTabHost({
   tab,
   contribution,
   active,
+  onRequest,
+  onChrome,
+  subscribeEvents,
 }: {
   tab: WorkspaceExtensionToolTab;
   contribution: DesktopExtensionDesktopTab;
   active: boolean;
+  onRequest?: (request: {
+    extensionId: string;
+    contributionId: string;
+    instanceId: string;
+    method: string;
+    params?: unknown;
+  }) => Promise<unknown>;
+  onChrome?: (request: {
+    extensionId: string;
+    instanceId: string;
+    patch: DesktopExtensionTabChromePatch;
+  }) => Promise<void>;
+  subscribeEvents?: (callback: (event: DesktopExtensionTabEvent) => void) => () => void;
 }) {
   const { t } = useTranslation();
   const [attempt, setAttempt] = useState(0);
@@ -49,6 +75,7 @@ export function ExtensionTabHost({
         extensionId: tab.extensionId,
         contributionId: tab.contributionId,
         instanceId: tab.instanceId,
+        channelId: tab.channelId,
         initialParams: tab.initialParams ?? null,
         scope: tab.scope,
         visible: active,
@@ -70,7 +97,8 @@ export function ExtensionTabHost({
       if (
         event.data?.extensionId !== tab.extensionId ||
         event.data?.contributionId !== tab.contributionId ||
-        event.data?.instanceId !== tab.instanceId
+        event.data?.instanceId !== tab.instanceId ||
+        event.data?.channelId !== tab.channelId
       ) {
         return;
       }
@@ -80,11 +108,54 @@ export function ExtensionTabHost({
       }
       if (event.data.type === SPIRIT_EXTENSION_TAB_READY) {
         setStatus("ready");
+        return;
+      }
+      if (event.data.type === SPIRIT_EXTENSION_TAB_REQUEST) {
+        const requestId = String(event.data.requestId ?? "");
+        if (!requestId || !onRequest) {
+          return;
+        }
+        void onRequest({
+          extensionId: tab.extensionId,
+          contributionId: tab.contributionId,
+          instanceId: tab.instanceId,
+          method: String(event.data.method ?? ""),
+          params: event.data.params,
+        }).then(
+          (result) => {
+            iframe.contentWindow?.postMessage(
+              { type: SPIRIT_EXTENSION_TAB_RESULT, ...tab, requestId, ok: true, result },
+              "*",
+            );
+          },
+          (error: unknown) => {
+            iframe.contentWindow?.postMessage(
+              {
+                type: SPIRIT_EXTENSION_TAB_RESULT,
+                ...tab,
+                requestId,
+                ok: false,
+                error: error instanceof Error ? error.message : String(error),
+              },
+              "*",
+            );
+          },
+        );
+        return;
+      }
+      if (event.data.type === SPIRIT_EXTENSION_TAB_CHROME) {
+        void onChrome?.({
+          extensionId: tab.extensionId,
+          instanceId: tab.instanceId,
+          patch: event.data.patch as DesktopExtensionTabChromePatch,
+        }).catch((error: unknown) => {
+          console.error("[extensions] failed to update tab chrome", error);
+        });
       }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [attempt, sendContext, tab]);
+  }, [attempt, onRequest, onChrome, sendContext, tab]);
 
   useEffect(() => {
     if (status === "ready") {
@@ -103,6 +174,33 @@ export function ExtensionTabHost({
     });
     return () => observer.disconnect();
   }, [sendContext, status]);
+
+  useEffect(() => {
+    if (!subscribeEvents) {
+      return;
+    }
+    return subscribeEvents((event) => {
+      const iframe = iframeRef.current;
+      if (
+        !iframe ||
+        event.extensionId !== tab.extensionId ||
+        event.contributionId !== tab.contributionId ||
+        event.instanceId !== tab.instanceId ||
+        event.channelId !== tab.channelId
+      ) {
+        return;
+      }
+      iframe.contentWindow?.postMessage({ type: SPIRIT_EXTENSION_TAB_EVENT, ...event }, "*");
+    });
+  }, [subscribeEvents, tab]);
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    const identity = { ...tab };
+    return () => {
+      iframe?.contentWindow?.postMessage({ type: SPIRIT_EXTENSION_TAB_CLOSED, ...identity }, "*");
+    };
+  }, [attempt, tab.instanceId]);
 
   return (
     <div

@@ -270,6 +270,15 @@ export async function createElectronHostApi(): Promise<HostApi> {
     subscribeWorkspaceToolTabsUpdates(callback) {
       return bridge.subscribeWorkspaceToolTabsUpdates(callback);
     },
+    invokeExtensionTabRequest(request) {
+      return bridge.invokeExtensionTabRequest(request);
+    },
+    setExtensionTabChrome(request) {
+      return bridge.setExtensionTabChrome(request);
+    },
+    subscribeExtensionTabEvents(callback) {
+      return bridge.subscribeExtensionTabEvents(callback);
+    },
     openPathInDefaultApp(absolutePath) {
       return bridge.openPathInDefaultApp(absolutePath);
     },

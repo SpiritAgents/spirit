@@ -9,6 +9,7 @@ import type {
 } from "../types.js";
 import {
   createInitialWorkspaceToolsState,
+  createExtensionWorkspaceToolTab,
   defaultActiveWorkspaceToolTabId,
 } from "../lib/workspace-tool-tabs.js";
 
@@ -21,7 +22,11 @@ type WindowRecord = {
   rendererRevision: number;
 };
 
-type PersistedWindowRecord = Pick<WindowRecord, "tabs" | "activeTabId">;
+type PersistedTab = DesktopWorkspaceToolTab | Omit<DesktopWorkspaceExtensionToolTab, "channelId">;
+type PersistedWindowRecord = {
+  tabs: PersistedTab[];
+  activeTabId: string;
+};
 type PersistedStore = {
   schemaVersion: typeof STORE_SCHEMA_VERSION;
   windows: Record<string, PersistedWindowRecord>;
@@ -90,6 +95,131 @@ export class WorkspaceToolTabsStore {
       const snapshot = this.snapshot(input.windowId, next);
       this.emit(input.windowId, snapshot);
       return snapshot;
+    });
+  }
+
+  openExtensionTab(input: {
+    windowId: string;
+    extensionId: string;
+    contributionId: string;
+    scope: DesktopWorkspaceExtensionToolTab["scope"];
+    initialParams?: unknown;
+    title: string;
+    icon?: DesktopWorkspaceExtensionToolTab["icon"];
+    reuse: "new" | "context";
+  }): Promise<DesktopWorkspaceExtensionToolTab> {
+    return this.enqueue(async () => {
+      await this.ensureLoaded();
+      const record = await this.ensureWindow(input.windowId);
+      if (input.reuse === "context") {
+        const existing = record.tabs.find(
+          (tab): tab is DesktopWorkspaceExtensionToolTab =>
+            tab.kind === "extension" &&
+            tab.extensionId === input.extensionId &&
+            tab.contributionId === input.contributionId &&
+            JSON.stringify(tab.scope) === JSON.stringify(input.scope),
+        );
+        if (existing) {
+          if (record.activeTabId !== existing.id) {
+            record.activeTabId = existing.id;
+            record.revision += 1;
+            await this.persist();
+            this.emit(input.windowId, this.snapshot(input.windowId, record));
+          }
+          return structuredClone(existing);
+        }
+      }
+      const tab = createExtensionWorkspaceToolTab({
+        extensionId: input.extensionId,
+        contributionId: input.contributionId,
+        scope: input.scope,
+        ...(input.initialParams === undefined ? {} : { initialParams: input.initialParams }),
+        ...(input.icon ? { icon: input.icon } : {}),
+        tabTitle: input.title,
+      });
+      record.tabs = [...record.tabs, tab];
+      record.activeTabId = tab.id;
+      record.revision += 1;
+      await this.persist();
+      this.emit(input.windowId, this.snapshot(input.windowId, record));
+      return structuredClone(tab);
+    });
+  }
+
+  focusExtensionTab(input: {
+    windowId: string;
+    extensionId: string;
+    instanceId: string;
+  }): Promise<DesktopWorkspaceToolsSnapshot> {
+    return this.enqueue(async () => {
+      await this.ensureLoaded();
+      const record = await this.ensureWindow(input.windowId);
+      const tab = requireOwnedExtensionTab(record, input);
+      if (record.activeTabId !== tab.id) {
+        record.activeTabId = tab.id;
+        record.revision += 1;
+        await this.persist();
+        this.emit(input.windowId, this.snapshot(input.windowId, record));
+      }
+      return this.snapshot(input.windowId, record);
+    });
+  }
+
+  closeExtensionTab(input: {
+    windowId: string;
+    extensionId: string;
+    instanceId: string;
+  }): Promise<DesktopWorkspaceToolsSnapshot> {
+    return this.enqueue(async () => {
+      await this.ensureLoaded();
+      const record = await this.ensureWindow(input.windowId);
+      requireOwnedExtensionTab(record, input);
+      record.tabs = record.tabs.filter((tab) => tab.id !== input.instanceId);
+      record.revision += 1;
+      if (!record.tabs.some((tab) => tab.id === record.activeTabId)) {
+        record.activeTabId = defaultActiveWorkspaceToolTabId(record.tabs);
+      }
+      await this.persist();
+      const snapshot = this.snapshot(input.windowId, record);
+      this.emit(input.windowId, snapshot);
+      return snapshot;
+    });
+  }
+
+  updateExtensionTab(input: {
+    windowId: string;
+    extensionId: string;
+    instanceId: string;
+    patch: {
+      title?: string;
+      icon?: DesktopWorkspaceExtensionToolTab["icon"];
+      dirty?: boolean;
+    };
+  }): Promise<DesktopWorkspaceExtensionToolTab> {
+    return this.enqueue(async () => {
+      await this.ensureLoaded();
+      const record = await this.ensureWindow(input.windowId);
+      requireOwnedExtensionTab(record, input);
+      let updated: DesktopWorkspaceExtensionToolTab | undefined;
+      record.tabs = record.tabs.map((tab) => {
+        if (tab.kind !== "extension" || tab.id !== input.instanceId) {
+          return tab;
+        }
+        updated = {
+          ...tab,
+          ...(input.patch.title === undefined ? {} : { tabTitle: input.patch.title || undefined }),
+          ...(input.patch.icon === undefined ? {} : { icon: input.patch.icon }),
+          ...(input.patch.dirty === undefined ? {} : { tabDirty: input.patch.dirty || undefined }),
+        };
+        return updated;
+      });
+      if (!updated) {
+        throw new Error(`Extension tab not found: ${input.instanceId}`);
+      }
+      record.revision += 1;
+      await this.persist();
+      this.emit(input.windowId, this.snapshot(input.windowId, record));
+      return structuredClone(updated);
     });
   }
 
@@ -237,9 +367,10 @@ export class WorkspaceToolTabsStore {
       if (!record || !Array.isArray(record.tabs) || typeof record.activeTabId !== "string") {
         throw new Error(`Invalid workspace tool tabs window record: ${windowId}`);
       }
-      assertValidTabs(record.tabs);
+      const restoredTabs = record.tabs.map(restoreTab);
+      assertValidTabs(restoredTabs);
       this.windows.set(windowId, {
-        tabs: record.tabs.map(restoreTab),
+        tabs: restoredTabs,
         activeTabId: record.activeTabId,
         revision: 0,
         rendererRevision: 0,
@@ -310,7 +441,21 @@ function enabledContributions(extensions: readonly DesktopExtensionListItem[]): 
   return result;
 }
 
-function persistTab(tab: DesktopWorkspaceToolTab): DesktopWorkspaceToolTab {
+function requireOwnedExtensionTab(
+  record: WindowRecord,
+  input: { extensionId: string; instanceId: string },
+): DesktopWorkspaceExtensionToolTab {
+  const tab = record.tabs.find(
+    (candidate): candidate is DesktopWorkspaceExtensionToolTab =>
+      candidate.kind === "extension" && candidate.instanceId === input.instanceId,
+  );
+  if (!tab || tab.extensionId !== input.extensionId) {
+    throw new Error(`Extension tab not found or not owned by the caller: ${input.instanceId}`);
+  }
+  return tab;
+}
+
+function persistTab(tab: DesktopWorkspaceToolTab): PersistedTab {
   if (tab.kind === "extension") {
     return {
       id: tab.id,
@@ -337,8 +482,17 @@ function persistTab(tab: DesktopWorkspaceToolTab): DesktopWorkspaceToolTab {
   };
 }
 
-function restoreTab(tab: DesktopWorkspaceToolTab): DesktopWorkspaceToolTab {
-  return persistTab(tab);
+function restoreTab(tab: PersistedTab): DesktopWorkspaceToolTab {
+  if (tab.kind !== "extension") {
+    return persistTab(tab) as DesktopWorkspaceToolTab;
+  }
+  return createExtensionWorkspaceToolTab({
+    extensionId: tab.extensionId,
+    contributionId: tab.contributionId,
+    instanceId: tab.instanceId,
+    scope: tab.scope,
+    ...(tab.initialParams === undefined ? {} : { initialParams: tab.initialParams }),
+  });
 }
 
 function assertValidTabs(tabs: readonly DesktopWorkspaceToolTab[]): void {
@@ -362,7 +516,13 @@ function assertValidTabs(tabs: readonly DesktopWorkspaceToolTab[]): void {
 }
 
 function assertValidExtensionTab(tab: DesktopWorkspaceExtensionToolTab): void {
-  if (!tab.extensionId || !tab.contributionId || !tab.instanceId || tab.id !== tab.instanceId) {
+  if (
+    !tab.extensionId ||
+    !tab.contributionId ||
+    !tab.instanceId ||
+    !tab.channelId ||
+    tab.id !== tab.instanceId
+  ) {
     throw new Error(`Invalid extension workspace tool tab identity: ${tab.id}`);
   }
   if (tab.scope.kind === "workspace" && !tab.scope.workspaceRoot) {

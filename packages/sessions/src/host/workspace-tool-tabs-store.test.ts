@@ -21,6 +21,7 @@ function extensionTab(
     extensionId: "personal/demo",
     contributionId: "notes",
     instanceId: "instance-1",
+    channelId: "channel-1",
     scope,
     initialParams: { text: "restored" },
     tabTitle: "runtime title",
@@ -99,7 +100,14 @@ test("store waits for contexts before pruning extension tabs and omits runtime c
     assert.equal(ready.restoreReady, true);
     assert.equal(ready.tabs[0]?.tabTitle, "runtime title");
     const restored = await new WorkspaceToolTabsStore(filePath).getSnapshot("main");
-    assert.deepEqual(restored.tabs[0], {
+    assert.equal(
+      restored.tabs[0]?.kind === "extension" && restored.tabs[0].channelId.length > 0,
+      true,
+    );
+    assert.notEqual((restored.tabs[0] as DesktopWorkspaceExtensionToolTab).channelId, "channel-1");
+    const { channelId: _channelId, ...restoredTab } = restored
+      .tabs[0] as DesktopWorkspaceExtensionToolTab;
+    assert.deepEqual(restoredTab, {
       id: "instance-1",
       kind: "extension",
       extensionId: "personal/demo",
@@ -230,6 +238,80 @@ test("stale renderer snapshots yield to host mutations but queued renderer write
       persisted.windows.main.tabs.some((tab) => tab.id === opened.instanceId),
       true,
     );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("extension open reuse, chrome updates, ownership checks, and close share one store", async () => {
+  const { directory, filePath } = await fixture();
+  try {
+    const store = new WorkspaceToolTabsStore(filePath);
+    const first = await store.openExtensionTab({
+      windowId: "main",
+      extensionId: "personal/demo",
+      contributionId: "notes",
+      scope: { kind: "workspace", workspaceRoot: "/repo" },
+      initialParams: { value: 1 },
+      title: "Notes",
+      icon: { type: "spirit", name: "globe" },
+      reuse: "new",
+    });
+    const second = await store.openExtensionTab({
+      windowId: "main",
+      extensionId: "personal/demo",
+      contributionId: "notes",
+      scope: { kind: "workspace", workspaceRoot: "/repo" },
+      title: "Notes",
+      reuse: "new",
+    });
+    assert.notEqual(first.instanceId, second.instanceId);
+
+    const reused = await store.openExtensionTab({
+      windowId: "main",
+      extensionId: "personal/demo",
+      contributionId: "notes",
+      scope: { kind: "workspace", workspaceRoot: "/repo" },
+      title: "Ignored",
+      reuse: "context",
+    });
+    assert.equal(reused.instanceId, first.instanceId);
+    assert.deepEqual(reused.initialParams, { value: 1 });
+    assert.equal((await store.getSnapshot("main")).activeTabId, first.instanceId);
+
+    await store.updateExtensionTab({
+      windowId: "main",
+      extensionId: "personal/demo",
+      instanceId: first.instanceId,
+      patch: { title: "Changed", dirty: true },
+    });
+    const updated = await store.getSnapshot("main");
+    assert.equal(updated.tabs.find((tab) => tab.id === first.instanceId)?.tabTitle, "Changed");
+    assert.equal(updated.tabs.find((tab) => tab.id === first.instanceId)?.tabDirty, true);
+    await assert.rejects(
+      store.closeExtensionTab({
+        windowId: "main",
+        extensionId: "personal/other",
+        instanceId: first.instanceId,
+      }),
+      /not owned/,
+    );
+    await store.closeExtensionTab({
+      windowId: "main",
+      extensionId: "personal/demo",
+      instanceId: first.instanceId,
+    });
+    const closed = await store.getSnapshot("main");
+    assert.equal(
+      closed.tabs.some((tab) => tab.id === first.instanceId),
+      false,
+    );
+    assert.equal(
+      closed.tabs.some((tab) => tab.id === second.instanceId),
+      true,
+    );
+    const restored = await new WorkspaceToolTabsStore(filePath).getSnapshot("main");
+    assert.equal(restored.tabs.filter((tab) => tab.kind === "extension").length, 1);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

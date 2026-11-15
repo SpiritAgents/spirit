@@ -65,6 +65,9 @@ export function ConversationWorkspaceToolsDock({
         workspaceRoot={snapshot?.workspaceRoot ?? ""}
         sessionKey={snapshot?.composerSessionKey ?? ""}
         extensionsList={snapshot?.extensionsList ?? []}
+        onExtensionTabRequest={runtime.invokeExtensionTabRequest}
+        onExtensionTabChrome={runtime.setExtensionTabChrome}
+        subscribeExtensionTabEvents={runtime.subscribeExtensionTabEvents}
         listExplorerChildren={runtime.listWorkspaceExplorerChildren}
         readWorkspaceTextFile={runtime.readWorkspaceTextFile}
         writeWorkspaceTextFile={runtime.writeWorkspaceTextFile}

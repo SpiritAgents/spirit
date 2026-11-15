@@ -44,6 +44,7 @@ export type WorkspaceExtensionToolTab = WorkspaceToolTabBase & {
   contributionId: string;
   /** Stable per-contribution runtime identity; id mirrors this value for renderer compatibility. */
   instanceId: string;
+  channelId: string;
   scope: WorkspaceExtensionToolTabScope;
   initialParams?: unknown;
   icon?: DesktopExtensionDesktopTabRuntimeIcon;
@@ -94,6 +95,7 @@ export function createExtensionWorkspaceToolTab(input: {
   icon?: DesktopExtensionDesktopTabRuntimeIcon;
   tabTitle?: string;
   instanceId?: string;
+  channelId?: string;
 }): WorkspaceExtensionToolTab {
   const instanceId = input.instanceId ?? newTabId();
   return {
@@ -102,6 +104,7 @@ export function createExtensionWorkspaceToolTab(input: {
     extensionId: input.extensionId,
     contributionId: input.contributionId,
     instanceId,
+    channelId: input.channelId ?? newTabId(),
     scope: input.scope,
     ...(input.initialParams === undefined ? {} : { initialParams: input.initialParams }),
     ...(input.icon ? { icon: input.icon } : {}),

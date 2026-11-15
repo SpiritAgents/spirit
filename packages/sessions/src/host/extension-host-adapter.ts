@@ -1,3 +1,8 @@
+import type {
+  DesktopExtensionTabChromePatch,
+  DesktopExtensionTabOpenRequest,
+  DesktopWorkspaceExtensionToolTab,
+} from "../types.js";
 import i18n from "../lib/i18n-host.js";
 
 export interface DesktopExtensionMessageBoxRequest {
@@ -16,9 +21,21 @@ export interface DesktopExtensionHostUi {
   close(): void;
 }
 
+export interface DesktopExtensionHostTabs {
+  open(request: DesktopExtensionTabOpenRequest): Promise<DesktopWorkspaceExtensionToolTab>;
+  focus(instanceId: string): Promise<void>;
+  close(instanceId: string): Promise<void>;
+  update(instanceId: string, patch: DesktopExtensionTabChromePatch): Promise<void>;
+  emit(instanceId: string, event: string, params?: unknown): void;
+}
+
 export interface DesktopExtensionHostAdapter {
+  /** Set on extension-bound adapters; the extension manager preserves per-request window binding. */
+  readonly boundExtensionId?: string;
   showMessageBox(request: DesktopExtensionMessageBoxRequest): Promise<void>;
   ui: DesktopExtensionHostUi;
+  tabs: DesktopExtensionHostTabs;
+  forExtension(extensionId: string, windowId?: string): DesktopExtensionHostAdapter;
 }
 
 let desktopExtensionHostAdapter: DesktopExtensionHostAdapter | undefined;
