@@ -1,5 +1,6 @@
 export * from "./schema.js";
 export * from "./store.js";
+export * from "./subagent-models.js";
 export * from "./write-lock.js";
 export * from "./keyring-secret.js";
 export * from "./data-paths.js";
