@@ -1,3 +1,5 @@
+import type { JsonObject } from "@spiritagent/agent-core";
+
 import {
   formatScheduleLabel,
   type HostAutomationDefinition,
@@ -14,7 +16,8 @@ export type AutomationRunTriggerContext =
       kind: "github";
       event: HostAutomationGitHubEvent;
       eventUrl: string;
-    };
+    }
+  | { kind: "extension"; summary: string; context?: JsonObject };
 
 export function formatGitHubAutomationEventLabel(event: HostAutomationGitHubEvent): string {
   if (event === "pull_request_created") {
@@ -45,6 +48,10 @@ export function buildAutomationTriggerEventLine(
   if (trigger.kind === "time") {
     return `${formatTimeAutomationEventLabel(trigger)}.`;
   }
+  if (trigger.kind !== "github" && context.kind === "extension") {
+    const detail = context.context ? ` ${JSON.stringify(context.context)}` : "";
+    return `${context.summary}${detail}`;
+  }
   return "Automation activated.";
 }
 
@@ -69,6 +76,9 @@ export function defaultAutomationRunTriggerContext(
 ): AutomationRunTriggerContext {
   if (definition.trigger.kind === "github") {
     throw new Error("GitHub automation runs require an event URL context.");
+  }
+  if (definition.trigger.kind !== "time") {
+    throw new Error("Extension automation runs require a provider event context.");
   }
   return { kind: "time" };
 }

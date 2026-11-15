@@ -1,3 +1,4 @@
+import type { JsonObject } from "@spiritagent/agent-core";
 import type {
   DesktopAutomationSchedule,
   DesktopAutomationScheduleFormatLabels,
@@ -10,6 +11,13 @@ export type {
 
 export type DesktopAutomationGitHubEvent = "pull_request_created" | "issue_created";
 
+export interface DesktopAutomationExtensionTrigger {
+  kind: `extension:${string}`;
+  config: JsonObject;
+  label: string;
+  state?: JsonObject;
+}
+
 export type DesktopAutomationTrigger =
   | { kind: "time"; schedule: DesktopAutomationSchedule }
   | {
@@ -18,7 +26,8 @@ export type DesktopAutomationTrigger =
       repo: string;
       event: DesktopAutomationGitHubEvent;
       poll?: { lastSeenNumber: number };
-    };
+    }
+  | DesktopAutomationExtensionTrigger;
 
 export interface DesktopAutomationTriggerFormatLabels extends DesktopAutomationScheduleFormatLabels {
   githubPrefix: string;

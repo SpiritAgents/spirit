@@ -1543,7 +1543,7 @@ export interface DesktopAutomationListItem {
   scheduleLabel: string;
   trigger: DesktopAutomationTrigger;
   enabled: boolean;
-  githubPollError?: string;
+  triggerError?: string;
   lastRunAtUnixMs?: number;
   updatedAtUnixMs: number;
 }
@@ -1580,6 +1580,7 @@ export interface DesktopAutomationRun {
   sessionPath: string;
   status: DesktopAutomationRunStatus;
   startedAtUnixMs: number;
+  triggerEventId?: string;
   completedAtUnixMs?: number;
   error?: string;
 }
@@ -1598,6 +1599,7 @@ export interface DesktopAutomationDefinition {
   createdAtUnixMs: number;
   updatedAtUnixMs: number;
   lastFiredAtUnixMs?: number;
+  triggerError?: string;
 }
 
 export interface DesktopAutomationDetail {

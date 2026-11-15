@@ -33,5 +33,5 @@ export interface HostAutomationDefinition {
   createdAtUnixMs: number;
   updatedAtUnixMs: number;
   lastFiredAtUnixMs?: number;
-  githubPollError?: string;
+  triggerError?: string;
 }

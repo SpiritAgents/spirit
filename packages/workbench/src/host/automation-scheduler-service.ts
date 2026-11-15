@@ -4,6 +4,7 @@ import {
   shouldFireNow,
   type AutomationRunTriggerContext,
   type HostAutomationDefinition,
+  type HostAutomationTrigger,
   type HostAutomationRun,
 } from "@spiritagent/automations";
 import {
@@ -24,6 +25,10 @@ import { spiritDataDir, type DesktopConfigFile } from "@spiritagent/sessions/hos
 import { runDesktopAutomationOnce } from "./automation-runner.js";
 
 export const AUTOMATION_SCHEDULER_MONITOR_INTERVAL_MS = 60_000;
+
+type GitHubAutomationDefinition = HostAutomationDefinition & {
+  trigger: Extract<HostAutomationTrigger, { kind: "github" }>;
+};
 
 export interface AutomationSchedulerServiceContext {
   initialized(): boolean;
@@ -162,7 +167,7 @@ async function tickGitHubAutomationTriggers(
   config: DesktopConfigFile,
 ): Promise<void> {
   const githubDefinitions = definitions.filter(
-    (definition) => definition.trigger.kind === "github",
+    (definition): definition is GitHubAutomationDefinition => definition.trigger.kind === "github",
   );
   if (githubDefinitions.length === 0) {
     return;
@@ -194,7 +199,10 @@ async function tickGitHubAutomationTriggers(
 
   const refreshed = await store.listEnabledDefinitions();
   const groups = groupGitHubAutomationsByRepo(
-    refreshed.filter((definition) => definition.trigger.kind === "github"),
+    refreshed.filter(
+      (definition): definition is GitHubAutomationDefinition =>
+        definition.trigger.kind === "github",
+    ),
   );
 
   for (const group of groups) {
@@ -214,7 +222,7 @@ async function tickGitHubAutomationTriggers(
       const message = error instanceof Error ? error.message : String(error);
       for (const definition of group.automations) {
         try {
-          await store.setGitHubPollError(definition.id, message);
+          await store.setTriggerError(definition.id, message);
         } catch {
           /* ignore per-automation persistence errors */
         }
@@ -224,7 +232,7 @@ async function tickGitHubAutomationTriggers(
 
     for (const definition of group.automations) {
       try {
-        await store.setGitHubPollError(definition.id, undefined);
+        await store.setTriggerError(definition.id, undefined);
       } catch {
         /* ignore per-automation persistence errors */
       }

@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+
+import type { JsonObject } from "@spiritagent/agent-core";
 import path from "node:path";
 
 import {
@@ -39,6 +41,7 @@ export interface RunDesktopAutomationOnceInput {
   definition: HostAutomationDefinition;
   config: DesktopConfigFile;
   triggerContext?: AutomationRunTriggerContext;
+  triggerEvent?: { id: string; checkpoint: JsonObject };
 }
 
 export interface RunDesktopAutomationOnceDeps {
@@ -64,13 +67,35 @@ export async function runDesktopAutomationOnce(
     `${AUTOMATION_SESSION_FILE_PREFIX}${input.definition.id.slice(0, 8)}-${startedAtUnixMs}.json`,
   );
 
-  let run = await store.addRun(input.definition.id, {
-    id: runId,
-    automationId: input.definition.id,
-    sessionPath,
-    status: "running",
-    startedAtUnixMs,
-  });
+  let run: HostAutomationRun;
+  if (input.triggerEvent) {
+    const consumed = await store.consumeAutomationTriggerEvent(
+      input.definition.id,
+      {
+        id: runId,
+        automationId: input.definition.id,
+        sessionPath,
+        status: "running",
+        startedAtUnixMs,
+      },
+      {
+        eventId: input.triggerEvent.id,
+        checkpoint: input.triggerEvent.checkpoint,
+      },
+    );
+    if (!consumed.created) {
+      return undefined;
+    }
+    run = consumed.run;
+  } else {
+    run = await store.addRun(input.definition.id, {
+      id: runId,
+      automationId: input.definition.id,
+      sessionPath,
+      status: "running",
+      startedAtUnixMs,
+    });
+  }
   deps.onRunUpdated?.(input.definition.id);
 
   let runtimeHandle: AutomationRuntimeHandle | undefined;

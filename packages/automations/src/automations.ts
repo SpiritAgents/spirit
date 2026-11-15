@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 
+import type { JsonObject } from "@spiritagent/agent-core";
 import type { ModelEffortSelection } from "@spiritagent/agent-core/model-effort";
 
 import { parseModelRef, type ModelRef } from "@spiritagent/config";
@@ -26,6 +28,13 @@ export type HostAutomationTimeSchedule = HostAutomationSchedule;
 
 export type HostAutomationGitHubEvent = "pull_request_created" | "issue_created";
 
+export interface HostAutomationExtensionTrigger {
+  kind: `extension:${string}`;
+  config: JsonObject;
+  label: string;
+  state?: JsonObject;
+}
+
 export type HostAutomationTrigger =
   | { kind: "time"; schedule: HostAutomationTimeSchedule }
   | {
@@ -34,7 +43,8 @@ export type HostAutomationTrigger =
       repo: string;
       event: HostAutomationGitHubEvent;
       poll?: { lastSeenNumber: number };
-    };
+    }
+  | HostAutomationExtensionTrigger;
 
 export interface HostAutomationDefinition {
   id: string;
@@ -50,8 +60,8 @@ export interface HostAutomationDefinition {
   createdAtUnixMs: number;
   updatedAtUnixMs: number;
   lastFiredAtUnixMs?: number;
-  /** Set when GitHub issue/PR polling fails for this automation's repository. */
-  githubPollError?: string;
+  /** Last provider error observed while evaluating this trigger. */
+  triggerError?: string;
 }
 
 export type HostAutomationRunStatus = "running" | "blocked" | "completed" | "failed";
@@ -62,6 +72,7 @@ export interface HostAutomationRun {
   sessionPath: string;
   status: HostAutomationRunStatus;
   startedAtUnixMs: number;
+  triggerEventId?: string;
   completedAtUnixMs?: number;
   error?: string;
 }
@@ -72,7 +83,7 @@ export interface HostAutomationListItem {
   scheduleLabel: string;
   trigger: HostAutomationTrigger;
   enabled: boolean;
-  githubPollError?: string;
+  triggerError?: string;
   lastRunAtUnixMs?: number;
   updatedAtUnixMs: number;
 }
@@ -155,7 +166,12 @@ export function normalizeAutomationTrigger(value: unknown): HostAutomationTrigge
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return undefined;
   }
-  const record = value as Partial<HostAutomationTrigger> & { schedule?: unknown };
+  const record = value as Partial<HostAutomationTrigger> & {
+    schedule?: unknown;
+    config?: JsonObject;
+    label?: string;
+    state?: JsonObject;
+  };
   if (record.kind === "time") {
     const schedule = normalizeAutomationSchedule(record.schedule);
     if (!schedule) {
@@ -182,13 +198,50 @@ export function normalizeAutomationTrigger(value: unknown): HostAutomationTrigge
       ...(poll ? { poll } : {}),
     };
   }
+  if (typeof record.kind === "string" && record.kind.startsWith("extension:")) {
+    const config = normalizeJsonObject(record.config);
+    const label = typeof record.label === "string" ? record.label.trim() : "";
+    if (!config || !label) {
+      return undefined;
+    }
+    const state = record.state === undefined ? undefined : normalizeJsonObject(record.state);
+    if (record.state !== undefined && !state) {
+      return undefined;
+    }
+    return {
+      kind: record.kind as `extension:${string}`,
+      config,
+      label,
+      ...(state ? { state } : {}),
+    };
+  }
   return undefined;
+}
+
+function normalizeJsonObject(value: unknown): JsonObject | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as JsonObject)
+    : undefined;
 }
 
 export function reconcileGitHubTriggerPollState(
   previous: HostAutomationTrigger,
   next: HostAutomationTrigger,
 ): HostAutomationTrigger {
+  if (next.kind !== "time" && next.kind !== "github") {
+    const previousState =
+      previous.kind !== "time" &&
+      previous.kind !== "github" &&
+      previous.kind === next.kind &&
+      isDeepStrictEqual(previous.config, next.config)
+        ? previous.state
+        : undefined;
+    const { state: _ignoredNextState, ...nextWithoutState } = next;
+    return {
+      ...nextWithoutState,
+      ...(previousState ? { state: previousState } : {}),
+    };
+  }
   if (next.kind !== "github") {
     return next;
   }
@@ -243,6 +296,9 @@ export function formatTriggerLabel(
   const l = { ...defaultTriggerFormatLabels(), ...labels };
   if (trigger.kind === "time") {
     return formatScheduleLabel(trigger.schedule, l);
+  }
+  if (trigger.kind !== "github") {
+    return trigger.label;
   }
   const eventLabel =
     trigger.event === "pull_request_created" ? l.githubPullRequestCreated : l.githubIssueCreated;
@@ -382,9 +438,7 @@ export class HostAutomationStore {
         scheduleLabel: formatTriggerLabel(file.definition.trigger),
         trigger: file.definition.trigger,
         enabled: file.definition.enabled,
-        ...(file.definition.githubPollError
-          ? { githubPollError: file.definition.githubPollError }
-          : {}),
+        ...(file.definition.triggerError ? { triggerError: file.definition.triggerError } : {}),
         ...(lastRun ? { lastRunAtUnixMs: lastRun.startedAtUnixMs } : {}),
         updatedAtUnixMs: file.definition.updatedAtUnixMs,
       });
@@ -410,6 +464,9 @@ export class HostAutomationStore {
     const trigger = normalizeAutomationTrigger(input.trigger);
     if (!trigger) {
       throw new Error("Invalid automation trigger.");
+    }
+    if (trigger.kind !== "time" && trigger.kind !== "github") {
+      delete trigger.state;
     }
     const definition: HostAutomationDefinition = {
       id: randomUUID(),
@@ -467,6 +524,7 @@ export class HostAutomationStore {
           throw new Error("Invalid automation trigger.");
         }
         file.definition.trigger = reconcileGitHubTriggerPollState(file.definition.trigger, trigger);
+        delete file.definition.triggerError;
       }
       if (patch.workspaceRoot !== undefined) {
         file.definition.workspaceRoot = path.resolve(
@@ -534,25 +592,40 @@ export class HostAutomationStore {
         ...file.definition.trigger,
         poll: { lastSeenNumber },
       };
-      delete file.definition.githubPollError;
+      delete file.definition.triggerError;
       file.definition.updatedAtUnixMs = Date.now();
       return { ...file.definition };
     });
   }
 
-  async setGitHubPollError(
+  async setTriggerError(
     automationId: string,
     error: string | undefined,
   ): Promise<HostAutomationDefinition> {
     return this.mutateFile(automationId, (file) => {
-      if (file.definition.trigger.kind !== "github") {
-        throw new Error("Automation trigger is not GitHub.");
+      if (file.definition.trigger.kind === "time") {
+        throw new Error("Time triggers do not have provider errors.");
       }
       if (error?.trim()) {
-        file.definition.githubPollError = error.trim();
+        file.definition.triggerError = error.trim();
       } else {
-        delete file.definition.githubPollError;
+        delete file.definition.triggerError;
       }
+      file.definition.updatedAtUnixMs = Date.now();
+      return { ...file.definition };
+    });
+  }
+
+  async updateAutomationTriggerState(
+    automationId: string,
+    state: JsonObject,
+  ): Promise<HostAutomationDefinition> {
+    return this.mutateFile(automationId, (file) => {
+      if (file.definition.trigger.kind === "time" || file.definition.trigger.kind === "github") {
+        throw new Error("Automation trigger is not extension-contributed.");
+      }
+      file.definition.trigger.state = state;
+      delete file.definition.triggerError;
       file.definition.updatedAtUnixMs = Date.now();
       return { ...file.definition };
     });
@@ -562,6 +635,32 @@ export class HostAutomationStore {
     await this.mutateFile(automationId, (file) => {
       file.definition.lastFiredAtUnixMs = firedAtUnixMs;
       file.definition.updatedAtUnixMs = firedAtUnixMs;
+    });
+  }
+
+  async consumeAutomationTriggerEvent(
+    automationId: string,
+    run: HostAutomationRun,
+    input: { eventId: string; checkpoint: JsonObject },
+  ): Promise<{ run: HostAutomationRun; created: boolean }> {
+    return this.mutateFile(automationId, (file) => {
+      if (file.definition.trigger.kind === "time" || file.definition.trigger.kind === "github") {
+        throw new Error("Automation trigger is not extension-contributed.");
+      }
+      const eventId = normalizeNonEmpty(input.eventId, "triggerEventId");
+      const duplicate = file.runs.find((entry) => entry.triggerEventId === eventId);
+      if (duplicate) {
+        return { run: { ...duplicate }, created: false };
+      }
+      const normalized = normalizeAutomationRun({ ...run, triggerEventId: eventId });
+      if (!normalized) {
+        throw new Error("Invalid automation run.");
+      }
+      file.runs.push(normalized);
+      file.definition.trigger.state = input.checkpoint;
+      delete file.definition.triggerError;
+      file.definition.updatedAtUnixMs = Date.now();
+      return { run: { ...normalized }, created: true };
     });
   }
 
@@ -693,7 +792,7 @@ function normalizeAutomationDefinition(value: unknown): HostAutomationDefinition
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return undefined;
   }
-  const record = value as Partial<HostAutomationDefinition>;
+  const record = value as Partial<HostAutomationDefinition> & { githubPollError?: string };
   if (typeof record.id !== "string" || !record.id.trim()) {
     return undefined;
   }
@@ -733,9 +832,11 @@ function normalizeAutomationDefinition(value: unknown): HostAutomationDefinition
     ...(typeof record.lastFiredAtUnixMs === "number"
       ? { lastFiredAtUnixMs: record.lastFiredAtUnixMs }
       : {}),
-    ...(typeof record.githubPollError === "string" && record.githubPollError.trim()
-      ? { githubPollError: record.githubPollError.trim() }
-      : {}),
+    ...(typeof record.triggerError === "string" && record.triggerError.trim()
+      ? { triggerError: record.triggerError.trim() }
+      : typeof record.githubPollError === "string" && record.githubPollError.trim()
+        ? { triggerError: record.githubPollError.trim() }
+        : {}),
   };
 }
 
@@ -772,6 +873,9 @@ function normalizeAutomationRun(value: unknown): HostAutomationRun | undefined {
     sessionPath: record.sessionPath.trim(),
     status,
     startedAtUnixMs: record.startedAtUnixMs,
+    ...(typeof record.triggerEventId === "string" && record.triggerEventId.trim()
+      ? { triggerEventId: record.triggerEventId.trim() }
+      : {}),
     ...(typeof record.completedAtUnixMs === "number"
       ? { completedAtUnixMs: record.completedAtUnixMs }
       : {}),
