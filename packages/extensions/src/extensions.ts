@@ -17,6 +17,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { unzipSync } from "fflate";
+import { isSpiritIconName } from "@spiritagent/icons/names";
 
 import {
   HOOKS_CONFIG_FILE_NAME,
@@ -180,10 +181,36 @@ export interface HostExtensionDesktopViewDefinition {
   chrome?: HostExtensionDesktopViewChrome;
 }
 
+export const SUPPORTED_HOST_EXTENSION_DESKTOP_TAB_SCOPES = [
+  "window-shared",
+  "workspace",
+  "session",
+] as const;
+
+export type HostExtensionDesktopTabScope =
+  (typeof SUPPORTED_HOST_EXTENSION_DESKTOP_TAB_SCOPES)[number];
+
+export type HostExtensionDesktopTabIcon =
+  | { type: "spirit"; name: string }
+  | { type: "file"; path: string };
+
+export type HostExtensionDesktopTabRuntimeIcon =
+  | HostExtensionDesktopTabIcon
+  | { type: "image"; dataUrl: string };
+
+export interface HostExtensionDesktopTabDefinition {
+  id: string;
+  name: string;
+  path: string;
+  icon: HostExtensionDesktopTabIcon;
+  defaultScope?: HostExtensionDesktopTabScope;
+}
+
 export interface HostExtensionDesktopContributionSet {
   css?: HostExtensionDesktopCssDefinition[];
   settingsPage?: HostExtensionDesktopSettingsPageDefinition;
   views?: HostExtensionDesktopViewDefinition[];
+  tabs?: HostExtensionDesktopTabDefinition[];
 }
 
 export const SUPPORTED_HOST_EXTENSION_CLI_UI_SLOTS = [
@@ -2234,7 +2261,8 @@ function optionalDesktopContributionSetField(
     `${fieldPrefix}.settingsPage`,
   );
   const views = optionalDesktopViewDefinitionsField(value.views, `${fieldPrefix}.views`);
-  if (css.length === 0 && !settingsPage && views.length === 0) {
+  const tabs = optionalDesktopTabDefinitionsField(value.tabs, `${fieldPrefix}.tabs`);
+  if (css.length === 0 && !settingsPage && views.length === 0 && tabs.length === 0) {
     return undefined;
   }
 
@@ -2242,6 +2270,7 @@ function optionalDesktopContributionSetField(
     ...(css.length > 0 ? { css } : {}),
     ...(settingsPage ? { settingsPage } : {}),
     ...(views.length > 0 ? { views } : {}),
+    ...(tabs.length > 0 ? { tabs } : {}),
   };
 }
 
@@ -2409,6 +2438,84 @@ function optionalCliUiHookTokensField(
     ...(border ? { border } : {}),
     ...(accent ? { accent } : {}),
   };
+}
+
+function optionalDesktopTabDefinitionsField(
+  value: unknown,
+  fieldPrefix: string,
+): HostExtensionDesktopTabDefinition[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const tabs = value.map((entry, index) => parseDesktopTabDefinition(entry, index, fieldPrefix));
+  const seen = new Set<string>();
+  for (const tab of tabs) {
+    if (seen.has(tab.id)) {
+      throw new Error(`Extension field ${fieldPrefix} has a duplicate tab id: ${tab.id}`);
+    }
+    seen.add(tab.id);
+  }
+  return tabs;
+}
+
+function parseDesktopTabDefinition(
+  value: unknown,
+  index: number,
+  fieldPrefix: string,
+): HostExtensionDesktopTabDefinition {
+  if (!isRecord(value)) {
+    throw new Error(`Extension field ${fieldPrefix}[${index}] must be an object.`);
+  }
+
+  const id = stringField(value.id, `${fieldPrefix}[${index}].id`);
+  if (!EXTENSION_FIELD_KEY_PATTERN.test(id)) {
+    throw new Error(`Invalid extension tab id: ${id}`);
+  }
+  const name = stringField(value.name, `${fieldPrefix}[${index}].name`);
+  const tabPath = stringField(value.path, `${fieldPrefix}[${index}].path`);
+  assertSafeRelativePath(tabPath, `${fieldPrefix}[${index}].path`);
+  if (!tabPath.toLowerCase().endsWith(".html")) {
+    throw new Error(`Extension field ${fieldPrefix}[${index}].path must be an HTML page.`);
+  }
+  const icon = parseDesktopTabIcon(value.icon, `${fieldPrefix}[${index}].icon`);
+  const defaultScope = optionalEnumField(
+    value.defaultScope,
+    `${fieldPrefix}[${index}].defaultScope`,
+    SUPPORTED_HOST_EXTENSION_DESKTOP_TAB_SCOPES,
+  );
+
+  return {
+    id,
+    name,
+    path: tabPath,
+    icon,
+    ...(defaultScope ? { defaultScope } : {}),
+  };
+}
+
+function parseDesktopTabIcon(value: unknown, fieldPrefix: string): HostExtensionDesktopTabIcon {
+  if (!isRecord(value) || typeof value.type !== "string") {
+    throw new Error(`Extension field ${fieldPrefix} must be an icon descriptor.`);
+  }
+  if (value.type === "spirit") {
+    const name = stringField(value.name, `${fieldPrefix}.name`);
+    if (!isSpiritIconName(name)) {
+      throw new Error(`Unknown Spirit Icon name: ${name}`);
+    }
+    return { type: "spirit", name };
+  }
+  if (value.type === "file") {
+    const iconPath = stringField(value.path, `${fieldPrefix}.path`);
+    assertSafeRelativePath(iconPath, `${fieldPrefix}.path`);
+    if (!/\.(?:svg|png|jpe?g|webp)$/iu.test(iconPath)) {
+      throw new Error(
+        `Extension field ${fieldPrefix}.path must reference an SVG, PNG, JPEG, or WebP icon.`,
+      );
+    }
+    return { type: "file", path: iconPath };
+  }
+  throw new Error(`Extension field ${fieldPrefix}.type must be "spirit" or "file".`);
 }
 
 function parseDesktopCssDefinition(

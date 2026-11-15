@@ -480,6 +480,94 @@ test("desktop views-only contributions parse and reject illegal view paths", asy
   }
 });
 
+test("desktop tabs parse contributions and reject invalid entries", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-tabs-data-"));
+  const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-tabs-prepared-"));
+  const install = async (name: string, tabs: unknown) => {
+    const packageDir = join(preparedRoot, name);
+    await writeExtensionDumpPackage(packageDir, {
+      name,
+      displayName: name,
+      manifest: {
+        supportedHosts: ["desktop"],
+        requestedCapabilities: ["desktop-ui"],
+        contributes: { desktop: { tabs } },
+      },
+    });
+    return installPreparedExtensionDirectory(
+      { spiritDataDir, hostKind: "desktop" },
+      { preparedDirectoryPath: packageDir },
+    );
+  };
+
+  try {
+    const installed = await install("valid-tabs", [
+      {
+        id: "notes",
+        name: "Notes",
+        path: "ui/notes.html",
+        icon: { type: "spirit", name: "globe" },
+        defaultScope: "workspace",
+      },
+      {
+        id: "preview",
+        name: "Preview",
+        path: "ui/preview.html",
+        icon: { type: "file", path: "assets/preview.svg" },
+      },
+    ]);
+    assert.deepEqual(installed.manifest.contributes?.desktop?.tabs, [
+      {
+        id: "notes",
+        name: "Notes",
+        path: "ui/notes.html",
+        icon: { type: "spirit", name: "globe" },
+        defaultScope: "workspace",
+      },
+      {
+        id: "preview",
+        name: "Preview",
+        path: "ui/preview.html",
+        icon: { type: "file", path: "assets/preview.svg" },
+      },
+    ]);
+
+    const validTab = {
+      id: "notes",
+      name: "Notes",
+      path: "ui/notes.html",
+      icon: { type: "spirit", name: "globe" },
+    };
+    const invalidCases: Array<[string, unknown, RegExp]> = [
+      [
+        "spirit",
+        [{ ...validTab, icon: { type: "spirit", name: "file-text" } }],
+        /Unknown Spirit Icon/,
+      ],
+      [
+        "lucide",
+        [{ ...validTab, icon: { type: "spirit", name: "FileText" } }],
+        /Unknown Spirit Icon/,
+      ],
+      ["html", [{ ...validTab, path: "ui/notes.mjs" }], /must be an HTML page/],
+      ["escape", [{ ...validTab, path: "../notes.html" }], /illegal path segment/],
+      [
+        "icon-file",
+        [{ ...validTab, icon: { type: "file", path: "icon.gif" } }],
+        /SVG, PNG, JPEG, or WebP/,
+      ],
+      ["scope", [{ ...validTab, defaultScope: "global" }], /defaultScope/],
+      ["duplicate", [validTab, validTab], /duplicate tab id/],
+    ];
+    for (const [name, tabs, expected] of invalidCases) {
+      await assert.rejects(install(`invalid-${name}`, tabs), expected);
+    }
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(preparedRoot, { recursive: true, force: true });
+  }
+});
+
 test("desktop views parse chrome modes and reject invalid values", async () => {
   const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-view-chrome-data-"));
   const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-view-chrome-prepared-"));

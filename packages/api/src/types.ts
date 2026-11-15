@@ -548,6 +548,7 @@ export interface DesktopMarketplaceCatalogEntry {
   desktopCss?: DesktopExtensionDesktopCssEntry[];
   desktopSettingsPage?: DesktopExtensionDesktopSettingsPage;
   desktopViews?: DesktopExtensionDesktopView[];
+  desktopTabs?: DesktopExtensionDesktopTab[];
   cliHooks?: DesktopExtensionCliUiHookEntry[];
   instructionContributions?: DesktopExtensionInstructionContributionSummary;
   installed: boolean;
@@ -656,6 +657,24 @@ export interface DesktopExtensionDesktopSettingsPage {
 
 export type DesktopExtensionDesktopViewChrome = "default" | "close-only" | "none";
 
+export type DesktopExtensionDesktopTabScope = "window-shared" | "workspace" | "session";
+
+export type DesktopExtensionDesktopTabIcon =
+  | { type: "spirit"; name: string }
+  | { type: "file"; path: string };
+
+export type DesktopExtensionDesktopTabRuntimeIcon =
+  | DesktopExtensionDesktopTabIcon
+  | { type: "image"; dataUrl: string };
+
+export interface DesktopExtensionDesktopTab {
+  id: string;
+  name: string;
+  path: string;
+  icon: DesktopExtensionDesktopTabIcon;
+  defaultScope: DesktopExtensionDesktopTabScope;
+}
+
 export interface DesktopExtensionDesktopView {
   id: string;
   path: string;
@@ -741,6 +760,7 @@ export interface DesktopExtensionListItem {
   desktopCss?: DesktopExtensionDesktopCssEntry[];
   desktopSettingsPage?: DesktopExtensionDesktopSettingsPage;
   desktopViews?: DesktopExtensionDesktopView[];
+  desktopTabs?: DesktopExtensionDesktopTab[];
   cliHooks?: DesktopExtensionCliUiHookEntry[];
   instructionContributions?: DesktopExtensionInstructionContributionSummary;
   settingsSchema?: DesktopExtensionSettingDefinition[];
