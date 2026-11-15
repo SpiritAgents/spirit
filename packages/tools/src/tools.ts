@@ -483,12 +483,14 @@ export class NodeHostToolService<
         };
       }
       case "subagent": {
+        const model = optionalStringStrict(parsed, "model");
         const worktree = optionalBoolean(parsed, "worktree");
         const sessionId = optionalStringStrict(parsed, "session_id");
         const background = parseBackgroundOptions(parsed.background);
         return {
           name,
           prompt: requiredString(parsed, "prompt"),
+          ...(model !== undefined ? { model } : {}),
           ...(sessionId !== undefined ? { sessionId } : {}),
           ...(worktree === true ? { worktree: true } : {}),
           ...(background !== undefined ? { background } : {}),
