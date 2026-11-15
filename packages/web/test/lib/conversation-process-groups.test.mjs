@@ -421,6 +421,60 @@ test("buildConversationRenderItems keeps todo_write outside process groups", () 
   assert.equal(secondGroup.toolCounts.explore, 1);
 });
 
+test("subagent tool cards stay outside process groups and run counts", () => {
+  const messages = [
+    { id: 1, role: "user", content: "Delegate and edit", pending: false },
+    {
+      id: 2,
+      role: "assistant",
+      content: "",
+      pending: false,
+      tool: { toolName: "read_file", phase: "succeeded", headline: "Viewed", detailLines: [] },
+    },
+    {
+      id: 3,
+      role: "assistant",
+      content: "",
+      pending: false,
+      tool: {
+        toolName: "subagent",
+        phase: "succeeded",
+        headline: "Subagent done",
+        detailLines: [],
+      },
+    },
+    {
+      id: 4,
+      role: "assistant",
+      content: "",
+      pending: false,
+      tool: { toolName: "edit_file", phase: "succeeded", headline: "Edited", detailLines: [] },
+    },
+    { id: 5, role: "assistant", content: "Done.", pending: false },
+  ];
+
+  const items = buildConversationRenderItems(messages, scopeKey);
+
+  assert.deepEqual(
+    items.map((item) => item.kind),
+    ["message", "process-group", "message", "process-group", "message"],
+  );
+  const readGroup = items[1];
+  const editGroup = items[3];
+  assert.equal(readGroup.kind, "process-group");
+  assert.equal(editGroup.kind, "process-group");
+  if (readGroup.kind !== "process-group" || editGroup.kind !== "process-group") {
+    return;
+  }
+  assert.deepEqual(readGroup.messageIndices, [1]);
+  assert.equal(readGroup.toolCounts.explore, 1);
+  assert.equal(readGroup.toolCounts.other, 0);
+  assert.deepEqual(editGroup.messageIndices, [3]);
+  assert.equal(editGroup.toolCounts.edit, 1);
+  assert.equal(editGroup.toolCounts.other, 0);
+  assert.equal(isMessageHiddenByProcessGroup(items, 2), false);
+});
+
 test("background task notifications stay outside process groups and run counts", () => {
   const messages = [
     { id: 1, role: "user", content: "Run in the background", pending: false },

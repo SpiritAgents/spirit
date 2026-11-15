@@ -47,7 +47,7 @@ const EDIT_TOOLS = new Set(["edit_file", "todo_write", "dream_update", "dream_re
 const DELETE_TOOLS = new Set(["delete_file", "dream_delete"]);
 
 /** Tools excluded from process card grouping and summary counts (rendered outside the process card). */
-export const PROCESS_GROUP_EXCLUDED_TOOL_NAMES = new Set(["finish_task", "todo_write"]);
+export const PROCESS_GROUP_EXCLUDED_TOOL_NAMES = new Set(["finish_task", "todo_write", "subagent"]);
 
 export function isProcessGroupExcludedToolName(toolName: string): boolean {
   return PROCESS_GROUP_EXCLUDED_TOOL_NAMES.has(toolName);
