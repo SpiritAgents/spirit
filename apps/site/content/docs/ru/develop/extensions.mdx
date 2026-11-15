@@ -122,22 +122,23 @@ my-extension/
 
 ### Возможности
 
-| Значение             | Среда выполнения                                                                          |
-| -------------------- | ----------------------------------------------------------------------------------------- |
-| `tool-definitions`   | Требуется с `tool-execution` для предоставления `contributes.tools` модели                |
-| `tool-execution`     | Требуется с `tool-definitions` для запуска этих инструментов                              |
-| `system-prompt`      | Требуется с `main` для добавления фрагмента системного промпта                            |
-| `desktop-ui`         | Должен использоваться вместе с `contributes.desktop`                                      |
-| `cli-ui`             | Должен использоваться вместе с `contributes.cli`                                          |
-| `mcp`                | Должен использоваться вместе с `contributes.mcp`; загружает `mcp.json` в корне пакета     |
-| `hooks`              | Должен использоваться вместе с `contributes.hooks`; загружает `hooks.json` в корне пакета |
-| `skills`             | Должен использоваться вместе с `contributes.skills`; загружает `skills/<name>/SKILL.md`   |
-| `rules`              | Должен использоваться вместе с `contributes.rules`; загружает `rule.md` в корне пакета    |
-| `approval-flow`      | Только объявлено. Одобрение определяется параметром `approvalMode` каждого инструмента    |
-| `questions-flow`     | Только объявлено. Вопросы определяются параметром `approvalMode: need-questions`          |
-| `settings`           | Только объявлено. Настройки берутся из `settingsSchema`                                   |
-| `secret-storage`     | Используется с `secretSlots`                                                              |
-| `structured-results` | Только объявлено                                                                          |
+| Значение              | Среда выполнения                                                                          |
+| --------------------- | ----------------------------------------------------------------------------------------- |
+| `tool-definitions`    | Требуется с `tool-execution` для предоставления `contributes.tools` модели                |
+| `tool-execution`      | Требуется с `tool-definitions` для запуска этих инструментов                              |
+| `system-prompt`       | Требуется с `main` для добавления фрагмента системного промпта                            |
+| `desktop-ui`          | Должен использоваться вместе с `contributes.desktop`                                      |
+| `cli-ui`              | Должен использоваться вместе с `contributes.cli`                                          |
+| `mcp`                 | Должен использоваться вместе с `contributes.mcp`; загружает `mcp.json` в корне пакета     |
+| `hooks`               | Должен использоваться вместе с `contributes.hooks`; загружает `hooks.json` в корне пакета |
+| `skills`              | Должен использоваться вместе с `contributes.skills`; загружает `skills/<name>/SKILL.md`   |
+| `rules`               | Должен использоваться вместе с `contributes.rules`; загружает `rule.md` в корне пакета    |
+| `approval-flow`       | Только объявлено. Одобрение определяется параметром `approvalMode` каждого инструмента    |
+| `questions-flow`      | Только объявлено. Вопросы определяются параметром `approvalMode: need-questions`          |
+| `settings`            | Только объявлено. Настройки берутся из `settingsSchema`                                   |
+| `secret-storage`      | Используется с `secretSlots`                                                              |
+| `automation-triggers` | Used with `contributes.automationTriggers`                                                |
+| `structured-results`  | Только объявлено                                                                          |
 
 `desktop-ui` / `cli-ui` / `mcp` / `hooks` / `skills` / `rules` и соответствующая запись `contributes` должны либо присутствовать оба, либо отсутствовать оба.
 
@@ -229,12 +230,12 @@ my-extension/
 
 Требуют соответствующую capability. `contributes.mcp`, `contributes.hooks`, `contributes.skills` и `contributes.rules` равны `true` или `{}`. Пути фиксированные; свои пути задавать нельзя.
 
-| Вклад       | Capability | Файл                                                                                         |
-| ----------- | ---------- | -------------------------------------------------------------------------------------------- |
-| MCP         | `mcp`      | `mcp.json` в корне пакета (та же схема, что у пользовательского/рабочего MCP)                |
+| Вклад      | Capability | Файл                                                                                        |
+| ---------- | ---------- | ------------------------------------------------------------------------------------------- |
+| MCP        | `mcp`      | `mcp.json` в корне пакета (та же схема, что у пользовательского/рабочего MCP)               |
 | Agent хуки | `hooks`    | `hooks.json` в корне пакета (та же схема, что у agent хуки; это не `contributes.cli.hooks`) |
-| Навыки      | `skills`   | `skills/<name>/SKILL.md`                                                                     |
-| Rules       | `rules`    | `rule.md` в корне пакета                                                                     |
+| Навыки     | `skills`   | `skills/<name>/SKILL.md`                                                                    |
+| Rules      | `rules`    | `rule.md` в корне пакета                                                                    |
 
 Объявлено, но файл отсутствует или некорректен — установка отклоняется. Необъявленные файлы игнорируются и никогда не загружаются.
 
@@ -261,14 +262,11 @@ my-extension/
 
 ### `secretSlots`
 
-| Поле          | Описание                           |
-| ------------- | ---------------------------------- |
-| `key`         | Обязательно                        |
-| `title`       | Обязательно                        |
-| `description` | Необязательно                      |
-| `required`    | Необязательно. Логическое значение |
+`secretSlots` is a string array of extension-private credential keys; it does not create a generic Settings editor. Only the extension backend can use `secrets.get/has/set/delete`. Empty values are rejected and all other values are preserved exactly. Removed slots are deleted on update, declared credentials are deleted before uninstall, and disabling preserves them.
 
-Desktop хранит секреты в системной связке ключей. В режиме демона CLI `secrets.set` / `secrets.delete` могут быть недоступны.
+### `authorizations` and `automationTriggers`
+
+See the English guide for the Authorization action/view-session contract and the Automation Trigger `validate/menu/poll` provider contract, including Native menu nodes, namespaced trigger kinds, baselines, and atomic event checkpoints.
 
 ## `activate`
 
@@ -280,14 +278,14 @@ Desktop хранит секреты в системной связке ключ�
 
 ### `ctx`
 
-| Поле              | Описание                                                                                               |
-| ----------------- | ------------------------------------------------------------------------------------------------------ |
-| `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                             |
-| `host`            | API хоста. Desktop реализует `showMessageBox` и `ui.open` / `ui.close`. CLI — `{}`                     |
-| `log`             | `(message: string) => void`                                                                            |
-| `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                            |
-| `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — ключи должны быть объявлены в `secretSlots` |
-| `activationEvent` | Необязательно. `{ type, detail? }`                                                                     |
+| Поле              | Описание                                                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                                                     |
+| `host`            | API хоста. Desktop реализует `showMessageBox` и `ui.open` sessions (`result` / `close(result)`) and `openExternal`. CLI — `{}` |
+| `log`             | `(message: string) => void`                                                                                                    |
+| `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                                                    |
+| `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — ключи должны быть объявлены в `secretSlots`                         |
+| `activationEvent` | Необязательно. `{ type, detail? }`                                                                                             |
 
 ### Возвращаемое значение
 

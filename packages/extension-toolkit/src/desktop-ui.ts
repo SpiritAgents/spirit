@@ -105,3 +105,47 @@ export interface SpiritDesktopWebViewPageApi {
 export interface SpiritDesktopWebViewsPageApi {
   create(region: Element, options?: { url?: string }): Promise<SpiritDesktopWebViewPageApi>;
 }
+
+export interface SpiritDesktopViewSession {
+  readonly requestId: string;
+  readonly result: Promise<unknown>;
+  close(result?: unknown): void;
+}
+
+export interface SpiritDesktopViewHost {
+  open(viewId: string, params?: unknown): Promise<SpiritDesktopViewSession>;
+}
+
+export interface SpiritDesktopAutomationTriggerHost {
+  update(
+    contributionId: string,
+    patch: { name?: string; icon?: SpiritDesktopTabIcon },
+  ): Promise<void>;
+}
+
+export interface SpiritDesktopActionHost {
+  ui: SpiritDesktopViewHost;
+  openExternal(url: string): Promise<void>;
+  automationTriggers: SpiritDesktopAutomationTriggerHost;
+}
+
+export interface SpiritDesktopActionContext {
+  host: SpiritDesktopActionHost;
+  actionId: string;
+  params?: unknown;
+  log(message: string): void;
+  settings: {
+    get(key: string): Promise<string | number | boolean | null | undefined>;
+    getAll(): Promise<Record<string, string | number | boolean | null>>;
+    set(key: string, value: string | number | boolean | null): Promise<void>;
+    setAll(
+      values: Record<string, string | number | boolean | null>,
+    ): Promise<Record<string, string | number | boolean | null>>;
+  };
+  secrets: {
+    get(key: string): Promise<string | undefined>;
+    has(key: string): Promise<boolean>;
+    set(key: string, value: string): Promise<void>;
+    delete(key: string): Promise<void>;
+  };
+}

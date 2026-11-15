@@ -121,22 +121,23 @@ my-extension/
 
 ### 機能
 
-| 値                   | ランタイム                                                                       |
-| -------------------- | -------------------------------------------------------------------------------- |
-| `tool-definitions`   | `contributes.tools` をモデルに公開するには `tool-execution` が必要               |
-| `tool-execution`     | これらのツールを実行するには `tool-definitions` が必要                           |
-| `system-prompt`      | システムプロンプトフラグメントを提供するには `main` が必要                       |
-| `desktop-ui`         | `contributes.desktop` と対で指定する必要があります                               |
-| `cli-ui`             | `contributes.cli` と対で指定する必要があります                                   |
-| `mcp`                | `contributes.mcp` と対で指定し、パッケージルートの `mcp.json` を読み込みます     |
-| `hooks`              | `contributes.hooks` と対で指定し、パッケージルートの `hooks.json` を読み込みます |
-| `skills`             | `contributes.skills` と対で指定し、`skills/<name>/SKILL.md` を読み込みます       |
-| `rules`              | `contributes.rules` と対で指定し、パッケージルートの `rule.md` を読み込みます    |
-| `approval-flow`      | 宣言のみ。承認は各ツールの `approvalMode` によって行われます                     |
-| `questions-flow`     | 宣言のみ。質問は `approvalMode: need-questions` によって行われます               |
-| `settings`           | 宣言のみ。設定は `settingsSchema` から取得されます                               |
-| `secret-storage`     | `secretSlots` と一緒に使用されます                                               |
-| `structured-results` | 宣言のみ                                                                         |
+| 値                    | ランタイム                                                                       |
+| --------------------- | -------------------------------------------------------------------------------- |
+| `tool-definitions`    | `contributes.tools` をモデルに公開するには `tool-execution` が必要               |
+| `tool-execution`      | これらのツールを実行するには `tool-definitions` が必要                           |
+| `system-prompt`       | システムプロンプトフラグメントを提供するには `main` が必要                       |
+| `desktop-ui`          | `contributes.desktop` と対で指定する必要があります                               |
+| `cli-ui`              | `contributes.cli` と対で指定する必要があります                                   |
+| `mcp`                 | `contributes.mcp` と対で指定し、パッケージルートの `mcp.json` を読み込みます     |
+| `hooks`               | `contributes.hooks` と対で指定し、パッケージルートの `hooks.json` を読み込みます |
+| `skills`              | `contributes.skills` と対で指定し、`skills/<name>/SKILL.md` を読み込みます       |
+| `rules`               | `contributes.rules` と対で指定し、パッケージルートの `rule.md` を読み込みます    |
+| `approval-flow`       | 宣言のみ。承認は各ツールの `approvalMode` によって行われます                     |
+| `questions-flow`      | 宣言のみ。質問は `approvalMode: need-questions` によって行われます               |
+| `settings`            | 宣言のみ。設定は `settingsSchema` から取得されます                               |
+| `secret-storage`      | `secretSlots` と一緒に使用されます                                               |
+| `automation-triggers` | Used with `contributes.automationTriggers`                                       |
+| `structured-results`  | 宣言のみ                                                                         |
 
 `desktop-ui` / `cli-ui` / `mcp` / `hooks` / `skills` / `rules` と対応する `contributes` は、両方存在するか、両方存在しないかのどちらかでなければなりません。
 
@@ -228,12 +229,12 @@ my-extension/
 
 対応する capability が必要です。`contributes.mcp`、`contributes.hooks`、`contributes.skills`、`contributes.rules` は `true` または `{}` です。パスは規約どおりで、カスタム path はできません。
 
-| 貢献        | Capability | ファイル                                                                                             |
-| ----------- | ---------- | ---------------------------------------------------------------------------------------------------- |
-| MCP         | `mcp`      | パッケージルートの `mcp.json`（ユーザー/ワークスペース MCP と同じ schema）                           |
+| 貢献         | Capability | ファイル                                                                                             |
+| ------------ | ---------- | ---------------------------------------------------------------------------------------------------- |
+| MCP          | `mcp`      | パッケージルートの `mcp.json`（ユーザー/ワークスペース MCP と同じ schema）                           |
 | Agent フック | `hooks`    | パッケージルートの `hooks.json`（agent フックと同じ schema。`contributes.cli.hooks` ではありません） |
-| スキル      | `skills`   | `skills/<name>/SKILL.md`                                                                             |
-| Rules       | `rules`    | パッケージルートの `rule.md`                                                                         |
+| スキル       | `skills`   | `skills/<name>/SKILL.md`                                                                             |
+| Rules        | `rules`    | パッケージルートの `rule.md`                                                                         |
 
 宣言したのにファイルが無い、または不正な場合はインストールに失敗します。宣言されていないファイルは無視され、読み込まれません。
 
@@ -260,14 +261,11 @@ my-extension/
 
 ### `secretSlots`
 
-| フィールド    | 説明           |
-| ------------- | -------------- |
-| `key`         | 必須           |
-| `title`       | 必須           |
-| `description` | 任意           |
-| `required`    | 任意。ブール値 |
+`secretSlots` is a string array of extension-private credential keys; it does not create a generic Settings editor. Only the extension backend can use `secrets.get/has/set/delete`. Empty values are rejected and all other values are preserved exactly. Removed slots are deleted on update, declared credentials are deleted before uninstall, and disabling preserves them.
 
-デスクトップはシークレットをOSキーリングに保存します。CLIデーモンパスでは、`secrets.set` / `secrets.delete` が利用できない場合があります。
+### `authorizations` and `automationTriggers`
+
+See the English guide for the Authorization action/view-session contract and the Automation Trigger `validate/menu/poll` provider contract, including Native menu nodes, namespaced trigger kinds, baselines, and atomic event checkpoints.
 
 ## `activate`
 
@@ -279,14 +277,14 @@ my-extension/
 
 ### `ctx`
 
-| フィールド        | 説明                                                                                                           |
-| ----------------- | -------------------------------------------------------------------------------------------------------------- |
-| `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                                     |
-| `host`            | ホストAPI。デスクトップは `showMessageBox` と `ui.open` / `ui.close` を実装します。CLIは `{}`                  |
-| `log`             | `(message: string) => void`                                                                                    |
-| `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                                    |
-| `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — キーは `secretSlots` で宣言されている必要があります |
-| `activationEvent` | 任意。`{ type, detail? }`                                                                                      |
+| フィールド        | 説明                                                                                                                                      |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                                                                |
+| `host`            | ホストAPI。デスクトップは `showMessageBox` と `ui.open` sessions (`result` / `close(result)`) and `openExternal` を実装します。CLIは `{}` |
+| `log`             | `(message: string) => void`                                                                                                               |
+| `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                                                               |
+| `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — キーは `secretSlots` で宣言されている必要があります                            |
+| `activationEvent` | 任意。`{ type, detail? }`                                                                                                                 |
 
 ### 戻り値
 

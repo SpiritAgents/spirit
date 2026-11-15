@@ -202,3 +202,31 @@ test("parseCapabilitiesFlag validates and de-duplicates", () => {
   assert.deepEqual(parseCapabilitiesFlag("skills, rules,skills"), ["skills", "rules"]);
   assert.throws(() => parseCapabilitiesFlag("skills,nope"), /Unknown capability/);
 });
+
+test("authorization scaffolds private secrets, an action, and a view session", async () => {
+  const { files } = await scaffold({ capabilities: ["authorization"] });
+  const dump = parseExtensionDumpText(files[".spirit/extension.json"] ?? "");
+  assert.deepEqual(dump.manifest.secretSlots, ["oauthAccessToken"]);
+  assert.deepEqual(dump.manifest.requestedCapabilities, ["secret-storage", "desktop-ui"]);
+  assert.deepEqual(dump.manifest.contributes?.authorizations, [
+    { id: "oauth", action: "authorize", secretSlots: ["oauthAccessToken"] },
+  ]);
+  assert.ok(files["ui/authorize.mjs"]?.includes("close({ accessToken"));
+  assert.ok(files["ui/authorize.mjs"]?.includes("close({ disconnect: true })"));
+  assert.ok(files["index.mjs"]?.includes("context.host.ui.open"));
+  assert.ok(files["index.mjs"]?.includes("context.secrets.has"));
+  assert.ok(files["index.mjs"]?.includes("context.secrets.set"));
+  assert.ok(files["index.mjs"]?.includes("context.secrets.delete"));
+});
+
+test("Automation triggers scaffold validation, native menu, and polling", async () => {
+  const { files } = await scaffold({ capabilities: ["automation-triggers"] });
+  const dump = parseExtensionDumpText(files[".spirit/extension.json"] ?? "");
+  assert.deepEqual(dump.manifest.requestedCapabilities, ["automation-triggers"]);
+  const triggers = dump.manifest.contributes?.automationTriggers as Array<Record<string, unknown>>;
+  assert.equal(triggers[0]?.configuration, "menu");
+  assert.ok(files["index.mjs"]?.includes("export const automationTriggers"));
+  assert.ok(files["index.mjs"]?.includes("validate({ config })"));
+  assert.ok(files["index.mjs"]?.includes("menu({ path })"));
+  assert.ok(files["index.mjs"]?.includes("poll({ triggers })"));
+});

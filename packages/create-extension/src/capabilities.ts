@@ -15,6 +15,8 @@ export const INIT_CAPABILITY_IDS = [
   "desktop-settings-page",
   "desktop-views",
   "desktop-tabs",
+  "authorization",
+  "automation-triggers",
   "system-prompt",
 ] as const;
 
@@ -32,6 +34,8 @@ export interface CapabilityDefinition {
   requestedCapabilities: string[];
   /** manifest.contributes fragments (deep-merged by the caller). */
   contributes(input: { name: string; title: string }): Record<string, unknown>;
+  /** Additional top-level manifest fields, such as private secret declarations. */
+  manifest?(input: { name: string; title: string }): Record<string, unknown>;
   /** Files scaffolded for this capability, relative to the extension root. */
   files(input: { name: string; title: string; description: string }): Record<string, string>;
 }
@@ -303,6 +307,66 @@ button { width: fit-content; }
     }),
   },
   {
+    id: "authorization",
+    label: "Authorization (private secrets + action + Desktop view)",
+    requestedCapabilities: ["secret-storage", "desktop-ui"],
+    manifest: () => ({ secretSlots: ["oauthAccessToken"] }),
+    contributes: () => ({
+      authorizations: [{ id: "oauth", action: "authorize", secretSlots: ["oauthAccessToken"] }],
+      desktop: {
+        views: [{ id: "authorize", path: "ui/authorize.mjs", title: "Authorize" }],
+      },
+    }),
+    files: () => ({
+      "ui/authorize.mjs": `import { createElement } from "react";
+import { Button, Card } from "@spirit/desktop-ui";
+
+export default function View({ params, close }) {
+  return createElement(
+    Card,
+    { className: "flex items-center justify-between gap-3 p-4" },
+    createElement("span", null, params.configured
+      ? "Manage the configured credential."
+      : "Connect this extension to your account."),
+    createElement("div", { className: "flex gap-2" },
+      params.configured
+        ? createElement(Button, { type: "button", variant: "destructive", onClick: () => close({ disconnect: true }) }, "Disconnect")
+        : null,
+      createElement(Button, { type: "button", onClick: () => close({ accessToken: "demo-access-token" }) },
+        params.configured ? "Reauthorize" : "Authorize"),
+    ),
+  );
+}
+`,
+    }),
+  },
+  {
+    id: "automation-triggers",
+    label: "Automation triggers (validate + Native menu + poll)",
+    requestedCapabilities: ["automation-triggers"],
+    contributes: (input) => ({
+      automationTriggers: [
+        {
+          id: "activity",
+          name: input.title,
+          description: `React to activity from ${input.title}.`,
+          icon: { type: "spirit", name: "compose" },
+          configuration: "menu",
+          inputSchema: {
+            type: "object",
+            properties: {
+              repository: { type: "string" },
+              event: { type: "string", enum: ["created"] },
+            },
+            required: ["repository", "event"],
+            additionalProperties: false,
+          },
+        },
+      ],
+    }),
+    files: () => ({}),
+  },
+  {
     id: "system-prompt",
     label: "System prompt contribution (main module export)",
     requestedCapabilities: ["system-prompt"],
@@ -324,7 +388,9 @@ export function needsMainModule(capabilities: readonly InitCapabilityId[]): bool
   return (
     capabilities.includes("tools") ||
     capabilities.includes("system-prompt") ||
-    capabilities.includes("desktop-tabs")
+    capabilities.includes("desktop-tabs") ||
+    capabilities.includes("authorization") ||
+    capabilities.includes("automation-triggers")
   );
 }
 
@@ -354,6 +420,62 @@ export function buildMainModule(
   }
   throw new Error("Unknown tab request method: " + method);
 }
+`);
+  }
+  if (capabilities.includes("authorization")) {
+    parts.push(`export const actions = {
+  authorize: async (context) => {
+    const session = await context.host.ui.open("authorize", {
+      extensionName: "${input.title}",
+      configured: await context.secrets.has("oauthAccessToken"),
+    });
+    const result = await session.result;
+    if (result && typeof result.accessToken === "string" && result.accessToken.length > 0) {
+      await context.secrets.set("oauthAccessToken", result.accessToken);
+    }
+    if (result && result.disconnect === true) {
+      await context.secrets.delete("oauthAccessToken");
+    }
+    return { configured: await context.secrets.has("oauthAccessToken") };
+  },
+};
+`);
+  }
+  if (capabilities.includes("automation-triggers")) {
+    parts.push(`export const automationTriggers = {
+  activity: {
+    validate({ config }) {
+      if (typeof config.repository !== "string" || !config.repository.trim()) {
+        throw new Error("Repository is required.");
+      }
+      return { config, label: config.repository + " · " + config.event };
+    },
+    menu({ path }) {
+      if (path.length === 0) {
+        return {
+          items: [{ action: "submenu", id: "example", label: "Example Repository" }],
+          searchPlaceholder: "Search repositories",
+        };
+      }
+      return {
+        items: [{
+          action: "select",
+          id: "created",
+          label: "Created",
+          config: { repository: "example", event: "created" },
+        }],
+      };
+    },
+    poll({ triggers }) {
+      return {
+        results: triggers.map((trigger) => ({
+          automationId: trigger.automationId,
+          checkpoint: { initialized: true },
+        })),
+      };
+    },
+  },
+};
 `);
   }
   if (capabilities.includes("system-prompt")) {

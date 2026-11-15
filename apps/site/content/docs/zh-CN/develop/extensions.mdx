@@ -121,22 +121,23 @@ my-extension/
 
 ### 能力
 
-| 值                   | 运行时                                                                |
-| -------------------- | --------------------------------------------------------------------- |
-| `tool-definitions`   | 须与 `tool-execution` 同时声明，才会把 `contributes.tools` 暴露给模型 |
-| `tool-execution`     | 须与 `tool-definitions` 同时声明，才会执行这些工具                    |
-| `system-prompt`      | 须与 `main` 同时具备，才会贡献 system 片段                            |
-| `desktop-ui`         | 必须与 `contributes.desktop` 成对出现                                 |
-| `cli-ui`             | 必须与 `contributes.cli` 成对出现                                     |
-| `mcp`                | 必须与 `contributes.mcp` 成对出现；加载包根 `mcp.json`                |
-| `hooks`              | 必须与 `contributes.hooks` 成对出现；加载包根 `hooks.json`            |
-| `skills`             | 必须与 `contributes.skills` 成对出现；加载 `skills/<name>/SKILL.md`   |
-| `rules`              | 必须与 `contributes.rules` 成对出现；加载包根 `rule.md`               |
-| `approval-flow`      | 仅声明。审批由各工具的 `approvalMode` 驱动                            |
-| `questions-flow`     | 仅声明。问卷由 `approvalMode: need-questions` 驱动                    |
-| `settings`           | 仅声明。设置来自 `settingsSchema`                                     |
-| `secret-storage`     | 与 `secretSlots` 一起使用                                             |
-| `structured-results` | 仅声明                                                                |
+| 值                    | 运行时                                                                |
+| --------------------- | --------------------------------------------------------------------- |
+| `tool-definitions`    | 须与 `tool-execution` 同时声明，才会把 `contributes.tools` 暴露给模型 |
+| `tool-execution`      | 须与 `tool-definitions` 同时声明，才会执行这些工具                    |
+| `system-prompt`       | 须与 `main` 同时具备，才会贡献 system 片段                            |
+| `desktop-ui`          | 必须与 `contributes.desktop` 成对出现                                 |
+| `cli-ui`              | 必须与 `contributes.cli` 成对出现                                     |
+| `mcp`                 | 必须与 `contributes.mcp` 成对出现；加载包根 `mcp.json`                |
+| `hooks`               | 必须与 `contributes.hooks` 成对出现；加载包根 `hooks.json`            |
+| `skills`              | 必须与 `contributes.skills` 成对出现；加载 `skills/<name>/SKILL.md`   |
+| `rules`               | 必须与 `contributes.rules` 成对出现；加载包根 `rule.md`               |
+| `approval-flow`       | 仅声明。审批由各工具的 `approvalMode` 驱动                            |
+| `questions-flow`      | 仅声明。问卷由 `approvalMode: need-questions` 驱动                    |
+| `settings`            | 仅声明。设置来自 `settingsSchema`                                     |
+| `secret-storage`      | 与 `secretSlots` 一起使用                                             |
+| `automation-triggers` | Used with `contributes.automationTriggers`                            |
+| `structured-results`  | 仅声明                                                                |
 
 `desktop-ui` / `cli-ui` / `mcp` / `hooks` / `skills` / `rules` 与对应的 `contributes` 项必须同时有或同时没有。
 
@@ -228,12 +229,12 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 
 须与对应能力成对。`contributes.mcp`、`contributes.hooks`、`contributes.skills`、`contributes.rules` 取 `true` 或 `{}`。路径是约定路径，不允许自定义 path。
 
-| 贡献面      | 能力     | 文件                                                                        |
-| ----------- | -------- | --------------------------------------------------------------------------- |
-| MCP         | `mcp`    | 包根 `mcp.json`（与用户/工作区 MCP 同 schema）                              |
+| 贡献面     | 能力     | 文件                                                                      |
+| ---------- | -------- | ------------------------------------------------------------------------- |
+| MCP        | `mcp`    | 包根 `mcp.json`（与用户/工作区 MCP 同 schema）                            |
 | Agent 挂钩 | `hooks`  | 包根 `hooks.json`（与 agent 挂钩同 schema；不是 `contributes.cli.hooks`） |
-| 技能      | `skills` | `skills/<name>/SKILL.md`                                                    |
-| Rules       | `rules`  | 包根 `rule.md`                                                              |
+| 技能       | `skills` | `skills/<name>/SKILL.md`                                                  |
+| Rules      | `rules`  | 包根 `rule.md`                                                            |
 
 已声明但文件缺失或非法则安装失败。包内有文件但未声明则忽略，永不加载。
 
@@ -260,14 +261,110 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 
 ### `secretSlots`
 
-| 参数          | 说明         |
-| ------------- | ------------ |
-| `key`         | 必填         |
-| `title`       | 必填         |
-| `description` | 可选         |
-| `required`    | 可选。布尔值 |
+`secretSlots` 是扩展私有凭据键名的字符串数组，不会在设置页生成通用编辑器。只有扩展后台可以通过 `secrets.get/has/set/delete` 读取或写入这些值。
 
-Desktop 把密钥存在操作系统钥匙串。在 CLI daemon 路径上，`secrets.set` / `secrets.delete` 可能不可用。
+```jsonc
+{
+  "requestedCapabilities": ["secret-storage"],
+  "secretSlots": ["oauthAccessToken", "refreshToken"],
+}
+```
+
+`set` 只拒绝空字符串，其余内容精确保留，包括空白与末尾换行。更新扩展时会删除新 manifest 不再声明的槽位；卸载时会先删除全部已声明凭据再删除扩展文件；禁用则保留凭据。
+
+### `authorizations`
+
+当扩展需要自行完成交互式授权流程时，声明 `authorizations`。扩展安装后，市场会显示“授权”按钮。`configured` 仅表示关联槽位均已配置，不代表远端凭据仍然有效。
+
+```jsonc
+{
+  "contributes": {
+    "authorizations": [
+      {
+        "id": "oauth",
+        "action": "authorize",
+        "secretSlots": ["oauthAccessToken"],
+      },
+    ],
+  },
+}
+```
+
+通过 `actions` 实现动作。`host.ui.open(viewId, params)` 返回属于当前扩展的 view session，提供 `result` 与 `close(result)`，不能打开或关闭其他扩展的视图。`host.openExternal(url)` 支持 HTTPS 与本地回环 HTTP。
+
+```js
+export const actions = {
+  async authorize(context) {
+    const session = await context.host.ui.open("authorize", { product: "example" });
+    const result = await session.result;
+    if (result?.accessToken) {
+      await context.secrets.set("oauthAccessToken", result.accessToken);
+    }
+    return result;
+  },
+};
+```
+
+长期凭据只能留在后台：不要放入 action 返回值、视图参数、快照或日志。
+
+### `automationTriggers`
+
+Automation Trigger 可以贡献 Native 菜单项、模型可见的配置 schema 和后台 provider。持久化的 kind 为 `extension:<sourceId>/<extensionName>/<contributionId>`。
+
+```jsonc
+{
+  "requestedCapabilities": ["automation-triggers"],
+  "contributes": {
+    "automationTriggers": [
+      {
+        "id": "repository-activity",
+        "name": "Repository Activity",
+        "description": "React to new repository activity.",
+        "icon": { "type": "spirit", "name": "globe" },
+        "configuration": "menu",
+        "inputSchema": {
+          "type": "object",
+          "properties": { "repository": { "type": "string" } },
+          "required": ["repository"],
+          "additionalProperties": false,
+        },
+      },
+    ],
+  },
+}
+```
+
+省略 `configuration` 时，菜单项会直接用 `{}` 调用 `validate`。声明 `"menu"` 后，通过 `menu({ path, query, page, signal })` 返回 Native `submenu` 或 `select` 节点；搜索、分页、加载、错误和重试均由宿主处理。`select` 只返回非秘密配置，并在保存前统一校验。
+
+```js
+export const automationTriggers = {
+  "repository-activity": {
+    validate({ config }) {
+      return { config, label: `${config.repository} · activity` };
+    },
+    menu({ path }) {
+      if (path.length === 0) {
+        return { items: [{ action: "submenu", id: "example", label: "Example" }] };
+      }
+      return {
+        items: [
+          { action: "select", id: "created", label: "Created", config: { repository: "example" } },
+        ],
+      };
+    },
+    poll({ triggers, signal }) {
+      return {
+        results: triggers.map((trigger) => ({
+          automationId: trigger.automationId,
+          checkpoint: { initialized: true },
+        })),
+      };
+    },
+  },
+};
+```
+
+首次没有 state 的 poll 只建立 baseline。事件必须包含稳定的 `id`、英文 `summary`、可选 JSON `context` 和逐事件 `checkpoint`。Run 创建与 checkpoint 推进是原子操作，重启不会重复消费同一事件。`create_automation` 会把已启用的贡献加入封闭的 `oneOf` 分支，并与 UI 使用同一个 `validate` 流程。
 
 ## `activate`
 
@@ -279,14 +376,14 @@ Desktop 把密钥存在操作系统钥匙串。在 CLI daemon 路径上，`secre
 
 ### `ctx`
 
-| 参数              | 说明                                                                                     |
-| ----------------- | ---------------------------------------------------------------------------------------- |
-| `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                               |
-| `host`            | 宿主 API。Desktop 实现 `showMessageBox` 与 `ui.open` / `ui.close`。CLI 为 `{}`           |
-| `log`             | `(message: string) => void`                                                              |
-| `settings`        | `get(key)`、`getAll()`、`set(key, value)`、`setAll(values)`                              |
-| `secrets`         | `get(key)`、`has(key)`、`set(key, value)`、`delete(key)` — 键必须在 `secretSlots` 中声明 |
-| `activationEvent` | 可选。`{ type, detail? }`                                                                |
+| 参数              | 说明                                                                                                                       |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                                                 |
+| `host`            | 宿主 API。Desktop 实现 `showMessageBox` 与 `ui.open` sessions (`result` / `close(result)`) and `openExternal`。CLI 为 `{}` |
+| `log`             | `(message: string) => void`                                                                                                |
+| `settings`        | `get(key)`、`getAll()`、`set(key, value)`、`setAll(values)`                                                                |
+| `secrets`         | `get(key)`、`has(key)`、`set(key, value)`、`delete(key)` — 键必须在 `secretSlots` 中声明                                   |
+| `activationEvent` | 可选。`{ type, detail? }`                                                                                                  |
 
 ### 返回值
 

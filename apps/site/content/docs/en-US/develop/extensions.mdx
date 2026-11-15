@@ -122,22 +122,23 @@ The `manifest` object is the extension's runtime declaration: which hosts it sup
 
 ### Capabilities
 
-| Value                | Runtime                                                                   |
-| -------------------- | ------------------------------------------------------------------------- |
-| `tool-definitions`   | Required with `tool-execution` to expose `contributes.tools` to the model |
-| `tool-execution`     | Required with `tool-definitions` to run those tools                       |
-| `system-prompt`      | Required with `main` to contribute a system prompt fragment               |
-| `desktop-ui`         | Must be paired with `contributes.desktop`                                 |
-| `cli-ui`             | Must be paired with `contributes.cli`                                     |
-| `mcp`                | Must be paired with `contributes.mcp`; loads package-root `mcp.json`      |
-| `hooks`              | Must be paired with `contributes.hooks`; loads package-root `hooks.json`  |
-| `skills`             | Must be paired with `contributes.skills`; loads `skills/<name>/SKILL.md`  |
-| `rules`              | Must be paired with `contributes.rules`; loads package-root `rule.md`     |
-| `approval-flow`      | Declared only. Approval is driven by each tool's `approvalMode`           |
-| `questions-flow`     | Declared only. Questions are driven by `approvalMode: need-questions`     |
-| `settings`           | Declared only. Settings come from `settingsSchema`                        |
-| `secret-storage`     | Used with `secretSlots`                                                   |
-| `structured-results` | Declared only                                                             |
+| Value                 | Runtime                                                                   |
+| --------------------- | ------------------------------------------------------------------------- |
+| `tool-definitions`    | Required with `tool-execution` to expose `contributes.tools` to the model |
+| `tool-execution`      | Required with `tool-definitions` to run those tools                       |
+| `system-prompt`       | Required with `main` to contribute a system prompt fragment               |
+| `desktop-ui`          | Must be paired with `contributes.desktop`                                 |
+| `cli-ui`              | Must be paired with `contributes.cli`                                     |
+| `mcp`                 | Must be paired with `contributes.mcp`; loads package-root `mcp.json`      |
+| `hooks`               | Must be paired with `contributes.hooks`; loads package-root `hooks.json`  |
+| `skills`              | Must be paired with `contributes.skills`; loads `skills/<name>/SKILL.md`  |
+| `rules`               | Must be paired with `contributes.rules`; loads package-root `rule.md`     |
+| `approval-flow`       | Declared only. Approval is driven by each tool's `approvalMode`           |
+| `questions-flow`      | Declared only. Questions are driven by `approvalMode: need-questions`     |
+| `settings`            | Declared only. Settings come from `settingsSchema`                        |
+| `secret-storage`      | Used with `secretSlots`                                                   |
+| `automation-triggers` | Used with `contributes.automationTriggers`                                |
+| `structured-results`  | Declared only                                                             |
 
 `desktop-ui` / `cli-ui` / `mcp` / `hooks` / `skills` / `rules` and the matching `contributes` entry must both be present or both be absent.
 
@@ -261,14 +262,110 @@ Values are `string`, `number`, `boolean`, or `null`. `null` clears a non-require
 
 ### `secretSlots`
 
-| Field         | Description       |
-| ------------- | ----------------- |
-| `key`         | Required          |
-| `title`       | Required          |
-| `description` | Optional          |
-| `required`    | Optional. Boolean |
+`secretSlots` is a string array of extension-private credential keys. It never creates a generic editor in Settings. Only the extension backend can read or write these values through `secrets.get/has/set/delete`.
 
-Desktop stores secrets in the OS keyring. On the CLI daemon path, `secrets.set` / `secrets.delete` may be unavailable.
+```jsonc
+{
+  "requestedCapabilities": ["secret-storage"],
+  "secretSlots": ["oauthAccessToken", "refreshToken"],
+}
+```
+
+`set` rejects empty strings and otherwise preserves the exact value, including whitespace and trailing newlines. Updating an extension deletes slots removed by the new manifest. Uninstalling deletes all declared credentials before removing the extension files; disabling preserves them.
+
+### `authorizations`
+
+Declare an authorization when the extension owns an interactive credential flow. The Marketplace shows an Authorize action for installed extensions. `configured` means all referenced slots are present, not that the remote credential is still valid.
+
+```jsonc
+{
+  "contributes": {
+    "authorizations": [
+      {
+        "id": "oauth",
+        "action": "authorize",
+        "secretSlots": ["oauthAccessToken"],
+      },
+    ],
+  },
+}
+```
+
+Implement the action with `actions`. `host.ui.open(viewId, params)` returns an owned view session with `result` and `close(result)`. It cannot open or close another extension's view. `host.openExternal(url)` supports HTTPS and loopback HTTP.
+
+```js
+export const actions = {
+  async authorize(context) {
+    const session = await context.host.ui.open("authorize", { product: "example" });
+    const result = await session.result;
+    if (result?.accessToken) {
+      await context.secrets.set("oauthAccessToken", result.accessToken);
+    }
+    return result;
+  },
+};
+```
+
+Secrets must stay in the backend: do not return them from actions, put them in view params, snapshots, or logs.
+
+### `automationTriggers`
+
+An Automation trigger contributes a Native menu item, a model-visible config schema, and a backend provider. Its persisted kind is `extension:<sourceId>/<extensionName>/<contributionId>`.
+
+```jsonc
+{
+  "requestedCapabilities": ["automation-triggers"],
+  "contributes": {
+    "automationTriggers": [
+      {
+        "id": "repository-activity",
+        "name": "Repository Activity",
+        "description": "React to new repository activity.",
+        "icon": { "type": "spirit", "name": "globe" },
+        "configuration": "menu",
+        "inputSchema": {
+          "type": "object",
+          "properties": { "repository": { "type": "string" } },
+          "required": ["repository"],
+          "additionalProperties": false,
+        },
+      },
+    ],
+  },
+}
+```
+
+Omit `configuration` for a trigger that validates `{}` immediately. With `"menu"`, implement `menu({ path, query, page, signal })` and return Native `submenu` or `select` nodes; the host owns search, pagination, loading, errors, and retry. `select` returns a non-secret config and is always validated before saving.
+
+```js
+export const automationTriggers = {
+  "repository-activity": {
+    validate({ config }) {
+      return { config, label: `${config.repository} · activity` };
+    },
+    menu({ path }) {
+      if (path.length === 0) {
+        return { items: [{ action: "submenu", id: "example", label: "Example" }] };
+      }
+      return {
+        items: [
+          { action: "select", id: "created", label: "Created", config: { repository: "example" } },
+        ],
+      };
+    },
+    poll({ triggers, signal }) {
+      return {
+        results: triggers.map((trigger) => ({
+          automationId: trigger.automationId,
+          checkpoint: { initialized: true },
+        })),
+      };
+    },
+  },
+};
+```
+
+The first poll without state establishes a baseline. Events need a stable `id`, an English `summary`, optional JSON `context`, and a per-event `checkpoint`. Run creation and checkpoint advancement are atomic, so restarts cannot consume the same event twice. `create_automation` exposes enabled contributions as closed `oneOf` branches and applies the same `validate` path as the UI.
 
 ## `activate`
 
@@ -280,14 +377,14 @@ Desktop stores secrets in the OS keyring. On the CLI daemon path, `secrets.set` 
 
 ### `ctx`
 
-| Field             | Description                                                                                       |
-| ----------------- | ------------------------------------------------------------------------------------------------- |
-| `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                        |
-| `host`            | Host API. Desktop implements `showMessageBox` and `ui.open` / `ui.close`. CLI is `{}`             |
-| `log`             | `(message: string) => void`                                                                       |
-| `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                       |
-| `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — keys must be declared in `secretSlots` |
-| `activationEvent` | Optional. `{ type, detail? }`                                                                     |
+| Field             | Description                                                                                                                       |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                                                        |
+| `host`            | Host API. Desktop implements `showMessageBox` and `ui.open` sessions (`result` / `close(result)`) and `openExternal`. CLI is `{}` |
+| `log`             | `(message: string) => void`                                                                                                       |
+| `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                                                       |
+| `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — keys must be declared in `secretSlots`                                 |
+| `activationEvent` | Optional. `{ type, detail? }`                                                                                                     |
 
 ### Return value
 

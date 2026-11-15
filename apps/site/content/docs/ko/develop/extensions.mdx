@@ -121,22 +121,23 @@ my-extension/
 
 ### 역량
 
-| 값                   | 런타임                                                                      |
-| -------------------- | --------------------------------------------------------------------------- |
-| `tool-definitions`   | `contributes.tools`를 모델에 노출하려면 `tool-execution`과 함께 필요        |
-| `tool-execution`     | 해당 도구를 실행하려면 `tool-definitions`와 함께 필요                       |
-| `system-prompt`      | 시스템 프롬프트 조각을 기여하려면 `main`과 함께 필요                        |
-| `desktop-ui`         | `contributes.desktop`와 함께 사용해야 합니다.                               |
-| `cli-ui`             | `contributes.cli`와 함께 사용해야 합니다.                                   |
-| `mcp`                | `contributes.mcp`와 함께 사용하며 패키지 루트 `mcp.json`을 로드합니다.      |
-| `hooks`              | `contributes.hooks`와 함께 사용하며 패키지 루트 `hooks.json`을 로드합니다.  |
-| `skills`             | `contributes.skills`와 함께 사용하며 `skills/<name>/SKILL.md`를 로드합니다. |
-| `rules`              | `contributes.rules`와 함께 사용하며 패키지 루트 `rule.md`를 로드합니다.     |
-| `approval-flow`      | 선언만 가능합니다. 승인은 각 도구의 `approvalMode`에 따라 결정됩니다.       |
-| `questions-flow`     | 선언만 가능합니다. 질문은 `approvalMode: need-questions`에 따라 결정됩니다. |
-| `settings`           | 선언만 가능합니다. 설정은 `settingsSchema`에서 가져옵니다.                  |
-| `secret-storage`     | `secretSlots`와 함께 사용됩니다.                                            |
-| `structured-results` | 선언만 가능합니다.                                                          |
+| 값                    | 런타임                                                                      |
+| --------------------- | --------------------------------------------------------------------------- |
+| `tool-definitions`    | `contributes.tools`를 모델에 노출하려면 `tool-execution`과 함께 필요        |
+| `tool-execution`      | 해당 도구를 실행하려면 `tool-definitions`와 함께 필요                       |
+| `system-prompt`       | 시스템 프롬프트 조각을 기여하려면 `main`과 함께 필요                        |
+| `desktop-ui`          | `contributes.desktop`와 함께 사용해야 합니다.                               |
+| `cli-ui`              | `contributes.cli`와 함께 사용해야 합니다.                                   |
+| `mcp`                 | `contributes.mcp`와 함께 사용하며 패키지 루트 `mcp.json`을 로드합니다.      |
+| `hooks`               | `contributes.hooks`와 함께 사용하며 패키지 루트 `hooks.json`을 로드합니다.  |
+| `skills`              | `contributes.skills`와 함께 사용하며 `skills/<name>/SKILL.md`를 로드합니다. |
+| `rules`               | `contributes.rules`와 함께 사용하며 패키지 루트 `rule.md`를 로드합니다.     |
+| `approval-flow`       | 선언만 가능합니다. 승인은 각 도구의 `approvalMode`에 따라 결정됩니다.       |
+| `questions-flow`      | 선언만 가능합니다. 질문은 `approvalMode: need-questions`에 따라 결정됩니다. |
+| `settings`            | 선언만 가능합니다. 설정은 `settingsSchema`에서 가져옵니다.                  |
+| `secret-storage`      | `secretSlots`와 함께 사용됩니다.                                            |
+| `automation-triggers` | Used with `contributes.automationTriggers`                                  |
+| `structured-results`  | 선언만 가능합니다.                                                          |
 
 `desktop-ui` / `cli-ui` / `mcp` / `hooks` / `skills` / `rules`와 해당 `contributes` 항목은 모두 있거나 모두 없어야 합니다.
 
@@ -228,12 +229,12 @@ my-extension/
 
 대응하는 capability가 필요합니다. `contributes.mcp`, `contributes.hooks`, `contributes.skills`, `contributes.rules`는 `true` 또는 `{}`입니다. 경로는 규약이며 사용자 지정 path는 허용되지 않습니다.
 
-| 기여        | Capability | 파일                                                                                   |
-| ----------- | ---------- | -------------------------------------------------------------------------------------- |
-| MCP         | `mcp`      | 패키지 루트 `mcp.json` (사용자/워크스페이스 MCP와 동일한 schema)                       |
+| 기여     | Capability | 파일                                                                                   |
+| -------- | ---------- | -------------------------------------------------------------------------------------- |
+| MCP      | `mcp`      | 패키지 루트 `mcp.json` (사용자/워크스페이스 MCP와 동일한 schema)                       |
 | Agent 훅 | `hooks`    | 패키지 루트 `hooks.json` (agent hooks와 동일한 schema. `contributes.cli.hooks`가 아님) |
-| 스킬      | `skills`   | `skills/<name>/SKILL.md`                                                               |
-| Rules       | `rules`    | 패키지 루트 `rule.md`                                                                  |
+| 스킬     | `skills`   | `skills/<name>/SKILL.md`                                                               |
+| Rules    | `rules`    | 패키지 루트 `rule.md`                                                                  |
 
 선언했는데 파일이 없거나 잘못된 경우 설치가 실패합니다. 선언되지 않은 파일은 무시되며 로드되지 않습니다.
 
@@ -260,14 +261,11 @@ my-extension/
 
 ### `secretSlots`
 
-| 필드          | 설명            |
-| ------------- | --------------- |
-| `key`         | 필수            |
-| `title`       | 필수            |
-| `description` | 선택 사항       |
-| `required`    | 선택 사항. 부울 |
+`secretSlots` is a string array of extension-private credential keys; it does not create a generic Settings editor. Only the extension backend can use `secrets.get/has/set/delete`. Empty values are rejected and all other values are preserved exactly. Removed slots are deleted on update, declared credentials are deleted before uninstall, and disabling preserves them.
 
-Desktop은 OS 키링에 비밀을 저장합니다. CLI 데몬 경로에서는 `secrets.set` / `secrets.delete`를 사용하지 못할 수 있습니다.
+### `authorizations` and `automationTriggers`
+
+See the English guide for the Authorization action/view-session contract and the Automation Trigger `validate/menu/poll` provider contract, including Native menu nodes, namespaced trigger kinds, baselines, and atomic event checkpoints.
 
 ## `activate`
 
@@ -279,14 +277,14 @@ Desktop은 OS 키링에 비밀을 저장합니다. CLI 데몬 경로에서는 `s
 
 ### `ctx`
 
-| 필드              | 설명                                                                                               |
-| ----------------- | -------------------------------------------------------------------------------------------------- |
-| `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                         |
-| `host`            | 호스트 API. Desktop은 `showMessageBox`와 `ui.open` / `ui.close`를 구현합니다. CLI는 `{}`입니다.    |
-| `log`             | `(message: string) => void`                                                                        |
-| `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                        |
-| `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — 키는 `secretSlots`에서 선언해야 합니다. |
-| `activationEvent` | 선택 사항. `{ type, detail? }`                                                                     |
+| 필드              | 설명                                                                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                                                                  |
+| `host`            | 호스트 API. Desktop은 `showMessageBox`와 `ui.open` sessions (`result` / `close(result)`) and `openExternal`를 구현합니다. CLI는 `{}`입니다. |
+| `log`             | `(message: string) => void`                                                                                                                 |
+| `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                                                                 |
+| `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — 키는 `secretSlots`에서 선언해야 합니다.                                          |
+| `activationEvent` | 선택 사항. `{ type, detail? }`                                                                                                              |
 
 ### 반환 값
 

@@ -122,22 +122,23 @@ Das `manifest`-Objekt ist die Laufzeitdeklaration der Erweiterung: welche Hosts 
 
 ### Fähigkeiten
 
-| Wert                 | Laufzeit                                                                                 |
-| -------------------- | ---------------------------------------------------------------------------------------- |
-| `tool-definitions`   | Erforderlich mit `tool-execution`, um `contributes.tools` für das Modell bereitzustellen |
-| `tool-execution`     | Erforderlich mit `tool-definitions`, um diese Werkzeuge auszuführen                      |
-| `system-prompt`      | Erforderlich mit `main`, um einen Systemprompt-Fragment beizutragen                      |
-| `desktop-ui`         | Muss mit `contributes.desktop` gepaart sein                                              |
-| `cli-ui`             | Muss mit `contributes.cli` gepaart sein                                                  |
-| `mcp`                | Muss mit `contributes.mcp` gepaart sein; lädt `mcp.json` im Paketstamm                   |
-| `hooks`              | Muss mit `contributes.hooks` gepaart sein; lädt `hooks.json` im Paketstamm               |
-| `skills`             | Muss mit `contributes.skills` gepaart sein; lädt `skills/<name>/SKILL.md`                |
-| `rules`              | Muss mit `contributes.rules` gepaart sein; lädt `rule.md` im Paketstamm                  |
-| `approval-flow`      | Nur deklariert. Die Genehmigung wird durch den `approvalMode` jedes Tools gesteuert      |
-| `questions-flow`     | Nur deklariert. Fragen werden durch `approvalMode: need-questions` gesteuert             |
-| `settings`           | Nur deklariert. Einstellungen kommen aus `settingsSchema`                                |
-| `secret-storage`     | Wird mit `secretSlots` verwendet                                                         |
-| `structured-results` | Nur deklariert                                                                           |
+| Wert                  | Laufzeit                                                                                 |
+| --------------------- | ---------------------------------------------------------------------------------------- |
+| `tool-definitions`    | Erforderlich mit `tool-execution`, um `contributes.tools` für das Modell bereitzustellen |
+| `tool-execution`      | Erforderlich mit `tool-definitions`, um diese Werkzeuge auszuführen                      |
+| `system-prompt`       | Erforderlich mit `main`, um einen Systemprompt-Fragment beizutragen                      |
+| `desktop-ui`          | Muss mit `contributes.desktop` gepaart sein                                              |
+| `cli-ui`              | Muss mit `contributes.cli` gepaart sein                                                  |
+| `mcp`                 | Muss mit `contributes.mcp` gepaart sein; lädt `mcp.json` im Paketstamm                   |
+| `hooks`               | Muss mit `contributes.hooks` gepaart sein; lädt `hooks.json` im Paketstamm               |
+| `skills`              | Muss mit `contributes.skills` gepaart sein; lädt `skills/<name>/SKILL.md`                |
+| `rules`               | Muss mit `contributes.rules` gepaart sein; lädt `rule.md` im Paketstamm                  |
+| `approval-flow`       | Nur deklariert. Die Genehmigung wird durch den `approvalMode` jedes Tools gesteuert      |
+| `questions-flow`      | Nur deklariert. Fragen werden durch `approvalMode: need-questions` gesteuert             |
+| `settings`            | Nur deklariert. Einstellungen kommen aus `settingsSchema`                                |
+| `secret-storage`      | Wird mit `secretSlots` verwendet                                                         |
+| `automation-triggers` | Used with `contributes.automationTriggers`                                               |
+| `structured-results`  | Nur deklariert                                                                           |
 
 `desktop-ui` / `cli-ui` / `mcp` / `hooks` / `skills` / `rules` und der passende `contributes`-Eintrag müssen entweder beide vorhanden oder beide nicht vorhanden sein.
 
@@ -261,14 +262,11 @@ Werte sind `string`, `number`, `boolean` oder `null`. `null` löscht eine nicht 
 
 ### `secretSlots`
 
-| Feld          | Beschreibung      |
-| ------------- | ----------------- |
-| `key`         | Erforderlich      |
-| `title`       | Erforderlich      |
-| `description` | Optional          |
-| `required`    | Optional. Boolean |
+`secretSlots` is a string array of extension-private credential keys; it does not create a generic Settings editor. Only the extension backend can use `secrets.get/has/set/delete`. Empty values are rejected and all other values are preserved exactly. Removed slots are deleted on update, declared credentials are deleted before uninstall, and disabling preserves them.
 
-Desktop speichert Geheimnisse im OS-Keyring. Beim CLI-Daemon-Pfad sind `secrets.set` / `secrets.delete` möglicherweise nicht verfügbar.
+### `authorizations` and `automationTriggers`
+
+See the English guide for the Authorization action/view-session contract and the Automation Trigger `validate/menu/poll` provider contract, including Native menu nodes, namespaced trigger kinds, baselines, and atomic event checkpoints.
 
 ## `activate`
 
@@ -280,14 +278,14 @@ Desktop speichert Geheimnisse im OS-Keyring. Beim CLI-Daemon-Pfad sind `secrets.
 
 ### `ctx`
 
-| Feld              | Beschreibung                                                                                                 |
-| ----------------- | ------------------------------------------------------------------------------------------------------------ |
-| `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                                   |
-| `host`            | Host-API. Desktop implementiert `showMessageBox` und `ui.open` / `ui.close`. CLI ist `{}`                    |
-| `log`             | `(message: string) => void`                                                                                  |
-| `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                                  |
-| `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — Schlüssel müssen in `secretSlots` deklariert sein |
-| `activationEvent` | Optional. `{ type, detail? }`                                                                                |
+| Feld              | Beschreibung                                                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                                                            |
+| `host`            | Host-API. Desktop implementiert `showMessageBox` und `ui.open` sessions (`result` / `close(result)`) and `openExternal`. CLI ist `{}` |
+| `log`             | `(message: string) => void`                                                                                                           |
+| `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                                                           |
+| `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — Schlüssel müssen in `secretSlots` deklariert sein                          |
+| `activationEvent` | Optional. `{ type, detail? }`                                                                                                         |
 
 ### Rückgabewert
 
