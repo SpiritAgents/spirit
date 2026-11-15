@@ -71,6 +71,42 @@ describe("MarketplaceContributionGroups", () => {
     expect(getByText("Views")).toBeTruthy();
   });
 
+  test("desktop tabs render each declared name and icon", () => {
+    const { container, getByText } = render(
+      <MarketplaceContributionGroups
+        item={{
+          id: "personal/demo",
+          desktopTabs: [
+            {
+              id: "notes",
+              name: "Workspace Notes",
+              path: "notes.html",
+              icon: { type: "spirit", name: "globe" },
+              defaultScope: "workspace",
+            },
+            {
+              id: "preview",
+              name: "Preview",
+              path: "preview.html",
+              icon: { type: "file", path: "assets/preview.svg" },
+              defaultScope: "window-shared",
+            },
+          ],
+        }}
+      />,
+    );
+    expect(getByText("Workspace Notes")).toBeTruthy();
+    expect(getByText("Preview")).toBeTruthy();
+    const spiritIcon = container.querySelector("svg.spirit-icon-globe");
+    expect(spiritIcon).toBeTruthy();
+    expect(spiritIcon?.classList.contains("text-foreground")).toBe(true);
+    expect(spiritIcon?.classList.contains("text-muted-foreground")).toBe(false);
+    expect(container.querySelector("img")?.getAttribute("src")).toBe(
+      "spirit://extension-ui/tab-icon/personal%2Fdemo/assets/preview.svg",
+    );
+    expect(container.querySelector("img")?.classList.contains("text-muted-foreground")).toBe(true);
+  });
+
   test("nothing declared and nothing resolved renders nothing", () => {
     const { container } = render(<MarketplaceContributionGroups item={{}} />);
     expect(container.firstChild).toBeNull();
