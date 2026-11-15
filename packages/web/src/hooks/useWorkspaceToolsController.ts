@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useWorkspaceToolsChromeActions } from "@/contexts/workspace-tools-chrome-context";
 import { useRecentFilePool } from "@/hooks/useRecentFilePool";
@@ -560,8 +560,20 @@ export function useWorkspaceToolsController({
     snapshot?.plan,
   ]);
 
+  const visibleWorkspaceToolTabs = useMemo(
+    () =>
+      workspaceToolTabs.filter((tab) =>
+        isWorkspaceToolTabVisibleInContext(tab, {
+          workspaceRoot: snapshot?.workspaceRoot ?? "",
+          sessionKey: snapshot?.composerSessionKey ?? "",
+        }),
+      ),
+    [snapshot?.composerSessionKey, snapshot?.workspaceRoot, workspaceToolTabs],
+  );
+
   return {
     setWorkspaceToolsOpen,
+    visibleWorkspaceToolTabs,
     workspaceToolTabs,
     setWorkspaceToolTabs,
     activeWorkspaceToolTabId,

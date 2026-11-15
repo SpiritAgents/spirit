@@ -63,6 +63,8 @@ export function ConversationWorkspaceToolsDock({
       <WorkspaceToolsDock
         useTranslucency={useTranslucency}
         workspaceRoot={snapshot?.workspaceRoot ?? ""}
+        sessionKey={snapshot?.composerSessionKey ?? ""}
+        extensionsList={snapshot?.extensionsList ?? []}
         listExplorerChildren={runtime.listWorkspaceExplorerChildren}
         readWorkspaceTextFile={runtime.readWorkspaceTextFile}
         writeWorkspaceTextFile={runtime.writeWorkspaceTextFile}

@@ -1144,7 +1144,8 @@
     "moveEntryConfirmTitle": "\"{{name}}\"을(를) 이동할까요?",
     "moveEntryConfirmDescription": "항목이 \"{{folder}}\"(으)로 이동합니다.",
     "forceDeleteConfirmTitle": "영구 삭제할까요?",
-    "forceDeleteConfirmDescription": "휴지통으로 이동할 수 없습니다: {{reason}}. 이 작업은 되돌릴 수 없습니다."
+    "forceDeleteConfirmDescription": "휴지통으로 이동할 수 없습니다: {{reason}}. 이 작업은 되돌릴 수 없습니다.",
+    "extensionTabLoadError": "{{name}}을(를) 불러오지 못했습니다. 확장 패키지를 확인한 후 다시 시도하세요."
   },
   "task": {
     "instanceLimitTitle": "“{{label}}”이(가) 이미 실행 중입니다.",

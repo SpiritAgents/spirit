@@ -1177,7 +1177,8 @@
     "moveEntryConfirmTitle": "Move \"{{name}}\"?",
     "moveEntryConfirmDescription": "This moves the item into \"{{folder}}\".",
     "forceDeleteConfirmTitle": "Delete permanently?",
-    "forceDeleteConfirmDescription": "Could not move to trash: {{reason}}. This cannot be undone."
+    "forceDeleteConfirmDescription": "Could not move to trash: {{reason}}. This cannot be undone.",
+    "extensionTabLoadError": "Could not load {{name}}. Check the extension package and try again."
   },
   "task": {
     "instanceLimitTitle": "“{{label}}” is already running.",

@@ -1144,7 +1144,8 @@
     "moveEntryConfirmTitle": "¿Mover \"{{name}}\"?",
     "moveEntryConfirmDescription": "El elemento se moverá a \"{{folder}}\".",
     "forceDeleteConfirmTitle": "¿Eliminar permanentemente?",
-    "forceDeleteConfirmDescription": "No se pudo mover a la papelera: {{reason}}. Esta acción no se puede deshacer."
+    "forceDeleteConfirmDescription": "No se pudo mover a la papelera: {{reason}}. Esta acción no se puede deshacer.",
+    "extensionTabLoadError": "No se pudo cargar {{name}}. Comprueba el paquete de la extensión e inténtalo de nuevo."
   },
   "task": {
     "instanceLimitTitle": "«{{label}}» ya se está ejecutando.",
