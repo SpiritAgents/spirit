@@ -14,6 +14,7 @@ export const INIT_CAPABILITY_IDS = [
   "desktop-css",
   "desktop-settings-page",
   "desktop-views",
+  "desktop-tabs",
   "system-prompt",
 ] as const;
 
@@ -248,6 +249,60 @@ export default function View({ params, close }) {
     }),
   },
   {
+    id: "desktop-tabs",
+    label: "Desktop tabs (contributes.desktop.tabs + page channel)",
+    requestedCapabilities: ["desktop-ui"],
+    contributes: (input) => ({
+      desktop: {
+        tabs: [
+          {
+            id: "main",
+            name: input.title,
+            path: "ui/tab.html",
+            icon: { type: "spirit", name: "compose" },
+            defaultScope: "window-shared",
+          },
+        ],
+      },
+    }),
+    files: (input) => ({
+      "ui/tab.html": `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${input.title}</title>
+    <link rel="stylesheet" href="./tab.css" />
+  </head>
+  <body>
+    <main>
+      <h1>${input.title}</h1>
+      <p id="context">Loading tab context…</p>
+      <button id="echo" type="button">Send Echo Request</button>
+      <p id="result" role="status"></p>
+    </main>
+    <script type="module" src="./tab.js"></script>
+  </body>
+</html>
+`,
+      "ui/tab.js": `const context = await window.spirit.tab.ready();
+document.getElementById("context").textContent =
+  context.instanceId + " · " + JSON.stringify(context.scope);
+document.getElementById("echo").addEventListener("click", async () => {
+  const result = await window.spirit.tab.request("echo", {
+    instanceId: context.instanceId,
+  });
+  document.getElementById("result").textContent = JSON.stringify(result);
+});
+`,
+      "ui/tab.css": `:root { color-scheme: light dark; }
+body { margin: 0; padding: 16px; font: 13px/1.5 var(--font-sans, system-ui); }
+main { display: grid; gap: 12px; }
+button { width: fit-content; }
+`,
+    }),
+  },
+  {
     id: "system-prompt",
     label: "System prompt contribution (main module export)",
     requestedCapabilities: ["system-prompt"],
@@ -266,7 +321,11 @@ export function capabilityDefinition(id: InitCapabilityId): CapabilityDefinition
 
 /** Whether the capability set needs a main module (package.json main + index.mjs). */
 export function needsMainModule(capabilities: readonly InitCapabilityId[]): boolean {
-  return capabilities.includes("tools") || capabilities.includes("system-prompt");
+  return (
+    capabilities.includes("tools") ||
+    capabilities.includes("system-prompt") ||
+    capabilities.includes("desktop-tabs")
+  );
 }
 
 /** Build the merged main-module source for the selected capabilities. */
@@ -288,6 +347,15 @@ export function buildMainModule(
 };
 `);
   }
+  if (capabilities.includes("desktop-tabs")) {
+    parts.push(`export function onTabRequest({ method, params }) {
+  if (method === "echo") {
+    return { echoed: params ?? null };
+  }
+  throw new Error("Unknown tab request method: " + method);
+}
+`);
+  }
   if (capabilities.includes("system-prompt")) {
     parts.push(`export const systemPrompt =
   "You are helping the user with the ${input.title} extension.";
@@ -298,7 +366,7 @@ export function buildMainModule(
 
 /**
  * Merge contributes fragments from all selected capabilities. The desktop
- * contributions (css / settingsPage / views) share one `desktop` object.
+ * contributions (css / settingsPage / views / tabs) share one `desktop` object.
  */
 export function mergeContributes(
   capabilities: readonly InitCapabilityId[],

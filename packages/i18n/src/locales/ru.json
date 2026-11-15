@@ -1148,7 +1148,8 @@
     "moveEntryConfirmTitle": "Переместить «{{name}}»?",
     "moveEntryConfirmDescription": "Элемент будет перемещён в «{{folder}}».",
     "forceDeleteConfirmTitle": "Удалить навсегда?",
-    "forceDeleteConfirmDescription": "Не удалось переместить в корзину: {{reason}}. Это действие необратимо."
+    "forceDeleteConfirmDescription": "Не удалось переместить в корзину: {{reason}}. Это действие необратимо.",
+    "extensionTabLoadError": "Не удалось загрузить {{name}}. Проверьте пакет расширения и повторите попытку."
   },
   "task": {
     "instanceLimitTitle": "«{{label}}» уже запущена.",

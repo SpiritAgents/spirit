@@ -1,6 +1,7 @@
 import {
   addWorkspaceToolTab,
   findWorkspaceToolTab,
+  isWorkspaceToolTabKind,
   focusFirstTabOfKind,
   type WorkspaceToolTab,
 } from "@/lib/workspace-tool-tabs";
@@ -44,7 +45,7 @@ export function resolveWorkspaceFilesTab(
   activeTabId: string,
 ): ResolveWorkspaceFilesTabResult {
   const activeTab = findWorkspaceToolTab(tabs, activeTabId);
-  if (activeTab?.kind === "files") {
+  if (isWorkspaceToolTabKind(activeTab, "files")) {
     return { tabs: [...tabs], activeTabId, filesTabId: activeTabId };
   }
 
@@ -100,7 +101,9 @@ export function findFilesTabWithWorkspacePath(
   relativePath: string,
 ): string | undefined {
   const normalized = normalizeWorkspaceEntryRel(relativePath);
-  return tabs.find((tab) => tab.kind === "files" && tab.filesWorkspacePath === normalized)?.id;
+  return tabs.find(
+    (tab) => isWorkspaceToolTabKind(tab, "files") && tab.filesWorkspacePath === normalized,
+  )?.id;
 }
 
 export type OpenWorkspaceFileNavigationInput = {

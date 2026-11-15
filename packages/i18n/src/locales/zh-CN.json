@@ -1152,7 +1152,8 @@
     "moveEntryConfirmTitle": "移动“{{name}}”？",
     "moveEntryConfirmDescription": "项目将移到“{{folder}}”。",
     "forceDeleteConfirmTitle": "永久删除？",
-    "forceDeleteConfirmDescription": "无法移到回收站：{{reason}}。此操作无法撤销。"
+    "forceDeleteConfirmDescription": "无法移到回收站：{{reason}}。此操作无法撤销。",
+    "extensionTabLoadError": "无法加载 {{name}}。请检查扩展包后重试。"
   },
   "task": {
     "instanceLimitTitle": "“{{label}}”已在运行。",

@@ -1144,7 +1144,8 @@
     "moveEntryConfirmTitle": "Déplacer « {{name}} » ?",
     "moveEntryConfirmDescription": "L'élément sera déplacé vers « {{folder}} ».",
     "forceDeleteConfirmTitle": "Supprimer définitivement ?",
-    "forceDeleteConfirmDescription": "Impossible de déplacer vers la corbeille : {{reason}}. Cette action est irréversible."
+    "forceDeleteConfirmDescription": "Impossible de déplacer vers la corbeille : {{reason}}. Cette action est irréversible.",
+    "extensionTabLoadError": "Impossible de charger {{name}}. Vérifiez le paquet de l’extension et réessayez."
   },
   "task": {
     "instanceLimitTitle": "« {{label}} » est déjà en cours d'exécution.",

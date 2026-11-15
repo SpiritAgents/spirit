@@ -15,7 +15,7 @@ describe("WorkspaceToolTabChip", () => {
     const onClose = vi.fn();
     const { getByRole } = render(
       <WorkspaceToolTabChip
-        tab={{ id: "file-tab", kind: "files", tabTitle: "notes.md" }}
+        tab={{ id: "file-tab", kind: "built-in", builtInKind: "files", tabTitle: "notes.md" }}
         icon={FileText}
         label="Files"
         selected={false}
@@ -42,7 +42,7 @@ describe("WorkspaceToolTabChip", () => {
     const { getByRole, queryByRole } = render(
       <TooltipProvider>
         <WorkspaceToolTabChip
-          tab={{ id: "empty-files", kind: "files" }}
+          tab={{ id: "empty-files", kind: "built-in", builtInKind: "files" }}
           icon={FileText}
           label="Files"
           selected
@@ -64,7 +64,7 @@ describe("WorkspaceToolTabChip", () => {
     const { getByRole, rerender } = render(
       <TooltipProvider>
         <WorkspaceToolTabChip
-          tab={{ id: "empty-files", kind: "files" }}
+          tab={{ id: "empty-files", kind: "built-in", builtInKind: "files" }}
           icon={FileText}
           label="Files"
           selected={false}
@@ -80,7 +80,7 @@ describe("WorkspaceToolTabChip", () => {
 
     rerender(
       <WorkspaceToolTabChip
-        tab={{ id: "file-tab", kind: "files", tabTitle: "notes.md" }}
+        tab={{ id: "file-tab", kind: "built-in", builtInKind: "files", tabTitle: "notes.md" }}
         icon={FileText}
         label="Files"
         selected={false}

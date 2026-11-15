@@ -371,6 +371,42 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   resolveExtensionUi(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "resolveExtensionUi", { request });
   },
+  getWorkspaceToolTabs() {
+    return ipcRenderer.invoke("desktop:invoke", "getWorkspaceToolTabs", {});
+  },
+  syncWorkspaceToolTabs(request: { expectedRevision: number; tabs: unknown; activeTabId: string }) {
+    return ipcRenderer.invoke("desktop:invoke", "syncWorkspaceToolTabs", request);
+  },
+  invokeExtensionTabRequest(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "invokeExtensionTabRequest", request);
+  },
+  setExtensionTabChrome(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "setExtensionTabChrome", request);
+  },
+  invokeExtensionWebView(request: unknown) {
+    return ipcRenderer.invoke("desktop:extension-web-view", request);
+  },
+  subscribeExtensionWebViewEvents(callback: (event: unknown) => void) {
+    const onEvent = (_event: Electron.IpcRendererEvent, payload: unknown) => callback(payload);
+    ipcRenderer.on("desktop:extension-web-view-event", onEvent);
+    return () => {
+      ipcRenderer.removeListener("desktop:extension-web-view-event", onEvent);
+    };
+  },
+  subscribeExtensionTabEvents(callback: (event: unknown) => void) {
+    const onEvent = (_event: Electron.IpcRendererEvent, payload: unknown) => callback(payload);
+    ipcRenderer.on("desktop:extension-tab-event", onEvent);
+    return () => {
+      ipcRenderer.removeListener("desktop:extension-tab-event", onEvent);
+    };
+  },
+  subscribeWorkspaceToolTabsUpdates(callback: (snapshot: unknown) => void) {
+    const onUpdate = (_event: Electron.IpcRendererEvent, snapshot: unknown) => callback(snapshot);
+    ipcRenderer.on("desktop:workspace-tool-tabs-updated", onUpdate);
+    return () => {
+      ipcRenderer.removeListener("desktop:workspace-tool-tabs-updated", onUpdate);
+    };
+  },
   openPathInDefaultApp(absolutePath: string) {
     return ipcRenderer.invoke("desktop:invoke", "openPathInDefaultApp", { absolutePath });
   },

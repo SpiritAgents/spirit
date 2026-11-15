@@ -17,6 +17,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { unzipSync } from "fflate";
+import { isSpiritIconName } from "@spiritagent/icons/names";
 
 import {
   HOOKS_CONFIG_FILE_NAME,
@@ -79,6 +80,9 @@ export const SUPPORTED_HOST_EXTENSION_REQUESTED_CAPABILITIES = [
   "secret-storage",
   "structured-results",
   "desktop-ui",
+  "desktop-webview-display",
+  "desktop-webview-control",
+  "desktop-webview-script",
   "cli-ui",
   "mcp",
   "hooks",
@@ -180,10 +184,36 @@ export interface HostExtensionDesktopViewDefinition {
   chrome?: HostExtensionDesktopViewChrome;
 }
 
+export const SUPPORTED_HOST_EXTENSION_DESKTOP_TAB_SCOPES = [
+  "window-shared",
+  "workspace",
+  "session",
+] as const;
+
+export type HostExtensionDesktopTabScope =
+  (typeof SUPPORTED_HOST_EXTENSION_DESKTOP_TAB_SCOPES)[number];
+
+export type HostExtensionDesktopTabIcon =
+  | { type: "spirit"; name: string }
+  | { type: "file"; path: string };
+
+export type HostExtensionDesktopTabRuntimeIcon =
+  | HostExtensionDesktopTabIcon
+  | { type: "image"; dataUrl: string };
+
+export interface HostExtensionDesktopTabDefinition {
+  id: string;
+  name: string;
+  path: string;
+  icon: HostExtensionDesktopTabIcon;
+  defaultScope?: HostExtensionDesktopTabScope;
+}
+
 export interface HostExtensionDesktopContributionSet {
   css?: HostExtensionDesktopCssDefinition[];
   settingsPage?: HostExtensionDesktopSettingsPageDefinition;
   views?: HostExtensionDesktopViewDefinition[];
+  tabs?: HostExtensionDesktopTabDefinition[];
 }
 
 export const SUPPORTED_HOST_EXTENSION_CLI_UI_SLOTS = [
@@ -438,7 +468,51 @@ export interface CollectExtensionSystemPromptContributionsRequest<THostApi> {
   logger?: Pick<Console, "error" | "log">;
 }
 
+export interface HostExtensionTabRequestContext<THostApi> {
+  extension: HostExtensionRuntimeInfo;
+  host: THostApi;
+  contributionId: string;
+  instanceId: string;
+  method: string;
+  params?: unknown;
+}
+
+export interface InvokeExtensionTabRequest<THostApi> {
+  extensionId: string;
+  contributionId: string;
+  instanceId: string;
+  method: string;
+  params?: unknown;
+  host: THostApi;
+  logger?: Pick<Console, "error" | "log">;
+}
+
+export interface HostExtensionWebViewEvent {
+  extensionId: string;
+  contributionId: string;
+  instanceId: string;
+  state: {
+    viewId: string;
+    url: string;
+    title: string;
+    isLoading: boolean;
+    canGoBack: boolean;
+    canGoForward: boolean;
+    error?: string;
+  };
+}
+
+export interface DispatchExtensionWebViewEventRequest<THostApi> {
+  event: HostExtensionWebViewEvent;
+  host: THostApi;
+  logger?: Pick<Console, "error" | "log">;
+}
+
 export interface HostActivatedExtension {
+  onWebViewEvent?(event: HostExtensionWebViewEvent): Promise<void> | void;
+  onTabRequest?<THostApi>(
+    request: HostExtensionTabRequestContext<THostApi>,
+  ): Promise<unknown> | unknown;
   tools?: Record<string, HostExtensionToolHandler<unknown>>;
   invokeTool?<THostApi>(
     request: HostExtensionToolExecutionContext<THostApi>,
@@ -496,6 +570,7 @@ export interface HostExtensionManager {
   setEnabled(id: string, enabled: boolean): Promise<void>;
   run<THostApi>(request: RunExtensionRequest<THostApi>): Promise<void>;
   invokeTool<THostApi>(request: InvokeExtensionToolRequest<THostApi>): Promise<string>;
+  invokeTabRequest<THostApi>(request: InvokeExtensionTabRequest<THostApi>): Promise<unknown>;
   getSettingsValues(id: string): Promise<HostExtensionSettingsValues>;
   setSettingsValues(request: UpdateExtensionSettingsRequest): Promise<HostExtensionSettingsValues>;
   getSecretStatus(id: string): Promise<Record<string, boolean>>;
@@ -504,6 +579,9 @@ export interface HostExtensionManager {
     request: CollectExtensionSystemPromptContributionsRequest<THostApi>,
   ): Promise<HostExtensionSystemPromptContribution[]>;
   dispatchEvent<THostApi>(request: DispatchExtensionEventRequest<THostApi>): Promise<void>;
+  dispatchWebViewEvent<THostApi>(
+    request: DispatchExtensionWebViewEventRequest<THostApi>,
+  ): Promise<void>;
   deactivateAll(): Promise<void>;
 }
 
@@ -559,6 +637,9 @@ export function createHostExtensionManager(
     async invokeTool(request) {
       return invokeExtensionTool(context, activatedExtensions, stateStore, request);
     },
+    async invokeTabRequest(request) {
+      return invokeExtensionTabRequest(context, activatedExtensions, stateStore, request);
+    },
     async getSettingsValues(id) {
       return loadExtensionSettingsValues(context, stateStore, id);
     },
@@ -581,6 +662,9 @@ export function createHostExtensionManager(
     },
     async dispatchEvent(request) {
       await dispatchExtensionEvent(context, activatedExtensions, stateStore, request);
+    },
+    async dispatchWebViewEvent(request) {
+      await dispatchExtensionWebViewEvent(context, activatedExtensions, stateStore, request);
     },
     async deactivateAll() {
       await deactivateAllExtensions(activatedExtensions);
@@ -1010,7 +1094,7 @@ export async function invokeExtensionTool<THostApi>(
   });
 
   const result = await invokeActivatedExtensionTool(target, entry, stateStore, {
-    host: request.host,
+    host: bindHostForExtension(request.host, target.id),
     toolName: tool.name,
     arguments: request.arguments,
     ...(request.logger ? { logger: request.logger } : {}),
@@ -1018,6 +1102,43 @@ export async function invokeExtensionTool<THostApi>(
     ...(request.questionsResult !== undefined ? { questionsResult: request.questionsResult } : {}),
   });
   return renderExtensionToolResult(result);
+}
+
+export async function invokeExtensionTabRequest<THostApi>(
+  context: ExtensionManagementContext,
+  activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
+  stateStore: ExtensionStateStore,
+  request: InvokeExtensionTabRequest<THostApi>,
+): Promise<unknown> {
+  const target = await requireInstalledExtension(context, request.extensionId);
+  if (!target.enabled) {
+    throw new Error(`The extension is disabled: ${target.id}`);
+  }
+  const contribution = target.manifest.contributes?.desktop?.tabs?.find(
+    (entry) => entry.id === request.contributionId,
+  );
+  if (!contribution) {
+    throw new Error(`The extension does not declare the tab: ${request.contributionId}`);
+  }
+  const entry = await ensureActivatedExtension(target, activatedExtensions, stateStore, {
+    host: request.host,
+    ...(request.logger ? { logger: request.logger } : {}),
+    log: (message) => {
+      request.logger?.log(`[extension:${target.id}] ${message}`);
+    },
+  });
+  const handler = entry.activatedExtension?.onTabRequest;
+  if (!handler) {
+    throw new Error(`The extension does not export onTabRequest: ${target.id}`);
+  }
+  return handler({
+    extension: entry.runtimeInfo,
+    host: bindHostForExtension(request.host, target.id),
+    contributionId: request.contributionId,
+    instanceId: request.instanceId,
+    method: request.method,
+    ...(request.params === undefined ? {} : { params: request.params }),
+  });
 }
 
 export async function loadExtensionSettingsValues(
@@ -1128,6 +1249,26 @@ export async function dispatchExtensionEvent<THostApi>(
   }
 }
 
+export async function dispatchExtensionWebViewEvent<THostApi>(
+  context: ExtensionManagementContext,
+  activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
+  stateStore: ExtensionStateStore,
+  request: DispatchExtensionWebViewEventRequest<THostApi>,
+): Promise<void> {
+  const target = await requireInstalledExtension(context, request.event.extensionId);
+  if (!target.enabled) {
+    throw new Error(`The extension is disabled: ${target.id}`);
+  }
+  const entry = await ensureActivatedExtension(target, activatedExtensions, stateStore, {
+    host: request.host,
+    ...(request.logger ? { logger: request.logger } : {}),
+    log: (message) => {
+      request.logger?.log(`[extension:${target.id}] ${message}`);
+    },
+  });
+  await entry.activatedExtension?.onWebViewEvent?.(request.event);
+}
+
 export async function collectExtensionSystemPromptContributions<THostApi>(
   context: ExtensionManagementContext,
   activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
@@ -1171,6 +1312,19 @@ export async function collectExtensionSystemPromptContributions<THostApi>(
   return contributions;
 }
 
+type BindableExtensionHost = {
+  boundExtensionId?: string;
+  forExtension?: (extensionId: string) => unknown;
+};
+
+function bindHostForExtension<THostApi>(host: THostApi, extensionId: string): THostApi {
+  const candidate = host as BindableExtensionHost;
+  if (candidate.boundExtensionId === extensionId || typeof candidate.forExtension !== "function") {
+    return host;
+  }
+  return candidate.forExtension(extensionId) as THostApi;
+}
+
 async function ensureActivatedExtension<THostApi>(
   target: HostInstalledExtension,
   activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
@@ -1203,8 +1357,9 @@ async function ensureActivatedExtension<THostApi>(
   }
 
   const runtimeInfo = createRuntimeInfo(target);
+  const host = bindHostForExtension(options.host, target.id);
   const activatedExtension = await activateExtension(target, mainFilePath, {
-    host: options.host,
+    host,
     ...(options.logger ? { logger: options.logger } : {}),
     log: options.log,
     settings: createSettingsAccessor(target, stateStore),
@@ -1998,8 +2153,20 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
       ? (value.getSystemPrompt as HostActivatedExtension["getSystemPrompt"])
       : undefined;
   const onEvent = typeof value.onEvent === "function" ? value.onEvent : undefined;
+  const onTabRequest = typeof value.onTabRequest === "function" ? value.onTabRequest : undefined;
+  const onWebViewEvent =
+    typeof value.onWebViewEvent === "function" ? value.onWebViewEvent : undefined;
   const dispose = typeof value.dispose === "function" ? value.dispose : undefined;
-  if (!tools && !invokeTool && !systemPrompt && !getSystemPrompt && !onEvent && !dispose) {
+  if (
+    !tools &&
+    !invokeTool &&
+    !systemPrompt &&
+    !getSystemPrompt &&
+    !onEvent &&
+    !onTabRequest &&
+    !onWebViewEvent &&
+    !dispose
+  ) {
     return undefined;
   }
 
@@ -2010,6 +2177,10 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
     systemPrompt ? { systemPrompt } : {},
     getSystemPrompt ? { getSystemPrompt } : {},
     onEvent ? { onEvent: onEvent as HostActivatedExtension["onEvent"] } : {},
+    onTabRequest ? { onTabRequest: onTabRequest as HostActivatedExtension["onTabRequest"] } : {},
+    onWebViewEvent
+      ? { onWebViewEvent: onWebViewEvent as HostActivatedExtension["onWebViewEvent"] }
+      : {},
     dispose ? { dispose: dispose as HostActivatedExtension["dispose"] } : {},
   ) as HostActivatedExtension;
 }
@@ -2234,7 +2405,8 @@ function optionalDesktopContributionSetField(
     `${fieldPrefix}.settingsPage`,
   );
   const views = optionalDesktopViewDefinitionsField(value.views, `${fieldPrefix}.views`);
-  if (css.length === 0 && !settingsPage && views.length === 0) {
+  const tabs = optionalDesktopTabDefinitionsField(value.tabs, `${fieldPrefix}.tabs`);
+  if (css.length === 0 && !settingsPage && views.length === 0 && tabs.length === 0) {
     return undefined;
   }
 
@@ -2242,6 +2414,7 @@ function optionalDesktopContributionSetField(
     ...(css.length > 0 ? { css } : {}),
     ...(settingsPage ? { settingsPage } : {}),
     ...(views.length > 0 ? { views } : {}),
+    ...(tabs.length > 0 ? { tabs } : {}),
   };
 }
 
@@ -2409,6 +2582,84 @@ function optionalCliUiHookTokensField(
     ...(border ? { border } : {}),
     ...(accent ? { accent } : {}),
   };
+}
+
+function optionalDesktopTabDefinitionsField(
+  value: unknown,
+  fieldPrefix: string,
+): HostExtensionDesktopTabDefinition[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const tabs = value.map((entry, index) => parseDesktopTabDefinition(entry, index, fieldPrefix));
+  const seen = new Set<string>();
+  for (const tab of tabs) {
+    if (seen.has(tab.id)) {
+      throw new Error(`Extension field ${fieldPrefix} has a duplicate tab id: ${tab.id}`);
+    }
+    seen.add(tab.id);
+  }
+  return tabs;
+}
+
+function parseDesktopTabDefinition(
+  value: unknown,
+  index: number,
+  fieldPrefix: string,
+): HostExtensionDesktopTabDefinition {
+  if (!isRecord(value)) {
+    throw new Error(`Extension field ${fieldPrefix}[${index}] must be an object.`);
+  }
+
+  const id = stringField(value.id, `${fieldPrefix}[${index}].id`);
+  if (!EXTENSION_FIELD_KEY_PATTERN.test(id)) {
+    throw new Error(`Invalid extension tab id: ${id}`);
+  }
+  const name = stringField(value.name, `${fieldPrefix}[${index}].name`);
+  const tabPath = stringField(value.path, `${fieldPrefix}[${index}].path`);
+  assertSafeRelativePath(tabPath, `${fieldPrefix}[${index}].path`);
+  if (!tabPath.toLowerCase().endsWith(".html")) {
+    throw new Error(`Extension field ${fieldPrefix}[${index}].path must be an HTML page.`);
+  }
+  const icon = parseDesktopTabIcon(value.icon, `${fieldPrefix}[${index}].icon`);
+  const defaultScope = optionalEnumField(
+    value.defaultScope,
+    `${fieldPrefix}[${index}].defaultScope`,
+    SUPPORTED_HOST_EXTENSION_DESKTOP_TAB_SCOPES,
+  );
+
+  return {
+    id,
+    name,
+    path: tabPath,
+    icon,
+    ...(defaultScope ? { defaultScope } : {}),
+  };
+}
+
+function parseDesktopTabIcon(value: unknown, fieldPrefix: string): HostExtensionDesktopTabIcon {
+  if (!isRecord(value) || typeof value.type !== "string") {
+    throw new Error(`Extension field ${fieldPrefix} must be an icon descriptor.`);
+  }
+  if (value.type === "spirit") {
+    const name = stringField(value.name, `${fieldPrefix}.name`);
+    if (!isSpiritIconName(name)) {
+      throw new Error(`Unknown Spirit Icon name: ${name}`);
+    }
+    return { type: "spirit", name };
+  }
+  if (value.type === "file") {
+    const iconPath = stringField(value.path, `${fieldPrefix}.path`);
+    assertSafeRelativePath(iconPath, `${fieldPrefix}.path`);
+    if (!/\.(?:svg|png|jpe?g|webp)$/iu.test(iconPath)) {
+      throw new Error(
+        `Extension field ${fieldPrefix}.path must reference an SVG, PNG, JPEG, or WebP icon.`,
+      );
+    }
+    return { type: "file", path: iconPath };
+  }
+  throw new Error(`Extension field ${fieldPrefix}.type must be "spirit" or "file".`);
 }
 
 function parseDesktopCssDefinition(

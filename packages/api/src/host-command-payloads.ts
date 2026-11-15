@@ -157,6 +157,27 @@ export type CommandPayloads = {
   replyPendingQuestions: { request: ReplyPendingQuestionsRequest };
   replyWorkspaceCapabilityTrust: { request: ReplyWorkspaceCapabilityTrustRequest };
   resolveExtensionUi: { request: import("./types.js").ResolveExtensionUiRequest };
+  getWorkspaceToolTabs: { windowId: string };
+  syncWorkspaceToolTabs: {
+    windowId: string;
+    expectedRevision: number;
+    tabs: import("./types.js").DesktopWorkspaceToolTab[];
+    activeTabId: string;
+  };
+  invokeExtensionTabRequest: {
+    windowId: string;
+    extensionId: string;
+    contributionId: string;
+    instanceId: string;
+    method: string;
+    params?: unknown;
+  };
+  setExtensionTabChrome: {
+    windowId: string;
+    extensionId: string;
+    instanceId: string;
+    patch: import("./types.js").DesktopExtensionTabChromePatch;
+  };
   resetSession:
     | { activate?: boolean; clientHost?: import("./types.js").DesktopClientHost }
     | undefined;

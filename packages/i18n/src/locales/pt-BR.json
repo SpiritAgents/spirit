@@ -1144,7 +1144,8 @@
     "moveEntryConfirmTitle": "Mover \"{{name}}\"?",
     "moveEntryConfirmDescription": "O item será movido para \"{{folder}}\".",
     "forceDeleteConfirmTitle": "Excluir permanentemente?",
-    "forceDeleteConfirmDescription": "Não foi possível mover para o lixo: {{reason}}. Esta ação não pode ser desfeita."
+    "forceDeleteConfirmDescription": "Não foi possível mover para o lixo: {{reason}}. Esta ação não pode ser desfeita.",
+    "extensionTabLoadError": "Não foi possível carregar {{name}}. Verifique o pacote da extensão e tente novamente."
   },
   "task": {
     "instanceLimitTitle": "“{{label}}” já está em execução.",

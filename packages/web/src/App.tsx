@@ -289,7 +289,7 @@ export default function App() {
     setActionPickerOpen: composer.setActionPickerOpen,
     setFilePickerOpen: composer.setFilePickerOpen,
     uiLayoutScaleApi: uiLayoutScale,
-    workspaceToolTabs: workspaceTools.workspaceToolTabs,
+    workspaceToolTabs: workspaceTools.visibleWorkspaceToolTabs,
     focusWorkspaceToolTab: workspaceTools.focusWorkspaceToolTab,
   });
 

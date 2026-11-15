@@ -16,6 +16,7 @@ import {
   installSourceForSourceId,
   summarizeDeclaredExtensionContributionPoints,
   type HostExtensionDesktopViewDefinition,
+  type HostExtensionDesktopTabDefinition,
   type HostExtensionManager,
   type HostInstalledExtension,
   type HostMarketplaceCatalogItem,
@@ -25,6 +26,7 @@ import {
 import type {
   DesktopExtensionCssLayer,
   DesktopExtensionDesktopView,
+  DesktopExtensionDesktopTab,
   DesktopExtensionListItem,
   DesktopMarketplaceCatalogEntry,
 } from "../types.js";
@@ -103,6 +105,9 @@ export async function buildDesktopExtensionListItems(
           : {}),
         ...(item.manifest.contributes?.desktop?.views?.length
           ? { desktopViews: mapDesktopViews(item.manifest.contributes.desktop.views) }
+          : {}),
+        ...(item.manifest.contributes?.desktop?.tabs?.length
+          ? { desktopTabs: mapDesktopTabs(item.manifest.contributes.desktop.tabs) }
           : {}),
         ...(item.manifest.contributes?.cli?.hooks?.length
           ? {
@@ -296,6 +301,9 @@ export async function buildDesktopMarketplaceCatalogEntries(
         ...(manifest.contributes?.desktop?.views?.length
           ? { desktopViews: mapDesktopViews(manifest.contributes.desktop.views) }
           : {}),
+        ...(manifest.contributes?.desktop?.tabs?.length
+          ? { desktopTabs: mapDesktopTabs(manifest.contributes.desktop.tabs) }
+          : {}),
         ...(manifest.contributes?.cli?.hooks?.length
           ? {
               cliHooks: manifest.contributes.cli.hooks.map((hook) => ({
@@ -323,6 +331,18 @@ export async function buildDesktopMarketplaceCatalogEntries(
       } satisfies DesktopMarketplaceCatalogEntry;
     }),
   );
+}
+
+function mapDesktopTabs(
+  tabs: readonly HostExtensionDesktopTabDefinition[],
+): DesktopExtensionDesktopTab[] {
+  return tabs.map((tab) => ({
+    id: tab.id,
+    name: tab.name,
+    path: tab.path,
+    icon: tab.icon,
+    defaultScope: tab.defaultScope ?? "window-shared",
+  }));
 }
 
 function mapDesktopViews(
@@ -375,6 +395,44 @@ export async function resolveEnabledExtensionViewFile(
   }
   return {
     filePath: path.join(item.directoryPath, ...view.path.split("/")),
+    extensionRoot: item.directoryPath,
+  };
+}
+
+export async function resolveEnabledExtensionTabFile(
+  manager: HostExtensionManager,
+  extensionId: string,
+  contributionId: string,
+): Promise<{ filePath: string; extensionRoot: string } | null> {
+  const listed = await manager.list();
+  const item = listed.find((entry) => entry.id === extensionId && entry.enabled);
+  const tab = item?.manifest.contributes?.desktop?.tabs?.find(
+    (entry) => entry.id === contributionId,
+  );
+  if (!item || !tab) {
+    return null;
+  }
+  return {
+    filePath: path.join(item.directoryPath, ...tab.path.split("/")),
+    extensionRoot: item.directoryPath,
+  };
+}
+
+export async function resolveEnabledExtensionTabIconFile(
+  manager: HostExtensionManager,
+  extensionId: string,
+  iconPath: string,
+): Promise<{ filePath: string; extensionRoot: string } | null> {
+  const listed = await manager.list();
+  const item = listed.find((entry) => entry.id === extensionId && entry.enabled);
+  const declared = item?.manifest.contributes?.desktop?.tabs?.some(
+    (tab) => tab.icon.type === "file" && tab.icon.path === iconPath,
+  );
+  if (!item || !declared) {
+    return null;
+  }
+  return {
+    filePath: path.join(item.directoryPath, ...iconPath.split("/")),
     extensionRoot: item.directoryPath,
   };
 }

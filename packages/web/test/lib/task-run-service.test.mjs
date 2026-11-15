@@ -126,7 +126,7 @@ function createDeps(tasks) {
       // The real tab component mounts right after the state update: register a fake
       // session for each new task tab synchronously.
       for (const tab of tabs) {
-        if (tab.kind === "task" && !state.sessionsByTabId.has(tab.id)) {
+        if (tab.builtInKind === "task" && !state.sessionsByTabId.has(tab.id)) {
           const session = createFakeSession();
           state.sessionsByTabId.set(tab.id, session);
           registerTaskTerminal(tab.id, { session, taskKey: tab.taskKey, running: false });
@@ -162,7 +162,7 @@ async function flush(times = 10) {
 function onlyTaskTab(state) {
   assert.equal(state.tabs.length, 1);
   const tab = state.tabs[0];
-  assert.equal(tab.kind, "task");
+  assert.equal(tab.builtInKind, "task");
   return tab;
 }
 

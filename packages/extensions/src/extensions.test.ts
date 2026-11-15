@@ -480,6 +480,247 @@ test("desktop views-only contributions parse and reject illegal view paths", asy
   }
 });
 
+test("tab requests activate the owning backend with its declared contribution", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-tab-request-data-"));
+  const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-tab-request-prepared-"));
+  try {
+    const packageDir = join(preparedRoot, "tab-request");
+    await writeExtensionDumpPackage(
+      packageDir,
+      {
+        name: "tab-request",
+        displayName: "Tab request",
+        main: "index.mjs",
+        manifest: {
+          supportedHosts: ["desktop"],
+          requestedCapabilities: ["desktop-ui"],
+          contributes: {
+            desktop: {
+              tabs: [
+                {
+                  id: "notes",
+                  name: "Notes",
+                  path: "notes.html",
+                  icon: { type: "spirit", name: "globe" },
+                },
+              ],
+            },
+          },
+        },
+      },
+      {
+        "index.mjs": `export function activate() {
+          return {
+            onTabRequest(request) {
+              return {
+                method: request.method,
+                instanceId: request.instanceId,
+                params: request.params,
+                host: request.host.marker,
+              };
+            },
+          };
+        }
+`,
+      },
+    );
+    const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
+    const installed = await manager.installPreparedDirectory({ preparedDirectoryPath: packageDir });
+    const result = await manager.invokeTabRequest({
+      extensionId: installed.id,
+      contributionId: "notes",
+      instanceId: "instance-1",
+      method: "echo",
+      params: { value: 42 },
+      host: {
+        forExtension(extensionId: string) {
+          return { marker: `bound:${extensionId}` };
+        },
+      },
+    });
+    assert.deepEqual(result, {
+      method: "echo",
+      instanceId: "instance-1",
+      params: { value: 42 },
+      host: "bound:personal/tab-request",
+    });
+    await assert.rejects(
+      manager.invokeTabRequest({
+        extensionId: installed.id,
+        contributionId: "missing",
+        instanceId: "instance-1",
+        method: "echo",
+        host: {},
+      }),
+      /does not declare the tab/,
+    );
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(preparedRoot, { recursive: true, force: true });
+  }
+});
+
+test("WebView events activate the owning backend handler", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-web-view-data-"));
+  const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-web-view-prepared-"));
+  const eventKey = "__spiritExtensionWebViewEvent";
+  try {
+    const packageDir = join(preparedRoot, "web-view-events");
+    await writeExtensionDumpPackage(
+      packageDir,
+      {
+        name: "web-view-events",
+        displayName: "WebView events",
+        main: "index.mjs",
+        manifest: {
+          supportedHosts: ["desktop"],
+          requestedCapabilities: [
+            "desktop-ui",
+            "desktop-webview-display",
+            "desktop-webview-control",
+          ],
+          contributes: {
+            desktop: {
+              tabs: [
+                {
+                  id: "browser",
+                  name: "Browser",
+                  path: "browser.html",
+                  icon: { type: "spirit", name: "globe" },
+                },
+              ],
+            },
+          },
+        },
+      },
+      {
+        "index.mjs": `export function activate() {}
+export function onWebViewEvent(event) {
+  globalThis.${eventKey} = {
+    viewId: event.state.viewId,
+    url: event.state.url,
+  };
+}
+`,
+      },
+    );
+    const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
+    const installed = await manager.installPreparedDirectory({ preparedDirectoryPath: packageDir });
+    await manager.dispatchWebViewEvent({
+      event: {
+        extensionId: installed.id,
+        contributionId: "browser",
+        instanceId: "instance-1",
+        state: {
+          viewId: "view-1",
+          url: "http://127.0.0.1:4173",
+          title: "Fixture",
+          isLoading: false,
+          canGoBack: false,
+          canGoForward: false,
+        },
+      },
+      host: { marker: "bound" },
+    });
+    assert.deepEqual((globalThis as Record<string, unknown>)[eventKey], {
+      viewId: "view-1",
+      url: "http://127.0.0.1:4173",
+    });
+  } finally {
+    delete (globalThis as Record<string, unknown>)[eventKey];
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(preparedRoot, { recursive: true, force: true });
+  }
+});
+
+test("desktop tabs parse contributions and reject invalid entries", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-tabs-data-"));
+  const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-tabs-prepared-"));
+  const install = async (name: string, tabs: unknown) => {
+    const packageDir = join(preparedRoot, name);
+    await writeExtensionDumpPackage(packageDir, {
+      name,
+      displayName: name,
+      manifest: {
+        supportedHosts: ["desktop"],
+        requestedCapabilities: ["desktop-ui"],
+        contributes: { desktop: { tabs } },
+      },
+    });
+    return installPreparedExtensionDirectory(
+      { spiritDataDir, hostKind: "desktop" },
+      { preparedDirectoryPath: packageDir },
+    );
+  };
+
+  try {
+    const installed = await install("valid-tabs", [
+      {
+        id: "notes",
+        name: "Notes",
+        path: "ui/notes.html",
+        icon: { type: "spirit", name: "globe" },
+        defaultScope: "workspace",
+      },
+      {
+        id: "preview",
+        name: "Preview",
+        path: "ui/preview.html",
+        icon: { type: "file", path: "assets/preview.svg" },
+      },
+    ]);
+    assert.deepEqual(installed.manifest.contributes?.desktop?.tabs, [
+      {
+        id: "notes",
+        name: "Notes",
+        path: "ui/notes.html",
+        icon: { type: "spirit", name: "globe" },
+        defaultScope: "workspace",
+      },
+      {
+        id: "preview",
+        name: "Preview",
+        path: "ui/preview.html",
+        icon: { type: "file", path: "assets/preview.svg" },
+      },
+    ]);
+
+    const validTab = {
+      id: "notes",
+      name: "Notes",
+      path: "ui/notes.html",
+      icon: { type: "spirit", name: "globe" },
+    };
+    const invalidCases: Array<[string, unknown, RegExp]> = [
+      [
+        "spirit",
+        [{ ...validTab, icon: { type: "spirit", name: "file-text" } }],
+        /Unknown Spirit Icon/,
+      ],
+      [
+        "lucide",
+        [{ ...validTab, icon: { type: "spirit", name: "FileText" } }],
+        /Unknown Spirit Icon/,
+      ],
+      ["html", [{ ...validTab, path: "ui/notes.mjs" }], /must be an HTML page/],
+      ["escape", [{ ...validTab, path: "../notes.html" }], /illegal path segment/],
+      [
+        "icon-file",
+        [{ ...validTab, icon: { type: "file", path: "icon.gif" } }],
+        /SVG, PNG, JPEG, or WebP/,
+      ],
+      ["scope", [{ ...validTab, defaultScope: "global" }], /defaultScope/],
+      ["duplicate", [validTab, validTab], /duplicate tab id/],
+    ];
+    for (const [name, tabs, expected] of invalidCases) {
+      await assert.rejects(install(`invalid-${name}`, tabs), expected);
+    }
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(preparedRoot, { recursive: true, force: true });
+  }
+});
+
 test("desktop views parse chrome modes and reject invalid values", async () => {
   const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-view-chrome-data-"));
   const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-view-chrome-prepared-"));

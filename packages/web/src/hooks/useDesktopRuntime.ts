@@ -3342,6 +3342,85 @@ export function useDesktopRuntime() {
     [api, applySnapshot],
   );
 
+  const getWorkspaceToolTabs = useCallback(async () => {
+    if (!api) {
+      throw new Error("Desktop host is unavailable.");
+    }
+    return api.getWorkspaceToolTabs();
+  }, [api]);
+
+  const syncWorkspaceToolTabs = useCallback(
+    async (request: {
+      expectedRevision: number;
+      tabs: import("../types").DesktopWorkspaceToolTab[];
+      activeTabId: string;
+    }) => {
+      if (!api) {
+        throw new Error("Desktop host is unavailable.");
+      }
+      return api.syncWorkspaceToolTabs(request);
+    },
+    [api],
+  );
+
+  const subscribeWorkspaceToolTabsUpdates = useCallback(
+    (callback: (snapshot: import("../types").DesktopWorkspaceToolsSnapshot) => void) =>
+      api?.subscribeWorkspaceToolTabsUpdates?.(callback) ?? (() => {}),
+    [api],
+  );
+
+  const invokeExtensionTabRequest = useCallback(
+    async (request: {
+      extensionId: string;
+      contributionId: string;
+      instanceId: string;
+      method: string;
+      params?: unknown;
+    }) => {
+      if (!api) {
+        throw new Error("Desktop host is unavailable.");
+      }
+      return api.invokeExtensionTabRequest(request);
+    },
+    [api],
+  );
+
+  const setExtensionTabChrome = useCallback(
+    async (request: {
+      extensionId: string;
+      instanceId: string;
+      patch: import("../types").DesktopExtensionTabChromePatch;
+    }) => {
+      if (!api) {
+        throw new Error("Desktop host is unavailable.");
+      }
+      return api.setExtensionTabChrome(request);
+    },
+    [api],
+  );
+
+  const subscribeExtensionTabEvents = useCallback(
+    (callback: (event: import("../types").DesktopExtensionTabEvent) => void) =>
+      api?.subscribeExtensionTabEvents?.(callback) ?? (() => {}),
+    [api],
+  );
+
+  const invokeExtensionWebView = useCallback(
+    async (request: import("../types").DesktopExtensionWebViewRequest) => {
+      if (!api) {
+        throw new Error("Desktop host is unavailable.");
+      }
+      return api.invokeExtensionWebView(request);
+    },
+    [api],
+  );
+
+  const subscribeExtensionWebViewEvents = useCallback(
+    (callback: (event: import("../types").DesktopExtensionWebViewEvent) => void) =>
+      api?.subscribeExtensionWebViewEvents?.(callback) ?? (() => {}),
+    [api],
+  );
+
   const replyWorkspaceCapabilityTrust = useCallback(
     async (decision: WorkspaceCapabilityTrustDecision) => {
       if (!api) {
@@ -4284,6 +4363,14 @@ export function useDesktopRuntime() {
     submitApproval,
     replyWorkspaceCapabilityTrust,
     resolveExtensionUi,
+    getWorkspaceToolTabs,
+    syncWorkspaceToolTabs,
+    subscribeWorkspaceToolTabsUpdates,
+    invokeExtensionTabRequest,
+    setExtensionTabChrome,
+    subscribeExtensionTabEvents,
+    invokeExtensionWebView,
+    subscribeExtensionWebViewEvents,
     submitQuestions,
   };
 }

@@ -1,4 +1,5 @@
 import { Globe } from "@spiritagent/icons/globe";
+import { getSpiritIconComponent } from "@spiritagent/icons";
 import { Plus } from "@spiritagent/icons/plus";
 import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
 import {
@@ -49,6 +50,8 @@ import { WorkspacePrTab } from "@/components/workspace-pr-tab";
 import { WorkspaceTerminalTab } from "@/components/workspace-terminal-tab";
 import { WorkspaceTaskTerminalTab } from "@/components/workspace-task-terminal-tab";
 import { WorkspaceToolTabChip } from "@/components/workspace-tool-tab-chip";
+import { ExtensionTabHost } from "@/components/extension-tab-host";
+import { ExtensionTabIcon } from "@/components/extension-tab-icon";
 import {
   DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
   DESKTOP_OVERLAY_LIST_ITEM,
@@ -92,6 +95,9 @@ import type { EditorFileTarget, WorkspaceEditorViewMode } from "@/lib/workspace-
 import { resolveWorkspaceFilesTabIcon } from "@/lib/workspace-explorer-icon";
 import {
   addWorkspaceToolTab,
+  createExtensionWorkspaceToolTab,
+  isWorkspaceToolTabKind,
+  isWorkspaceToolTabVisibleInContext,
   closeWorkspaceToolTab,
   workspaceTerminalChipDisplayName,
   workspaceToolTabLabel,
@@ -100,8 +106,15 @@ import {
 } from "@/lib/workspace-tool-tabs";
 import { getTaskTerminal, shouldConfirmTaskTabClose } from "@/lib/task-terminal-registry";
 import { terminateTaskTerminalInstance } from "@/lib/task-run-service";
+import {
+  collectExtensionTabContributions,
+  resolveExtensionTabScope,
+  type ExtensionTabContribution,
+} from "@/lib/extension-tab-contributions";
+import { extensionTabPackagedIconUrl } from "@/lib/extension-tab-frame";
 import type {
   DesktopGitSnapshot,
+  DesktopExtensionListItem,
   WorkspaceContentInvalidation,
   GetGitHubPullRequestDetailRequest,
   GitHubAuthStatus,
@@ -132,6 +145,29 @@ const TAB_KIND_META: Record<WorkspaceToolTabKind, { labelKey: string; icon: type
 export type WorkspaceToolsDockProps = {
   /** Resolved workspace root path; empty string while not ready */
   workspaceRoot: string;
+  sessionKey?: string;
+  extensionsList?: readonly DesktopExtensionListItem[];
+  onExtensionTabRequest?: (request: {
+    extensionId: string;
+    contributionId: string;
+    instanceId: string;
+    method: string;
+    params?: unknown;
+  }) => Promise<unknown>;
+  onExtensionTabChrome?: (request: {
+    extensionId: string;
+    instanceId: string;
+    patch: import("@/types").DesktopExtensionTabChromePatch;
+  }) => Promise<void>;
+  subscribeExtensionTabEvents?: (
+    callback: (event: import("@/types").DesktopExtensionTabEvent) => void,
+  ) => () => void;
+  onExtensionWebView?: (
+    request: import("@/types").DesktopExtensionWebViewRequest,
+  ) => Promise<unknown>;
+  subscribeExtensionWebViewEvents?: (
+    callback: (event: import("@/types").DesktopExtensionWebViewEvent) => void,
+  ) => () => void;
   listExplorerChildren: (relativePath: string) => Promise<WorkspaceExplorerListResult>;
   readWorkspaceTextFile: (relativePath: string) => Promise<WorkspaceReadTextFileResult>;
   writeWorkspaceTextFile: (request: WriteWorkspaceTextFileRequest) => Promise<void>;
@@ -523,6 +559,13 @@ function WorkspaceToolsDockShell({
 
 const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   workspaceRoot,
+  sessionKey = "",
+  extensionsList = [],
+  onExtensionTabRequest,
+  onExtensionTabChrome,
+  subscribeExtensionTabEvents,
+  onExtensionWebView,
+  subscribeExtensionWebViewEvents,
   listExplorerChildren,
   readWorkspaceTextFile,
   writeWorkspaceTextFile,
@@ -610,6 +653,10 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   );
   const [taskCloseDialogOpen, setTaskCloseDialogOpen] = useState(false);
   const [addToolTabMenuOpen, setAddToolTabMenuOpen] = useState(false);
+  const extensionContributions = useMemo(
+    () => (browserTabEnabled ? collectExtensionTabContributions(extensionsList) : []),
+    [browserTabEnabled, extensionsList],
+  );
   const toolTabsBarRef = useRef<HTMLDivElement>(null);
 
   useWorkspaceToolsShellHorizontalDivider(
@@ -639,7 +686,10 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId), [activeTabId, tabs]);
 
   useEffect(() => {
-    if (activeTab?.kind !== "terminal" && activeTab?.kind !== "task") {
+    if (
+      !isWorkspaceToolTabKind(activeTab, "terminal") &&
+      !isWorkspaceToolTabKind(activeTab, "task")
+    ) {
       return;
     }
     setMountedTerminalTabIds((prev) => {
@@ -660,7 +710,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
       if (kind === "pr" && (!prTabEnabled || gitHubAuthConnected !== true)) {
         return;
       }
-      const vacant = tabs.find((tab) => tab.kind === kind && !tab.tabTitle);
+      const vacant = tabs.find((tab) => isWorkspaceToolTabKind(tab, kind) && !tab.tabTitle);
       if (vacant) {
         onActiveTabIdChange(vacant.id);
         return;
@@ -680,6 +730,26 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
       tabs,
       t,
     ],
+  );
+
+  const handleAddExtensionTab = useCallback(
+    ({ extension, contribution }: ExtensionTabContribution) => {
+      const scope = resolveExtensionTabScope({
+        defaultScope: contribution.defaultScope,
+        workspaceRoot,
+        sessionKey,
+      });
+      const tab = createExtensionWorkspaceToolTab({
+        extensionId: extension.id,
+        contributionId: contribution.id,
+        scope,
+        icon: contribution.icon,
+        tabTitle: contribution.name,
+      });
+      onTabsChange([...tabs, tab]);
+      onActiveTabIdChange(tab.id);
+    },
+    [onActiveTabIdChange, onTabsChange, sessionKey, tabs, workspaceRoot],
   );
 
   const performCloseTab = useCallback(
@@ -704,11 +774,14 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   const handleCloseTab = useCallback(
     (closeId: string) => {
       const tab = tabs.find((item) => item.id === closeId);
-      if (tab?.kind === "files" && tab.tabDirty) {
+      if ((isWorkspaceToolTabKind(tab, "files") || tab?.kind === "extension") && tab.tabDirty) {
         setPendingCloseTabId(closeId);
         return;
       }
-      if (tab?.kind === "task" && shouldConfirmTaskTabClose(getTaskTerminal(closeId))) {
+      if (
+        isWorkspaceToolTabKind(tab, "task") &&
+        shouldConfirmTaskTabClose(getTaskTerminal(closeId))
+      ) {
         setPendingTaskClose({ tabId: closeId, label: tab.tabTitle ?? "" });
         setTaskCloseDialogOpen(true);
         return;
@@ -751,7 +824,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     (tabId: string, title: string | undefined) => {
       onTabsChange((prev) =>
         prev.map((item) =>
-          item.id === tabId && item.pinnedTitle !== true
+          item.kind === "built-in" && item.id === tabId && item.pinnedTitle !== true
             ? {
                 ...item,
                 tabTitle: title || undefined,
@@ -779,6 +852,19 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
       onTabsChange((prev) =>
         prev.map((item) =>
           item.id === tabId ? { ...item, filesWorkspacePath: relativePath || undefined } : item,
+        ),
+      );
+    },
+    [onTabsChange],
+  );
+
+  const handleTabFilesViewModeChange = useCallback(
+    (tabId: string, viewMode: "edit" | "preview") => {
+      onTabsChange((prev) =>
+        prev.map((item) =>
+          isWorkspaceToolTabKind(item, "files") && item.id === tabId
+            ? { ...item, filesViewMode: viewMode }
+            : item,
         ),
       );
     },
@@ -835,12 +921,47 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
             className="flex items-center gap-1"
           >
             {tabs.map((item) => {
-              const meta = TAB_KIND_META[item.kind];
+              if (item.kind === "extension") {
+                if (!isWorkspaceToolTabVisibleInContext(item, { workspaceRoot, sessionKey })) {
+                  return null;
+                }
+                const entry = extensionContributions.find(
+                  (candidate) =>
+                    candidate.extension.id === item.extensionId &&
+                    candidate.contribution.id === item.contributionId,
+                );
+                if (!entry) {
+                  return null;
+                }
+                const icon = item.icon ?? entry.contribution.icon;
+                const Icon =
+                  icon.type === "spirit" ? (getSpiritIconComponent(icon.name) ?? Globe) : Globe;
+                const iconUrl =
+                  icon.type === "file"
+                    ? extensionTabPackagedIconUrl(item.extensionId, icon.path)
+                    : icon.type === "image"
+                      ? icon.dataUrl
+                      : undefined;
+                return (
+                  <WorkspaceToolTabChip
+                    key={item.id}
+                    tab={item}
+                    icon={Icon}
+                    iconUrl={iconUrl}
+                    label={entry.contribution.name}
+                    selected={item.id === activeTabId}
+                    onSelect={onActiveTabIdChange}
+                    onClose={handleCloseTab}
+                  />
+                );
+              }
+              const meta = TAB_KIND_META[item.builtInKind];
               const displayTitle = item.tabTitle;
-              const filesTabIcon =
-                item.kind === "files" ? resolveWorkspaceFilesTabIcon(displayTitle) : undefined;
+              const filesTabIcon = isWorkspaceToolTabKind(item, "files")
+                ? resolveWorkspaceFilesTabIcon(displayTitle)
+                : undefined;
               const Icon =
-                item.kind === "pr" && item.prStatus
+                isWorkspaceToolTabKind(item, "pr") && item.prStatus
                   ? resolvePrTabStatusIcon(item.prStatus)
                   : (filesTabIcon ?? meta.icon);
               return (
@@ -848,7 +969,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   key={item.id}
                   tab={item}
                   icon={Icon}
-                  label={workspaceToolTabLabel(item.kind, tabs, item.id, t)}
+                  label={workspaceToolTabLabel(item.builtInKind, tabs, item.id, t)}
                   selected={item.id === activeTabId}
                   onSelect={onActiveTabIdChange}
                   onClose={handleCloseTab}
@@ -986,6 +1107,25 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                 </Tooltip>
               );
             })}
+            {extensionContributions.map((entry) => (
+              <DropdownMenuItem
+                key={`${entry.extension.id}:${entry.contribution.id}`}
+                data-workspace-extension-tab={`${entry.extension.id}:${entry.contribution.id}`}
+                className={cn(
+                  "flex w-full cursor-pointer select-none items-center gap-2 rounded-sm text-left outline-none",
+                  DESKTOP_OVERLAY_LIST_ITEM,
+                  "text-popover-foreground",
+                )}
+                onSelect={() => handleAddExtensionTab(entry)}
+              >
+                <ExtensionTabIcon
+                  extensionId={entry.extension.id}
+                  icon={entry.contribution.icon}
+                  className="size-4"
+                />
+                <span className="min-w-0 flex-1 truncate">{entry.contribution.name}</span>
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -995,14 +1135,68 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
         aria-live="polite"
       >
         {tabs.map((item) => {
+          if (item.kind === "extension") {
+            const entry = extensionContributions.find(
+              (candidate) =>
+                candidate.extension.id === item.extensionId &&
+                candidate.contribution.id === item.contributionId,
+            );
+            if (!entry) {
+              return null;
+            }
+            const selected =
+              item.id === activeTabId &&
+              isWorkspaceToolTabVisibleInContext(item, { workspaceRoot, sessionKey });
+            return (
+              <div
+                key={item.id}
+                id={`workspace-tool-panel-${item.id}`}
+                role="tabpanel"
+                aria-labelledby={`workspace-tool-tab-${item.id}`}
+                hidden={!selected}
+                inert={!selected}
+                aria-hidden={!selected}
+                className={cn(
+                  "absolute inset-0 flex min-h-0 flex-col overflow-hidden",
+                  !selected && "invisible",
+                )}
+              >
+                <ExtensionTabHost
+                  tab={item}
+                  contribution={entry.contribution}
+                  active={selected}
+                  workspaceRoot={workspaceRoot}
+                  sessionKey={sessionKey}
+                  onRequest={onExtensionTabRequest}
+                  onChrome={onExtensionTabChrome}
+                  subscribeEvents={subscribeExtensionTabEvents}
+                  onWebView={onExtensionWebView}
+                  subscribeWebViewEvents={subscribeExtensionWebViewEvents}
+                />
+              </div>
+            );
+          }
           const selected = item.id === activeTabId;
-          const panelPadding = item.kind === "files" || item.kind === "terminal" ? "p-0" : "p-0";
+          const panelPadding =
+            isWorkspaceToolTabKind(item, "files") || isWorkspaceToolTabKind(item, "terminal")
+              ? "p-0"
+              : "p-0";
           const planRevealEnabled =
-            item.kind === "files" && planRevealTabId != null && item.id === planRevealTabId;
+            isWorkspaceToolTabKind(item, "files") &&
+            planRevealTabId != null &&
+            item.id === planRevealTabId;
           const fileRevealEnabled =
-            item.kind === "files" && fileRevealTabId != null && item.id === fileRevealTabId;
+            isWorkspaceToolTabKind(item, "files") &&
+            fileRevealTabId != null &&
+            item.id === fileRevealTabId;
+          const restoredFileRevealEnabled =
+            isWorkspaceToolTabKind(item, "files") &&
+            !fileRevealEnabled &&
+            Boolean(item.filesWorkspacePath);
           const prRevealEnabled =
-            item.kind === "pr" && prRevealTabId != null && item.id === prRevealTabId;
+            isWorkspaceToolTabKind(item, "pr") &&
+            prRevealTabId != null &&
+            item.id === prRevealTabId;
 
           return (
             <div
@@ -1019,7 +1213,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                 !selected && "invisible",
               )}
             >
-              {item.kind === "files" ? (
+              {isWorkspaceToolTabKind(item, "files") ? (
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pt-0">
                   <WorkspaceFilesTab
                     workspaceRoot={workspaceRoot}
@@ -1038,12 +1232,14 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     startImplementingDisabled={startImplementingDisabled}
                     autoRevealPlanNonce={planRevealEnabled ? autoRevealPlanNonce : 0}
                     planRevealEnabled={planRevealEnabled}
-                    autoRevealFileNonce={fileRevealEnabled ? autoRevealFileNonce : 0}
-                    fileRevealEnabled={fileRevealEnabled}
-                    fileRevealPath={fileRevealPath}
+                    autoRevealFileNonce={
+                      fileRevealEnabled ? autoRevealFileNonce : restoredFileRevealEnabled ? 1 : 0
+                    }
+                    fileRevealEnabled={fileRevealEnabled || restoredFileRevealEnabled}
+                    fileRevealPath={fileRevealEnabled ? fileRevealPath : item.filesWorkspacePath}
                     fileRevealAbsolutePath={fileRevealAbsolutePath}
                     fileRevealScope={fileRevealScope}
-                    fileRevealViewMode={fileRevealViewMode}
+                    fileRevealViewMode={fileRevealEnabled ? fileRevealViewMode : item.filesViewMode}
                     fileRevealDirectoryOnly={fileRevealDirectoryOnly}
                     fileRevealLine={fileRevealEnabled ? fileRevealLine : null}
                     fileRevealColumn={fileRevealEnabled ? fileRevealColumn : null}
@@ -1054,6 +1250,9 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     onOpenWorkspaceFileInNewTab={onOpenWorkspaceFileInNewTab}
                     onFilesWorkspacePathChange={(path) =>
                       handleTabFilesWorkspacePathChange(item.id, path)
+                    }
+                    onFilesViewModeChange={(viewMode) =>
+                      handleTabFilesViewModeChange(item.id, viewMode)
                     }
                     onFileSnippetAddToChat={
                       onFileSnippetAddToChat
@@ -1070,7 +1269,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     codeCompletionEnabled={codeCompletionEnabled}
                   />
                 </div>
-              ) : item.kind === "terminal" ? (
+              ) : isWorkspaceToolTabKind(item, "terminal") ? (
                 mountedTerminalTabIds.has(item.id) ? (
                   <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                     <WorkspaceTerminalTab
@@ -1088,7 +1287,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     />
                   </div>
                 ) : null
-              ) : item.kind === "task" ? (
+              ) : isWorkspaceToolTabKind(item, "task") ? (
                 mountedTerminalTabIds.has(item.id) ? (
                   <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                     <WorkspaceTaskTerminalTab
@@ -1100,7 +1299,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     />
                   </div>
                 ) : null
-              ) : item.kind === "browser" ? (
+              ) : isWorkspaceToolTabKind(item, "browser") ? (
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                   <WorkspaceBrowserTab
                     browserTabId={item.id}
@@ -1119,7 +1318,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     }
                   />
                 </div>
-              ) : item.kind === "pr" ? (
+              ) : isWorkspaceToolTabKind(item, "pr") ? (
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                   <WorkspacePrTab
                     gitSnapshot={gitSnapshot}

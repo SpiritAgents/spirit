@@ -90,6 +90,34 @@ test("desktop views scaffold a single-file default export", async () => {
   assert.ok(files["ui/view.mjs"]?.includes("relative imports 404"));
 });
 
+test("desktop tabs scaffold a plain page and its backend channel", async () => {
+  const { files } = await scaffold({ capabilities: ["desktop-tabs"] });
+
+  const dump = parseExtensionDumpText(files[".spirit/extension.json"] ?? "");
+  assert.deepEqual(dump.manifest.requestedCapabilities, ["desktop-ui"]);
+  assert.deepEqual(dump.manifest.contributes, {
+    desktop: {
+      tabs: [
+        {
+          id: "main",
+          name: "My Ext",
+          path: "ui/tab.html",
+          icon: { type: "spirit", name: "compose" },
+          defaultScope: "window-shared",
+        },
+      ],
+    },
+  });
+  assert.ok(files["ui/tab.html"]?.includes('<script type="module" src="./tab.js">'));
+  assert.ok(files["ui/tab.js"]?.includes("window.spirit.tab.ready()"));
+  assert.ok(files["ui/tab.js"]?.includes('request("echo"'));
+  assert.ok(files["index.mjs"]?.includes("export function onTabRequest"));
+  assert.equal(JSON.parse(files["package.json"] ?? "{}").main, "index.mjs");
+  assert.ok(
+    !dump.manifest.requestedCapabilities?.some((entry) => entry.startsWith("desktop-webview-")),
+  );
+});
+
 test("system-prompt scaffolds the main module export", async () => {
   const { files } = await scaffold({ capabilities: ["system-prompt"] });
   assert.ok(files["index.mjs"]?.includes("export const systemPrompt"));

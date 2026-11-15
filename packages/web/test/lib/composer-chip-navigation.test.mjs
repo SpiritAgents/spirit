@@ -23,7 +23,7 @@ function env(overrides = {}) {
 }
 
 test("untracked terminal chips are not navigable", () => {
-  const tabs = [{ id: "term-1", kind: "terminal" }];
+  const tabs = [{ id: "term-1", kind: "built-in", builtInKind: "terminal" }];
   assert.deepEqual(resolveComposerChipNavigate({ kind: "terminalSnippet" }, env({ tabs })), {
     navigable: false,
   });
@@ -34,7 +34,7 @@ test("untracked terminal chips are not navigable", () => {
 });
 
 test("tracked terminal tab still present is navigable", () => {
-  const tabs = [{ id: "term-1", kind: "terminal" }];
+  const tabs = [{ id: "term-1", kind: "built-in", builtInKind: "terminal" }];
   assert.deepEqual(
     resolveComposerChipNavigate({ kind: "terminalSnippet", sourceTabId: "term-1" }, env({ tabs })),
     { navigable: true, action: { type: "focus-tab", tabId: "term-1" } },
@@ -42,7 +42,9 @@ test("tracked terminal tab still present is navigable", () => {
 });
 
 test("closed tracked files tab falls back to same-path tab or new reveal", () => {
-  const tabs = [{ id: "files-2", kind: "files", filesWorkspacePath: "src/a.ts" }];
+  const tabs = [
+    { id: "files-2", kind: "built-in", builtInKind: "files", filesWorkspacePath: "src/a.ts" },
+  ];
   assert.deepEqual(
     resolveComposerChipNavigate(
       { kind: "workspaceFile", path: "src/a.ts", sourceTabId: "files-1" },
@@ -290,7 +292,7 @@ test("quote chips follow session-path aliases before checking availability", () 
 });
 
 test("trackedTabOfKind ignores surviving tabs of the wrong kind", () => {
-  const tabs = [{ id: "tab-1", kind: "files" }];
+  const tabs = [{ id: "tab-1", kind: "built-in", builtInKind: "files" }];
   assert.equal(trackedTabOfKind(tabs, "tab-1", "terminal"), undefined);
   assert.equal(trackedTabOfKind(tabs, "tab-1", "files")?.id, "tab-1");
 });

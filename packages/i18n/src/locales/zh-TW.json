@@ -1144,7 +1144,8 @@
     "moveEntryConfirmTitle": "移動「{{name}}」？",
     "moveEntryConfirmDescription": "項目將移至「{{folder}}」。",
     "forceDeleteConfirmTitle": "永久刪除？",
-    "forceDeleteConfirmDescription": "無法移至垃圾桶：{{reason}}。此操作無法復原。"
+    "forceDeleteConfirmDescription": "無法移至垃圾桶：{{reason}}。此操作無法復原。",
+    "extensionTabLoadError": "無法載入 {{name}}。請檢查擴充套件後重試。"
   },
   "task": {
     "instanceLimitTitle": "「{{label}}」已在執行。",

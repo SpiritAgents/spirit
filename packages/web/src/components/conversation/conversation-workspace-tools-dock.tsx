@@ -63,6 +63,13 @@ export function ConversationWorkspaceToolsDock({
       <WorkspaceToolsDock
         useTranslucency={useTranslucency}
         workspaceRoot={snapshot?.workspaceRoot ?? ""}
+        sessionKey={snapshot?.composerSessionKey ?? ""}
+        extensionsList={snapshot?.extensionsList ?? []}
+        onExtensionTabRequest={runtime.invokeExtensionTabRequest}
+        onExtensionTabChrome={runtime.setExtensionTabChrome}
+        subscribeExtensionTabEvents={runtime.subscribeExtensionTabEvents}
+        onExtensionWebView={runtime.invokeExtensionWebView}
+        subscribeExtensionWebViewEvents={runtime.subscribeExtensionWebViewEvents}
         listExplorerChildren={runtime.listWorkspaceExplorerChildren}
         readWorkspaceTextFile={runtime.readWorkspaceTextFile}
         writeWorkspaceTextFile={runtime.writeWorkspaceTextFile}

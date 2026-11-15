@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useWorkspaceToolsChromeActions } from "@/contexts/workspace-tools-chrome-context";
 import { useRecentFilePool } from "@/hooks/useRecentFilePool";
@@ -8,7 +8,10 @@ import { readWorkspaceToolsWidthRatio } from "@/lib/layout-prefs";
 import {
   addWorkspaceToolTab,
   createInitialWorkspaceToolsState,
+  defaultActiveWorkspaceToolTabId,
   findWorkspaceToolTab,
+  isWorkspaceToolTabKind,
+  isWorkspaceToolTabVisibleInContext,
   focusFirstTabOfKind,
   normalizeWorkspaceToolTabsForHost,
   openBrowserUrlInWorkspaceTabs,
@@ -60,6 +63,9 @@ export function useWorkspaceToolsController({
   const getWorkspaceToolTabs = useCallback(() => workspaceToolTabsRef.current, []);
   const getActiveWorkspaceToolTabId = useCallback(() => activeWorkspaceToolTabIdRef.current, []);
   const workspaceToolsHostSyncedRef = useRef<typeof runtime.hostKind | null>(null);
+  const workspaceToolsHostReadyRef = useRef(false);
+  const workspaceToolsHostSignatureRef = useRef("");
+  const workspaceToolsHostRevisionRef = useRef(-1);
   const browserTabEnabled = runtime.hostKind === "electron";
   const prTabEnabled = runtime.hostKind === "electron";
   const [workspaceFilesPlanRevealNonce, setWorkspaceFilesPlanRevealNonce] = useState(0);
@@ -220,7 +226,7 @@ export function useWorkspaceToolsController({
   const openGitTab = useCallback((preferTabId?: string) => {
     if (preferTabId) {
       const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, preferTabId);
-      if (tab?.kind === "git") {
+      if (isWorkspaceToolTabKind(tab, "git")) {
         setWorkspaceToolsOpen(true);
         setActiveWorkspaceToolTabId(preferTabId);
         return;
@@ -255,7 +261,7 @@ export function useWorkspaceToolsController({
       },
     ) => {
       const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, tabId);
-      if (tab?.kind !== "files") {
+      if (!isWorkspaceToolTabKind(tab, "files")) {
         openWorkspaceFile(relativePath, options);
         return;
       }
@@ -276,7 +282,7 @@ export function useWorkspaceToolsController({
 
   const revealWorkspaceDirectoryOnTab = useCallback((tabId: string, relativePath: string) => {
     const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, tabId);
-    if (tab?.kind !== "files") {
+    if (!isWorkspaceToolTabKind(tab, "files")) {
       revealWorkspaceDirectory(relativePath);
       return;
     }
@@ -301,7 +307,7 @@ export function useWorkspaceToolsController({
       }
       if (preferTabId) {
         const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, preferTabId);
-        if (tab?.kind === "browser") {
+        if (isWorkspaceToolTabKind(tab, "browser")) {
           setWorkspaceToolsOpen(true);
           setWorkspaceToolTabs(
             workspaceToolTabsRef.current.map((item) =>
@@ -313,8 +319,10 @@ export function useWorkspaceToolsController({
         }
       }
       const tabs = workspaceToolTabsRef.current;
-      const vacant = tabs.find((tab) => tab.kind === "browser" && !tab.tabTitle?.trim());
-      const existing = vacant ?? tabs.find((tab) => tab.kind === "browser");
+      const vacant = tabs.find(
+        (tab) => isWorkspaceToolTabKind(tab, "browser") && !tab.tabTitle?.trim(),
+      );
+      const existing = vacant ?? tabs.find((tab) => isWorkspaceToolTabKind(tab, "browser"));
       if (existing) {
         setWorkspaceToolsOpen(true);
         setWorkspaceToolTabs(
@@ -335,7 +343,7 @@ export function useWorkspaceToolsController({
       }
       if (preferTabId) {
         const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, preferTabId);
-        if (tab?.kind === "pr") {
+        if (isWorkspaceToolTabKind(tab, "pr")) {
           setWorkspaceToolsOpen(true);
           setActiveWorkspaceToolTabId(preferTabId);
           setWorkspacePrRevealTargetId(preferTabId);
@@ -366,7 +374,7 @@ export function useWorkspaceToolsController({
     const activeTabId = activeWorkspaceToolTabIdRef.current;
     const activeTab = findWorkspaceToolTab(tabs, activeTabId);
     let targetFilesTabId: string;
-    if (activeTab?.kind === "files") {
+    if (isWorkspaceToolTabKind(activeTab, "files")) {
       targetFilesTabId = activeTabId;
     } else {
       const firstFilesId = focusFirstTabOfKind(tabs, "files");
@@ -384,6 +392,97 @@ export function useWorkspaceToolsController({
     setWorkspaceFilesPlanRevealTargetId(targetFilesTabId);
     setWorkspaceFilesPlanRevealNonce((value) => value + 1);
   }, [setWorkspaceToolsOpen]);
+
+  useEffect(() => {
+    workspaceToolsHostReadyRef.current = false;
+    workspaceToolsHostRevisionRef.current = -1;
+    if (!runtime.apiReady || runtime.hostKind !== "electron") {
+      return;
+    }
+    let disposed = false;
+    const applySnapshot = (snapshot: import("@/types").DesktopWorkspaceToolsSnapshot) => {
+      if (disposed || snapshot.revision < workspaceToolsHostRevisionRef.current) {
+        return;
+      }
+      workspaceToolsHostRevisionRef.current = snapshot.revision;
+      workspaceToolsHostSignatureRef.current = JSON.stringify({
+        tabs: snapshot.tabs,
+        activeTabId: snapshot.activeTabId,
+      });
+      setWorkspaceToolTabs(snapshot.tabs);
+      setActiveWorkspaceToolTabId(snapshot.activeTabId);
+      workspaceToolsHostReadyRef.current = true;
+    };
+    const unsubscribe = runtime.subscribeWorkspaceToolTabsUpdates(applySnapshot);
+    void runtime
+      .getWorkspaceToolTabs()
+      .then(applySnapshot)
+      .catch((error: unknown) => {
+        console.error("[workspace-tabs] failed to restore Desktop tabs", error);
+      });
+    return () => {
+      disposed = true;
+      workspaceToolsHostReadyRef.current = false;
+      unsubscribe();
+    };
+  }, [
+    runtime.apiReady,
+    runtime.hostKind,
+    runtime.getWorkspaceToolTabs,
+    runtime.subscribeWorkspaceToolTabsUpdates,
+  ]);
+
+  useEffect(() => {
+    if (runtime.hostKind !== "electron" || !workspaceToolsHostReadyRef.current) {
+      return;
+    }
+    const signature = JSON.stringify({
+      tabs: workspaceToolTabs,
+      activeTabId: activeWorkspaceToolTabId,
+    });
+    if (signature === workspaceToolsHostSignatureRef.current) {
+      return;
+    }
+    workspaceToolsHostSignatureRef.current = signature;
+    void runtime
+      .syncWorkspaceToolTabs({
+        expectedRevision: workspaceToolsHostRevisionRef.current,
+        tabs: workspaceToolTabs,
+        activeTabId: activeWorkspaceToolTabId,
+      })
+      .catch((error: unknown) => {
+        workspaceToolsHostSignatureRef.current = "";
+        console.error("[workspace-tabs] failed to persist Desktop tabs", error);
+      });
+  }, [
+    activeWorkspaceToolTabId,
+    runtime.hostKind,
+    runtime.syncWorkspaceToolTabs,
+    workspaceToolTabs,
+  ]);
+
+  useEffect(() => {
+    const activeTab = findWorkspaceToolTab(workspaceToolTabs, activeWorkspaceToolTabId);
+    if (!activeTab || activeTab.kind !== "extension") {
+      return;
+    }
+    const context = {
+      workspaceRoot: snapshot?.workspaceRoot ?? "",
+      sessionKey: snapshot?.composerSessionKey ?? "",
+    };
+    if (isWorkspaceToolTabVisibleInContext(activeTab, context)) {
+      return;
+    }
+    const visibleTabs = workspaceToolTabs.filter((tab) =>
+      isWorkspaceToolTabVisibleInContext(tab, context),
+    );
+    setActiveWorkspaceToolTabId(defaultActiveWorkspaceToolTabId(visibleTabs));
+  }, [
+    activeWorkspaceToolTabId,
+    snapshot?.composerSessionKey,
+    snapshot?.workspaceRoot,
+    workspaceToolTabs,
+  ]);
 
   useEffect(() => {
     if (!runtime.apiReady || runtime.hostKind == null) {
@@ -461,8 +560,20 @@ export function useWorkspaceToolsController({
     snapshot?.plan,
   ]);
 
+  const visibleWorkspaceToolTabs = useMemo(
+    () =>
+      workspaceToolTabs.filter((tab) =>
+        isWorkspaceToolTabVisibleInContext(tab, {
+          workspaceRoot: snapshot?.workspaceRoot ?? "",
+          sessionKey: snapshot?.composerSessionKey ?? "",
+        }),
+      ),
+    [snapshot?.composerSessionKey, snapshot?.workspaceRoot, workspaceToolTabs],
+  );
+
   return {
     setWorkspaceToolsOpen,
+    visibleWorkspaceToolTabs,
     workspaceToolTabs,
     setWorkspaceToolTabs,
     activeWorkspaceToolTabId,

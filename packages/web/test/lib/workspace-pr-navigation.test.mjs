@@ -32,6 +32,6 @@ test("buildOpenPullRequestNavigation creates PR tab when missing", () => {
   });
 
   assert.notEqual(navigation.activeTabId, initial.activeTabId);
-  assert.equal(navigation.tabs.at(-1)?.kind, "pr");
+  assert.equal(navigation.tabs.at(-1)?.builtInKind, "pr");
   assert.equal(navigation.prTabId, navigation.activeTabId);
 });

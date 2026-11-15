@@ -1144,7 +1144,8 @@
     "moveEntryConfirmTitle": "„{{name}}“ verschieben?",
     "moveEntryConfirmDescription": "Das Element wird nach „{{folder}}“ verschoben.",
     "forceDeleteConfirmTitle": "Endgültig löschen?",
-    "forceDeleteConfirmDescription": "Konnte nicht in den Papierkorb verschoben werden: {{reason}}. Dies kann nicht rückgängig gemacht werden."
+    "forceDeleteConfirmDescription": "Konnte nicht in den Papierkorb verschoben werden: {{reason}}. Dies kann nicht rückgängig gemacht werden.",
+    "extensionTabLoadError": "{{name}} konnte nicht geladen werden. Prüfe das Erweiterungspaket und versuche es erneut."
   },
   "task": {
     "instanceLimitTitle": "„{{label}}“ läuft bereits.",

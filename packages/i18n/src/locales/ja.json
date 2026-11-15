@@ -1144,7 +1144,8 @@
     "moveEntryConfirmTitle": "「{{name}}」を移動しますか？",
     "moveEntryConfirmDescription": "項目は「{{folder}}」に移動されます。",
     "forceDeleteConfirmTitle": "完全に削除しますか？",
-    "forceDeleteConfirmDescription": "ごみ箱に移動できませんでした: {{reason}}。この操作は元に戻せません。"
+    "forceDeleteConfirmDescription": "ごみ箱に移動できませんでした: {{reason}}。この操作は元に戻せません。",
+    "extensionTabLoadError": "{{name}} を読み込めませんでした。拡張パッケージを確認して再試行してください。"
   },
   "task": {
     "instanceLimitTitle": "“{{label}}” はすでに実行中です。",

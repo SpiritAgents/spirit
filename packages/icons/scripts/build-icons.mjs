@@ -46,6 +46,34 @@ export const ${toPascalCase(name)} = createSpiritIcon(${JSON.stringify(name)}, i
 `;
 }
 
+function renderNamesModule(iconNames) {
+  return `export const SPIRIT_ICON_NAMES = ${JSON.stringify(iconNames)} as const;
+export type SpiritIconName = (typeof SPIRIT_ICON_NAMES)[number];
+
+export function isSpiritIconName(value: string): value is SpiritIconName {
+  return (SPIRIT_ICON_NAMES as readonly string[]).includes(value);
+}
+`;
+}
+
+function renderLookupModule(iconNames) {
+  const imports = iconNames.map((name) => `import { ${toPascalCase(name)} } from "./${name}.js";`);
+  const entries = iconNames.map((name) => `  ${JSON.stringify(name)}: ${toPascalCase(name)},`);
+  return `import type { createSpiritIcon } from "../create-spirit-icon.js";
+${imports.join("\n")}
+
+export type SpiritIconComponent = ReturnType<typeof createSpiritIcon>;
+
+const components = {
+${entries.join("\n")}
+} satisfies Record<string, SpiritIconComponent>;
+
+export function getSpiritIconComponent(name: string): SpiritIconComponent | undefined {
+  return Object.hasOwn(components, name) ? components[name as keyof typeof components] : undefined;
+}
+`;
+}
+
 function renderBarrel(iconNames) {
   const lines = iconNames.map(
     (name) => `export { ${toPascalCase(name)} } from "./icons/${name}.js";`,
@@ -55,6 +83,15 @@ function renderBarrel(iconNames) {
   type SpiritIconNode,
   type SpiritIconProps,
 } from "./create-spirit-icon.js";
+export {
+  getSpiritIconComponent,
+  type SpiritIconComponent,
+} from "./icons/lookup.js";
+export {
+  SPIRIT_ICON_NAMES,
+  isSpiritIconName,
+  type SpiritIconName,
+} from "./icons/names.js";
 ${lines.join("\n")}
 `;
 }
@@ -66,7 +103,16 @@ function updatePackageExports(iconNames) {
   if (typeof manifest.exports?.["."] !== "object" || manifest.exports["."] === null) {
     throw new Error('build-icons: package.json must keep its existing "." export');
   }
-  const exportsField = { ".": manifest.exports["."] };
+  const exportsField = {
+    ".": manifest.exports["."],
+    "./names": {
+      types: "./dist/icons/names.d.ts",
+      default: "./dist/icons/names.js",
+    },
+  };
+  writeFileSync(join(GENERATED_ICONS_DIR, "names.ts"), renderNamesModule(iconNames));
+  writeFileSync(join(GENERATED_ICONS_DIR, "lookup.ts"), renderLookupModule(iconNames));
+
   for (const name of iconNames) {
     exportsField[`./${name}`] = {
       types: `./dist/icons/${name}.d.ts`,
@@ -85,6 +131,9 @@ if (errors.length > 0) {
 }
 
 mkdirSync(GENERATED_ICONS_DIR, { recursive: true });
+
+writeFileSync(join(GENERATED_ICONS_DIR, "names.ts"), renderNamesModule(iconNames));
+writeFileSync(join(GENERATED_ICONS_DIR, "lookup.ts"), renderLookupModule(iconNames));
 
 for (const name of iconNames) {
   const svgSource = readFileSync(join(ICONS_DIR, `${name}.svg`), "utf8").trim();

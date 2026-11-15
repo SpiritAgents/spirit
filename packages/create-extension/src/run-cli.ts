@@ -17,7 +17,7 @@ Options:
   --description <text>     One-line description
   --capabilities <list>    Comma-separated capability ids: skills, rules, mcp,
                            hooks, tools, desktop-css, desktop-settings-page,
-                           desktop-views, system-prompt
+                           desktop-views, desktop-tabs, system-prompt
   -y, --yes                Skip the confirmation prompt
   -h, --help               Show this help
 

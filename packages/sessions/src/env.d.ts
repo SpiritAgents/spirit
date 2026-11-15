@@ -172,6 +172,36 @@ declare global {
     resolveExtensionUi(
       request: import("./types").ResolveExtensionUiRequest,
     ): Promise<DesktopSnapshot>;
+    getWorkspaceToolTabs(): Promise<import("./types").DesktopWorkspaceToolsSnapshot>;
+    syncWorkspaceToolTabs(request: {
+      expectedRevision: number;
+      tabs: import("./types").DesktopWorkspaceToolTab[];
+      activeTabId: string;
+    }): Promise<import("./types").DesktopWorkspaceToolsSnapshot>;
+    subscribeWorkspaceToolTabsUpdates(
+      callback: (snapshot: import("./types").DesktopWorkspaceToolsSnapshot) => void,
+    ): () => void;
+    invokeExtensionTabRequest(request: {
+      extensionId: string;
+      contributionId: string;
+      instanceId: string;
+      method: string;
+      params?: unknown;
+    }): Promise<unknown>;
+    setExtensionTabChrome(request: {
+      extensionId: string;
+      instanceId: string;
+      patch: import("./types").DesktopExtensionTabChromePatch;
+    }): Promise<void>;
+    subscribeExtensionTabEvents(
+      callback: (event: import("./types").DesktopExtensionTabEvent) => void,
+    ): () => void;
+    invokeExtensionWebView(
+      request: import("./types").DesktopExtensionWebViewRequest,
+    ): Promise<unknown>;
+    subscribeExtensionWebViewEvents(
+      callback: (event: import("./types").DesktopExtensionWebViewEvent) => void,
+    ): () => void;
     openPathInDefaultApp(absolutePath: string): Promise<void>;
     resetSession(): Promise<DesktopSnapshot>;
     listSessions(): Promise<SessionListItem[]>;

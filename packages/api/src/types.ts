@@ -548,6 +548,7 @@ export interface DesktopMarketplaceCatalogEntry {
   desktopCss?: DesktopExtensionDesktopCssEntry[];
   desktopSettingsPage?: DesktopExtensionDesktopSettingsPage;
   desktopViews?: DesktopExtensionDesktopView[];
+  desktopTabs?: DesktopExtensionDesktopTab[];
   cliHooks?: DesktopExtensionCliUiHookEntry[];
   instructionContributions?: DesktopExtensionInstructionContributionSummary;
   installed: boolean;
@@ -656,6 +657,151 @@ export interface DesktopExtensionDesktopSettingsPage {
 
 export type DesktopExtensionDesktopViewChrome = "default" | "close-only" | "none";
 
+export type DesktopExtensionDesktopTabScope = "window-shared" | "workspace" | "session";
+
+export type DesktopExtensionDesktopTabIcon =
+  | { type: "spirit"; name: string }
+  | { type: "file"; path: string };
+
+export type DesktopExtensionDesktopTabRuntimeIcon =
+  | DesktopExtensionDesktopTabIcon
+  | { type: "image"; dataUrl: string };
+
+export interface DesktopExtensionDesktopTab {
+  id: string;
+  name: string;
+  path: string;
+  icon: DesktopExtensionDesktopTabIcon;
+  defaultScope: DesktopExtensionDesktopTabScope;
+}
+
+export type DesktopWorkspaceBuiltInToolTabKind =
+  | "files"
+  | "terminal"
+  | "git"
+  | "browser"
+  | "pr"
+  | "task";
+
+export type DesktopWorkspaceExtensionToolTabScope =
+  | { kind: "window-shared" }
+  | { kind: "workspace"; workspaceRoot: string }
+  | { kind: "session"; sessionKey: string };
+
+interface DesktopWorkspaceToolTabBase {
+  id: string;
+  tabTitle?: string;
+  tabDirty?: boolean;
+}
+
+export interface DesktopWorkspaceBuiltInToolTab extends DesktopWorkspaceToolTabBase {
+  kind: "built-in";
+  builtInKind: DesktopWorkspaceBuiltInToolTabKind;
+  browserUrl?: string;
+  filesWorkspacePath?: string;
+  filesViewMode?: "edit" | "preview";
+  prStatus?: import("@spiritagent/ui/composer").PullRequestChipStatus;
+  taskKey?: string;
+  pinnedTitle?: boolean;
+}
+
+export interface DesktopWorkspaceExtensionToolTab extends DesktopWorkspaceToolTabBase {
+  kind: "extension";
+  extensionId: string;
+  contributionId: string;
+  instanceId: string;
+  channelId: string;
+  scope: DesktopWorkspaceExtensionToolTabScope;
+  initialParams?: unknown;
+  icon?: DesktopExtensionDesktopTabRuntimeIcon;
+}
+
+export type DesktopWorkspaceToolTab =
+  | DesktopWorkspaceBuiltInToolTab
+  | DesktopWorkspaceExtensionToolTab;
+
+export type DesktopExtensionTabOpenScope =
+  | { kind: "window-shared" }
+  | { kind: "workspace"; workspaceRoot?: string }
+  | { kind: "session"; sessionKey?: string };
+
+export interface DesktopExtensionTabOpenRequest {
+  contributionId: string;
+  scope?: DesktopExtensionTabOpenScope;
+  initialParams?: unknown;
+  reuse: "new" | "context";
+  windowId?: string;
+}
+
+export interface DesktopExtensionTabChromePatch {
+  title?: string;
+  icon?: DesktopExtensionDesktopTabRuntimeIcon;
+  dirty?: boolean;
+}
+
+export interface DesktopExtensionTabEvent {
+  windowId: string;
+  extensionId: string;
+  contributionId: string;
+  instanceId: string;
+  channelId: string;
+  event: string;
+  params?: unknown;
+}
+
+export interface DesktopExtensionWebViewBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface DesktopExtensionWebViewState {
+  viewId: string;
+  url: string;
+  title: string;
+  isLoading: boolean;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  error?: string;
+}
+
+export interface DesktopExtensionWebViewEvent {
+  windowId: string;
+  extensionId: string;
+  contributionId: string;
+  instanceId: string;
+  channelId: string;
+  state: DesktopExtensionWebViewState;
+}
+
+export type DesktopExtensionWebViewRequest =
+  | {
+      operation: "create";
+      extensionId: string;
+      contributionId: string;
+      instanceId: string;
+      url: string;
+    }
+  | {
+      operation: "attach";
+      viewId: string;
+      guestWebContentsId: number;
+    }
+  | { operation: "navigate"; viewId: string; url: string }
+  | { operation: "getState"; viewId: string }
+  | { operation: "capture"; viewId: string }
+  | { operation: "executeScript"; viewId: string; code: string }
+  | { operation: "destroy"; viewId: string };
+
+export interface DesktopWorkspaceToolsSnapshot {
+  windowId: string;
+  tabs: DesktopWorkspaceToolTab[];
+  activeTabId: string;
+  restoreReady: boolean;
+  revision: number;
+}
+
 export interface DesktopExtensionDesktopView {
   id: string;
   path: string;
@@ -741,6 +887,7 @@ export interface DesktopExtensionListItem {
   desktopCss?: DesktopExtensionDesktopCssEntry[];
   desktopSettingsPage?: DesktopExtensionDesktopSettingsPage;
   desktopViews?: DesktopExtensionDesktopView[];
+  desktopTabs?: DesktopExtensionDesktopTab[];
   cliHooks?: DesktopExtensionCliUiHookEntry[];
   instructionContributions?: DesktopExtensionInstructionContributionSummary;
   settingsSchema?: DesktopExtensionSettingDefinition[];

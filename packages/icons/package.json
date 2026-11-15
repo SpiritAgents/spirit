@@ -21,6 +21,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./names": {
+      "types": "./dist/icons/names.d.ts",
+      "default": "./dist/icons/names.js"
+    },
     "./check": {
       "types": "./dist/icons/check.d.ts",
       "default": "./dist/icons/check.js"
@@ -120,7 +124,7 @@
   "scripts": {
     "build": "node scripts/build-icons.mjs && tsc -p tsconfig.build.json",
     "typecheck": "node scripts/build-icons.mjs && tsc -p tsconfig.json --noEmit",
-    "test": "node scripts/verify-icons.mjs",
+    "test": "node scripts/verify-icons.mjs && node --test scripts/icon-lookup.test.mjs",
     "prepublishOnly": "pnpm run build && node ../../scripts/publish/assert-no-workspace-deps.mjs"
   },
   "devDependencies": {

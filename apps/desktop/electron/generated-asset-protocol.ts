@@ -7,6 +7,9 @@ import { product } from "@spiritagent/product";
 
 import {
   assertResolvedViewFilePath,
+  injectExtensionTabRuntime,
+  extensionAssetMimeType,
+  EXTENSION_TAB_PAGE_CSP,
   parseExtensionUiUrl,
   SPIRIT_EXTENSION_UI_HOST,
 } from "./extension-ui-protocol.js";
@@ -34,6 +37,25 @@ export type ResolveManagedGeneratedAssetPath = (reference: string) => Promise<st
 export type VideoPreviewMimeType = (extension: string) => string | null | undefined;
 export type ImagePreviewMimeType = (extension: string) => string | null | undefined;
 
+type ResolvedExtensionFile = { filePath: string; extensionRoot: string };
+
+export interface ExtensionUiHandlerDeps {
+  resolveExtensionUiRuntimePath: () => string;
+  resolveExtensionTabRuntimePath: () => string;
+  resolveExtensionViewFile: (
+    extensionId: string,
+    viewId: string,
+  ) => Promise<ResolvedExtensionFile | null>;
+  resolveExtensionTabFile: (
+    extensionId: string,
+    contributionId: string,
+  ) => Promise<ResolvedExtensionFile | null>;
+  resolveExtensionTabIconFile: (
+    extensionId: string,
+    iconPath: string,
+  ) => Promise<ResolvedExtensionFile | null>;
+}
+
 export function installSpiritGeneratedAssetProtocolHandler(deps: {
   resolveManagedGeneratedAssetPath: ResolveManagedGeneratedAssetPath;
   videoPreviewMimeType: VideoPreviewMimeType;
@@ -43,6 +65,9 @@ export function installSpiritGeneratedAssetProtocolHandler(deps: {
     extensionId: string,
     viewId: string,
   ) => Promise<{ filePath: string; extensionRoot: string } | null>;
+  resolveExtensionTabRuntimePath: () => string;
+  resolveExtensionTabFile: ExtensionUiHandlerDeps["resolveExtensionTabFile"];
+  resolveExtensionTabIconFile: ExtensionUiHandlerDeps["resolveExtensionTabIconFile"];
 }): void {
   protocol.handle(SCHEME, async (request) => {
     const url = new URL(request.url);
@@ -96,16 +121,20 @@ async function handleExtensionUiRequest(
   url: URL,
   deps: {
     resolveExtensionUiRuntimePath: () => string;
+    resolveExtensionTabRuntimePath: () => string;
     resolveExtensionViewFile: (
       extensionId: string,
       viewId: string,
-    ) => Promise<{ filePath: string; extensionRoot: string } | null>;
+    ) => Promise<ResolvedExtensionFile | null>;
+    resolveExtensionTabFile: ExtensionUiHandlerDeps["resolveExtensionTabFile"];
+    resolveExtensionTabIconFile: ExtensionUiHandlerDeps["resolveExtensionTabIconFile"];
   },
 ): Promise<Response> {
   const parsed = parseExtensionUiUrl(url);
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
   };
 
   if (parsed.kind === "invalid") {
@@ -113,11 +142,68 @@ async function handleExtensionUiRequest(
   }
 
   try {
-    if (parsed.kind === "runtime") {
-      const body = await readFile(deps.resolveExtensionUiRuntimePath());
+    if (parsed.kind === "runtime" || parsed.kind === "tab-runtime") {
+      const runtimePath =
+        parsed.kind === "runtime"
+          ? deps.resolveExtensionUiRuntimePath()
+          : deps.resolveExtensionTabRuntimePath();
+      const body = await readFile(runtimePath);
       return new Response(body, {
         status: 200,
         headers: { ...headers, "Content-Type": "text/javascript; charset=utf-8" },
+      });
+    }
+
+    if (parsed.kind === "tab") {
+      const resolved = await deps.resolveExtensionTabFile(
+        parsed.extensionId,
+        parsed.contributionId,
+      );
+      if (!resolved) {
+        return new Response("Not Found", { status: 404, headers });
+      }
+      const filePath =
+        parsed.assetPath === "index.html"
+          ? resolved.filePath
+          : path.join(path.dirname(resolved.filePath), ...parsed.assetPath.split("/"));
+      assertResolvedViewFilePath(filePath, resolved.extensionRoot);
+      if (parsed.assetPath === "index.html") {
+        const body = injectExtensionTabRuntime(await readFile(filePath, "utf8"));
+        return new Response(body, {
+          status: 200,
+          headers: {
+            ...headers,
+            "Content-Type": "text/html; charset=utf-8",
+            "Content-Security-Policy": EXTENSION_TAB_PAGE_CSP,
+          },
+        });
+      }
+      const body = await readFile(filePath);
+      return new Response(body, {
+        status: 200,
+        headers: {
+          ...headers,
+          "Content-Type": extensionAssetMimeType(filePath),
+        },
+      });
+    }
+
+    if (parsed.kind === "tab-icon") {
+      const resolved = await deps.resolveExtensionTabIconFile(parsed.extensionId, parsed.iconPath);
+      if (!resolved) {
+        return new Response("Not Found", { status: 404, headers });
+      }
+      const filePath = assertResolvedViewFilePath(resolved.filePath, resolved.extensionRoot);
+      const body = await readFile(filePath);
+      return new Response(body, {
+        status: 200,
+        headers: {
+          ...headers,
+          "Content-Type": extensionAssetMimeType(filePath),
+          ...(filePath.toLowerCase().endsWith(".svg")
+            ? { "Content-Security-Policy": "default-src 'none'; script-src 'none'" }
+            : {}),
+        },
       });
     }
 
