@@ -1,20 +1,21 @@
 import { randomUUID } from "node:crypto";
 
-import { BrowserWindow, WebContentsView, type WebContents } from "electron";
+import { type WebContents } from "electron";
 
 import type {
-  DesktopExtensionWebViewBounds,
   DesktopExtensionWebViewEvent,
   DesktopExtensionWebViewRequest,
   DesktopExtensionWebViewState,
 } from "../src/types.js";
 import type { DesktopExtensionWebViewOwner } from "@spiritagent/sessions/host/extension-web-view-contracts";
+import { requireOwnedWebviewGuest } from "./workspace-browser-guest.js";
 
 type WebViewRecord = {
   owner: DesktopExtensionWebViewOwner;
   windowId: string;
   host: WebContents;
-  view: WebContentsView;
+  guest?: WebContents;
+  initialUrl: string;
   state: DesktopExtensionWebViewState;
 };
 
@@ -28,19 +29,6 @@ export function isExtensionWebViewUrlAllowed(value: string): boolean {
   } catch {
     return false;
   }
-}
-
-export function scaleExtensionWebViewBounds(
-  bounds: DesktopExtensionWebViewBounds,
-  zoomFactor: number,
-): DesktopExtensionWebViewBounds {
-  const zoom = Number.isFinite(zoomFactor) && zoomFactor > 0 ? zoomFactor : 1;
-  return {
-    x: Math.round(bounds.x * zoom),
-    y: Math.round(bounds.y * zoom),
-    width: Math.max(0, Math.round(bounds.width * zoom)),
-    height: Math.max(0, Math.round(bounds.height * zoom)),
-  };
 }
 
 export class ExtensionWebViewManager {
@@ -65,13 +53,8 @@ export class ExtensionWebViewManager {
     if (request.operation === "create") {
       return this.create(sender, request, windowId);
     }
-    if (request.operation === "bounds") {
-      const record = this.requireRendererRecord(sender, request.viewId, "desktop-webview-display");
-      record.view.setBounds(scaleExtensionWebViewBounds(request.bounds, sender.zoomFactor));
-      record.view.setVisible(
-        request.visible && request.bounds.width > 0 && request.bounds.height > 0,
-      );
-      return this.getState(record);
+    if (request.operation === "attach") {
+      return this.attach(sender, request);
     }
     if (request.operation === "destroy") {
       this.destroy(request.viewId, sender);
@@ -146,83 +129,79 @@ export class ExtensionWebViewManager {
       throw new Error("Extension web view identity does not match a live tab.");
     }
     requireExtensionWebViewCapability(owner, "desktop-webview-display");
-    const url = normalizeUrl(request.url);
-    const ownerWindow = BrowserWindow.fromWebContents(sender);
-    if (!ownerWindow) {
-      throw new Error("The extension web view has no owning BrowserWindow.");
-    }
+    const initialUrl = normalizeUrl(request.url);
     const viewId = randomUUID();
-    const view = new WebContentsView({
-      webPreferences: {
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: true,
-        webviewTag: false,
-        partition: `extension-webview-${viewId}`,
-      },
-    });
     const record: WebViewRecord = {
       owner,
       windowId,
       host: sender,
-      view,
+      initialUrl,
       state: {
         viewId,
-        url,
+        url: initialUrl,
         title: "",
-        isLoading: true,
+        isLoading: false,
         canGoBack: false,
         canGoForward: false,
       },
     };
     this.records.set(viewId, record);
-    view.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) =>
+    return this.getState(record);
+  }
+
+  private async attach(
+    sender: WebContents,
+    request: Extract<DesktopExtensionWebViewRequest, { operation: "attach" }>,
+  ): Promise<DesktopExtensionWebViewState> {
+    const record = this.requireRendererRecord(sender, request.viewId, "desktop-webview-display");
+    if (record.guest) {
+      throw new Error("Extension web view is already attached.");
+    }
+    const initialState = { ...record.state };
+    const guest = requireOwnedWebviewGuest(sender, request.guestWebContentsId);
+    record.guest = guest;
+    guest.session.setPermissionRequestHandler((_contents, _permission, callback) =>
       callback(false),
     );
-    view.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
-    view.webContents.on("will-navigate", (event) => {
+    guest.setWindowOpenHandler(() => ({ action: "deny" }));
+    const enforceNavigationPolicy = (event: { url: string; preventDefault: () => void }) => {
       if (!isExtensionWebViewUrlAllowed(event.url)) {
         event.preventDefault();
       }
-    });
+    };
+    guest.on("will-navigate", enforceNavigationPolicy);
+    guest.on("will-redirect", enforceNavigationPolicy);
     const publish = () => this.publishState(record);
-    view.webContents.on("did-start-loading", publish);
-    view.webContents.on("did-stop-loading", publish);
-    view.webContents.on("did-navigate", publish);
-    view.webContents.on("did-navigate-in-page", publish);
-    view.webContents.on("page-title-updated", publish);
-    view.webContents.on("did-fail-load", (_event, _code, description) => {
+    guest.on("did-start-loading", publish);
+    guest.on("did-stop-loading", publish);
+    guest.on("did-navigate", publish);
+    guest.on("did-navigate-in-page", publish);
+    guest.on("page-title-updated", publish);
+    guest.on("did-fail-load", (_event, _code, description) => {
       record.state.error = description;
       record.state.isLoading = false;
       publish();
     });
-    view.webContents.once("destroyed", () => {
-      this.records.delete(viewId);
+    guest.once("destroyed", () => {
+      if (this.records.get(record.state.viewId) === record) {
+        this.records.delete(record.state.viewId);
+      }
     });
-    ownerWindow.contentView.addChildView(view);
-    view.setBounds(scaleExtensionWebViewBounds(request.bounds, sender.zoomFactor));
-    view.setVisible(request.visible && request.bounds.width > 0 && request.bounds.height > 0);
-    try {
-      await view.webContents.loadURL(url);
-    } catch (error) {
-      record.state.error = error instanceof Error ? error.message : String(error);
-      record.state.isLoading = false;
-    }
-    this.refreshState(record);
-    this.publishState(record);
-    return this.getState(record);
+    const state = await this.navigate(record, record.initialUrl);
+    return record.owner.capabilities.has("desktop-webview-control") ? state : initialState;
   }
 
   private async navigate(
     record: WebViewRecord,
     rawUrl: string,
   ): Promise<DesktopExtensionWebViewState> {
+    const guest = this.requireGuest(record);
     const url = normalizeUrl(rawUrl);
     record.state.error = undefined;
     record.state.isLoading = true;
     this.publishState(record);
     try {
-      await record.view.webContents.loadURL(url);
+      await guest.loadURL(url);
     } catch (error) {
       record.state.error = error instanceof Error ? error.message : String(error);
       record.state.isLoading = false;
@@ -238,7 +217,7 @@ export class ExtensionWebViewManager {
   }
 
   private async capture(record: WebViewRecord): Promise<string> {
-    const image = await record.view.webContents.capturePage();
+    const image = await this.requireGuest(record).capturePage();
     return image.toDataURL();
   }
 
@@ -246,7 +225,7 @@ export class ExtensionWebViewManager {
     if (typeof code !== "string") {
       throw new Error("Extension web view script must be a string.");
     }
-    const result: unknown = await record.view.webContents.executeJavaScript(code, true);
+    const result: unknown = await this.requireGuest(record).executeJavaScript(code, true);
     if (result === undefined) {
       return null;
     }
@@ -258,14 +237,15 @@ export class ExtensionWebViewManager {
   }
 
   private refreshState(record: WebViewRecord): void {
-    if (record.view.webContents.isDestroyed()) {
+    const guest = record.guest;
+    if (!guest || guest.isDestroyed()) {
       return;
     }
-    record.state.url = record.view.webContents.getURL() || record.state.url;
-    record.state.title = record.view.webContents.getTitle();
-    record.state.isLoading = record.view.webContents.isLoading();
-    record.state.canGoBack = record.view.webContents.navigationHistory.canGoBack();
-    record.state.canGoForward = record.view.webContents.navigationHistory.canGoForward();
+    record.state.url = guest.getURL() || record.state.url;
+    record.state.title = guest.getTitle();
+    record.state.isLoading = guest.isLoading();
+    record.state.canGoBack = guest.navigationHistory.canGoBack();
+    record.state.canGoForward = guest.navigationHistory.canGoForward();
   }
 
   private publishState(record: WebViewRecord): void {
@@ -309,6 +289,13 @@ export class ExtensionWebViewManager {
     return record;
   }
 
+  private requireGuest(record: WebViewRecord): WebContents {
+    if (!record.guest || record.guest.isDestroyed()) {
+      throw new Error("Extension web view is not attached to a live renderer guest.");
+    }
+    return record.guest;
+  }
+
   private destroy(viewId: string, sender?: WebContents): void {
     const record = this.records.get(viewId);
     if (!record) {
@@ -322,12 +309,8 @@ export class ExtensionWebViewManager {
 
   private destroyRecord(record: WebViewRecord): void {
     this.records.delete(record.state.viewId);
-    const ownerWindow = BrowserWindow.fromWebContents(record.host);
-    if (ownerWindow && !ownerWindow.isDestroyed()) {
-      ownerWindow.contentView.removeChildView(record.view);
-    }
-    if (!record.view.webContents.isDestroyed()) {
-      record.view.webContents.close({ waitForBeforeUnload: false });
+    if (record.guest && !record.guest.isDestroyed()) {
+      record.guest.close({ waitForBeforeUnload: false });
     }
   }
 }

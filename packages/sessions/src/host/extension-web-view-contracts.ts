@@ -1,4 +1,4 @@
-import type { DesktopExtensionWebViewBounds, DesktopExtensionWebViewState } from "../types.js";
+import type { DesktopExtensionWebViewState } from "../types.js";
 
 export interface DesktopExtensionWebViews {
   navigate(viewId: string, url: string): Promise<DesktopExtensionWebViewState>;
@@ -13,9 +13,4 @@ export interface DesktopExtensionWebViewOwner {
   instanceId: string;
   channelId: string;
   capabilities: ReadonlySet<string>;
-}
-
-export interface DesktopExtensionWebViewLayout {
-  bounds: DesktopExtensionWebViewBounds;
-  visible: boolean;
 }

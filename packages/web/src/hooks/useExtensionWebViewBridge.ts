@@ -5,6 +5,10 @@ import {
   SPIRIT_EXTENSION_WEB_VIEW_REQUEST,
   SPIRIT_EXTENSION_WEB_VIEW_RESULT,
 } from "@/lib/extension-tab-frame";
+import {
+  BROWSER_WEBVIEW_WEBPREFERENCES,
+  waitForWebviewDomReady,
+} from "@/lib/workspace-browser-webview";
 import type {
   DesktopExtensionWebViewBounds,
   DesktopExtensionWebViewEvent,
@@ -13,7 +17,11 @@ import type {
   WorkspaceExtensionToolTab,
 } from "@/types";
 
-type LocalRegion = { bounds: DesktopExtensionWebViewBounds; visible: boolean };
+type LocalRegion = {
+  bounds: DesktopExtensionWebViewBounds;
+  visible: boolean;
+  element: SpiritWebviewTag;
+};
 
 export function useExtensionWebViewBridge({
   tab,
@@ -31,51 +39,39 @@ export function useExtensionWebViewBridge({
   subscribeEvents?: (callback: (event: DesktopExtensionWebViewEvent) => void) => () => void;
 }) {
   const regionsRef = useRef(new Map<string, LocalRegion>());
+  const generationRef = useRef(0);
   const apiRef = useRef(onWebView);
   apiRef.current = onWebView;
 
-  const computeLayout = useCallback(
+  const layoutRegion = useCallback(
     (region: LocalRegion) => {
       const iframe = iframeRef.current;
       if (!iframe) {
-        return { bounds: region.bounds, visible: false };
+        return;
       }
-      const frame = iframe.getBoundingClientRect();
-      const left = Math.max(frame.left, frame.left + region.bounds.x);
-      const top = Math.max(frame.top, frame.top + region.bounds.y);
-      const right = Math.min(frame.right, frame.left + region.bounds.x + region.bounds.width);
-      const bottom = Math.min(frame.bottom, frame.top + region.bounds.y + region.bounds.height);
-      const bounds = {
-        x: left,
-        y: top,
-        width: Math.max(0, right - left),
-        height: Math.max(0, bottom - top),
-      };
-      return {
-        bounds,
-        visible:
-          active &&
-          region.visible &&
-          bounds.width > 0 &&
-          bounds.height > 0 &&
-          !isOccludedByHostOverlay(bounds),
-      };
+      const left = Math.max(0, region.bounds.x);
+      const top = Math.max(0, region.bounds.y);
+      const right = Math.min(iframe.clientWidth, region.bounds.x + region.bounds.width);
+      const bottom = Math.min(iframe.clientHeight, region.bounds.y + region.bounds.height);
+      const width = Math.max(0, right - left);
+      const height = Math.max(0, bottom - top);
+      const visible = active && region.visible && width > 0 && height > 0;
+      Object.assign(region.element.style, {
+        left: `${iframe.offsetLeft + left}px`,
+        top: `${iframe.offsetTop + top}px`,
+        width: `${width}px`,
+        height: `${height}px`,
+        visibility: visible ? "visible" : "hidden",
+      });
     },
     [active, iframeRef],
   );
 
-  const syncBounds = useCallback(() => {
-    const api = apiRef.current;
-    if (!api) {
-      return;
+  const syncLayout = useCallback(() => {
+    for (const region of regionsRef.current.values()) {
+      layoutRegion(region);
     }
-    for (const [viewId, region] of regionsRef.current) {
-      const layout = computeLayout(region);
-      void api({ operation: "bounds", viewId, ...layout }).catch((error: unknown) => {
-        console.error("[extensions] failed to update WebView bounds", error);
-      });
-    }
-  }, [computeLayout]);
+  }, [layoutRegion]);
 
   const handleRequest = useCallback(
     async (operation: string, payload: Record<string, unknown>) => {
@@ -83,35 +79,71 @@ export function useExtensionWebViewBridge({
       if (!api) {
         throw new Error("Native WebView is unavailable in this host.");
       }
+      const generation = generationRef.current;
       if (operation === "create") {
-        const region = {
+        const initialRegion = {
           bounds: readBounds(payload.localRect),
           visible: payload.visible !== false,
         };
-        const layout = computeLayout(region);
         const state = (await api({
           operation: "create",
           extensionId: tab.extensionId,
           contributionId: tab.contributionId,
           instanceId: tab.instanceId,
           url: typeof payload.url === "string" ? payload.url : "about:blank",
-          ...layout,
         })) as DesktopExtensionWebViewState;
+        if (generation !== generationRef.current) {
+          await api({ operation: "destroy", viewId: state.viewId });
+          throw new Error("The extension tab was closed.");
+        }
+        const iframe = iframeRef.current;
+        if (!iframe?.parentElement) {
+          await api({ operation: "destroy", viewId: state.viewId });
+          throw new Error("The extension tab has no webview container.");
+        }
+        const element = document.createElement("webview") as SpiritWebviewTag;
+        element.setAttribute("src", "about:blank");
+        element.setAttribute("partition", `extension-webview-${state.viewId}`);
+        element.setAttribute("webpreferences", BROWSER_WEBVIEW_WEBPREFERENCES);
+        element.setAttribute("data-extension-web-view-id", state.viewId);
+        element.className = "electron-no-drag absolute";
+        const region: LocalRegion = { ...initialRegion, element };
         regionsRef.current.set(state.viewId, region);
-        return { viewId: state.viewId, state };
+        iframe.parentElement.appendChild(element);
+        layoutRegion(region);
+        try {
+          await waitForWebviewDomReady(element);
+          if (generation !== generationRef.current) {
+            throw new Error("The extension tab was closed.");
+          }
+          const attachedState = (await api({
+            operation: "attach",
+            viewId: state.viewId,
+            guestWebContentsId: element.getWebContentsId(),
+          })) as DesktopExtensionWebViewState;
+          if (generation !== generationRef.current) {
+            throw new Error("The extension tab was closed.");
+          }
+          return { viewId: state.viewId, state: attachedState };
+        } catch (error) {
+          if (regionsRef.current.get(state.viewId) === region) {
+            regionsRef.current.delete(state.viewId);
+            element.remove();
+            await api({ operation: "destroy", viewId: state.viewId }).catch(() => undefined);
+          }
+          throw error;
+        }
       }
       const viewId = String(payload.viewId ?? "");
-      if (!viewId) {
-        throw new Error("Native WebView viewId is required.");
+      const region = regionsRef.current.get(viewId);
+      if (!viewId || !region) {
+        throw new Error("Native WebView is not owned by this extension tab.");
       }
       if (operation === "bounds") {
-        const region = {
-          bounds: readBounds(payload.localRect),
-          visible: payload.visible !== false,
-        };
-        regionsRef.current.set(viewId, region);
-        const layout = computeLayout(region);
-        return api({ operation: "bounds", viewId, ...layout });
+        region.bounds = readBounds(payload.localRect);
+        region.visible = payload.visible !== false;
+        layoutRegion(region);
+        return undefined;
       }
       if (operation === "navigate") {
         return api({ operation: "navigate", viewId, url: String(payload.url ?? "") });
@@ -130,11 +162,12 @@ export function useExtensionWebViewBridge({
           return await api({ operation: "destroy", viewId });
         } finally {
           regionsRef.current.delete(viewId);
+          region.element.remove();
         }
       }
       throw new Error(`Unknown native WebView operation: ${operation}`);
     },
-    [computeLayout, tab],
+    [iframeRef, layoutRegion, tab],
   );
 
   useEffect(() => {
@@ -145,30 +178,22 @@ export function useExtensionWebViewBridge({
     let frame = 0;
     const schedule = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(syncBounds);
+      frame = requestAnimationFrame(syncLayout);
     };
     const resizeObserver =
       typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(schedule);
     resizeObserver?.observe(iframe);
-    const mutationObserver = new MutationObserver(schedule);
-    mutationObserver.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["style", "data-state"],
-    });
     window.addEventListener("resize", schedule);
     return () => {
       cancelAnimationFrame(frame);
       resizeObserver?.disconnect();
-      mutationObserver.disconnect();
       window.removeEventListener("resize", schedule);
     };
-  }, [attempt, iframeRef, syncBounds]);
+  }, [attempt, iframeRef, syncLayout]);
 
   useEffect(() => {
-    syncBounds();
-  }, [active, syncBounds]);
+    syncLayout();
+  }, [active, syncLayout]);
 
   useEffect(() => {
     if (!subscribeEvents) {
@@ -193,7 +218,9 @@ export function useExtensionWebViewBridge({
   useEffect(() => {
     const regions = regionsRef.current;
     return () => {
-      for (const viewId of regions.keys()) {
+      generationRef.current += 1;
+      for (const [viewId, region] of regions) {
+        region.element.remove();
         void apiRef.current?.({ operation: "destroy", viewId }).catch(() => undefined);
       }
       regions.clear();
@@ -244,25 +271,4 @@ function readBounds(value: unknown): DesktopExtensionWebViewBounds {
 
 function finiteOrZero(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
-}
-
-function isOccludedByHostOverlay(bounds: DesktopExtensionWebViewBounds): boolean {
-  const overlays = document.querySelectorAll(
-    '[data-slot="dialog-content"], [data-radix-popper-content-wrapper], [role="menu"], [role="alertdialog"]',
-  );
-  for (const overlay of overlays) {
-    const rect = overlay.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) {
-      continue;
-    }
-    if (
-      bounds.x < rect.right &&
-      bounds.x + bounds.width > rect.left &&
-      bounds.y < rect.bottom &&
-      bounds.y + bounds.height > rect.top
-    ) {
-      return true;
-    }
-  }
-  return false;
 }

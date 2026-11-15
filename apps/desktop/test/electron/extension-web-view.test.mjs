@@ -4,7 +4,6 @@ import { test } from "vitest";
 import {
   isExtensionWebViewUrlAllowed,
   requireExtensionWebViewCapability,
-  scaleExtensionWebViewBounds,
 } from "../../electron/extension-web-view.ts";
 
 test("native web views allow web pages but reject privileged and local-file URLs", () => {
@@ -20,19 +19,6 @@ test("native web views allow web pages but reject privileged and local-file URLs
   ]) {
     assert.equal(isExtensionWebViewUrlAllowed(url), false);
   }
-});
-
-test("renderer CSS bounds scale into native window coordinates", () => {
-  assert.deepEqual(
-    scaleExtensionWebViewBounds({ x: 10.4, y: 20.5, width: 300.2, height: 200.8 }, 1.25),
-    { x: 13, y: 26, width: 375, height: 251 },
-  );
-  assert.deepEqual(scaleExtensionWebViewBounds({ x: 0, y: 0, width: -1, height: 100 }, 0), {
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 100,
-  });
 });
 
 test("native capabilities gate display, control, and script independently", () => {

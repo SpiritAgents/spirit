@@ -782,14 +782,11 @@ export type DesktopExtensionWebViewRequest =
       contributionId: string;
       instanceId: string;
       url: string;
-      bounds: DesktopExtensionWebViewBounds;
-      visible: boolean;
     }
   | {
-      operation: "bounds";
+      operation: "attach";
       viewId: string;
-      bounds: DesktopExtensionWebViewBounds;
-      visible: boolean;
+      guestWebContentsId: number;
     }
   | { operation: "navigate"; viewId: string; url: string }
   | { operation: "getState"; viewId: string }

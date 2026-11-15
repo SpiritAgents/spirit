@@ -28,7 +28,10 @@ function findOwnedWebviewGuest(host: WebContents, guestWebContentsId: number): W
   return guest;
 }
 
-function requireOwnedWebviewGuest(host: WebContents, guestWebContentsId: number): WebContents {
+export function requireOwnedWebviewGuest(
+  host: WebContents,
+  guestWebContentsId: number,
+): WebContents {
   const guest = findOwnedWebviewGuest(host, guestWebContentsId);
   if (!guest) {
     throw new Error("Invalid browser guest webContents");
