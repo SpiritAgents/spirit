@@ -43,6 +43,7 @@ struct TaskView {
     final_output_preview: Option<String>,
     session_id: Option<String>,
     session_transcript: Option<String>,
+    model: Option<String>,
     worktree_path: Option<String>,
     worktree_branch: Option<String>,
     exit_code: Option<i32>,
@@ -111,6 +112,9 @@ pub(crate) fn task_tool_message(
         record.tool_call_id
     };
     let mut details = vec![record.id, record.output_path];
+    if let Some(model) = record.model {
+        details.push(t!("tui.tool.detail.model", model = model).into_owned());
+    }
     if let Some(code) = record.exit_code {
         details.push(format!("exit_code: {code}"));
     }
@@ -217,6 +221,40 @@ mod tests {
         assert!(output.truncated);
         assert_eq!(output.text.chars().count(), 16_384);
         assert!(output.text.ends_with('終'));
+    }
+
+    #[test]
+    fn subagent_task_displays_effective_model_and_keeps_legacy_records_unchanged() {
+        let mut value = task();
+        value["kind"] = json!("subagent");
+        value["status"] = json!("running");
+        value["argumentsJson"] = json!(r#"{"prompt":"inherit the parent model"}"#);
+
+        let legacy = task_tool_message(&value, &TaskOutput::default(), false, false, None)
+            .unwrap()
+            .tool_block
+            .unwrap();
+        assert_eq!(
+            legacy.detail_lines,
+            vec![
+                "task_000000000001".to_string(),
+                "/tasks/output.log".to_string()
+            ]
+        );
+
+        value["model"] = json!("alpha::vendor/shared");
+        let message = task_tool_message(&value, &TaskOutput::default(), false, false, None)
+            .unwrap()
+            .tool_block
+            .unwrap();
+        assert_eq!(
+            message.detail_lines,
+            vec![
+                "task_000000000001".to_string(),
+                "/tasks/output.log".to_string(),
+                t!("tui.tool.detail.model", model = "alpha::vendor/shared").into_owned(),
+            ]
+        );
     }
 
     #[test]

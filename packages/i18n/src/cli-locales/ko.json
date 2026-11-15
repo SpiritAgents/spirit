@@ -154,6 +154,7 @@
   "tui.tool.detail.line_range": "줄 범위: %{start} - %{end}",
   "tui.tool.detail.query": "쿼리: %{query}",
   "tui.tool.detail.task": "작업: %{task}",
+  "tui.tool.detail.model": "모델: %{model}",
   "tui.tool.detail.question_count": "질문 수: %{count}",
   "tui.tool.detail.command": "명령: %{command}",
   "tui.tool.message.mcp_done": "[tool] MCP %{display} (%{server}) / %{tool} 실행 완료.\n%{output}",

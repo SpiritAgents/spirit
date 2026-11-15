@@ -154,6 +154,7 @@
   "tui.tool.detail.line_range": "Line range: %{start} - %{end}",
   "tui.tool.detail.query": "Query: %{query}",
   "tui.tool.detail.task": "Task: %{task}",
+  "tui.tool.detail.model": "Model: %{model}",
   "tui.tool.detail.question_count": "Questions: %{count}",
   "tui.tool.detail.command": "Command: %{command}",
   "tui.tool.message.mcp_done": "[tool] MCP %{display} (%{server}) / %{tool} completed.\n%{output}",

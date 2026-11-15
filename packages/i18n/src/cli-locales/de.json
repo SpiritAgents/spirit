@@ -154,6 +154,7 @@
   "tui.tool.detail.line_range": "Zeilenbereich: %{start} - %{end}",
   "tui.tool.detail.query": "Abfrage: %{query}",
   "tui.tool.detail.task": "Aufgabe: %{task}",
+  "tui.tool.detail.model": "Modell: %{model}",
   "tui.tool.detail.question_count": "Fragen: %{count}",
   "tui.tool.detail.command": "Befehl: %{command}",
   "tui.tool.message.mcp_done": "[tool] MCP %{display} (%{server}) / %{tool} abgeschlossen.\n%{output}",
