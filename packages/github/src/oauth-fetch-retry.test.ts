@@ -66,3 +66,15 @@ test("retryGitHubOAuthUntil throws when deadline passes", async () => {
     },
   );
 });
+
+test("cancelling a retry delay stops immediately instead of waiting for the poll interval", async () => {
+  const { sleepUntilGitHubOAuthRetryDeadline } = await import("./oauth-fetch-retry.js");
+  const controller = new AbortController();
+  const wait = sleepUntilGitHubOAuthRetryDeadline({
+    intervalMs: 60_000,
+    expiresAtMs: Date.now() + 60_000,
+    signal: controller.signal,
+  });
+  controller.abort();
+  await assert.rejects(wait, /cancelled/);
+});

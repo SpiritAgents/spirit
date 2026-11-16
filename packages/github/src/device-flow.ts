@@ -36,6 +36,7 @@ interface DeviceTokenApiResponse extends GitHubOAuthTokenResponse {
 export async function requestGitHubDeviceCode(input?: {
   clientId?: string;
   scopes?: readonly string[];
+  signal?: AbortSignal;
 }): Promise<GitHubDeviceAuthChallenge & { deviceCode: string }> {
   const body = new URLSearchParams({
     client_id: input?.clientId ?? GITHUB_OAUTH_CLIENT_ID,
@@ -46,6 +47,7 @@ export async function requestGitHubDeviceCode(input?: {
     expiresAtMs: Date.now() + GITHUB_OAUTH_DEVICE_CODE_REQUEST_TIMEOUT_MS,
     intervalMs: GITHUB_OAUTH_DEVICE_CODE_REQUEST_INTERVAL_MS,
     timedOutMessage: "GitHub device code request timed out.",
+    signal: input?.signal,
     attempt: async (): Promise<
       GitHubOAuthRetryAttempt<GitHubDeviceAuthChallenge & { deviceCode: string }>
     > => {
@@ -57,6 +59,7 @@ export async function requestGitHubDeviceCode(input?: {
             "Content-Type": "application/x-www-form-urlencoded",
           },
           body,
+          signal: input?.signal,
         });
 
         if (isRetriableGitHubHttpStatus(response.status)) {
@@ -87,6 +90,7 @@ export async function requestGitHubDeviceCode(input?: {
           },
         };
       } catch (error) {
+        throwIfGitHubFetchAborted(input?.signal);
         if (error instanceof GitHubOAuthError) {
           throw error;
         }

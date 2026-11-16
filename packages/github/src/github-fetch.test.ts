@@ -37,3 +37,30 @@ test("setGitHubFetchImplementation overrides outbound fetch", async () => {
     setGitHubFetchImplementation(undefined);
   }
 });
+
+test("request transports are scoped independently and inherit cancellation", async () => {
+  const { withGitHubRequest } = await import("./github-fetch.js");
+  const first = withGitHubRequest({ fetch: async () => new Response("one") }, async () => {
+    await Promise.resolve();
+    return (await githubFetch("https://example.test")).text();
+  });
+  const second = withGitHubRequest({ fetch: async () => new Response("two") }, async () =>
+    (await githubFetch("https://example.test")).text(),
+  );
+  assert.deepEqual(await Promise.all([first, second]), ["one", "two"]);
+  const controller = new AbortController();
+  controller.abort();
+  assert.throws(
+    () =>
+      withGitHubRequest(
+        {
+          signal: controller.signal,
+          fetch: async () => {
+            assert.fail("aborted request reached transport");
+          },
+        },
+        () => githubFetch("https://example.test"),
+      ),
+    /abort/i,
+  );
+});
