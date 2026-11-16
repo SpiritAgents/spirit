@@ -94,10 +94,12 @@ or manifests. The domain dependency graph must remain acyclic.
 turns, approvals, client authentication, WebSocket/JSON-RPC transport, and the
 instance registry. It composes domain services for local typed RPC clients.
 
-Daemon RPC names and HTTP command names are compatibility contracts. Domain
-errors use `DomainError { code, params?, message }`; JSON-RPC carries the stable
-domain error in `error.data.domainError`. Unknown system errors remain system
-errors.
+Daemon RPC names and HTTP command names are internal, evolvable contracts during
+early development. Rename or reshape them together with their callers whenever a
+cleaner design is needed; do not retain legacy aliases or add compatibility
+fallbacks unless the user explicitly requests them. Domain errors use
+`DomainError { code, params?, message }`; JSON-RPC carries the stable domain
+error in `error.data.domainError`. Unknown system errors remain system errors.
 
 ### Workbench, HTTP, And Web
 
