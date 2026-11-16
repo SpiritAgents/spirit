@@ -263,3 +263,16 @@ export function desktopComposerChipSurfaceClass(useTranslucency: boolean): strin
     desktopComposerSurfaceBackdropClass(useTranslucency),
   ].join(" ");
 }
+
+export const DESKTOP_GIT_ACTION_BTN = cn("border-r-0 shadow-none", instantHoverMotionClass);
+
+/** Middle vertical line of the Git ButtonGroup (`ButtonGroupSeparator`); geometry only, color is `bg-outline-border` */
+export const DESKTOP_GIT_ACTION_SPLIT = cn(
+  "!my-0 !mx-0 h-auto w-px min-w-px max-w-px shrink-0 self-stretch !border-0 !bg-outline-border !p-0",
+);
+
+/** Dropdown trigger on the right side of the Git ButtonGroup */
+export const DESKTOP_GIT_ACTION_MENU_TRIGGER = cn(
+  DESKTOP_GIT_ACTION_BTN,
+  "w-6 min-w-6 max-w-6 rounded-l-none rounded-r-md px-0",
+);

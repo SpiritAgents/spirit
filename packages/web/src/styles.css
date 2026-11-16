@@ -8,6 +8,7 @@
 @import "./styles/markdown-mermaid.css";
 @import "./styles/markdown-code-block.css";
 @import "./styles/floating-action-button.css";
+@import "@spiritagent/ui/rendering/animated-count.css";
 
 @custom-variant motion-reduce (&:is(html.spirit-reduce-motion *));
 
@@ -762,36 +763,6 @@ html.spirit-reduce-motion.spirit-launch-splash-exiting
     animation: spirit-thinking-text-shimmer-pos 1s linear infinite;
     will-change: background-position;
     transform: translateZ(0);
-  }
-
-  @keyframes spirit-edit-delta-enter-up {
-    from {
-      transform: translateY(100%);
-      opacity: 0.35;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-
-  @keyframes spirit-edit-delta-enter-down {
-    from {
-      transform: translateY(-100%);
-      opacity: 0.35;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-
-  .spirit-edit-delta-slide-up {
-    animation: spirit-edit-delta-enter-up 180ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .spirit-edit-delta-slide-down {
-    animation: spirit-edit-delta-enter-down 180ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .spirit-delay-duration {

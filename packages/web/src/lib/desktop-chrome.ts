@@ -139,18 +139,11 @@ export const DESKTOP_CHROME_COMMIT_BTN = cn(
 );
 
 /** Primary button of the Git changes area (ButtonGroup segment, paired with `size="xs"`); `border-r-0` prevents the transparent right border from stacking on the divider and looking too thick */
-export const DESKTOP_GIT_ACTION_BTN = cn("border-r-0 shadow-none", instantHoverMotionClass);
-
-/** Middle vertical line of the Git ButtonGroup (`ButtonGroupSeparator`); geometry only, color is `bg-outline-border` */
-export const DESKTOP_GIT_ACTION_SPLIT = cn(
-  "!my-0 !mx-0 h-auto w-px min-w-px max-w-px shrink-0 self-stretch !border-0 !bg-outline-border !p-0",
-);
-
-/** Dropdown trigger on the right side of the Git ButtonGroup */
-export const DESKTOP_GIT_ACTION_MENU_TRIGGER = cn(
+export {
   DESKTOP_GIT_ACTION_BTN,
-  "w-6 min-w-6 max-w-6 rounded-l-none rounded-r-md px-0",
-);
+  DESKTOP_GIT_ACTION_SPLIT,
+  DESKTOP_GIT_ACTION_MENU_TRIGGER,
+} from "@spiritagent/ui/chrome";
 
 /**
  * Overlay menu density: uniformly use the LIST density (text-xs / py-2), aligned with the

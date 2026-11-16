@@ -1438,6 +1438,21 @@ importers:
       '@spiritagent/icons':
         specifier: workspace:*
         version: link:../icons
+      '@spiritagent/product':
+        specifier: workspace:*
+        version: link:../product
+      '@streamdown/code':
+        specifier: 1.1.1
+        version: 1.1.1(react@19.2.8)
+      '@streamdown/math':
+        specifier: 1.0.2
+        version: 1.0.2(react@19.2.8)(supports-color@8.1.1)
+      '@streamdown/mermaid':
+        specifier: 1.0.2
+        version: 1.0.2(react@19.2.8)
+      '@types/hast':
+        specifier: 3.0.5
+        version: 3.0.5
       '@types/react':
         specifier: 19.2.18
         version: 19.2.18
@@ -1453,12 +1468,24 @@ importers:
       cmdk:
         specifier: 1.1.1
         version: 1.1.1(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      diff:
+        specifier: 9.0.0
+        version: 9.0.0
+      gitdiff-parser:
+        specifier: 0.3.1
+        version: 0.3.1
+      hast-util-sanitize:
+        specifier: 5.0.2
+        version: 5.0.2
       lexical:
         specifier: 0.53.0
         version: 0.53.0(typescript@7.0.2)
       lucide-react:
         specifier: 1.28.0
         version: 1.28.0(react@19.2.8)
+      mermaid:
+        specifier: 11.16.1
+        version: 11.16.1
       radix-ui:
         specifier: 1.6.7
         version: 1.6.7(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -1468,15 +1495,33 @@ importers:
       react-dom:
         specifier: 19.2.8
         version: 19.2.8(react@19.2.8)
+      react-i18next:
+        specifier: 17.0.8
+        version: 17.0.8(i18next@26.3.0(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
+      rehype-sanitize:
+        specifier: 6.0.0
+        version: 6.0.0
+      remark-breaks:
+        specifier: 4.0.0
+        version: 4.0.0
+      shiki:
+        specifier: 3.23.0
+        version: 3.23.0
       sonner:
         specifier: 2.0.7
         version: 2.0.7(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      streamdown:
+        specifier: 2.5.0
+        version: 2.5.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@8.1.1)
       tailwind-merge:
         specifier: 3.6.0
         version: 3.6.0
       typescript:
         specifier: 7.0.2
         version: 7.0.2
+      unified:
+        specifier: 11.0.5
+        version: 11.0.5
 
   packages/web:
     dependencies:
