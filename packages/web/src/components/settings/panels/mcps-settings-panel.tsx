@@ -1,9 +1,13 @@
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { product } from "@spiritagent/product";
+import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
+import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
 
+import { SettingsListItemHeading } from "@/components/settings/settings-list-item-heading";
 import type { SettingsViewProps } from "@/components/settings/types";
-import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
@@ -17,13 +21,10 @@ import {
 import { DesktopFormInput, DesktopFormTextarea } from "@/components/ui/desktop-form-field";
 import { Label } from "@/components/ui/label";
 import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
+import { formatMcpCapabilityCounts } from "@/lib/mcp-capability-counts";
 import { cn } from "@/lib/utils";
 import i18n from "@/lib/i18n";
-import {
-  DESKTOP_EDITOR_TAB_CLASS,
-  DESKTOP_LIST_ITEM_PRIMARY_CLASS,
-  DESKTOP_PAGE_TITLE_CLASS,
-} from "@/lib/desktop-typography";
+import { DESKTOP_EDITOR_TAB_CLASS, DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
 import type { DeleteMcpServerRequest, DesktopMcpScope, DesktopMcpTransportType } from "@/types";
 
 function mcpTransportTypeLabel(type: DesktopMcpTransportType): string {
@@ -48,55 +49,28 @@ function mcpMetadataPlaceholder(type: DesktopMcpTransportType): string {
     : "PATH=C:/Tools; NODE_ENV=production";
 }
 
-function formatMcpMetadata(
-  metadata: Record<string, string>,
-  type: DesktopMcpTransportType,
-): string {
-  const entries = Object.entries(metadata);
-  if (entries.length === 0) {
-    return "";
-  }
-  return entries
-    .map(([key, value]) => (type === "http" ? `${key}: ${value}` : `${key}=${value}`))
-    .join("; ");
-}
-
-type McpServerRuntimeBadgeState = "loading" | "ready" | "error" | "disabled";
+type McpServerRuntimeState = "connecting" | "connected" | "failed";
 
 type McpServerRuntimeInfo = {
-  state: McpServerRuntimeBadgeState;
+  state: McpServerRuntimeState;
   counts?: {
     tools: number;
     resources: number;
     prompts: number;
   };
+  errorMessage?: string;
 };
 
-function mcpCountsSummary(runtime?: McpServerRuntimeInfo): string {
-  const tools = runtime?.state === "ready" ? String(runtime.counts?.tools ?? 0) : "-";
-  const resources = runtime?.state === "ready" ? String(runtime.counts?.resources ?? 0) : "-";
-  const prompts = runtime?.state === "ready" ? String(runtime.counts?.prompts ?? 0) : "-";
-  return i18n.t("settings.mcpCountsSummary", { tools, resources, prompts });
-}
-
-function McpRuntimeBadge({ state }: { state: McpServerRuntimeBadgeState }) {
-  if (state === "ready") {
-    return <Badge>{i18n.t("settings.active")}</Badge>;
+function mcpCountsSummary(runtime?: McpServerRuntimeInfo): string | null {
+  if (runtime?.state !== "connected") {
+    return null;
   }
-
-  if (state === "error") {
-    return <Badge variant="destructive">{i18n.t("settings.failed")}</Badge>;
-  }
-
-  if (state === "disabled") {
-    return <Badge variant="outline">{i18n.t("settings.disabled")}</Badge>;
-  }
-
-  return (
-    <Badge variant="outline" className="gap-1.5">
-      <LoaderCircle className="size-3 animate-spin" aria-hidden strokeWidth={1.75} />
-      {i18n.t("common.loading")}
-    </Badge>
+  return formatMcpCapabilityCounts(
+    runtime.counts ?? {
+      tools: 0,
+      resources: 0,
+      prompts: 0,
+    },
   );
 }
 
@@ -162,7 +136,7 @@ export function McpsSettingsPanel({
       }
       const key = `${item.scope}:${item.name}`;
       const existing = runtimeInfoRef.current[key];
-      if (existing?.state !== "ready" && existing?.state !== "error") {
+      if (existing?.state !== "connected" && existing?.state !== "failed") {
         keysToInspect.push(key);
       }
     }
@@ -170,17 +144,16 @@ export function McpsSettingsPanel({
     setRuntimeInfo((current) => {
       const next: Record<string, McpServerRuntimeInfo> = {};
       for (const item of items) {
-        const key = `${item.scope}:${item.name}`;
         if (!item.enabled) {
-          next[key] = { state: "disabled" };
           continue;
         }
+        const key = `${item.scope}:${item.name}`;
         const existing = current[key];
-        if (existing?.state === "ready" || existing?.state === "error") {
+        if (existing?.state === "connected" || existing?.state === "failed") {
           next[key] = existing;
           continue;
         }
-        next[key] = { state: "loading" };
+        next[key] = { state: "connecting" };
       }
       return next;
     });
@@ -203,7 +176,7 @@ export function McpsSettingsPanel({
           setRuntimeInfo((current) => ({
             ...current,
             [key]: {
-              state: "ready",
+              state: "connected",
               counts: {
                 tools: inspection.toolsCount,
                 resources: inspection.resourcesCount,
@@ -211,14 +184,17 @@ export function McpsSettingsPanel({
               },
             },
           }));
-        } catch {
+        } catch (error) {
           if (cancelled) {
             return;
           }
+          const errorMessage =
+            error instanceof Error && error.message.trim() ? error.message.trim() : undefined;
           setRuntimeInfo((current) => ({
             ...current,
             [key]: {
-              state: "error",
+              state: "failed",
+              ...(errorMessage ? { errorMessage } : {}),
             },
           }));
         }
@@ -269,44 +245,46 @@ export function McpsSettingsPanel({
         ) : (
           items.map((item) => {
             const runtimeKey = `${item.scope}:${item.name}`;
+            const runtime = runtimeInfo[runtimeKey];
+            const countsSummary = mcpCountsSummary(runtime);
+            const failureMessage =
+              runtime?.state === "failed"
+                ? runtime.errorMessage?.trim() || t("settings.mcpConnectionFailed")
+                : null;
             return (
               <div
                 key={runtimeKey}
                 className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
               >
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}>{item.displayName}</span>
-                    <McpRuntimeBadge
-                      state={
-                        runtimeInfo[runtimeKey]?.state ?? (item.enabled ? "loading" : "disabled")
-                      }
-                    />
-                    <Badge variant="outline" className="text-muted-foreground">
-                      {item.scope === "user"
-                        ? t("settings.skillUserDirShort")
-                        : t("settings.mcpScopeWorkspace")}
-                    </Badge>
-                    <Badge variant="secondary" className="text-muted-foreground">
-                      {mcpTransportTypeLabel(item.transport.type)}
-                    </Badge>
-                    {!item.enabled ? (
-                      <Badge variant="secondary" className="text-muted-foreground">
-                        {t("settings.mcpDisabled")}
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <p className="text-xs text-muted-foreground">{item.transport.summary}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {mcpCountsSummary(runtimeInfo[runtimeKey])}
-                  </p>
-                  {Object.keys(item.transport.metadata).length > 0 ? (
-                    <p
-                      className="truncate font-mono text-[0.65rem] text-muted-foreground/90"
-                      title={formatMcpMetadata(item.transport.metadata, item.transport.type)}
-                    >
-                      {formatMcpMetadata(item.transport.metadata, item.transport.type)}
-                    </p>
+                <div
+                  className={cn(
+                    "min-w-0 flex-1 space-y-1.5",
+                    (!item.enabled || runtime?.state === "failed") && "opacity-50",
+                  )}
+                >
+                  <SettingsListItemHeading
+                    title={formatTitleFromId(item.name, {
+                      casingOverrides: WELL_KNOWN_CASING_OVERRIDES,
+                    })}
+                    path={
+                      item.scope === "user"
+                        ? "mcp.json"
+                        : `${product.workspaceDataFolderName}/mcp.json`
+                    }
+                    leading={
+                      runtime?.state === "connecting" ? (
+                        <Spinner
+                          className="size-3.5 shrink-0 text-muted-foreground"
+                          aria-label={t("settings.mcpConnecting")}
+                        />
+                      ) : undefined
+                    }
+                  />
+                  {countsSummary ? (
+                    <p className="text-xs text-muted-foreground">{countsSummary}</p>
+                  ) : null}
+                  {failureMessage ? (
+                    <p className="text-xs text-muted-foreground">{failureMessage}</p>
                   ) : null}
                 </div>
                 <Button

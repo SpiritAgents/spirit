@@ -54,7 +54,6 @@ export interface HostRuleSource {
 
 export interface HostRulePreview {
   excerpt: string;
-  truncated: boolean;
 }
 
 export interface HostRuleEntry {
@@ -93,7 +92,6 @@ export interface HostSkillSource {
 
 export interface HostSkillPreview {
   excerpt: string;
-  truncated: boolean;
 }
 
 export interface HostSkillEntry {
@@ -511,11 +509,9 @@ function scopeRank(scope: HostSkillScope): number {
 function buildPreview(content: string, maxLines: number, maxChars: number): HostRulePreview {
   const excerptLines: string[] = [];
   let usedChars = 0;
-  let truncated = false;
 
   for (const [index, line] of content.split(/\r?\n/u).entries()) {
     if (index >= maxLines) {
-      truncated = true;
       break;
     }
 
@@ -526,7 +522,6 @@ function buildPreview(content: string, maxLines: number, maxChars: number): Host
       if (remaining > 0) {
         excerptLines.push(truncateChars(line, remaining));
       }
-      truncated = true;
       break;
     }
 
@@ -534,13 +529,8 @@ function buildPreview(content: string, maxLines: number, maxChars: number): Host
     usedChars += separator + lineChars;
   }
 
-  if (!truncated && content.split(/\r?\n/u).length <= maxLines) {
-    truncated = [...content].length > maxChars;
-  }
-
   return {
     excerpt: excerptLines.join("\n").trimEnd(),
-    truncated,
   };
 }
 

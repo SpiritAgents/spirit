@@ -3,10 +3,12 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Sparkles } from "lucide-react";
 import { product } from "@spiritagent/product";
+import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
+import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
 
 import { skillRootKindLabel } from "@/components/settings/skill-rule-labels";
+import { SettingsListItemHeading } from "@/components/settings/settings-list-item-heading";
 import type { SettingsViewProps } from "@/components/settings/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
@@ -21,22 +23,11 @@ import {
 import { DesktopFormInput, DesktopFormTextarea } from "@/components/ui/desktop-form-field";
 import { Label } from "@/components/ui/label";
 import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
+import { workspaceFileDirname } from "@/lib/file-picker-path";
+import { markdownToPlainText } from "@/lib/markdown-plain-text";
 import { cn } from "@/lib/utils";
-import type {
-  CreateSkillRequest,
-  DeleteSkillRequest,
-  DesktopSkillListItem,
-  DesktopSkillRootKind,
-} from "@/types";
-import {
-  DESKTOP_EDITOR_TAB_CLASS,
-  DESKTOP_LIST_ITEM_PRIMARY_CLASS,
-  DESKTOP_PAGE_TITLE_CLASS,
-} from "@/lib/desktop-typography";
-
-function skillLocationLabel(item: DesktopSkillListItem): string {
-  return skillRootKindLabel(item.rootKind);
-}
+import type { CreateSkillRequest, DeleteSkillRequest, DesktopSkillRootKind } from "@/types";
+import { DESKTOP_EDITOR_TAB_CLASS, DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
 
 const skillCreateRootOptions: Array<{
   kind: DesktopSkillRootKind;
@@ -61,6 +52,10 @@ const skillCreateRootOptions: Array<{
     hintKey: "settings.skillWorkspaceAgentsHint",
   },
 ];
+
+function skillDirectoryLabel(shortLabel: string): string {
+  return workspaceFileDirname(workspaceFileDirname(shortLabel));
+}
 
 export function SkillsSettingsPanel({
   snapshot,
@@ -87,9 +82,7 @@ export function SkillsSettingsPanel({
   const [createRootKind, setCreateRootKind] = useState<DesktopSkillRootKind>("user");
 
   const workspaceBindingDisabled = snapshot?.workspaceBinding === "none";
-  const items = (snapshot?.skillsList ?? []).filter(
-    (item) => !workspaceBindingDisabled || item.scope === "user",
-  );
+  const items = snapshot?.skillsList ?? [];
   const availableSkillCreateRootOptions = workspaceBindingDisabled
     ? skillCreateRootOptions.filter((option) => option.kind === "user")
     : skillCreateRootOptions;
@@ -156,25 +149,19 @@ export function SkillsSettingsPanel({
               key={item.id}
               className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
             >
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}>{item.name}</span>
-                  <Badge variant="secondary" className="text-muted-foreground">
-                    {skillLocationLabel(item)}
-                  </Badge>
-                  {!item.enabled ? (
-                    <Badge variant="secondary" className="text-muted-foreground">
-                      {t("settings.skillDisabled")}
-                    </Badge>
-                  ) : null}
-                </div>
-                <p className="text-xs text-muted-foreground">{item.description}</p>
-                <p
-                  className="truncate font-mono text-[0.65rem] text-muted-foreground/90"
-                  title={item.shortLabel}
-                >
-                  {item.shortLabel}
-                </p>
+              <div className={cn("min-w-0 flex-1 space-y-1", !item.enabled && "opacity-50")}>
+                <SettingsListItemHeading
+                  title={formatTitleFromId(item.name, {
+                    casingOverrides: WELL_KNOWN_CASING_OVERRIDES,
+                  })}
+                  path={item.shortLabel}
+                  directoryLabel={skillDirectoryLabel(item.shortLabel)}
+                />
+                {markdownToPlainText(item.description) ? (
+                  <p className="text-xs text-muted-foreground">
+                    {markdownToPlainText(item.description)}
+                  </p>
+                ) : null}
               </div>
               <Button
                 type="button"

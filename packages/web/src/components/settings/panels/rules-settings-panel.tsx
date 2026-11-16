@@ -5,8 +5,8 @@ import { Sparkles } from "lucide-react";
 import { product } from "@spiritagent/product";
 
 import { skillRootKindLabel } from "@/components/settings/skill-rule-labels";
+import { SettingsListItemHeading } from "@/components/settings/settings-list-item-heading";
 import type { SettingsViewProps } from "@/components/settings/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
@@ -20,14 +20,11 @@ import {
 import { DesktopFormTextarea } from "@/components/ui/desktop-form-field";
 import { Label } from "@/components/ui/label";
 import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
+import { markdownToPlainText } from "@/lib/markdown-plain-text";
 import { cn } from "@/lib/utils";
 import i18n from "@/lib/i18n";
 import type { CreateRuleRequest, DesktopRuleListItem, DesktopSkillRootKind } from "@/types";
-import {
-  DESKTOP_EDITOR_TAB_CLASS,
-  DESKTOP_LIST_ITEM_PRIMARY_CLASS,
-  DESKTOP_PAGE_TITLE_CLASS,
-} from "@/lib/desktop-typography";
+import { DESKTOP_EDITOR_TAB_CLASS, DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
 
 const ruleCreateRootOptions: Array<{
   kind: DesktopSkillRootKind;
@@ -72,10 +69,6 @@ function ruleFileBaseName(shortLabel: string): string {
   return slash >= 0 ? normalized.slice(slash + 1) : normalized;
 }
 
-function rulePreviewOneLine(excerpt: string): string {
-  return excerpt.replace(/\s*\r?\n+\s*/g, " ").trim();
-}
-
 export function RulesSettingsPanel({
   snapshot,
   rulesBusy,
@@ -94,9 +87,7 @@ export function RulesSettingsPanel({
   const [createRootKind, setCreateRootKind] = useState<DesktopSkillRootKind>("user");
 
   const workspaceBindingDisabled = snapshot?.workspaceBinding === "none";
-  const items = (snapshot?.rulesList ?? [])
-    .filter((item) => item.exists)
-    .filter((item) => !workspaceBindingDisabled || item.scope === "user");
+  const items = snapshot?.rulesList ?? [];
   const availableRuleCreateRootOptions = workspaceBindingDisabled
     ? ruleCreateRootOptions.filter((option) => option.kind === "user")
     : ruleCreateRootOptions;
@@ -161,34 +152,19 @@ export function RulesSettingsPanel({
               key={item.id}
               className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
             >
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}>
-                    {ruleFileBaseName(item.shortLabel)}
-                  </span>
-                  <Badge variant="secondary" className="text-muted-foreground">
-                    {ruleLocationLabel(item)}
-                  </Badge>
-                  {!item.enabled ? (
-                    <Badge variant="secondary" className="text-muted-foreground">
-                      {t("settings.ruleDisabled")}
-                    </Badge>
-                  ) : null}
-                </div>
+              <div className={cn("min-w-0 flex-1 space-y-1", !item.enabled && "opacity-50")}>
+                <SettingsListItemHeading
+                  title={ruleFileBaseName(item.shortLabel)}
+                  path={item.shortLabel}
+                />
                 {item.previewExcerpt ? (
                   <p
                     className="truncate text-xs text-muted-foreground"
-                    title={rulePreviewOneLine(item.previewExcerpt)}
+                    title={markdownToPlainText(item.previewExcerpt)}
                   >
-                    {rulePreviewOneLine(item.previewExcerpt)}
+                    {markdownToPlainText(item.previewExcerpt)}
                   </p>
                 ) : null}
-                <p
-                  className="truncate font-mono text-[0.65rem] text-muted-foreground/90"
-                  title={item.shortLabel}
-                >
-                  {item.shortLabel}
-                </p>
               </div>
               <Button
                 type="button"

@@ -2,8 +2,9 @@ import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Sparkles } from "lucide-react";
+import { product } from "@spiritagent/product";
 
-import { Badge } from "@/components/ui/badge";
+import { SettingsListItemHeading } from "@/components/settings/settings-list-item-heading";
 import { Button } from "@/components/ui/button";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
@@ -26,11 +27,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { cn } from "@/lib/utils";
-import {
-  DESKTOP_EDITOR_TAB_CLASS,
-  DESKTOP_LIST_ITEM_PRIMARY_CLASS,
-  DESKTOP_PAGE_TITLE_CLASS,
-} from "@/lib/desktop-typography";
+import { DESKTOP_EDITOR_TAB_CLASS, DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
 import type {
   DeleteHookEntryRequest,
   DesktopHookEventName,
@@ -73,10 +70,6 @@ type HooksSettingsPanelProps = {
   onDeleteHookEntry(request: DeleteHookEntryRequest): void | Promise<void>;
   onGenerateHookNavigate?: () => void;
 };
-
-function hookScopeLabel(scope: DesktopHookScope, t: (key: string) => string): string {
-  return scope === "user" ? t("settings.skillUserDirShort") : t("settings.mcpScopeWorkspace");
-}
 
 export function HooksSettingsPanel({
   snapshot,
@@ -208,16 +201,15 @@ export function HooksSettingsPanel({
               className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
             >
               <div className="min-w-0 flex-1 space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}>{item.event}</span>
-                  <Badge variant="outline" className="text-muted-foreground">
-                    {hookScopeLabel(item.scope, t)}
-                  </Badge>
-                </div>
-                <p
-                  className="break-all font-mono text-[0.65rem] text-muted-foreground/90"
-                  title={item.command}
-                >
+                <SettingsListItemHeading
+                  title={item.event}
+                  path={
+                    item.scope === "user"
+                      ? "hooks.json"
+                      : `${product.workspaceDataFolderName}/hooks.json`
+                  }
+                />
+                <p className="break-all text-xs text-muted-foreground" title={item.command}>
                   {item.command}
                 </p>
               </div>

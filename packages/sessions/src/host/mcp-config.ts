@@ -8,7 +8,6 @@ import {
   normalizeCapabilityToggles,
   normalizeMcpServerConfig,
   parseMcpConfigFile,
-  summarizeTransport,
   type McpConfigFile,
   type McpServerConfig,
 } from "@spiritagent/agent-core";
@@ -73,44 +72,11 @@ function mapServerListItem(
   scope: DesktopMcpScope,
 ): DesktopMcpServerListItem {
   const normalized = normalizeMcpServerConfig(name, server);
-  switch (normalized.transport.type) {
-    case "stdio":
-      return {
-        name: normalized.name,
-        displayName: normalized.displayName,
-        enabled: normalized.enabled,
-        capabilities: normalized.capabilities,
-        scope,
-        transport: {
-          type: "stdio",
-          command: normalized.transport.command,
-          args: normalized.transport.args,
-          metadata: normalized.transport.env,
-          ...(normalized.transport.cwd ? { cwd: normalized.transport.cwd } : {}),
-          ...(normalized.transport.timeoutMs !== undefined
-            ? { timeoutMs: normalized.transport.timeoutMs }
-            : {}),
-          summary: summarizeTransport(normalized.transport),
-        },
-      };
-    case "http":
-      return {
-        name: normalized.name,
-        displayName: normalized.displayName,
-        enabled: normalized.enabled,
-        capabilities: normalized.capabilities,
-        scope,
-        transport: {
-          type: "http",
-          url: normalized.transport.url,
-          metadata: normalized.transport.headers,
-          ...(normalized.transport.timeoutMs !== undefined
-            ? { timeoutMs: normalized.transport.timeoutMs }
-            : {}),
-          summary: summarizeTransport(normalized.transport),
-        },
-      };
-  }
+  return {
+    name: normalized.name,
+    enabled: normalized.enabled,
+    scope,
+  };
 }
 
 export function listDesktopMcpServersFromDisk(

@@ -22,6 +22,12 @@ export function workspaceFileBasename(relativePath: string): string {
   return segments[segments.length - 1] || normalized;
 }
 
+export function workspaceFileDirname(relativePath: string): string {
+  const normalized = relativePath.replace(/\\/g, "/").replace(/\/+$/u, "");
+  const slash = normalized.lastIndexOf("/");
+  return slash < 0 ? "" : normalized.slice(0, slash);
+}
+
 export function isMarkdownPath(path: string): boolean {
   return /\.(md|mdx|markdown|mdown|mkd|mkdn|mdwn)$/i.test(path);
 }

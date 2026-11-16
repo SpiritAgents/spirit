@@ -156,31 +156,37 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
       discovered: input.metadata.skills.discovered,
       enabled: input.metadata.skills.enabled,
     },
-    rulesList: input.metadata.rules.entries.filter(isSettingsInstructionScope).map((entry) => ({
-      id: entry.source.id,
-      title: entry.source.title,
-      shortLabel: entry.source.shortLabel,
-      scope: entry.source.scope,
-      rootKind: entry.source.rootKind,
-      exists: entry.exists,
-      enabled: entry.enabled,
-      ...(entry.preview
-        ? {
-            previewExcerpt: entry.preview.excerpt,
-            previewTruncated: entry.preview.truncated,
-          }
-        : {}),
-    })),
-    skillsList: input.metadata.skills.entries.filter(isSettingsInstructionScope).map((entry) => ({
-      id: entry.source.id,
-      name: entry.source.name,
-      description: entry.source.description,
-      shortLabel: entry.source.shortLabel,
-      scope: entry.source.scope,
-      rootKind: entry.source.rootKind,
-      enabled: entry.enabled,
-      path: entry.source.path,
-    })),
+    rulesList: input.metadata.rules.entries
+      .filter(isSettingsInstructionScope)
+      .filter((entry) => entry.exists)
+      .filter(
+        (entry) =>
+          normalizeWorkspaceBinding(input.config.workspaceBinding) !== "none" ||
+          entry.source.scope === "user",
+      )
+      .map((entry) => ({
+        id: entry.source.id,
+        shortLabel: entry.source.shortLabel,
+        rootKind: entry.source.rootKind,
+        enabled: entry.enabled,
+        ...(entry.preview ? { previewExcerpt: entry.preview.excerpt } : {}),
+      })),
+    skillsList: input.metadata.skills.entries
+      .filter(isSettingsInstructionScope)
+      .filter(
+        (entry) =>
+          normalizeWorkspaceBinding(input.config.workspaceBinding) !== "none" ||
+          entry.source.scope === "user",
+      )
+      .map((entry) => ({
+        id: entry.source.id,
+        name: entry.source.name,
+        description: entry.source.description,
+        shortLabel: entry.source.shortLabel,
+        rootKind: entry.source.rootKind,
+        enabled: entry.enabled,
+        path: entry.source.path,
+      })),
     extensionSkills: (input.extensionSkills ?? []).map((skill) => ({ ...skill })),
     extensionsList: input.extensionsList.map((item) => ({ ...item })),
     marketplaceSources: (input.marketplaceSources ?? []).map((item) => ({ ...item })),

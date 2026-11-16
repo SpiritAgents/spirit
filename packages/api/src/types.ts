@@ -900,37 +900,6 @@ export interface DesktopExtensionListItem {
   installedAtUnixMs?: number;
 }
 
-export interface DesktopMcpStdioTransportSnapshot {
-  type: "stdio";
-  command: string;
-  args: string[];
-  metadata: Record<string, string>;
-  cwd?: string;
-  timeoutMs?: number;
-  summary: string;
-}
-
-export interface DesktopMcpHttpTransportSnapshot {
-  type: "http";
-  url: string;
-  metadata: Record<string, string>;
-  timeoutMs?: number;
-  summary: string;
-}
-
-export type DesktopMcpTransportSnapshot =
-  | DesktopMcpStdioTransportSnapshot
-  | DesktopMcpHttpTransportSnapshot;
-
-export interface DesktopMcpServerListItem {
-  name: string;
-  displayName: string;
-  enabled: boolean;
-  capabilities: DesktopMcpCapabilityToggles;
-  scope: DesktopMcpScope;
-  transport: DesktopMcpTransportSnapshot;
-}
-
 export interface DesktopMcpServerInspection {
   name: string;
   displayName: string;
@@ -942,7 +911,12 @@ export interface DesktopMcpServerInspection {
   promptsCount: number;
 }
 
-export type DesktopSkillScope = "workspace" | "user";
+export interface DesktopMcpServerListItem {
+  name: string;
+  enabled: boolean;
+  scope: DesktopMcpScope;
+}
+
 export type DesktopSkillRootKind = "workspaceSpirit" | "workspaceAgents" | "user";
 
 /** Create `skills/<name>/SKILL.md`; `rootKind` selects the user, product workspace, or `.agents` directory. */
@@ -972,8 +946,6 @@ export interface SubmitGitChipRequest {
   action: GitChipAction;
   extraNote?: string;
 }
-
-export type DesktopRuleScope = "workspace" | "user";
 
 /** Create a Markdown rule file in a fixed rule slot; the root directory is determined by `rootKind`. */
 export interface CreateRuleRequest {
@@ -1145,10 +1117,9 @@ export interface DesktopSkillListItem {
   name: string;
   description: string;
   shortLabel: string;
-  scope: DesktopSkillScope;
   rootKind: DesktopSkillRootKind;
   enabled: boolean;
-  /** Absolute SKILL.md path; host-only, used to open the skill file from composer chips. */
+  /** Absolute SKILL.md path used to open the source file from composer chips. */
   path: string;
 }
 
@@ -1161,14 +1132,10 @@ export interface DesktopExtensionSkillSlashItem {
 
 export interface DesktopRuleListItem {
   id: string;
-  title: string;
   shortLabel: string;
-  scope: DesktopRuleScope;
   rootKind: DesktopSkillRootKind;
-  exists: boolean;
   enabled: boolean;
   previewExcerpt?: string;
-  previewTruncated?: boolean;
 }
 
 /** Same as the `*.json` files saved by CLI `chat_store`. */
@@ -1337,9 +1304,9 @@ export interface DesktopSnapshot {
   remoteControl: DesktopWebHostSnapshot;
   rules: DiscoverySummary;
   skills: DiscoverySummary;
-  /** All Rules in the fixed slots (including ones not yet created), for the settings page list. */
+  /** Existing rules shown on the settings page. */
   rulesList: DesktopRuleListItem[];
-  /** All Skills discovered under the current workspace and user directory, for the settings page list. */
+  /** Skills available to the settings page and composer slash suggestions. */
   skillsList: DesktopSkillListItem[];
   /** Extension-contributed skills for slash activation; omitted from settings lists. */
   extensionSkills: DesktopExtensionSkillSlashItem[];
