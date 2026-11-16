@@ -809,6 +809,14 @@ pub fn handle_extension_cli(action: ExtensionCommand) -> Result<()> {
                 }
                 if let Some(author) = extension.author {
                     println!("    author: {}", author.name);
+                    if let Some(email) = author
+                        .email
+                        .as_deref()
+                        .map(str::trim)
+                        .filter(|value| !value.is_empty())
+                    {
+                        println!("    email: {}", email);
+                    }
                 }
                 if let Some(main) = extension.main {
                     println!("    main: {}", main);

@@ -2029,6 +2029,15 @@ fn extension_help_text(entry: &CliExtensionEntry) -> String {
     {
         lines.push(format!("author: {}", author));
     }
+    if let Some(email) = entry
+        .author
+        .as_ref()
+        .and_then(|value| value.email.as_deref())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        lines.push(format!("email: {}", email));
+    }
     if let Some(main) = entry.main.as_ref().filter(|value| !value.trim().is_empty()) {
         lines.push(format!("main: {}", main));
     }
@@ -2487,6 +2496,23 @@ mod tests {
         assert!(form.fields[1].help.contains("hooks: sessionStart"));
         assert!(form.fields[1].help.contains("skills: demo-skill"));
         assert!(form.fields[1].help.contains("rules: yes"));
+    }
+
+    #[test]
+    fn extensions_form_help_shows_only_nonempty_author_email() {
+        let mut entry = sample_extension_entry();
+        entry.author.as_mut().expect("sample author").email = Some("  alice@example.com  ".into());
+        let form = new_extensions_form(&[entry]);
+        assert!(
+            form.fields[1]
+                .help
+                .contains("author: Spirit\nemail: alice@example.com\n")
+        );
+
+        let mut entry = sample_extension_entry();
+        entry.author.as_mut().expect("sample author").email = Some("   ".into());
+        let form = new_extensions_form(&[entry]);
+        assert!(!form.fields[1].help.contains("email:"));
     }
 
     #[test]

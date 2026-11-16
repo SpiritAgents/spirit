@@ -245,6 +245,18 @@ fn build_marketplace_overview_lines(
         lines.push(Line::from(Span::styled(description, subtle_style)));
     }
 
+    if let Some(email) = detail
+        .email
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        lines.push(Line::from(Span::styled(
+            format!("email: {}", email),
+            subtle_style,
+        )));
+    }
+
     if !detail.supported_hosts.is_empty() || !detail.requested_capabilities.is_empty() {
         let mut capability_spans = vec![Span::styled(
             t!("tui.marketplace.detail_capabilities_label").into_owned(),

@@ -774,6 +774,7 @@ fn marketplace_detail_page_hugs_content_and_hides_id() {
             display_name: "Detail Demo".to_string(),
             description: "A detail demo.".to_string(),
             author: None,
+            email: Some("  detail@example.com  ".to_string()),
             review_status: "verified".to_string(),
             version: "1.2.0".to_string(),
             installed: false,
@@ -826,15 +827,20 @@ fn marketplace_detail_page_hugs_content_and_hides_id() {
         .iter()
         .position(|line| line.contains("Capabilities"))
         .expect("capabilities line renders");
+    let email_row = lines
+        .iter()
+        .position(|line| line.contains("email: detail@example.com"))
+        .expect("author email renders");
+    assert!(email_row < capabilities_row);
     let install_row = lines
         .iter()
         .position(|line| line.contains("> Install"))
         .expect("actions form renders");
-    // Borderless layout: four overview rows (title, description, capabilities,
-    // one contribution line), exactly one blank gap row, then the actions.
+    // Borderless layout: five overview rows (title, description, email,
+    // capabilities, one contribution line), one blank gap, then the actions.
     assert_eq!(
         install_row - title_row,
-        5,
+        6,
         "actions form docks one blank row below the overview content, got:\n{snapshot}"
     );
     assert!(
@@ -868,6 +874,16 @@ fn marketplace_detail_page_hugs_content_and_hides_id() {
         narrow_install_row - contribution_row <= 2,
         "actions form docks right below the wrapped overview, got:\n{narrow_snapshot}"
     );
+
+    app.marketplace_view
+        .as_mut()
+        .expect("marketplace view")
+        .detail
+        .as_mut()
+        .expect("marketplace detail")
+        .email = Some("   ".to_string());
+    let blank_email = render_ui_lines(&app, 80, 24).join("\n");
+    assert!(!blank_email.contains("email:"));
 }
 
 #[test]

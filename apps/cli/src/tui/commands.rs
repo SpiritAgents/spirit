@@ -1568,6 +1568,15 @@ fn format_extension_list_message(entries: &[CliExtensionEntry]) -> String {
         {
             lines.push(format!("  author: {}", author));
         }
+        if let Some(email) = entry
+            .author
+            .as_ref()
+            .and_then(|value| value.email.as_deref())
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            lines.push(format!("  email: {}", email));
+        }
         if let Some(main) = entry.main.as_ref().filter(|value| !value.trim().is_empty()) {
             lines.push(format!("  main: {}", main));
         }
@@ -1581,4 +1590,47 @@ fn format_extension_list_message(entries: &[CliExtensionEntry]) -> String {
     }
 
     lines.join("\n")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::host_protocol::{CliExtensionAuthor, CliExtensionEntry};
+
+    fn extension_entry(email: Option<&str>) -> CliExtensionEntry {
+        CliExtensionEntry {
+            id: "personal/demo".to_string(),
+            display_name: "Demo".to_string(),
+            version: "1.0.0".to_string(),
+            enabled: true,
+            description: None,
+            author: Some(CliExtensionAuthor {
+                name: "Alice".to_string(),
+                email: email.map(str::to_string),
+                url: None,
+            }),
+            main: None,
+            supported_hosts: vec!["cli".to_string()],
+            activation_events: None,
+            requested_capabilities: None,
+            contributes: None,
+            instruction_contributions: None,
+            settings_schema: None,
+            secret_slots: None,
+            archive_file_name: None,
+            installed_at_unix_ms: 0,
+            installed: true,
+            install_source: None,
+        }
+    }
+
+    #[test]
+    fn extension_list_message_shows_only_nonempty_author_email() {
+        let output =
+            format_extension_list_message(&[extension_entry(Some("  alice@example.com  "))]);
+        assert!(output.contains("  author: Alice\n  email: alice@example.com"));
+
+        let blank = format_extension_list_message(&[extension_entry(Some("   "))]);
+        assert!(!blank.contains("  email:"));
+    }
 }

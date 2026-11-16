@@ -629,6 +629,7 @@ impl TuiShell {
             display_name: item.display_name.clone(),
             description: item.description.clone(),
             author: item.author.as_ref().map(|author| author.name.clone()),
+            email: item.author.as_ref().and_then(|author| author.email.clone()),
             review_status: item.review_status.clone(),
             version: item.version.clone(),
             installed: item.installed,
