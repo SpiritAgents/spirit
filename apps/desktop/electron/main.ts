@@ -73,6 +73,7 @@ import {
   startLocalListenersScan,
 } from "@spiritagent/http/local-listeners";
 import { shouldBlockExtensionTabNavigation } from "./extension-ui-protocol.js";
+import { emailComposerUrl } from "./email-composer.js";
 import { ExtensionWebViewManager } from "./extension-web-view.js";
 import {
   bindBrowserGuestDevtools,
@@ -1846,6 +1847,11 @@ if (gotSpiritSingleInstanceLock) {
         return;
       }
       event.sender.send("desktop:browser-open-url", { url });
+    });
+
+    ipcMain.handle("desktop:open-email-composer", async (_event, payload: { email?: string }) => {
+      const email = typeof payload?.email === "string" ? payload.email : "";
+      await shell.openExternal(emailComposerUrl(email));
     });
 
     ipcMain.handle(

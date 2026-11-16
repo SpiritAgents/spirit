@@ -515,6 +515,7 @@ pub struct MarketplaceDetailView {
     pub display_name: String,
     pub description: String,
     pub author: Option<String>,
+    pub email: Option<String>,
     pub review_status: String,
     pub version: String,
     pub installed: bool,

@@ -16,7 +16,7 @@ function websiteDisplayText(url: string): string {
 export function MarketplaceInformationSection({ item }: { item: DesktopMarketplaceCatalogEntry }) {
   const { t } = useTranslation();
 
-  const rows: { key: string; label: string; value: string; href?: string }[] = [];
+  const rows: { key: string; label: string; value: string; onOpen?: () => void }[] = [];
   const authorName = item.author?.name?.trim();
   if (authorName) {
     rows.push({ key: "author", label: t("marketplace.infoAuthor"), value: authorName });
@@ -41,7 +41,16 @@ export function MarketplaceInformationSection({ item }: { item: DesktopMarketpla
       key: "website",
       label: t("marketplace.infoWebsite"),
       value: websiteDisplayText(websiteUrl),
-      href: websiteUrl,
+      onOpen: () => void window.spiritDesktop?.openBrowserUrl(websiteUrl),
+    });
+  }
+  const email = item.author?.email?.trim();
+  if (email) {
+    rows.push({
+      key: "contact",
+      label: t("marketplace.infoContact"),
+      value: email,
+      onOpen: () => void window.spiritDesktop?.openEmailComposer(email),
     });
   }
 
@@ -49,14 +58,14 @@ export function MarketplaceInformationSection({ item }: { item: DesktopMarketpla
     <section aria-label={t("marketplace.information")} className="space-y-3">
       <p className="text-base font-medium text-foreground">{t("marketplace.information")}</p>
       <div className="space-y-2 text-sm">
-        {rows.map(({ key, label, value, href }) => (
+        {rows.map(({ key, label, value, onOpen }) => (
           <div key={key} className="flex items-baseline">
             <span className="w-24 shrink-0 text-muted-foreground">{label}</span>
-            {href ? (
+            {onOpen ? (
               <button
                 type="button"
                 className="text-foreground underline underline-offset-2 hover:text-chrome-emphasis/80"
-                onClick={() => void window.spiritDesktop?.openBrowserUrl(href)}
+                onClick={onOpen}
               >
                 {value}
               </button>

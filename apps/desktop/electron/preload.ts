@@ -713,6 +713,9 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   openBrowserUrl(url: string) {
     return ipcRenderer.invoke("desktop:open-browser-url", { url });
   },
+  openEmailComposer(email: string) {
+    return ipcRenderer.invoke("desktop:open-email-composer", { email });
+  },
   subscribeBrowserOpenUrl(callback: (url: string) => void) {
     const onOpen = (_event: Electron.IpcRendererEvent, payload: { url?: string }) => {
       const url = typeof payload?.url === "string" ? payload.url.trim() : "";
