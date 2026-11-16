@@ -17,3 +17,13 @@ test("the built extension backend has no workspace or host runtime dependency", 
   for (const file of ["README.md", "LICENSE", "icon.svg"])
     assert.ok((await stat(path.join(root, file))).size > 0);
 });
+
+test("both Native pages ship their own browser assets", async () => {
+  const root = path.resolve(import.meta.dirname, "../dist/extension/ui");
+  for (const name of ["authorize.html", "pull-requests.html"]) {
+    const html = await readFile(path.join(root, name), "utf8");
+    assert.match(html, /\.\/assets\/.+\.js/);
+    assert.match(html, /\.\/assets\/.+\.css/);
+    assert.doesNotMatch(html, /importmap|srcdoc|node_modules/);
+  }
+});

@@ -981,6 +981,7 @@
     "prGitHubConnectLink": "연결",
     "prGitHubConnectTooltipBefore": " ",
     "prGitHubConnectPromptBefore": " ",
+    "prGitHubAuthorizationRequired": "Pull Request를 사용하려면 <authorize>GitHub를 승인</authorize>하세요",
     "prNoRepo": "워크스페이스가 Git 저장소가 아닙니다.",
     "prNoGitHubOrigin": "이 저장소에 GitHub origin 리모트가 없습니다.",
     "prNoOpenPullRequest": "브랜치 {{branch}}에 열린 pull request가 없습니다.",
@@ -1651,5 +1652,14 @@
       "pairingRequired": "먼저 최초 페어링을 완료하세요.",
       "invalidProvider": "제공자 인수가 잘못되었습니다."
     }
+  },
+  "github": {
+    "connect": "GitHub 연결",
+    "disconnect": "연결 해제",
+    "connectedAs": "@{{login}}(으)로 연결됨",
+    "waiting": "인증 대기 중",
+    "openDevicePage": "GitHub 확인 페이지 열기",
+    "desktopOnly": "GitHub 통합은 데스크톱 앱에서만 사용할 수 있습니다.",
+    "oauthUnavailable": "Spirit OAuth 앱을 설정하기 전에는 GitHub 인증을 사용할 수 없습니다。"
   }
 }

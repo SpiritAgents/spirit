@@ -1,3 +1,6 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { GitPullRequest } from "lucide-react";
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
@@ -20,4 +23,11 @@ await writeFile(
     null,
     2,
   ) + "\n",
+);
+
+await mkdir(path.join(output, "icons"), { recursive: true });
+await writeFile(
+  path.join(output, "icons/pull-request.svg"),
+  renderToStaticMarkup(createElement(GitPullRequest, { strokeWidth: 1.75, stroke: "black" })) +
+    "\n",
 );

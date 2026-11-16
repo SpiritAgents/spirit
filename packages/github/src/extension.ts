@@ -198,6 +198,19 @@ export function createGitHubExtension(
     automationTriggers,
     async onTabRequest(input: SpiritDesktopPageRequestContext): Promise<unknown> {
       return request(input.signal, async () => {
+        if (input.method === "openLink") {
+          const url = (input.params as { url?: unknown })?.url;
+          if (typeof url !== "string") throw new Error("A link URL is required.");
+          const target = parseGitHubPullRequestUrl(url);
+          if (!target) return false;
+          await input.host.tabs.open({
+            contributionId: "pull-requests",
+            reuse: "context",
+            initialParams: target,
+            preferInstanceId: input.instanceId,
+          });
+          return true;
+        }
         if (input.method === "getLayout") return input.settings.getAll();
         if (input.method === "setLayout") {
           const values = input.params as Record<string, unknown>;

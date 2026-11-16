@@ -1014,6 +1014,7 @@
     "prGitHubConnectLink": "Connect",
     "prGitHubConnectTooltipBefore": "Please ",
     "prGitHubConnectPromptBefore": "Please ",
+    "prGitHubAuthorizationRequired": "<authorize>Authorize GitHub</authorize> to use Pull Requests",
     "prNoRepo": "The workspace is not a Git repository.",
     "prNoGitHubOrigin": "No GitHub origin remote was found for this repository.",
     "prNoOpenPullRequest": "No open pull request for branch {{branch}}.",
@@ -1685,5 +1686,14 @@
       "pairingRequired": "Complete the initial pairing first.",
       "invalidProvider": "Invalid provider argument."
     }
+  },
+  "github": {
+    "connect": "Connect GitHub",
+    "disconnect": "Disconnect",
+    "connectedAs": "Connected as @{{login}}",
+    "waiting": "Waiting for authorization",
+    "openDevicePage": "Open GitHub verification page",
+    "desktopOnly": "GitHub integration is only available in the Desktop app.",
+    "oauthUnavailable": "GitHub authorization is unavailable until the Spirit OAuth App is configured."
   }
 }

@@ -1,4 +1,4 @@
-import { nestReviewThreadsUnderReviews } from "./conversation.js";
+import { nestReviewThreadsUnderReviews } from "./conversation-model.js";
 import type {
   GitHubPullRequestConversationItem,
   GitHubPullRequestConversationReview,

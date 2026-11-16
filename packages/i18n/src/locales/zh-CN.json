@@ -989,6 +989,7 @@
     "prGitHubConnectLink": "连接",
     "prGitHubConnectTooltipBefore": "请",
     "prGitHubConnectPromptBefore": "请",
+    "prGitHubAuthorizationRequired": "<authorize>授权 GitHub</authorize> 以使用 Pull Request",
     "prNoRepo": "当前工作区不是 Git 仓库。",
     "prNoGitHubOrigin": "未找到指向 GitHub 的 origin 远程。",
     "prNoOpenPullRequest": "分支 {{branch}} 没有 open 状态的 Pull Request。",
@@ -1660,5 +1661,14 @@
       "pairingRequired": "需要完成首次配对。",
       "invalidProvider": "无效的提供商参数。"
     }
+  },
+  "github": {
+    "connect": "连接 GitHub",
+    "disconnect": "断开连接",
+    "connectedAs": "已连接 @{{login}}",
+    "waiting": "等待授权",
+    "openDevicePage": "打开 GitHub 验证页",
+    "desktopOnly": "GitHub 集成仅在 Desktop 应用中可用。",
+    "oauthUnavailable": "Spirit 的 OAuth 应用配置完成前，GitHub 授权暂不可用。"
   }
 }

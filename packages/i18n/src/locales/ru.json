@@ -991,6 +991,7 @@
     "prGitHubConnectLink": "Подключиться",
     "prGitHubConnectTooltipBefore": "Пожалуйста, ",
     "prGitHubConnectPromptBefore": "Пожалуйста, ",
+    "prGitHubAuthorizationRequired": "<authorize>Авторизуйте GitHub</authorize>, чтобы использовать Pull Requests",
     "prNoRepo": "Рабочее пространство не является Git-репозиторием.",
     "prNoGitHubOrigin": "Для этого репозитория не найден удалённый репозиторий GitHub.",
     "prNoOpenPullRequest": "Нет открытых pull request для ветки {{branch}}.",
@@ -1661,5 +1662,14 @@
       "pairingRequired": "Сначала завершите первоначальное сопряжение.",
       "invalidProvider": "Недопустимый аргумент поставщика."
     }
+  },
+  "github": {
+    "connect": "Подключить GitHub",
+    "disconnect": "Отключить",
+    "connectedAs": "Подключено как @{{login}}",
+    "waiting": "Ожидание авторизации",
+    "openDevicePage": "Открыть страницу проверки GitHub",
+    "desktopOnly": "Интеграция с GitHub доступна только в десктопном приложении.",
+    "oauthUnavailable": "Авторизация GitHub будет доступна после настройки OAuth-приложения Spirit."
   }
 }

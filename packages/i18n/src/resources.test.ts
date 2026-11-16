@@ -9,3 +9,12 @@ test("all locales expose the same translation keys", () => {
     assert.deepEqual(Object.keys(locale.translation).sort(), expected);
   }
 });
+
+test("PR authorization hints localize the complete sentence and preserve its navigation link", () => {
+  for (const [locale, { translation }] of Object.entries(resources)) {
+    const message = translation.workspace.prGitHubAuthorizationRequired;
+    assert.equal(message.match(/<authorize>/g)?.length, 1, locale);
+    assert.equal(message.match(/<\/authorize>/g)?.length, 1, locale);
+    assert.match(message, /<authorize>[^<]*GitHub[^<]*<\/authorize>/, locale);
+  }
+});

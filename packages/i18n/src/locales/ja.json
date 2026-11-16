@@ -981,6 +981,7 @@
     "prGitHubConnectLink": "接続",
     "prGitHubConnectTooltipBefore": " ",
     "prGitHubConnectPromptBefore": " ",
+    "prGitHubAuthorizationRequired": "Pull Request を使用するには、<authorize>GitHub を認可</authorize>してください",
     "prNoRepo": "ワークスペースは Git リポジトリではありません。",
     "prNoGitHubOrigin": "このリポジトリに GitHub の origin リモートが見つかりませんでした。",
     "prNoOpenPullRequest": "ブランチ {{branch}} に開いているプルリクエストはありません。",
@@ -1651,5 +1652,14 @@
       "pairingRequired": "最初のペアリングを完了してください。",
       "invalidProvider": "プロバイダーの引数が無効です。"
     }
+  },
+  "github": {
+    "connect": "GitHub に接続",
+    "disconnect": "切断",
+    "connectedAs": "@{{login}} として接続済み",
+    "waiting": "認証を待機中",
+    "openDevicePage": "GitHub 認証ページを開く",
+    "desktopOnly": "GitHub 連携はデスクトップアプリでのみ利用可能です。",
+    "oauthUnavailable": "Spirit の OAuth アプリが設定されるまで、GitHub 認証は利用できません。"
   }
 }

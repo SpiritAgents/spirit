@@ -88,6 +88,7 @@ const nodeDomains = new Set([
   "workspace",
 ]);
 const reactPresentationPaths = [
+  /^packages\/github\/src\/ui\//u,
   /^packages\/extensions\/src\/extension-ui-kit\//u,
   /^packages\/sessions\/src\/lib\//u,
 ];
