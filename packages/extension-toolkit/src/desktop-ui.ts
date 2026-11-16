@@ -1,11 +1,3 @@
-/** Props for a precompiled Desktop view: `export default function View(props)`. */
-export interface SpiritDesktopViewProps {
-  params: unknown;
-  close: (result?: unknown) => void;
-}
-
-export type SpiritDesktopView = (props: SpiritDesktopViewProps) => unknown;
-
 export type SpiritDesktopTabScope = "window-shared" | "workspace" | "session";
 export type SpiritDesktopTabIcon =
   | { type: "spirit"; name: string }
@@ -77,6 +69,7 @@ export interface SpiritDesktopTabPageContext {
   workspaceRoot: string;
   sessionKey: string;
   visible: boolean;
+  locale: string;
   theme: {
     htmlClassName: string;
     htmlStyle: string;
@@ -84,12 +77,34 @@ export interface SpiritDesktopTabPageContext {
   };
 }
 
-export interface SpiritDesktopTabPageApi {
-  ready(): Promise<SpiritDesktopTabPageContext>;
+export interface SpiritDesktopViewPageContext {
+  extensionId: string;
+  contributionId: string;
+  instanceId: string;
+  channelId: string;
+  params?: unknown;
+  visible: boolean;
+  locale: string;
+  theme: SpiritDesktopTabPageContext["theme"];
+}
+
+/** Common document bridge; bundle application dependencies with the extension page. */
+export interface SpiritDesktopPageApi<TContext = SpiritDesktopTabPageContext> {
+  ready(): Promise<TContext>;
+  /** Call after the application has committed its first render. */
+  mounted(): void;
+  fail(error: unknown): void;
   request(method: string, params?: unknown): Promise<unknown>;
   onEvent(listener: (event: { event: string; params?: unknown }) => void): () => void;
+  onContextChange(listener: (context: TContext) => void): () => void;
+}
+
+export interface SpiritDesktopTabPageApi extends SpiritDesktopPageApi {
   setChrome(patch: SpiritDesktopTabChromePatch): void;
-  onContextChange(listener: (context: SpiritDesktopTabPageContext) => void): () => void;
+}
+
+export interface SpiritDesktopViewPageApi extends SpiritDesktopPageApi<SpiritDesktopViewPageContext> {
+  close(result?: unknown): void;
 }
 
 export interface SpiritDesktopWebViewPageApi {
@@ -109,6 +124,7 @@ export interface SpiritDesktopWebViewsPageApi {
 export interface SpiritDesktopViewSession {
   readonly requestId: string;
   readonly result: Promise<unknown>;
+  update(params: unknown): void;
   close(result?: unknown): void;
 }
 

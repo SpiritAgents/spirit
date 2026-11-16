@@ -18,11 +18,11 @@
   "scripts": {
     "dev": "vite --strictPort --host 127.0.0.1 --port 1420",
     "build": "tsc --noEmit && vite build && pnpm run build:extension-ui",
-    "build:extension-ui": "vite build --config vite.extension-ui.config.ts && vite build --config vite.extension-tab-ui.config.ts",
+    "build:extension-ui": "vite build --config vite.extension-ui.config.ts",
     "typecheck": "tsc --noEmit",
     "test": "node scripts/check-renderer-boundaries.mjs && node scripts/check-renderer-agent-core-imports.mjs && vitest run",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
-    "dev:extension-ui": "concurrently \"vite build --watch --config vite.extension-ui.config.ts\" \"vite build --watch --config vite.extension-tab-ui.config.ts\""
+    "dev:extension-ui": "vite build --watch --config vite.extension-ui.config.ts"
   },
   "dependencies": {
     "@lexical/clipboard": "0.53.0",

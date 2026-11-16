@@ -64,7 +64,7 @@ describe("MarketplaceContributionGroups", () => {
   test("desktop views render in the Desktop contribution group", () => {
     const { getByText } = render(
       <MarketplaceContributionGroups
-        item={{ desktopViews: [{ id: "enable", path: "ui/enable.mjs" }] }}
+        item={{ desktopViews: [{ id: "enable", path: "ui/enable.html" }] }}
       />,
     );
     expect(getByText("Desktop")).toBeTruthy();

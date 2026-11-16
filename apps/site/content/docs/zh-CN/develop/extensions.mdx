@@ -185,7 +185,7 @@ my-extension/
 | `views[].height` | 可选。Dialog 高度上限。省略则随内容高度。内容更高时 iframe 内滚动。                                                          |
 | `views[].chrome` | 可选。Dialog 外壳：`default`（标题 + 关闭）、`close-only`（隐藏标题、保留关闭）或 `none`（两者都隐藏）。省略等同 `default`。 |
 
-默认导出：`export default function View({ params, close })`。`close(result)` 结束 View。宿主注入 React 与 `@spirit/desktop-ui`。
+View 与 Tab 都是自带 JavaScript、CSS 和依赖的 HTML 页面。宿主提供 `window.spirit.page`；View 通过 `window.spirit.view.close(result)` 关闭。等待 `ready()`，渲染后调用 `mounted()`，通过 `onContextChange()` 接收参数、语言和主题更新。宿主不再提供 React import map。
 
 ### `contributes.cli`
 

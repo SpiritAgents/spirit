@@ -7,9 +7,9 @@ import { product } from "@spiritagent/product";
 
 import {
   assertResolvedViewFilePath,
-  injectExtensionTabRuntime,
+  injectExtensionPageRuntime,
   extensionAssetMimeType,
-  EXTENSION_TAB_PAGE_CSP,
+  EXTENSION_PAGE_CSP,
   parseExtensionUiUrl,
   SPIRIT_EXTENSION_UI_HOST,
 } from "./extension-ui-protocol.js";
@@ -27,7 +27,6 @@ export function registerSpiritGeneratedAssetPrivilegedScheme(): void {
         supportFetchAPI: true,
         stream: true,
         corsEnabled: true,
-        bypassCSP: true,
       },
     },
   ]);
@@ -40,8 +39,7 @@ export type ImagePreviewMimeType = (extension: string) => string | null | undefi
 type ResolvedExtensionFile = { filePath: string; extensionRoot: string };
 
 export interface ExtensionUiHandlerDeps {
-  resolveExtensionUiRuntimePath: () => string;
-  resolveExtensionTabRuntimePath: () => string;
+  resolveExtensionPageRuntimePath: () => string;
   resolveExtensionViewFile: (
     extensionId: string,
     viewId: string,
@@ -60,12 +58,11 @@ export function installSpiritGeneratedAssetProtocolHandler(deps: {
   resolveManagedGeneratedAssetPath: ResolveManagedGeneratedAssetPath;
   videoPreviewMimeType: VideoPreviewMimeType;
   imagePreviewMimeType: ImagePreviewMimeType;
-  resolveExtensionUiRuntimePath: () => string;
   resolveExtensionViewFile: (
     extensionId: string,
     viewId: string,
   ) => Promise<{ filePath: string; extensionRoot: string } | null>;
-  resolveExtensionTabRuntimePath: () => string;
+  resolveExtensionPageRuntimePath: () => string;
   resolveExtensionTabFile: ExtensionUiHandlerDeps["resolveExtensionTabFile"];
   resolveExtensionTabIconFile: ExtensionUiHandlerDeps["resolveExtensionTabIconFile"];
 }): void {
@@ -120,8 +117,7 @@ export function installSpiritGeneratedAssetProtocolHandler(deps: {
 async function handleExtensionUiRequest(
   url: URL,
   deps: {
-    resolveExtensionUiRuntimePath: () => string;
-    resolveExtensionTabRuntimePath: () => string;
+    resolveExtensionPageRuntimePath: () => string;
     resolveExtensionViewFile: (
       extensionId: string,
       viewId: string,
@@ -142,11 +138,8 @@ async function handleExtensionUiRequest(
   }
 
   try {
-    if (parsed.kind === "runtime" || parsed.kind === "tab-runtime") {
-      const runtimePath =
-        parsed.kind === "runtime"
-          ? deps.resolveExtensionUiRuntimePath()
-          : deps.resolveExtensionTabRuntimePath();
+    if (parsed.kind === "page-runtime") {
+      const runtimePath = deps.resolveExtensionPageRuntimePath();
       const body = await readFile(runtimePath);
       return new Response(body, {
         status: 200,
@@ -154,11 +147,10 @@ async function handleExtensionUiRequest(
       });
     }
 
-    if (parsed.kind === "tab") {
-      const resolved = await deps.resolveExtensionTabFile(
-        parsed.extensionId,
-        parsed.contributionId,
-      );
+    if (parsed.kind === "tab" || parsed.kind === "view") {
+      const resolve =
+        parsed.kind === "tab" ? deps.resolveExtensionTabFile : deps.resolveExtensionViewFile;
+      const resolved = await resolve(parsed.extensionId, parsed.contributionId);
       if (!resolved) {
         return new Response("Not Found", { status: 404, headers });
       }
@@ -168,13 +160,13 @@ async function handleExtensionUiRequest(
           : path.join(path.dirname(resolved.filePath), ...parsed.assetPath.split("/"));
       assertResolvedViewFilePath(filePath, resolved.extensionRoot);
       if (parsed.assetPath === "index.html") {
-        const body = injectExtensionTabRuntime(await readFile(filePath, "utf8"));
+        const body = injectExtensionPageRuntime(await readFile(filePath, "utf8"));
         return new Response(body, {
           status: 200,
           headers: {
             ...headers,
             "Content-Type": "text/html; charset=utf-8",
-            "Content-Security-Policy": EXTENSION_TAB_PAGE_CSP,
+            "Content-Security-Policy": EXTENSION_PAGE_CSP,
           },
         });
       }
@@ -207,16 +199,7 @@ async function handleExtensionUiRequest(
       });
     }
 
-    const resolved = await deps.resolveExtensionViewFile(parsed.extensionId, parsed.viewId);
-    if (!resolved) {
-      return new Response("Not Found", { status: 404, headers });
-    }
-    const filePath = assertResolvedViewFilePath(resolved.filePath, resolved.extensionRoot);
-    const body = await readFile(filePath);
-    return new Response(body, {
-      status: 200,
-      headers: { ...headers, "Content-Type": "text/javascript; charset=utf-8" },
-    });
+    return new Response("Not Found", { status: 404, headers });
   } catch {
     return new Response("Not Found", { status: 404, headers });
   }

@@ -24,7 +24,7 @@ Declare only what the extension uses; every declared file must exist and parse.
 | `hooks`                               | package-root `hooks.json` (agent hooks)                                  |
 | `tool-definitions` + `tool-execution` | model-callable tools declared in the manifest, implemented by `activate` |
 | `system-prompt`                       | system prompt fragment from `activate`                                   |
-| `desktop-ui`                          | Desktop CSS, a settings page, and precompiled single-file views          |
+| `desktop-ui`                          | Desktop CSS, a settings page, and packaged HTML pages for Views and Tabs |
 | `cli-ui`                              | CLI TUI slot styling from a declarative hooks file                       |
 
 A bundled MCP server may send `spirit/ui/open` during `tools/call` for a view that same extension owns. CLI / headless hosts return `{ kind: "unavailable", reason: "host-has-no-ui" }`.

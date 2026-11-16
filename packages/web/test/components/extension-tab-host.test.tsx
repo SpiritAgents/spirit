@@ -114,7 +114,7 @@ test("ready requests receive initial parameters, scope, visibility, and host the
   expect(postMessage).toHaveBeenCalled();
   const [context] = postMessage.mock.calls.at(-1)!;
   expect(context).toMatchObject({
-    type: "spirit-extension-tab-context",
+    type: "spirit-extension-page-context",
     extensionId: "personal/demo",
     contributionId: "notes",
     instanceId: "instance-1",
@@ -269,4 +269,76 @@ test("backend events and teardown reach only the owning page channel", () => {
     expect.objectContaining({ type: SPIRIT_EXTENSION_TAB_CLOSED, channelId: tab.channelId }),
     "*",
   );
+});
+test("loading and retried tabs publish context without relying on the first ready request", async () => {
+  const originalClasses = document.documentElement.className;
+  const postMessage = vi.fn();
+  const childWindow = { postMessage } as unknown as Window;
+  const contentWindow = vi
+    .spyOn(HTMLIFrameElement.prototype, "contentWindow", "get")
+    .mockReturnValue(childWindow);
+  let rendered: ReturnType<typeof render> | undefined;
+  try {
+    rendered = render(
+      <ExtensionTabHost
+        tab={{ ...tab, initialParams: { step: 1 } }}
+        contribution={contribution}
+        active
+      />,
+    );
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "spirit-extension-page-context",
+        initialParams: { step: 1 },
+        instanceId: tab.instanceId,
+      }),
+      "*",
+    );
+    expect(
+      rendered.container
+        .querySelector("[data-extension-tab-state]")
+        ?.getAttribute("data-extension-tab-state"),
+    ).toBe("loading");
+    postMessage.mockClear();
+    rendered.rerender(
+      <ExtensionTabHost
+        tab={{ ...tab, initialParams: { step: 2 } }}
+        contribution={contribution}
+        active
+      />,
+    );
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ initialParams: { step: 2 } }),
+      "*",
+    );
+    postMessage.mockClear();
+    const wasDark = document.documentElement.classList.contains("dark");
+    await act(async () => {
+      document.documentElement.classList.toggle("dark", !wasDark);
+    });
+    const context = postMessage.mock.calls.at(-1)?.[0];
+    expect(context?.theme.htmlClassName.includes("dark")).toBe(!wasDark);
+    dispatchFrameMessage(
+      rendered.container.querySelector("iframe")!,
+      "spirit-extension-page-error",
+    );
+    postMessage.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "spirit-extension-page-context",
+        initialParams: { step: 2 },
+      }),
+      "*",
+    );
+    expect(
+      rendered.container
+        .querySelector("[data-extension-tab-state]")
+        ?.getAttribute("data-extension-tab-state"),
+    ).toBe("loading");
+  } finally {
+    rendered?.unmount();
+    document.documentElement.className = originalClasses;
+    contentWindow.mockRestore();
+  }
 });

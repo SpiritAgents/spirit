@@ -3168,10 +3168,8 @@ function parseDesktopViewDefinition(
 
   const viewPath = stringField(value.path, `${fieldPrefix}[${index}].path`);
   assertSafeRelativePath(viewPath, `${fieldPrefix}[${index}].path`);
-  if (!viewPath.endsWith(".js") && !viewPath.endsWith(".mjs")) {
-    throw new Error(
-      `Extension field ${fieldPrefix}[${index}].path must be a precompiled .js or .mjs module.`,
-    );
+  if (!viewPath.endsWith(".html")) {
+    throw new Error(`Extension field ${fieldPrefix}[${index}].path must be an .html page.`);
   }
 
   const title = optionalStringField(value.title);

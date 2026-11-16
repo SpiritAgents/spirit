@@ -84,10 +84,10 @@ test("desktop views scaffold a single-file default export", async () => {
   const dump = parseExtensionDumpText(files[".spirit/extension.json"] ?? "");
   assert.deepEqual(dump.manifest.requestedCapabilities, ["desktop-ui"]);
   assert.deepEqual(dump.manifest.contributes, {
-    desktop: { views: [{ id: "main", path: "ui/view.mjs", title: "View" }] },
+    desktop: { views: [{ id: "main", path: "ui/view.html", title: "View" }] },
   });
-  assert.ok(files["ui/view.mjs"]?.includes("export default function View"));
-  assert.ok(files["ui/view.mjs"]?.includes("relative imports 404"));
+  assert.ok(files["ui/view.js"]?.includes("window.spirit.view"));
+  assert.ok(files["ui/view.js"]?.includes("view.mounted()"));
 });
 
 test("desktop tabs scaffold a plain page and its backend channel", async () => {
@@ -211,8 +211,8 @@ test("authorization scaffolds private secrets, an action, and a view session", a
   assert.deepEqual(dump.manifest.contributes?.authorizations, [
     { id: "oauth", action: "authorize", secretSlots: ["oauthAccessToken"] },
   ]);
-  assert.ok(files["ui/authorize.mjs"]?.includes("close({ accessToken"));
-  assert.ok(files["ui/authorize.mjs"]?.includes("close({ disconnect: true })"));
+  assert.ok(files["ui/authorize.js"]?.includes("close({ authorize"));
+  assert.ok(files["ui/authorize.js"]?.includes("close({ disconnect: true })"));
   assert.ok(files["index.mjs"]?.includes("context.host.ui.open"));
   assert.ok(files["index.mjs"]?.includes("context.secrets.has"));
   assert.ok(files["index.mjs"]?.includes("context.secrets.set"));

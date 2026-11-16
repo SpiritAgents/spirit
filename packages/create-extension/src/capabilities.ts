@@ -235,20 +235,21 @@ echo "session started with ${input.name}"
     label: "Desktop views (contributes.desktop.views)",
     requestedCapabilities: ["desktop-ui"],
     contributes: () => ({
-      desktop: { views: [{ id: "main", path: "ui/view.mjs", title: "View" }] },
+      desktop: { views: [{ id: "main", path: "ui/view.html", title: "View" }] },
     }),
     files: () => ({
-      "ui/view.mjs": `/**
- * Precompiled single-file Desktop view. The host imports the default export:
- *   export default function View({ params, close })
- * Bundle this file as one ESM module — relative imports 404.
- * React and @spirit/desktop-ui are provided by the host import map.
- */
-export default function View({ params, close }) {
-  void params;
-  void close;
-  return null;
-}
+      "ui/view.html": `<!doctype html>
+<html lang="en"><head><meta charset="UTF-8" /><title>View</title></head>
+<body><main id="content"></main><button id="close" type="button">Close</button><script type="module" src="./view.js"></script></body></html>
+`,
+      "ui/view.js": `const view = window.spirit.view;
+const context = await view.ready();
+document.getElementById("content").textContent = JSON.stringify(context.params);
+view.onContextChange((context) => {
+  document.getElementById("content").textContent = JSON.stringify(context.params);
+});
+document.getElementById("close").addEventListener("click", () => view.close());
+view.mounted();
 `,
     }),
   },
@@ -290,6 +291,7 @@ export default function View({ params, close }) {
 </html>
 `,
       "ui/tab.js": `const context = await window.spirit.tab.ready();
+window.spirit.tab.mounted();
 document.getElementById("context").textContent =
   context.instanceId + " · " + JSON.stringify(context.scope);
 document.getElementById("echo").addEventListener("click", async () => {
@@ -314,29 +316,23 @@ button { width: fit-content; }
     contributes: () => ({
       authorizations: [{ id: "oauth", action: "authorize", secretSlots: ["oauthAccessToken"] }],
       desktop: {
-        views: [{ id: "authorize", path: "ui/authorize.mjs", title: "Authorize" }],
+        views: [{ id: "authorize", path: "ui/authorize.html", title: "Authorize" }],
       },
     }),
     files: () => ({
-      "ui/authorize.mjs": `import { createElement } from "react";
-import { Button, Card } from "@spirit/desktop-ui";
-
-export default function View({ params, close }) {
-  return createElement(
-    Card,
-    { className: "flex items-center justify-between gap-3 p-4" },
-    createElement("span", null, params.configured
-      ? "Manage the configured credential."
-      : "Connect this extension to your account."),
-    createElement("div", { className: "flex gap-2" },
-      params.configured
-        ? createElement(Button, { type: "button", variant: "destructive", onClick: () => close({ disconnect: true }) }, "Disconnect")
-        : null,
-      createElement(Button, { type: "button", onClick: () => close({ accessToken: "demo-access-token" }) },
-        params.configured ? "Reauthorize" : "Authorize"),
-    ),
-  );
-}
+      "ui/authorize.html": `<!doctype html>
+<html lang="en"><head><meta charset="UTF-8" /><title>Authorize</title></head>
+<body><p id="status"></p><button id="disconnect" type="button">Disconnect</button><button id="authorize" type="button">Authorize</button><script type="module" src="./authorize.js"></script></body></html>
+`,
+      "ui/authorize.js": `const view = window.spirit.view;
+const { params } = await view.ready();
+document.getElementById("status").textContent = params.configured
+  ? "Manage the configured credential." : "Connect this extension to your account.";
+document.getElementById("disconnect").hidden = !params.configured;
+document.getElementById("disconnect").addEventListener("click", () => view.close({ disconnect: true }));
+// The backend owns credentials; pages return only the user's chosen operation.
+document.getElementById("authorize").addEventListener("click", () => view.close({ authorize: true }));
+view.mounted();
 `,
     }),
   },
@@ -430,8 +426,9 @@ export function buildMainModule(
       configured: await context.secrets.has("oauthAccessToken"),
     });
     const result = await session.result;
-    if (result && typeof result.accessToken === "string" && result.accessToken.length > 0) {
-      await context.secrets.set("oauthAccessToken", result.accessToken);
+    if (result?.authorize === true) {
+      // Replace this demonstration value with a backend OAuth exchange. Never send it to a page.
+      await context.secrets.set("oauthAccessToken", "demo-access-token");
     }
     if (result && result.disconnect === true) {
       await context.secrets.delete("oauthAccessToken");

@@ -185,7 +185,7 @@ my-extension/
 | `views[].height` | 선택 사항. Dialog 최대 높이. 생략하면 내용에 맞춤. 더 높으면 iframe 안에서 스크롤.                                                                                |
 | `views[].chrome` | 선택 사항. Dialog 크롬: `default`(제목 + 닫기), `close-only`(제목 숨김, 닫기 유지), `none`(둘 다 숨김). 생략 시 `default`.                                        |
 
-기본 내보내기: `export default function View({ params, close })`. `close(result)`가 View를 끝냅니다. 호스트가 React와 `@spirit/desktop-ui`를 주입합니다.
+View와 Tab은 JavaScript, CSS, 의존성을 포함하는 HTML 페이지입니다. 호스트는 `window.spirit.page`를 제공합니다. View는 `window.spirit.view.close(result)`로 닫습니다. `ready()`를 기다린 뒤 렌더링하고 `mounted()`를 호출하세요. `onContextChange()`로 매개변수, 언어, 테마 변경을 받습니다. 호스트의 React import map은 제공되지 않습니다.
 
 ### `contributes.cli`
 

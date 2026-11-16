@@ -1,14 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  buildExtensionViewSrcdoc,
-  extensionViewFileUrl,
-  SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE,
-  SPIRIT_EXTENSION_VIEW_READY_MESSAGE,
-  SPIRIT_EXTENSION_VIEW_SIZE_MESSAGE,
-  SPIRIT_EXTENSION_VIEW_THEME_MESSAGE,
-} from "@/lib/extension-view-frame";
+  extensionPageUrl,
+  matchesExtensionPageIdentity,
+  EXTENSION_PAGE_READY_REQUEST,
+  EXTENSION_PAGE_READY,
+  EXTENSION_PAGE_ERROR,
+  EXTENSION_PAGE_CONTEXT,
+  EXTENSION_PAGE_REQUEST,
+  EXTENSION_PAGE_RESULT,
+  EXTENSION_PAGE_CLOSED,
+  EXTENSION_PAGE_CLOSE,
+  EXTENSION_PAGE_SIZE,
+} from "@/lib/extension-page-frame";
 import {
   closeAllOpenExtensionViews,
   closeOpenExtensionViewsForExtension,
@@ -17,13 +24,10 @@ import {
   openExtensionView,
   resolveOpenExtensionView,
   subscribeOpenExtensionView,
+  updateOpenExtensionView,
 } from "@/lib/extension-view-runtime";
-import {
-  collectHostDocumentChrome,
-  collectHostStylesheetCssText,
-} from "@/lib/extension-view-tokens";
+import { collectHostDocumentChrome, collectHostThemeCssText } from "@/lib/extension-view-tokens";
 import { RADIX_OVERLAY_CLOSE_MS } from "@/lib/overlay-motion";
-import { cn } from "@/lib/utils";
 import type { DesktopExtensionListItem, DesktopPendingExtensionUi } from "@/types";
 
 export function ExtensionViewHost({
@@ -31,248 +35,259 @@ export function ExtensionViewHost({
   sessionKey,
   hostRequest,
   onHostResult,
+  onRequest,
 }: {
   extensionsList?: readonly DesktopExtensionListItem[];
   sessionKey?: string | null;
   hostRequest?: DesktopPendingExtensionUi | null;
   onHostResult?: (requestId: string, result: unknown) => void;
+  onRequest?: (request: {
+    extensionId: string;
+    viewId: string;
+    requestId: string;
+    method: string;
+    params?: unknown;
+  }) => Promise<unknown>;
 }) {
+  const { t, i18n } = useTranslation();
   const [openRequest, setOpenRequest] = useState(getOpenExtensionView);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [readyRequestId, setReadyRequestId] = useState<string | null>(null);
-  const [frameHeight, setFrameHeight] = useState<number | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(Boolean(openRequest));
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [frameHeight, setFrameHeight] = useState<number>();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const previousSessionKey = useRef(sessionKey ?? null);
   const hostOpenedRequestId = useRef<string | null>(null);
-  const exitHoldTimer = useRef<number | null>(null);
+  const exitHoldTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  useEffect(
-    () =>
-      subscribeOpenExtensionView(() => {
-        const next = getOpenExtensionView();
-        if (exitHoldTimer.current !== null) {
-          window.clearTimeout(exitHoldTimer.current);
-          exitHoldTimer.current = null;
-        }
-        if (!next) {
-          setDialogOpen(false);
-          // Keep the last request (and iframe) mounted through the Radix exit
-          // animation, matching delete-workspace: clear content after duration-100.
-          exitHoldTimer.current = window.setTimeout(() => {
-            exitHoldTimer.current = null;
-            setOpenRequest(null);
-          }, RADIX_OVERLAY_CLOSE_MS);
-          return;
-        }
-        setOpenRequest(next);
-      }),
-    [],
-  );
-
-  useEffect(
-    () => () => {
-      if (exitHoldTimer.current !== null) {
-        window.clearTimeout(exitHoldTimer.current);
-      }
-    },
-    [],
-  );
+  useEffect(() => {
+    const unsubscribe = subscribeOpenExtensionView(() => {
+      const next = getOpenExtensionView();
+      clearTimeout(exitHoldTimer.current);
+      setDialogOpen(Boolean(next));
+      if (next) setOpenRequest(next);
+      else exitHoldTimer.current = setTimeout(() => setOpenRequest(null), RADIX_OVERLAY_CLOSE_MS);
+    });
+    return () => {
+      unsubscribe();
+      clearTimeout(exitHoldTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!hostRequest) {
       const openedId = hostOpenedRequestId.current;
       hostOpenedRequestId.current = null;
-      if (openedId) {
-        dismissOpenExtensionView(openedId);
-      }
+      if (openedId) dismissOpenExtensionView(openedId);
       return;
     }
     const existing = getOpenExtensionView();
     if (existing?.requestId === hostRequest.requestId) {
+      if (existing.params !== hostRequest.params)
+        updateOpenExtensionView(existing.requestId, hostRequest.params);
       return;
     }
-    const requestId = hostRequest.requestId;
-    hostOpenedRequestId.current = requestId;
+    hostOpenedRequestId.current = hostRequest.requestId;
     const view = extensionsList
       ?.find((item) => item.id === hostRequest.extensionId)
       ?.desktopViews?.find((entry) => entry.id === hostRequest.viewId);
     void openExtensionView({
-      requestId,
-      extensionId: hostRequest.extensionId,
-      viewId: hostRequest.viewId,
-      viewUrl: extensionViewFileUrl(hostRequest.extensionId, hostRequest.viewId),
+      ...view,
+      ...hostRequest,
       title: hostRequest.title ?? view?.title,
-      ...(hostRequest.width === undefined && view?.width === undefined
-        ? {}
-        : { width: hostRequest.width ?? view?.width }),
-      ...(hostRequest.height === undefined && view?.height === undefined
-        ? {}
-        : { height: hostRequest.height ?? view?.height }),
-      ...(hostRequest.chrome === undefined && view?.chrome === undefined
-        ? {}
-        : { chrome: hostRequest.chrome ?? view?.chrome }),
-      params: hostRequest.params,
+      width: hostRequest.width ?? view?.width,
+      height: hostRequest.height ?? view?.height,
+      chrome: hostRequest.chrome ?? view?.chrome,
     }).then(
-      (result) => onHostResult?.(requestId, result),
-      () => onHostResult?.(requestId, { dismissed: true }),
+      (result) => onHostResult?.(hostRequest.requestId, result),
+      () => onHostResult?.(hostRequest.requestId, { dismissed: true }),
     );
   }, [hostRequest, extensionsList, onHostResult]);
 
   useEffect(() => {
     const open = getOpenExtensionView();
-    if (!open || !extensionsList) {
-      return;
-    }
-    const item = extensionsList.find((entry) => entry.id === open.extensionId);
-    if (!item?.enabled) {
+    if (
+      open &&
+      extensionsList &&
+      !extensionsList.find((item) => item.id === open.extensionId)?.enabled
+    )
       closeOpenExtensionViewsForExtension(open.extensionId);
-    }
   }, [extensionsList]);
-
   useEffect(() => {
     const previous = previousSessionKey.current;
-    const next = sessionKey ?? null;
-    previousSessionKey.current = next;
-    if (previous && previous !== next) {
-      closeAllOpenExtensionViews();
-    }
+    previousSessionKey.current = sessionKey ?? null;
+    if (previous && previous !== sessionKey) closeAllOpenExtensionViews();
   }, [sessionKey]);
-
   useEffect(() => () => closeAllOpenExtensionViews(), []);
 
-  const srcdoc = useMemo(() => {
-    if (!openRequest) {
-      return "";
-    }
-    return buildExtensionViewSrcdoc({
-      cssText: collectHostStylesheetCssText(),
-      chrome: collectHostDocumentChrome(),
-      viewUrl: openRequest.viewUrl,
-      params: openRequest.params,
-      requestId: openRequest.requestId,
-    });
-  }, [openRequest]);
+  const identity = useMemo(
+    () =>
+      openRequest
+        ? {
+            extensionId: openRequest.extensionId,
+            contributionId: openRequest.viewId,
+            instanceId: openRequest.requestId,
+            channelId: openRequest.channelId,
+          }
+        : null,
+    [openRequest?.extensionId, openRequest?.viewId, openRequest?.requestId, openRequest?.channelId],
+  );
+
+  const sendContext = useCallback(() => {
+    if (!identity) return;
+    iframeRef.current?.contentWindow?.postMessage(
+      {
+        type: EXTENSION_PAGE_CONTEXT,
+        ...identity,
+        params: openRequest?.params ?? null,
+        visible: dialogOpen,
+        locale: i18n.resolvedLanguage ?? i18n.language,
+        theme: { ...collectHostDocumentChrome(), cssText: collectHostThemeCssText() },
+      },
+      "*",
+    );
+  }, [identity, openRequest?.params, dialogOpen, i18n.resolvedLanguage, i18n.language]);
 
   useEffect(() => {
-    if (!openRequest) {
-      return;
+    if (identity) {
+      setStatus("loading");
+      setFrameHeight(undefined);
     }
-
-    const syncTheme = () => {
-      const iframeWindow = iframeRef.current?.contentWindow;
-      if (!iframeWindow) {
-        return;
-      }
-      const chrome = collectHostDocumentChrome();
-      iframeWindow.postMessage(
-        {
-          type: SPIRIT_EXTENSION_VIEW_THEME_MESSAGE,
-          htmlClassName: chrome.htmlClassName,
-          htmlStyle: chrome.htmlStyle,
-        },
-        "*",
-      );
-    };
-
-    const observer = new MutationObserver(syncTheme);
+  }, [identity]);
+  useEffect(() => {
+    if (!identity || status !== "loading") return;
+    const timer = setTimeout(() => setStatus("error"), 10_000);
+    return () => clearTimeout(timer);
+  }, [identity, status]);
+  useEffect(() => {
+    if (!identity) return;
+    sendContext();
+    const observer = new MutationObserver(sendContext);
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["class", "style"],
+      attributeFilter: ["class", "style", "lang"],
     });
+    return () => observer.disconnect();
+  }, [identity, sendContext]);
 
+  useEffect(() => {
+    if (!identity) return;
     const onMessage = (event: MessageEvent) => {
-      if (event.source !== iframeRef.current?.contentWindow) {
+      const frame = iframeRef.current?.contentWindow;
+      if (!frame || event.source !== frame || !matchesExtensionPageIdentity(event.data, identity))
         return;
-      }
-      if (event.data?.type === SPIRIT_EXTENSION_VIEW_READY_MESSAGE) {
-        if (event.data.requestId === openRequest.requestId) {
-          setReadyRequestId(event.data.requestId);
+      const data = event.data;
+      switch (data.type) {
+        case EXTENSION_PAGE_READY_REQUEST:
+          sendContext();
+          break;
+        case EXTENSION_PAGE_READY:
+          setStatus("ready");
+          break;
+        case EXTENSION_PAGE_ERROR:
+          setStatus("error");
+          break;
+        case EXTENSION_PAGE_SIZE:
+          if (typeof data.height === "number" && Number.isFinite(data.height) && data.height > 0)
+            setFrameHeight(Math.min(Math.ceil(data.height), window.innerHeight));
+          break;
+        case EXTENSION_PAGE_CLOSE:
+          resolveOpenExtensionView(identity.instanceId, data.result);
+          break;
+        case EXTENSION_PAGE_REQUEST: {
+          const requestId = String(data.requestId ?? "");
+          if (!requestId) break;
+          const operation = onRequest
+            ? onRequest({
+                extensionId: identity.extensionId,
+                viewId: identity.contributionId,
+                requestId: identity.instanceId,
+                method: String(data.method ?? ""),
+                params: data.params,
+              })
+            : Promise.reject(new Error("Extension page requests are unavailable."));
+          void operation.then(
+            (result) =>
+              frame?.postMessage(
+                { type: EXTENSION_PAGE_RESULT, ...identity, requestId, ok: true, result },
+                "*",
+              ),
+            (error: unknown) =>
+              frame?.postMessage(
+                {
+                  type: EXTENSION_PAGE_RESULT,
+                  ...identity,
+                  requestId,
+                  ok: false,
+                  error: String(error),
+                },
+                "*",
+              ),
+          );
+          break;
         }
-        return;
       }
-      if (event.data?.type === SPIRIT_EXTENSION_VIEW_SIZE_MESSAGE) {
-        if (
-          event.data.requestId === openRequest.requestId &&
-          typeof event.data.height === "number" &&
-          Number.isFinite(event.data.height)
-        ) {
-          setFrameHeight(event.data.height);
-        }
-        return;
-      }
-      if (event.data?.type !== SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE) {
-        return;
-      }
-      resolveOpenExtensionView(openRequest.requestId, event.data.result);
     };
     window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [identity, onRequest, sendContext]);
+  useEffect(() => {
+    const frame = iframeRef.current?.contentWindow;
     return () => {
-      observer.disconnect();
-      window.removeEventListener("message", onMessage);
+      if (identity) frame?.postMessage({ type: EXTENSION_PAGE_CLOSED, ...identity }, "*");
     };
-  }, [openRequest]);
+  }, [identity]);
 
-  useEffect(() => {
-    if (!openRequest) {
-      return;
-    }
-    setFrameHeight(null);
-    setReadyRequestId(null);
-    // The view signals readiness via SPIRIT_EXTENSION_VIEW_READY_MESSAGE. If the frame
-    // process dies or the view module never executes, no signal arrives and the pending
-    // tool call would hang with no visible dialog to dismiss; this timeout is the single
-    // fallback that opens the (possibly blank) dialog so the user can close it.
-    const timer = window.setTimeout(() => setReadyRequestId(openRequest.requestId), 3000);
-    return () => window.clearTimeout(timer);
-  }, [openRequest]);
-
-  const frameReady = openRequest !== null && readyRequestId === openRequest.requestId;
-
-  useEffect(() => {
-    if (frameReady) {
-      setDialogOpen(true);
-    }
-  }, [frameReady]);
-
-  const width = openRequest?.width;
-  const height = openRequest?.height;
   const chrome = openRequest?.chrome ?? "default";
-  const hideTitle = chrome === "close-only" || chrome === "none";
-  const showCloseButton = chrome !== "none";
-
   return (
     <Dialog
       open={dialogOpen}
       onOpenChange={(next) => {
-        // Only a visible dialog can be dismissed; while the view is still loading
-        // (force-mounted but hidden), outside clicks and Escape must not cancel it.
-        if (!next && openRequest && frameReady) {
-          dismissOpenExtensionView(openRequest.requestId);
-        }
+        if (!next && openRequest) dismissOpenExtensionView(openRequest.requestId);
       }}
     >
       <DialogContent
-        className={cn("sm:max-w-lg", openRequest !== null && !frameReady && "hidden")}
-        overlayClassName={openRequest !== null && !frameReady ? "hidden" : undefined}
+        className="gap-0 overflow-hidden p-0"
         forceMount={openRequest !== null || undefined}
-        style={width ? { width, maxWidth: width } : {}}
-        showCloseButton={showCloseButton}
+        style={
+          openRequest?.width ? { width: openRequest.width, maxWidth: "calc(100vw - 2rem)" } : {}
+        }
+        showCloseButton={chrome !== "none" || status === "error"}
         aria-describedby={undefined}
       >
-        <DialogHeader className={hideTitle ? "sr-only" : undefined}>
+        <DialogHeader className={chrome === "default" ? "px-4 pt-4 pb-4" : "sr-only"}>
           <DialogTitle>{openRequest?.title ?? openRequest?.viewId ?? "Extension"}</DialogTitle>
         </DialogHeader>
-        {openRequest ? (
+        {status === "error" ? (
+          <div role="alert" className="space-y-4 p-4 text-sm">
+            <p>
+              {t("workspace.extensionTabLoadError", {
+                name: openRequest?.title ?? openRequest?.viewId,
+              })}
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => openRequest && dismissOpenExtensionView(openRequest.requestId)}
+            >
+              {t("common.close")}
+            </Button>
+          </div>
+        ) : null}
+        {identity ? (
           <iframe
+            key={identity.instanceId}
             ref={iframeRef}
-            title={openRequest.title ?? openRequest.viewId}
+            title={openRequest?.title ?? identity.contributionId}
             sandbox="allow-scripts"
-            srcDoc={srcdoc}
-            className="w-full border-0 bg-background"
+            src={extensionPageUrl("view", identity)}
+            className="w-full border-0 bg-transparent"
+            data-extension-page-state={status}
             style={{
-              ...(frameHeight === null ? {} : { height: frameHeight }),
-              ...(height === undefined ? {} : { maxHeight: height, overflowY: "auto" }),
+              height: frameHeight ?? 160,
+              maxHeight: openRequest?.height ?? "calc(100vh - 8rem)",
+              visibility: status === "ready" ? "visible" : "hidden",
+              ...(status === "error" ? { display: "none" } : {}),
             }}
+            onError={() => setStatus("error")}
           />
         ) : null}
       </DialogContent>

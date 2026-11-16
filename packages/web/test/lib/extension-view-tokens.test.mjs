@@ -5,18 +5,18 @@ import { test } from "vitest";
 
 import {
   collectHostDocumentChrome,
-  collectHostStylesheetCssText,
+  collectHostThemeCssText,
 } from "../../src/lib/extension-view-tokens.ts";
 
-test("collects live stylesheet cssText instead of a second token file", () => {
+test("collects resolved tokens without leaking host component styles", () => {
   const style = document.createElement("style");
   style.textContent =
     ":root { --primary: oklch(0.2 0 0); } .bg-primary { background: var(--primary); }";
   document.head.append(style);
 
-  const cssText = collectHostStylesheetCssText(document);
+  const cssText = collectHostThemeCssText(document);
   assert.match(cssText, /--primary/);
-  assert.match(cssText, /bg-primary/);
+  assert.doesNotMatch(cssText, /bg-primary/);
   style.remove();
 });
 

@@ -15,7 +15,7 @@ const enabled = {
   manifest: {
     contributes: {
       desktop: {
-        views: [{ id: "main", path: "ui/view.mjs" }],
+        views: [{ id: "main", path: "ui/view.html" }],
       },
     },
   },
@@ -28,7 +28,7 @@ test("resolveEnabledExtensionViewFile serves only a declared view of an enabled 
     "main",
   );
   assert.deepEqual(resolved, {
-    filePath: path.join("/tmp/ext", "ui", "view.mjs"),
+    filePath: path.join("/tmp/ext", "ui", "view.html"),
     extensionRoot: "/tmp/ext",
   });
 });

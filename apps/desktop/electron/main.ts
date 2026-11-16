@@ -1265,13 +1265,11 @@ if (gotSpiritSingleInstanceLock) {
       resolveManagedGeneratedAssetPath,
       videoPreviewMimeType,
       imagePreviewMimeType,
-      resolveExtensionUiRuntimePath: () =>
-        path.join(rendererDistPath(), "extension-ui", "runtime.js"),
       resolveExtensionViewFile: resolveDesktopExtensionViewFile,
       resolveExtensionTabFile: resolveDesktopExtensionTabFile,
       resolveExtensionTabIconFile: resolveDesktopExtensionTabIconFile,
-      resolveExtensionTabRuntimePath: () =>
-        path.join(rendererDistPath(), "extension-ui", "tab-runtime.js"),
+      resolveExtensionPageRuntimePath: () =>
+        path.join(rendererDistPath(), "extension-ui", "page-runtime.js"),
     });
     bindSpiritProtocolActionHandlers({
       focusWindows: focusSpiritDesktopWindows,

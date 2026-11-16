@@ -2652,6 +2652,12 @@ export class DesktopHostService {
     return {
       requestId,
       result,
+      update: (params) => {
+        if (this.pendingExtensionUi?.requestId !== requestId) return;
+        assertHostExtensionJsonValue(params, "View parameters");
+        this.pendingExtensionUi = { ...this.pendingExtensionUi, params };
+        this.emitLiveSnapshotUpdate();
+      },
       close: (closeResult) => {
         this.settleLocalExtensionUi(requestId, closeResult);
       },

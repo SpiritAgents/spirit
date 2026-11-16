@@ -13,10 +13,8 @@ import {
   SPIRIT_EXTENSION_TAB_READY,
   SPIRIT_EXTENSION_TAB_READY_REQUEST,
 } from "@/lib/extension-tab-frame";
-import {
-  collectHostDocumentChrome,
-  collectHostStylesheetCssText,
-} from "@/lib/extension-view-tokens";
+import { collectHostDocumentChrome, collectHostThemeCssText } from "@/lib/extension-view-tokens";
+import { EXTENSION_PAGE_ERROR } from "@/lib/extension-page-frame";
 import { cn } from "@/lib/utils";
 import { useExtensionWebViewBridge } from "@/hooks/useExtensionWebViewBridge";
 import type {
@@ -61,7 +59,7 @@ export function ExtensionTabHost({
   onWebView?: (request: DesktopExtensionWebViewRequest) => Promise<unknown>;
   subscribeWebViewEvents?: (callback: (event: DesktopExtensionWebViewEvent) => void) => () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [attempt, setAttempt] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -92,11 +90,12 @@ export function ExtensionTabHost({
         workspaceRoot: workspaceRoot ?? "",
         sessionKey: sessionKey ?? "",
         visible: active,
-        theme: { ...chrome, cssText: collectHostStylesheetCssText() },
+        locale: i18n.resolvedLanguage ?? i18n.language,
+        theme: { ...chrome, cssText: collectHostThemeCssText() },
       },
       "*",
     );
-  }, [active, sessionKey, tab, workspaceRoot]);
+  }, [active, sessionKey, tab, workspaceRoot, i18n.resolvedLanguage, i18n.language]);
 
   const handleWebViewMessage = useExtensionWebViewBridge({
     tab,
@@ -129,6 +128,10 @@ export function ExtensionTabHost({
       }
       if (event.data.type === SPIRIT_EXTENSION_TAB_READY_REQUEST) {
         sendContext();
+        return;
+      }
+      if (event.data.type === EXTENSION_PAGE_ERROR) {
+        setStatus("error");
         return;
       }
       if (event.data.type === SPIRIT_EXTENSION_TAB_READY) {
@@ -183,22 +186,18 @@ export function ExtensionTabHost({
   }, [attempt, handleWebViewMessage, onRequest, onChrome, sendContext, tab]);
 
   useEffect(() => {
-    if (status === "ready") {
-      sendContext();
-    }
-  }, [active, sendContext, status]);
+    // A cached page can request context before the host listener attaches.
+    sendContext();
+  }, [attempt, sendContext]);
 
   useEffect(() => {
-    if (status !== "ready") {
-      return;
-    }
     const observer = new MutationObserver(sendContext);
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["class", "style"],
     });
     return () => observer.disconnect();
-  }, [sendContext, status]);
+  }, [sendContext]);
 
   useEffect(() => {
     if (!subscribeEvents) {

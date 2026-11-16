@@ -1,86 +1,57 @@
 import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { test } from "vitest";
-
 import {
-  buildExtensionViewSrcdoc,
-  extensionViewFileUrl,
-  SPIRIT_EXTENSION_UI_RUNTIME_URL,
-  SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE,
-  SPIRIT_EXTENSION_VIEW_READY_MESSAGE,
-  SPIRIT_EXTENSION_VIEW_SIZE_MESSAGE,
-} from "../../src/lib/extension-view-frame.ts";
+  extensionPageUrl,
+  matchesExtensionPageIdentity,
+} from "../../src/lib/extension-page-frame.ts";
 import {
   assertResolvedViewFilePath,
   parseExtensionUiUrl,
 } from "../../../../apps/desktop/electron/extension-ui-protocol.ts";
+const identity = {
+  extensionId: "built-in/demo",
+  contributionId: "authorize",
+  instanceId: "request-1",
+  channelId: "channel-1",
+};
 
-test("srcdoc injects live cssText and the View default-export contract", () => {
-  const html = buildExtensionViewSrcdoc({
-    cssText: ":root { --foreground: black; } .text-muted-foreground { color: gray; }",
-    chrome: { htmlClassName: "dark", htmlStyle: "font-family: Example Sans" },
-    viewUrl: extensionViewFileUrl("built-in/demo", "main"),
-    params: { step: 1 },
-    requestId: "test-request-id",
-  });
-
-  assert.match(html, /--foreground: black/);
-  assert.match(html, /class="dark"/);
-  assert.match(html, /default-export function View\(\{ params, close \}\)/);
-  assert.match(html, new RegExp(SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE));
-  assert.match(html, new RegExp(SPIRIT_EXTENSION_VIEW_READY_MESSAGE));
-  assert.match(html, new RegExp(SPIRIT_EXTENSION_VIEW_SIZE_MESSAGE));
-  assert.match(html, /ResizeObserver/);
-  assert.match(html, /getElementById\("root"\)/);
-  assert.match(html, /getBoundingClientRect\(\)\.height/);
-  assert.match(html, /test-request-id/);
-  assert.match(html, new RegExp(SPIRIT_EXTENSION_UI_RUNTIME_URL.replaceAll("/", "\\/")));
-  assert.doesNotMatch(html, /token-stylesheet\.css/);
+test("View and Tab use the same packaged document identity and resource tree", () => {
+  for (const kind of ["view", "tab"]) {
+    const url = new URL(extensionPageUrl(kind, identity));
+    assert.deepEqual(parseExtensionUiUrl(url), {
+      kind,
+      extensionId: identity.extensionId,
+      contributionId: identity.contributionId,
+      instanceId: identity.instanceId,
+      assetPath: "index.html",
+    });
+    assert.equal(url.searchParams.get("channelId"), "channel-1");
+    assert.equal(parseExtensionUiUrl(new URL("./assets/page.js", url)).assetPath, "assets/page.js");
+  }
 });
-
-test("protocol only serves runtime.js and a declared view identity", () => {
-  assert.deepEqual(
-    parseExtensionUiUrl(new URL(`${product.urlProtocol}://extension-ui/runtime.js`)),
-    {
-      kind: "runtime",
-    },
-  );
-  assert.deepEqual(
-    parseExtensionUiUrl(
-      new URL(`${product.urlProtocol}://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main`),
-    ),
-    { kind: "view", extensionId: "built-in/demo", viewId: "main" },
-  );
-  assert.equal(
-    parseExtensionUiUrl(new URL(`${product.urlProtocol}://extension-ui/chunk.js`)).kind,
-    "invalid",
-  );
-  assert.equal(
-    parseExtensionUiUrl(
-      new URL(`${product.urlProtocol}://extension-ui/view?extensionId=../x&viewId=main`),
-    ).kind,
-    "invalid",
-  );
+test("component-only view and React runtime URLs are no longer served", () => {
+  for (const path of [
+    "runtime.js",
+    "tab-runtime.js",
+    "view?extensionId=built-in%2Fdemo&viewId=authorize",
+  ]) {
+    assert.equal(
+      parseExtensionUiUrl(new URL(`${product.urlProtocol}://extension-ui/${path}`)).kind,
+      "invalid",
+    );
+  }
 });
-
-test("fixture view uses the same default-export View contract", () => {
-  const fixture = readFileSync(
-    path.join(path.dirname(fileURLToPath(import.meta.url)), "../fixtures/extension-view/view.mjs"),
-    "utf8",
-  );
-  assert.match(fixture, /export default function View\(\{ params, close \}\)/);
+test("page messages require every identity field", () => {
+  assert.ok(matchesExtensionPageIdentity(identity, identity));
+  for (const key of Object.keys(identity))
+    assert.equal(matchesExtensionPageIdentity({ ...identity, [key]: "another" }, identity), false);
+  assert.equal(matchesExtensionPageIdentity(null, identity), false);
 });
-
-test("resolved view files cannot escape the extension root", () => {
+test("packaged asset paths cannot escape their root", () => {
   assert.equal(
-    assertResolvedViewFilePath("/tmp/ext/ui/view.mjs", "/tmp/ext"),
-    "/tmp/ext/ui/view.mjs",
+    assertResolvedViewFilePath("/extension/ui/page.html", "/extension"),
+    "/extension/ui/page.html",
   );
-  assert.throws(
-    () => assertResolvedViewFilePath("/tmp/other/secret.mjs", "/tmp/ext"),
-    /escapes the extension directory/,
-  );
+  assert.throws(() => assertResolvedViewFilePath("/other/page.html", "/extension"), /escapes/);
 });
