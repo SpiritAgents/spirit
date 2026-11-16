@@ -3,6 +3,28 @@ import { test } from "vitest";
 
 import { buildApprovalPromptText } from "../src/approval-text.js";
 
+test("automation approval presents the validated extension label", () => {
+  const { body } = buildApprovalPromptText(
+    {
+      kind: "tool",
+      request: {
+        kind: "create_automation",
+        title: "Repository Digest",
+        trigger: {
+          kind: "extension:personal/demo/activity",
+          config: {},
+          label: "Repository Activity",
+        },
+        approvalLevel: "default",
+        overview: "Summarize new activity.",
+        overviewChars: 23,
+      },
+    },
+    "create_automation",
+  );
+  assert.match(body, /Schedule: Repository Activity/);
+});
+
 test("buildApprovalPromptText renders the shell approval with its reason line", () => {
   const { body } = buildApprovalPromptText(
     {

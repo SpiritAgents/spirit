@@ -35,13 +35,28 @@ test("the shipped built-in registry is a valid marketplace.json (dogfood)", asyn
     const contentDir = join(resolveBuiltInRegistryRoot(), "extensions", entry.name);
     const shippedPkgPath = join(contentDir, "package.json");
     assert.ok(existsSync(shippedPkgPath), `${entry.name}/package.json`);
-    const sourcePkg = JSON.parse(
-      await readFile(join(packagesRoot, entry.name, "package.json"), "utf8"),
+    const artifactPkg = JSON.parse(
+      await readFile(join(packagesRoot, entry.name, "dist/extension/package.json"), "utf8"),
     ) as { version: string };
     const shippedPkg = JSON.parse(await readFile(shippedPkgPath, "utf8")) as { version: string };
-    assert.equal(entry.version, sourcePkg.version, entry.name);
-    assert.equal(shippedPkg.version, sourcePkg.version, entry.name);
+    assert.equal(entry.version, artifactPkg.version, entry.name);
+    assert.equal(shippedPkg.version, artifactPkg.version, entry.name);
   }
+});
+
+test("GitHub Automation uses a monochrome contribution glyph instead of the marketplace logo", async () => {
+  const index = await readBuiltInMarketplaceIndex();
+  const github = index.extensions.find((entry) => entry.name === "github");
+  assert.ok(github);
+  assert.equal(github.icon, "extensions/github/icon.svg");
+  const triggers = github.manifest.contributes?.automationTriggers;
+  assert.ok(Array.isArray(triggers));
+  assert.deepEqual(triggers[0]?.icon, {
+    type: "file",
+    path: "icons/github.svg",
+    monochrome: true,
+  });
+  assert.ok(existsSync(join(resolveBuiltInRegistryRoot(), "extensions/github/icons/github.svg")));
 });
 
 interface FixtureRegistry {

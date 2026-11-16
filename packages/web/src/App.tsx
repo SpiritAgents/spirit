@@ -55,7 +55,7 @@ import { useFont } from "@/hooks/useFont";
 import { useMessageRewind } from "@/hooks/useMessageRewind";
 import { useSubagentViewer } from "@/hooks/useSubagentViewer";
 import { useThemeSetter } from "@/hooks/useTheme";
-import { useGitHubAuthConnected } from "@/hooks/use-github-auth-connected";
+
 import { useWorkspaceToolsController } from "@/hooks/useWorkspaceToolsController";
 import {
   desktopTranslucencyTintClass,
@@ -228,17 +228,6 @@ export default function App() {
     snapshot?.workspaceRoot,
   ]);
 
-  const gitHubAuthConnected = useGitHubAuthConnected(
-    runtime.getGitHubAuthStatus,
-    workspaceTools.prTabEnabled,
-  );
-
-  const openIntegrationsSettings = useCallback(() => {
-    surfaceNav.handleOpenSettings();
-    surfaceNav.setExtensionSettingsId(null);
-    surfaceNav.setSettingsTab("integrations");
-  }, [surfaceNav]);
-
   const composer = useComposerController({
     runtime,
     snapshot,
@@ -399,12 +388,10 @@ export default function App() {
         tryHandleDesktopWorkspaceLink(
           href,
           {
-            openPullRequestInPrTab: workspaceTools.openPullRequestInPrTab,
-            openBrowserUrlInNewTab: workspaceTools.openBrowserUrlInNewTab,
+            openUrl: workspaceTools.openWorkspaceUrl,
           },
           {
             hostKind: runtime.hostKind ?? undefined,
-            interceptPrInApp: workspaceTools.prTabEnabled && gitHubAuthConnected === true,
           },
         )
       ) {
@@ -425,14 +412,11 @@ export default function App() {
       );
     },
     [
-      gitHubAuthConnected,
       runtime.hostKind,
       runtime.statHostTextFile,
       snapshot?.workspaceRoot,
-      workspaceTools.openBrowserUrlInNewTab,
-      workspaceTools.openPullRequestInPrTab,
+      workspaceTools.openWorkspaceUrl,
       workspaceTools.openWorkspaceFileInNewTab,
-      workspaceTools.prTabEnabled,
       workspaceTools.revealWorkspaceDirectory,
     ],
   );
@@ -704,11 +688,6 @@ export default function App() {
                                 onGenerateHookNavigate={() => {
                                   surfaceNav.handlePrefillComposerSkillChip("create-hook");
                                 }}
-                                getGitHubAuthStatus={runtime.getGitHubAuthStatus}
-                                beginGitHubDeviceLogin={runtime.beginGitHubDeviceLogin}
-                                completeGitHubDeviceLogin={runtime.completeGitHubDeviceLogin}
-                                cancelGitHubDeviceLogin={runtime.cancelGitHubDeviceLogin}
-                                disconnectGitHub={runtime.disconnectGitHub}
                               />
                             </div>
                           ) : surfaceNav.automationsMode ? (
@@ -743,9 +722,7 @@ export default function App() {
                                     settingsDisabled={
                                       !runtime.apiReady || runtime.busyAction === "automation"
                                     }
-                                    githubConnected={gitHubAuthConnected === true}
-                                    githubAuthChecking={gitHubAuthConnected === null}
-                                    onOpenIntegrationsSettings={openIntegrationsSettings}
+
                                     triggerRuntime={automationTriggerRuntime}
                                     onAddWorkspace={() =>
                                       void runtime.pickWorkspaceDirectory?.().then((path) => {
@@ -760,7 +737,7 @@ export default function App() {
                                     snapshot={snapshot}
                                     apiReady={runtime.apiReady}
                                     busyAction={runtime.busyAction}
-                                    githubConnected={gitHubAuthConnected === true}
+
                                     onGenerateAutomation={() =>
                                       void surfaceNav.handleGenerateAutomation()
                                     }
@@ -787,9 +764,7 @@ export default function App() {
                                   disabled={
                                     !runtime.apiReady || runtime.busyAction === "automation"
                                   }
-                                  githubConnected={gitHubAuthConnected === true}
-                                  githubAuthChecking={gitHubAuthConnected === null}
-                                  onOpenIntegrationsSettings={openIntegrationsSettings}
+
                                   triggerRuntime={automationTriggerRuntime}
                                   onSubmit={(request) => void runtime.createAutomation(request)}
                                   onAddWorkspace={() =>
@@ -901,7 +876,7 @@ export default function App() {
                                           runtime.setSessionPinned(path, pinned)
                                         }
                                         workspaceTools={workspaceTools}
-                                        onOpenIntegrationsSettings={openIntegrationsSettings}
+
                                         onCompactionDemoStop={compactionDemo.stop}
                                         onLongConversationListDemoStop={
                                           longConversationListDemo.stop
@@ -921,7 +896,6 @@ export default function App() {
                                   conversation={conversation}
                                   composer={composer}
                                   workspaceTools={workspaceTools}
-                                  onOpenIntegrationsSettings={openIntegrationsSettings}
                                 />
                               </div>
                             </div>

@@ -15,8 +15,6 @@ import {
   isValidDesktopAutomationSchedule,
 } from "./automation-schedule.js";
 
-export type DesktopAutomationGitHubEvent = "pull_request_created" | "issue_created";
-
 export interface DesktopAutomationExtensionTrigger {
   kind: `extension:${string}`;
   config: JsonObject;
@@ -26,20 +24,9 @@ export interface DesktopAutomationExtensionTrigger {
 
 export type DesktopAutomationTrigger =
   | { kind: "time"; schedule: DesktopAutomationSchedule }
-  | {
-      kind: "github";
-      owner: string;
-      repo: string;
-      event: DesktopAutomationGitHubEvent;
-      poll?: { lastSeenNumber: number };
-    }
   | DesktopAutomationExtensionTrigger;
 
-export interface DesktopAutomationTriggerFormatLabels extends DesktopAutomationScheduleFormatLabels {
-  githubPrefix: string;
-  githubPullRequestCreated: string;
-  githubIssueCreated: string;
-}
+export type DesktopAutomationTriggerFormatLabels = DesktopAutomationScheduleFormatLabels;
 
 export function formatDesktopAutomationTriggerLabel(
   trigger: DesktopAutomationTrigger,
@@ -48,14 +35,7 @@ export function formatDesktopAutomationTriggerLabel(
   if (trigger.kind === "time") {
     return formatDesktopAutomationScheduleLabel(trigger.schedule, labels);
   }
-  if (trigger.kind !== "github") {
-    return trigger.label.trim() || trigger.kind;
-  }
-  const eventLabel =
-    trigger.event === "pull_request_created"
-      ? labels.githubPullRequestCreated
-      : labels.githubIssueCreated;
-  return `${labels.githubPrefix} · ${trigger.owner}/${trigger.repo} · ${eventLabel}`;
+  return trigger.label.trim() || trigger.kind;
 }
 
 export function defaultDesktopTimeTrigger(
@@ -67,9 +47,6 @@ export function defaultDesktopTimeTrigger(
 export function isValidDesktopAutomationTrigger(trigger: DesktopAutomationTrigger): boolean {
   if (trigger.kind === "time") {
     return isValidDesktopAutomationSchedule(trigger.schedule);
-  }
-  if (trigger.kind === "github") {
-    return Boolean(trigger.owner.trim() && trigger.repo.trim());
   }
   return Boolean(
     trigger.kind.startsWith("extension:") && trigger.config && !Array.isArray(trigger.config),

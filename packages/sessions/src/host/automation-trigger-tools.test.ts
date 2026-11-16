@@ -23,7 +23,7 @@ test("lazy create_automation schema follows the current trigger registry", () =>
       }
     ).builtInLazyToolIndex();
 
-  assert.equal(index()[0]?.inputSchema.properties.trigger.oneOf.length, 3);
-  contributions = [];
   assert.equal(index()[0]?.inputSchema.properties.trigger.oneOf.length, 2);
+  contributions = [];
+  assert.equal(index()[0]?.inputSchema.properties.trigger.oneOf.length, 1);
 });

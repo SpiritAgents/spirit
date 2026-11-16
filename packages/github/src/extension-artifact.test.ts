@@ -14,8 +14,22 @@ test("the built extension backend has no workspace or host runtime dependency", 
   const manifest = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
   assert.equal(manifest.version, "1.0.0");
   assert.equal(manifest.author.name, "Spirit");
-  for (const file of ["README.md", "LICENSE", "icon.svg"])
+  for (const file of ["README.md", "LICENSE", "icon.svg", "icons/github.svg"])
     assert.ok((await stat(path.join(root, file))).size > 0);
+});
+
+test("the contribution glyph is transparent and separate from the padded marketplace logo", async () => {
+  const root = path.resolve(import.meta.dirname, "../dist/extension");
+  const glyph = await readFile(path.join(root, "icons/github.svg"), "utf8");
+  assert.match(glyph, /viewBox="-1 -1 26 26"/);
+  assert.match(glyph, /fill="currentColor"/);
+  assert.doesNotMatch(glyph, /<rect|<style|transform=/);
+  const logo = await readFile(path.join(root, "icon.svg"), "utf8");
+  assert.match(logo, /<rect class="background"/);
+  assert.match(logo, /translate\(15 15\)/);
+  const glyphPath = glyph.match(/ d="([^"]+)"/)?.[1];
+  assert.ok(glyphPath);
+  assert.equal(glyphPath, logo.match(/ d="([^"]+)"/)?.[1]);
 });
 
 test("both Native pages ship their own browser assets", async () => {

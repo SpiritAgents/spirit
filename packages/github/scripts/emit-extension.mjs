@@ -26,6 +26,7 @@ await writeFile(
 );
 
 await mkdir(path.join(output, "icons"), { recursive: true });
+await copyFile(path.join(root, "icons/github.svg"), path.join(output, "icons/github.svg"));
 await writeFile(
   path.join(output, "icons/pull-request.svg"),
   renderToStaticMarkup(createElement(GitPullRequest, { strokeWidth: 1.75, stroke: "black" })) +

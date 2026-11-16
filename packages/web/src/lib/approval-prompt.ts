@@ -199,11 +199,5 @@ function automationStructuredTitle(
     const weekday = t(`automations.schedule.weekday${schedule.weekday}`);
     return t("approval.title.createAutomationWeekly", { title, weekday, time });
   }
-  if (trigger.kind !== "github") {
-    return t("approval.title.createAutomationWithTrigger", { title, trigger: trigger.label });
-  }
-  const repo = `${trigger.owner}/${trigger.repo}`;
-  return trigger.event === "pull_request_created"
-    ? t("approval.title.createAutomationGithubPullRequest", { title, repo })
-    : t("approval.title.createAutomationGithubIssue", { title, repo });
+  return t("approval.title.createAutomationWithTrigger", { title, trigger: trigger.label });
 }

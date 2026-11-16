@@ -14,13 +14,11 @@ import type {
   AutomationTriggerProviderEvent,
   RegisteredAutomationTriggerContribution,
 } from "@spiritagent/automations/trigger-provider";
-import type { GitHubAutomationPollMatch } from "@spiritagent/github";
 
 import { cloneDesktopConfig } from "@spiritagent/sessions/host/service-utils";
 import { modelExistsInProvider } from "@spiritagent/config";
 import { spiritDataDir, type DesktopConfigFile } from "@spiritagent/sessions/host/storage";
 import { runDesktopAutomationOnce } from "./automation-runner.js";
-import { pollGitHubAutomationTriggerProvider } from "./github-automation-trigger-provider.js";
 
 export const AUTOMATION_SCHEDULER_MONITOR_INTERVAL_MS = 60_000;
 export const AUTOMATION_TRIGGER_PROVIDER_TIMEOUT_MS = 45_000;
@@ -206,17 +204,6 @@ async function tickContributedAutomationTriggers(
         }),
     });
   }
-  providers.set("github", {
-    kind: "github",
-    extensionId: "github",
-    contributionId: "github",
-    id: "github",
-    name: "GitHub",
-    description: "GitHub repository events",
-    icon: { type: "spirit", name: "globe" },
-    inputSchema: { type: "object" },
-    poll: pollGitHubAutomationTriggerProvider,
-  });
 
   const groups = new Map<string, HostAutomationDefinition[]>();
   for (const definition of definitions) {
@@ -355,19 +342,6 @@ async function setAutomationTriggerError(
 function automationTriggerPollTarget(
   definition: HostAutomationDefinition,
 ): AutomationTriggerPollTarget {
-  if (definition.trigger.kind === "github") {
-    return {
-      automationId: definition.id,
-      config: {
-        owner: definition.trigger.owner,
-        repo: definition.trigger.repo,
-        event: definition.trigger.event,
-      },
-      ...(definition.trigger.poll
-        ? { state: { lastSeenNumber: definition.trigger.poll.lastSeenNumber } }
-        : {}),
-    };
-  }
   if (definition.trigger.kind === "time") {
     throw new Error("Time triggers do not have a provider poll target.");
   }
@@ -382,10 +356,6 @@ function automationRunTriggerContext(
   definition: HostAutomationDefinition,
   event: AutomationTriggerProviderEvent,
 ): AutomationRunTriggerContext {
-  if (definition.trigger.kind === "github") {
-    const url = typeof event.context?.url === "string" ? event.context.url : event.id;
-    return { kind: "github", event: definition.trigger.event, eventUrl: url };
-  }
   if (definition.trigger.kind === "time") {
     return { kind: "time" };
   }
@@ -494,41 +464,6 @@ async function launchAutomationRun(
     ctx.markAutomationRunning(input.definition.id, false);
     ctx.onAutomationUpdated(input.definition.id);
   }
-}
-
-export function runGitHubMatchesAndCollectConsumed(
-  matches: GitHubAutomationPollMatch[],
-  launch: (match: GitHubAutomationPollMatch) => Promise<HostAutomationRun | undefined>,
-): Promise<GitHubAutomationPollMatch[]> {
-  return (async () => {
-    const consumed: GitHubAutomationPollMatch[] = [];
-    for (const match of matches) {
-      const run = await launch(match);
-      if (!run) {
-        break;
-      }
-      consumed.push(match);
-      if (run.status !== "completed") {
-        break;
-      }
-    }
-    return consumed;
-  })();
-}
-
-export function groupGitHubPollMatchesByAutomation(
-  matches: GitHubAutomationPollMatch[],
-): Map<string, GitHubAutomationPollMatch[]> {
-  const grouped = new Map<string, GitHubAutomationPollMatch[]>();
-  for (const match of matches) {
-    const existing = grouped.get(match.automationId);
-    if (existing) {
-      existing.push(match);
-      continue;
-    }
-    grouped.set(match.automationId, [match]);
-  }
-  return grouped;
 }
 
 export function automationDefinitionNeedsApiKey(

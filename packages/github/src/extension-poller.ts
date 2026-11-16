@@ -4,16 +4,16 @@ import type {
   AutomationTriggerPollTarget,
   AutomationTriggerProviderEvent,
 } from "@spiritagent/automations/trigger-provider";
-import type { HostAutomationGitHubEvent } from "./automation-types.js";
+import type { GitHubAutomationEvent } from "./automation-types.js";
 import {
   fetchRepositoryMaxIssueNumber,
-  filterNewHostAutomationGitHubEvents,
+  filterNewGitHubAutomationEvents,
   githubAutomationRepoKey,
   listRepositoryIssuesForAutomation,
 } from "./automation-events.js";
 
 type GitHubTarget = AutomationTriggerPollTarget & {
-  config: { owner: string; repo: string; event: HostAutomationGitHubEvent };
+  config: { owner: string; repo: string; event: GitHubAutomationEvent };
   lastSeenNumber?: number;
 };
 
@@ -130,7 +130,7 @@ export async function pollGitHubAutomationTriggerProvider(input: {
       const items = [...new Map(fetchedItems.map((item) => [item.number, item])).values()];
       for (const target of initialized) {
         const lastSeenNumber = target.lastSeenNumber ?? 0;
-        const events = filterNewHostAutomationGitHubEvents(
+        const events = filterNewGitHubAutomationEvents(
           items,
           target.config.event,
           lastSeenNumber,

@@ -6,13 +6,6 @@ export function withGitHubRequest<T>(
 ): T {
   return requests.run(options, run);
 }
-let githubFetchImpl: typeof fetch | undefined;
-
-/** Hosts such as Desktop can inject electron.net.fetch to use the system certificate store and proxy. */
-export function setGitHubFetchImplementation(fetchImpl: typeof fetch | undefined): void {
-  githubFetchImpl = fetchImpl;
-}
-
 export function githubFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const request = requests.getStore();
   const signals = [request?.signal, init?.signal].filter((signal): signal is AbortSignal =>
@@ -20,7 +13,7 @@ export function githubFetch(input: RequestInfo | URL, init?: RequestInit): Promi
   );
   const signal = signals.length ? AbortSignal.any(signals) : undefined;
   signal?.throwIfAborted();
-  return (request?.fetch ?? githubFetchImpl ?? globalThis.fetch)(input, {
+  return (request?.fetch ?? globalThis.fetch)(input, {
     ...init,
     ...(signal ? { signal } : {}),
   });

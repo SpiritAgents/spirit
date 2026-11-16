@@ -48,7 +48,7 @@ export interface ExtensionUiHandlerDeps {
     extensionId: string,
     contributionId: string,
   ) => Promise<ResolvedExtensionFile | null>;
-  resolveExtensionTabIconFile: (
+  resolveExtensionIconFile: (
     extensionId: string,
     iconPath: string,
   ) => Promise<ResolvedExtensionFile | null>;
@@ -64,7 +64,7 @@ export function installSpiritGeneratedAssetProtocolHandler(deps: {
   ) => Promise<{ filePath: string; extensionRoot: string } | null>;
   resolveExtensionPageRuntimePath: () => string;
   resolveExtensionTabFile: ExtensionUiHandlerDeps["resolveExtensionTabFile"];
-  resolveExtensionTabIconFile: ExtensionUiHandlerDeps["resolveExtensionTabIconFile"];
+  resolveExtensionIconFile: ExtensionUiHandlerDeps["resolveExtensionIconFile"];
 }): void {
   protocol.handle(SCHEME, async (request) => {
     const url = new URL(request.url);
@@ -123,7 +123,7 @@ async function handleExtensionUiRequest(
       viewId: string,
     ) => Promise<ResolvedExtensionFile | null>;
     resolveExtensionTabFile: ExtensionUiHandlerDeps["resolveExtensionTabFile"];
-    resolveExtensionTabIconFile: ExtensionUiHandlerDeps["resolveExtensionTabIconFile"];
+    resolveExtensionIconFile: ExtensionUiHandlerDeps["resolveExtensionIconFile"];
   },
 ): Promise<Response> {
   const parsed = parseExtensionUiUrl(url);
@@ -181,7 +181,7 @@ async function handleExtensionUiRequest(
     }
 
     if (parsed.kind === "tab-icon") {
-      const resolved = await deps.resolveExtensionTabIconFile(parsed.extensionId, parsed.iconPath);
+      const resolved = await deps.resolveExtensionIconFile(parsed.extensionId, parsed.iconPath);
       if (!resolved) {
         return new Response("Not Found", { status: 404, headers });
       }

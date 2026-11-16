@@ -200,30 +200,16 @@ test("create_automation approval composes a structured title and carries the ove
   );
   assert.equal(weekly.title, "Create Nightly sweep to run every Monday at 09:00");
 
-  const issue = buildApprovalPromptView(
-    automation({ kind: "github", owner: "SpiritAgents", repo: "spirit", event: "issue_created" }),
-    "create_automation",
-    t,
-  );
-  assert.equal(
-    issue.title,
-    "Create Nightly sweep to run when an issue is opened in SpiritAgents/spirit",
-  );
-
-  const pr = buildApprovalPromptView(
+  const contributed = buildApprovalPromptView(
     automation({
-      kind: "github",
-      owner: "SpiritAgents",
-      repo: "spirit",
-      event: "pull_request_created",
+      kind: "extension:personal/demo/activity",
+      config: {},
+      label: "Repository Activity",
     }),
     "create_automation",
     t,
   );
-  assert.equal(
-    pr.title,
-    "Create Nightly sweep to run when a pull request is opened in SpiritAgents/spirit",
-  );
+  assert.equal(contributed.title, "Create Nightly sweep to run with Repository Activity");
 
   // An unparseable trigger falls back to the generic title.
   const fallback = buildApprovalPromptView(

@@ -1,7 +1,7 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
 
-import { buildPrChangedFilesTree } from "../../src/lib/pr-changed-files-tree.ts";
+import { buildPrChangedFilesTree } from "./ui/lib/pr-changed-files-tree.ts";
 
 function dir(name, path, children) {
   return { kind: "dir", name, path, children };

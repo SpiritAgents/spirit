@@ -14,7 +14,6 @@ import {
   dialog,
   ipcMain,
   nativeTheme,
-  net,
   shell,
 } from "electron";
 
@@ -163,7 +162,7 @@ import {
   resolveDesktopExtensionWebViewOwner,
   publishDesktopExtensionWebViewEvent,
   subscribeDesktopExtensionWebViewEvents,
-  resolveDesktopExtensionTabIconFile,
+  resolveDesktopExtensionIconFile,
   openDesktopHostExtensionUiSession,
   updateDesktopAutomationTriggerContribution,
   openDesktopExtensionTab,
@@ -172,7 +171,6 @@ import {
   updateDesktopExtensionTab,
   emitDesktopExtensionTabEvent,
   subscribeDesktopExtensionTabEvents,
-  setDesktopGitHubFetchImplementation,
   setDesktopAutomationNotificationAdapter,
   setDesktopExtensionHostAdapter,
   shutdownDesktopHostService,
@@ -210,13 +208,9 @@ import {
 } from "./application-menu.js";
 import { resolveDesktopWebHostFromEnv } from "@spiritagent/http/http-host";
 import { stopWorkbenchChild, type WorkbenchChildState } from "./workbench-child.js";
-import {
-  beginGitHubDeviceLoginInElectron,
-  clearPendingGitHubDeviceAuth,
-  completeGitHubDeviceLoginInElectron,
-} from "./github-oauth-flow.js";
+
 import { resolveRendererDistPath } from "./renderer-dist.js";
-import { registerGitHubDeviceLoginRunners } from "@spiritagent/sessions/host/github-oauth-bridge";
+
 import { assertExtensionExternalUrl } from "./extension-external-url.js";
 import { listSystemFonts } from "./system-fonts.js";
 import { syncWindowsImmersiveDarkMode } from "./win-dwm.js";
@@ -1267,7 +1261,7 @@ if (gotSpiritSingleInstanceLock) {
       imagePreviewMimeType,
       resolveExtensionViewFile: resolveDesktopExtensionViewFile,
       resolveExtensionTabFile: resolveDesktopExtensionTabFile,
-      resolveExtensionTabIconFile: resolveDesktopExtensionTabIconFile,
+      resolveExtensionIconFile: resolveDesktopExtensionIconFile,
       resolveExtensionPageRuntimePath: () =>
         path.join(rendererDistPath(), "extension-ui", "page-runtime.js"),
     });
@@ -1278,16 +1272,6 @@ if (gotSpiritSingleInstanceLock) {
     handleWindowsLaunchArgv(process.argv);
     setDesktopApplicationMenu();
 
-    registerGitHubDeviceLoginRunners({
-      begin: () => beginGitHubDeviceLoginInElectron(),
-      complete: () => completeGitHubDeviceLoginInElectron(),
-      cancel: () => clearPendingGitHubDeviceAuth(),
-    });
-
-    const electronNetFetch: typeof fetch = (input, init) =>
-      net.fetch(input instanceof URL ? input.toString() : input, init);
-
-    setDesktopGitHubFetchImplementation(electronNetFetch);
     setDesktopAutomationNotificationAdapter({
       isAway: () => Promise.resolve(getAppAwayFromUser()),
       show: (payload) => showDesktopNotification(payload),

@@ -11,7 +11,7 @@ import {
   formatTriggerLabel,
   mostRecentDueAt,
   normalizeAutomationTrigger,
-  reconcileGitHubTriggerPollState,
+  reconcileAutomationTriggerState,
   shouldFireNow,
 } from "./automations.js";
 
@@ -235,49 +235,27 @@ test("formatScheduleLabel renders weekly label", () => {
   assert.equal(formatScheduleLabel({ kind: "hourly" }), "Hourly");
 });
 
-test("formatTriggerLabel renders GitHub trigger", () => {
-  assert.equal(
-    formatTriggerLabel({
-      kind: "github",
-      owner: "spirit",
-      repo: "agent",
-      event: "pull_request_created",
-    }),
-    "GitHub · spirit/agent · PR created",
-  );
-});
-
-test("normalizeAutomationTrigger accepts time and github triggers", () => {
-  assert.deepEqual(
-    normalizeAutomationTrigger({ kind: "time", schedule: { kind: "daily", hour: 9, minute: 0 } }),
-    {
-      kind: "time",
-      schedule: { kind: "daily", hour: 9, minute: 0 },
-    },
-  );
-});
-
-test("reconcileGitHubTriggerPollState clears poll when repo identity changes", () => {
+test("extension trigger labels and state follow the provider identity", () => {
   const previous = {
-    kind: "github" as const,
-    owner: "a",
-    repo: "b",
-    event: "issue_created" as const,
-    poll: { lastSeenNumber: 42 },
+    kind: "extension:personal/demo/activity" as const,
+    config: { repository: "one" },
+    label: "Repository Activity",
+    state: { cursor: 42 },
   };
-  const next = {
-    kind: "github" as const,
-    owner: "c",
-    repo: "d",
-    event: "issue_created" as const,
-    poll: { lastSeenNumber: 99 },
-  };
-  assert.deepEqual(reconcileGitHubTriggerPollState(previous, next), {
-    kind: "github",
-    owner: "c",
-    repo: "d",
-    event: "issue_created",
-  });
+  assert.equal(formatTriggerLabel(previous), "Repository Activity");
+  assert.deepEqual(normalizeAutomationTrigger(previous), previous);
+  assert.deepEqual(
+    reconcileAutomationTriggerState(previous, {
+      ...previous,
+      config: { repository: "two" },
+      state: { cursor: 99 },
+    }),
+    { kind: previous.kind, config: { repository: "two" }, label: previous.label },
+  );
+  assert.equal(
+    normalizeAutomationTrigger({ kind: "github", owner: "o", repo: "r", event: "issue_created" }),
+    undefined,
+  );
 });
 
 test("automation store persists modelRef and rejects legacy modelName-only files", async () => {

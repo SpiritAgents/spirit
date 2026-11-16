@@ -13,8 +13,6 @@ function env(overrides = {}) {
   return {
     tabs: [],
     supportsBrowserTabs: true,
-    supportsPrTabs: true,
-    githubConnected: true,
     sessions: [],
     skills: [],
     workspaceRoot: "/tmp/workspace",
@@ -102,24 +100,22 @@ test("composerChipNavigateTargetFromMeta carries isPlan for workspaceFile chips"
   );
 });
 
-test("PR chips are not navigable when GitHub is disconnected or host has no PR tab", () => {
+test("PR chips route their URL and source tab through the generic extension dispatcher", () => {
   const target = {
     kind: "prDiff",
-    prUrl: "https://github.com/SpiritAgents/spirit/pull/100",
+    prUrl: "https://example.test/project/pull/100",
+    sourceTabId: "extension-1",
   };
+  assert.deepEqual(resolveComposerChipNavigate(target, env()), {
+    navigable: true,
+    action: { type: "open-url", url: target.prUrl, sourceTabId: target.sourceTabId },
+  });
   assert.equal(
-    resolveComposerChipNavigate(target, env({ githubConnected: false })).navigable,
+    resolveComposerChipNavigate(target, env({ supportsBrowserTabs: false })).navigable,
     false,
   );
   assert.equal(
-    resolveComposerChipNavigate(target, env({ supportsPrTabs: false })).navigable,
-    false,
-  );
-  assert.equal(
-    resolveComposerChipNavigate(
-      { kind: "element", pageUrl: "https://example.com" },
-      env({ supportsBrowserTabs: false }),
-    ).navigable,
+    resolveComposerChipNavigate({ ...target, prUrl: "file:///private/data" }, env()).navigable,
     false,
   );
 });

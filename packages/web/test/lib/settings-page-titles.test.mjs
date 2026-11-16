@@ -15,7 +15,6 @@ const EXPECTED_TABS = [
   "skills",
   "rules",
   "dreams",
-  "integrations",
   "developer",
 ];
 

@@ -160,18 +160,6 @@ const TIME_TRIGGER_SCHEMA: JsonObject = {
   additionalProperties: false,
 };
 
-const GITHUB_TRIGGER_SCHEMA: JsonObject = {
-  type: "object",
-  properties: {
-    kind: { type: "string", const: "github" },
-    owner: { type: "string", description: "GitHub owner or organization." },
-    repo: { type: "string", description: "GitHub repository name." },
-    event: { type: "string", enum: ["pull_request_created", "issue_created"] },
-  },
-  required: ["kind", "owner", "repo", "event"],
-  additionalProperties: false,
-};
-
 export function createAutomationContributedTool(
   contributions: readonly AutomationTriggerToolContribution[] = [],
 ): ContributedHostToolDefinition {
@@ -206,7 +194,7 @@ export function createAutomationContributedTool(
           description: "Trigger definition. Use one of the listed kinds and its matching schema.",
           oneOf: [
             TIME_TRIGGER_SCHEMA,
-            GITHUB_TRIGGER_SCHEMA,
+
             ...contributions.map((contribution) => ({
               type: "object",
               properties: {

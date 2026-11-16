@@ -1,7 +1,7 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 
 import { useConversationSplit } from "@/contexts/conversation-split-context";
-import { useGitHubAuthConnected } from "@/hooks/use-github-auth-connected";
+
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 import type { useWorkspaceToolsController } from "@/hooks/useWorkspaceToolsController";
 import { resolveComposerChipNavigate } from "@/lib/composer-chip-navigation";
@@ -47,8 +47,7 @@ export function ComposerChipNavigateProvider({
   children: ReactNode;
 }) {
   const split = useConversationSplit();
-  const githubConnected =
-    useGitHubAuthConnected(runtime.getGitHubAuthStatus, workspaceTools.prTabEnabled) === true;
+
   const sourceSnapshot = baseSnapshot ?? snapshot;
 
   const env = useMemo(() => {
@@ -90,8 +89,7 @@ export function ComposerChipNavigateProvider({
     return {
       tabs: workspaceTools.workspaceToolTabs,
       supportsBrowserTabs: workspaceTools.browserTabEnabled,
-      supportsPrTabs: workspaceTools.prTabEnabled,
-      githubConnected,
+
       sessions: runtime.sessions.map((session) => ({
         path: session.path,
         transcriptPath: session.transcriptPath,
@@ -109,7 +107,6 @@ export function ComposerChipNavigateProvider({
       knownSessionPathKeys,
     };
   }, [
-    githubConnected,
     paneSessionPath,
     runtime.sessions,
     snapshot?.activeSession?.filePath,
@@ -125,7 +122,6 @@ export function ComposerChipNavigateProvider({
     sourceSnapshot?.workspaceRoot,
     split.layout,
     workspaceTools.browserTabEnabled,
-    workspaceTools.prTabEnabled,
     workspaceTools.workspaceToolTabs,
   ]);
 
@@ -182,11 +178,8 @@ export function ComposerChipNavigateProvider({
         case "open-git":
           workspaceTools.openGitTab(action.preferTabId);
           return;
-        case "open-pr":
-          workspaceTools.openPullRequestInPrTab(
-            { owner: action.owner, repo: action.repo, number: action.number },
-            action.preferTabId,
-          );
+        case "open-url":
+          workspaceTools.openWorkspaceUrl(action.url, action.sourceTabId);
           return;
         case "open-session": {
           const leaf = split.layout

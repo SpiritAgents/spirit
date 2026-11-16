@@ -97,6 +97,13 @@ function automationTriggerLabel(trigger: JsonValue): string {
     return JSON.stringify(trigger);
   }
   const record = trigger as Record<string, unknown>;
+  if (
+    typeof record.kind === "string" &&
+    record.kind.startsWith("extension:") &&
+    typeof record.label === "string"
+  ) {
+    return record.label;
+  }
   if (record.kind === "time") {
     const schedule = (
       typeof record.schedule === "object" && record.schedule !== null ? record.schedule : {}
@@ -117,9 +124,6 @@ function automationTriggerLabel(trigger: JsonValue): string {
       return `Weekly ${weekday} ${time}`;
     }
   }
-  if (record.kind === "github") {
-    const eventLabel = record.event === "pull_request_created" ? "PR created" : "Issue created";
-    return `GitHub · ${String(record.owner ?? "")}/${String(record.repo ?? "")} · ${eventLabel}`;
-  }
+
   return JSON.stringify(trigger);
 }

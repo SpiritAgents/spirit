@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { isViteDev } from "@/lib/vite-dev";
@@ -10,7 +9,7 @@ import { DeveloperSettingsPanel } from "@/components/settings/panels/developer-s
 import { DreamSettingsPanel } from "@/components/settings/panels/dream-settings-panel";
 import { ExtensionConfigurationPanel } from "@/components/settings/panels/extension-configuration-panel";
 import { HooksSettingsPanel } from "@/components/settings/panels/hooks-settings-panel";
-import { IntegrationsSettingsPanel } from "@/components/settings/panels/integrations-settings-panel";
+
 import { McpsSettingsPanel } from "@/components/settings/panels/mcps-settings-panel";
 import { RemoteControlPanel } from "@/components/settings/panels/remote-control-panel";
 import { RulesSettingsPanel } from "@/components/settings/panels/rules-settings-panel";
@@ -47,7 +46,7 @@ export function SettingsView({
   skillsBusy,
   rulesBusy,
   extensionsBusy,
-  isElectronShell,
+
   onSavePatch,
   onPairRemoteControl,
   onApproveRemoteControlPairing,
@@ -78,29 +77,7 @@ export function SettingsView({
   onStartApprovalPreviewDemo,
   onStartToolCardPreviewDemo,
   useTranslucency: _useTranslucency = false,
-  getGitHubAuthStatus,
-  beginGitHubDeviceLogin,
-  completeGitHubDeviceLogin,
-  cancelGitHubDeviceLogin,
-  disconnectGitHub,
 }: SettingsViewProps) {
-  const integrationsRuntime = useMemo(
-    () => ({
-      getGitHubAuthStatus,
-      beginGitHubDeviceLogin,
-      completeGitHubDeviceLogin,
-      cancelGitHubDeviceLogin,
-      disconnectGitHub,
-    }),
-    [
-      getGitHubAuthStatus,
-      beginGitHubDeviceLogin,
-      completeGitHubDeviceLogin,
-      cancelGitHubDeviceLogin,
-      disconnectGitHub,
-    ],
-  );
-
   const { t } = useTranslation();
   // The theme is subscribed in place: switching themes only re-renders the settings panel subtree,
   // and App does not need to pass it down (avoiding a full-tree re-render)
@@ -130,8 +107,7 @@ export function SettingsView({
             tab !== "networks" &&
             tab !== "hooks" &&
             tab !== "agents" &&
-            tab !== "tab" &&
-            tab !== "integrations" ? (
+            tab !== "tab" ? (
               <h1 className={cn("mb-6 flex items-center gap-2", DESKTOP_PAGE_TITLE_CLASS)}>
                 {t(settingsPageTitleKey[tab])}
                 {tab === "dreams" ? <Badge variant="outline">Beta</Badge> : null}
@@ -241,11 +217,6 @@ export function SettingsView({
                 onRejectRemoteControlPairing={onRejectRemoteControlPairing}
                 onCancelRemoteControlPairing={onCancelRemoteControlPairing}
                 onRevokeRemoteControlDevice={onRevokeRemoteControlDevice}
-              />
-            ) : tab === "integrations" ? (
-              <IntegrationsSettingsPanel
-                isElectronShell={isElectronShell}
-                runtime={integrationsRuntime}
               />
             ) : null}
           </div>

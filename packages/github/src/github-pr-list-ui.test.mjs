@@ -4,7 +4,7 @@ import { test } from "vitest";
 import {
   resolvePrTestPlanProgressVariant,
   resolvePullRequestListIconTone,
-} from "../../src/lib/github-pr-list-ui.ts";
+} from "./ui/lib/github-pr-list-ui.ts";
 
 test("resolvePrTestPlanProgressVariant covers none, zero, partial, and complete", () => {
   assert.equal(resolvePrTestPlanProgressVariant(null), "none");

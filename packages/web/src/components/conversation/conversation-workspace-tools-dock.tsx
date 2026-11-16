@@ -24,7 +24,6 @@ export type ConversationWorkspaceToolsDockProps = {
   conversation: ConversationViewState;
   composer: ComposerController;
   workspaceTools: WorkspaceToolsController;
-  onOpenIntegrationsSettings: () => void;
 };
 
 /** App-level workspace tools panel; spans the full conversation split area (not a single pane). */
@@ -35,7 +34,6 @@ export function ConversationWorkspaceToolsDock({
   conversation,
   composer,
   workspaceTools,
-  onOpenIntegrationsSettings,
 }: ConversationWorkspaceToolsDockProps) {
   const split = useConversationSplit();
   const fullScreen = useWorkspaceToolsChromeFullScreen();
@@ -98,9 +96,7 @@ export function ConversationWorkspaceToolsDock({
         fileRevealLine={workspaceTools.workspaceFileRevealLine}
         fileRevealColumn={workspaceTools.workspaceFileRevealColumn}
         searchWorkspaceContent={runtime.searchWorkspaceContent}
-        prRevealNonce={workspaceTools.workspacePrRevealNonce}
-        prRevealTabId={workspaceTools.workspacePrRevealTargetId}
-        prRevealRequest={workspaceTools.workspacePrRevealRequest}
+
         onOpenWorkspaceFile={workspaceTools.openWorkspaceFile}
         onOpenWorkspaceFileInNewTab={workspaceTools.openWorkspaceFileInNewTab}
         tabs={workspaceTools.workspaceToolTabs}
@@ -115,19 +111,7 @@ export function ConversationWorkspaceToolsDock({
         onGitCommitAddToChat={composerInsert.handleGitCommitAddToChat}
         onBrowserOpenInNewTab={workspaceTools.openBrowserUrlInNewTab}
         browserTabEnabled={workspaceTools.browserTabEnabled}
-        prTabEnabled={workspaceTools.prTabEnabled}
-        onOpenIntegrationsSettings={onOpenIntegrationsSettings}
-        getGitHubAuthStatus={runtime.getGitHubAuthStatus}
-        getGitHubPullRequestForCurrentBranch={runtime.getGitHubPullRequestForCurrentBranch}
-        listGitHubPullRequests={runtime.listGitHubPullRequests}
-        getGitHubPullRequestTabCounts={runtime.getGitHubPullRequestTabCounts}
-        getGitHubPullRequestDetail={runtime.getGitHubPullRequestDetail}
-        getGitHubPullRequestConversation={runtime.getGitHubPullRequestConversation}
-        getGitHubPullRequestFiles={runtime.getGitHubPullRequestFiles}
-        getGitHubPullRequestCommits={runtime.getGitHubPullRequestCommits}
-        getGitHubPullRequestChecks={runtime.getGitHubPullRequestChecks}
-        mergeGitHubPullRequest={runtime.mergeGitHubPullRequest}
-        markGitHubPullRequestReady={runtime.markGitHubPullRequestReady}
+
         codeCompletionEnabled={snapshot?.codeCompletion?.userEnabled !== false}
         widthRatio={workspaceTools.workspaceToolsWidthRatio}
         onWidthRatioChange={workspaceTools.setWorkspaceToolsWidthRatio}

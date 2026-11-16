@@ -274,47 +274,7 @@ declare global {
     readGitCommitMessage(
       request: import("./types").ReadGitCommitMessageRequest,
     ): Promise<import("./types").GitCommitMessageSnapshot>;
-    getGitHubAuthStatus(): Promise<import("./types").GitHubAuthStatus>;
-    beginGitHubDeviceLogin(): Promise<import("./types").GitHubDeviceAuthChallenge>;
-    completeGitHubDeviceLogin(): Promise<import("./types").GitHubAuthStatus>;
-    cancelGitHubDeviceLogin(): Promise<void>;
-    disconnectGitHub(): Promise<import("./types").GitHubAuthStatus>;
-    getGitHubPullRequestForCurrentBranch(): Promise<
-      import("./types").GitHubPullRequestForBranchResult
-    >;
-    listGitHubPullRequests(
-      request: import("./types").ListGitHubPullRequestsRequest,
-    ): Promise<import("./types").GitHubPullRequestListSnapshot>;
-    listGitHubAutomationRepositories(
-      request?: import("./types").ListGitHubAutomationRepositoriesRequest,
-    ): Promise<import("./types").GitHubAutomationRepositoriesSnapshot>;
-    searchGitHubAutomationRepositories(
-      request: import("./types").SearchGitHubAutomationRepositoriesRequest,
-    ): Promise<import("./types").SearchGitHubAutomationRepositoriesSnapshot>;
-    getGitHubPullRequestTabCounts(
-      request: import("./types").GetGitHubPullRequestTabCountsRequest,
-    ): Promise<import("./types").GitHubPullRequestTabCounts>;
-    getGitHubPullRequestDetail(
-      request: import("./types").GetGitHubPullRequestDetailRequest,
-    ): Promise<import("./types").GitHubPullRequestDetail>;
-    getGitHubPullRequestConversation(
-      request: import("./types").GetGitHubPullRequestDetailRequest,
-    ): Promise<import("./types").GitHubPullRequestConversationSnapshot>;
-    getGitHubPullRequestFiles(
-      request: import("./types").GetGitHubPullRequestDetailRequest,
-    ): Promise<import("./types").GitHubPullRequestFilesSnapshot>;
-    getGitHubPullRequestCommits(
-      request: import("./types").GetGitHubPullRequestDetailRequest,
-    ): Promise<import("./types").GitHubPullRequestCommitsSnapshot>;
-    getGitHubPullRequestChecks(
-      request: import("./types").GetGitHubPullRequestDetailRequest,
-    ): Promise<import("./types").GitHubPullRequestChecksSnapshot>;
-    mergeGitHubPullRequest(
-      request: import("./types").MergeGitHubPullRequestRequest,
-    ): Promise<import("./types").GitHubPullRequestMergeResult>;
-    markGitHubPullRequestReady(
-      request: import("./types").GetGitHubPullRequestDetailRequest,
-    ): Promise<import("./types").GitHubPullRequestDetail>;
+
     readWorkspaceTextFile(
       relativePath: string,
       options?: import("@/types").ReadWorkspaceTextFileOptions,

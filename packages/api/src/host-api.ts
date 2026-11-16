@@ -53,25 +53,6 @@ import type {
   QueuedUserTurnRequest,
   RewindAndSubmitMessageRequest,
   ForkSessionRequest,
-  GetGitHubPullRequestDetailRequest,
-  GetGitHubPullRequestTabCountsRequest,
-  ListGitHubAutomationRepositoriesRequest,
-  ListGitHubPullRequestsRequest,
-  SearchGitHubAutomationRepositoriesRequest,
-  MergeGitHubPullRequestRequest,
-  GitHubAuthStatus,
-  GitHubAutomationRepositoriesSnapshot,
-  GitHubDeviceAuthChallenge,
-  GitHubPullRequestDetail,
-  GitHubPullRequestListSnapshot,
-  GitHubPullRequestMergeResult,
-  GitHubPullRequestTabCounts,
-  GitHubPullRequestConversationSnapshot,
-  GitHubPullRequestFilesSnapshot,
-  GitHubPullRequestCommitsSnapshot,
-  GitHubPullRequestChecksSnapshot,
-  GitHubPullRequestForBranchResult,
-  SearchGitHubAutomationRepositoriesSnapshot,
   SubmitUserTurnRequest,
   AbortConversationRequest,
   ReplyPendingApprovalRequest,
@@ -171,45 +152,7 @@ export interface HostApi {
   readGitWorkingTree(): Promise<GitWorkingTreeSnapshot>;
   readGitHistory(request?: ReadGitHistoryRequest): Promise<GitHistorySnapshot>;
   readGitCommitMessage(request: ReadGitCommitMessageRequest): Promise<GitCommitMessageSnapshot>;
-  getGitHubAuthStatus(): Promise<GitHubAuthStatus>;
-  beginGitHubDeviceLogin(): Promise<GitHubDeviceAuthChallenge>;
-  completeGitHubDeviceLogin(): Promise<GitHubAuthStatus>;
-  cancelGitHubDeviceLogin(): Promise<void>;
-  disconnectGitHub(): Promise<GitHubAuthStatus>;
-  getGitHubPullRequestForCurrentBranch(): Promise<GitHubPullRequestForBranchResult>;
-  listGitHubPullRequests(
-    request: ListGitHubPullRequestsRequest,
-  ): Promise<GitHubPullRequestListSnapshot>;
-  listGitHubAutomationRepositories(
-    request?: ListGitHubAutomationRepositoriesRequest,
-  ): Promise<GitHubAutomationRepositoriesSnapshot>;
-  searchGitHubAutomationRepositories(
-    request: SearchGitHubAutomationRepositoriesRequest,
-  ): Promise<SearchGitHubAutomationRepositoriesSnapshot>;
-  getGitHubPullRequestTabCounts(
-    request: GetGitHubPullRequestTabCountsRequest,
-  ): Promise<GitHubPullRequestTabCounts>;
-  getGitHubPullRequestDetail(
-    request: GetGitHubPullRequestDetailRequest,
-  ): Promise<GitHubPullRequestDetail>;
-  getGitHubPullRequestConversation(
-    request: GetGitHubPullRequestDetailRequest,
-  ): Promise<GitHubPullRequestConversationSnapshot>;
-  getGitHubPullRequestFiles(
-    request: GetGitHubPullRequestDetailRequest,
-  ): Promise<GitHubPullRequestFilesSnapshot>;
-  getGitHubPullRequestCommits(
-    request: GetGitHubPullRequestDetailRequest,
-  ): Promise<GitHubPullRequestCommitsSnapshot>;
-  getGitHubPullRequestChecks(
-    request: GetGitHubPullRequestDetailRequest,
-  ): Promise<GitHubPullRequestChecksSnapshot>;
-  mergeGitHubPullRequest(
-    request: MergeGitHubPullRequestRequest,
-  ): Promise<GitHubPullRequestMergeResult>;
-  markGitHubPullRequestReady(
-    request: GetGitHubPullRequestDetailRequest,
-  ): Promise<GitHubPullRequestDetail>;
+
   abortConversation(request?: AbortConversationRequest): Promise<DesktopSnapshot>;
   abortShell(toolCallId: string): Promise<DesktopSnapshot>;
   moveToBackground(toolCallId: string): Promise<DesktopSnapshot>;

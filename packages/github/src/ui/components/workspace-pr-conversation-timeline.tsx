@@ -1,8 +1,9 @@
+import type { LucideIcon } from "lucide-react";
+import { TimelineNode as PrConversationTimelineNode } from "@spiritagent/ui/rendering/timeline-node";
 import { Check } from "@spiritagent/icons/check";
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { CircleX, Eye, GitCommit, GitPullRequest, MessageSquare } from "lucide-react";
 
@@ -100,38 +101,6 @@ function PrConversationCommentCard({
     <div className="mt-2 flex min-w-0">
       <div className={COMMENT_CARD_INDENT_SPACER_CLASS} aria-hidden />
       <div className={cn(COMMENT_CARD_SURFACE_CLASS, "min-w-0 flex-1", className)}>{children}</div>
-    </div>
-  );
-}
-
-export function PrConversationTimelineNode({
-  icon: Icon,
-  className,
-  iconClassName,
-  size = "default",
-}: {
-  icon: LucideIcon;
-  className?: string;
-  iconClassName?: string;
-  /** `compact` fits single-line `text-xs` rows (e.g. local git history). */
-  size?: "default" | "compact";
-}) {
-  return (
-    <div
-      className={cn(
-        "relative z-10 flex shrink-0 items-center justify-center rounded-full border border-border/40 bg-background",
-        size === "compact" ? "size-3.5" : "size-5",
-        className,
-      )}
-      aria-hidden
-    >
-      <Icon
-        className={cn(
-          size === "compact" ? "size-2" : "size-2.5",
-          iconClassName ?? "text-muted-foreground",
-        )}
-        strokeWidth={1.75}
-      />
     </div>
   );
 }

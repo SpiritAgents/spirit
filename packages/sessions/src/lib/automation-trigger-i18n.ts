@@ -20,8 +20,5 @@ export function buildAutomationTriggerFormatLabels(
       t("automations.schedule.weekday6"),
     ],
     formatWeekly: (weekday, time) => t("automations.schedule.weeklyAt", { weekday, time }),
-    githubPrefix: t("automations.trigger.github"),
-    githubPullRequestCreated: t("automations.trigger.pullRequestCreated"),
-    githubIssueCreated: t("automations.trigger.issueCreated"),
   };
 }

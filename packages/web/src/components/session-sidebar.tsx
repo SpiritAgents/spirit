@@ -33,7 +33,6 @@ import {
   FolderOpen,
   Layers,
   Code2,
-  Link2,
   MoonStar,
   Network,
   Palette,
@@ -167,7 +166,6 @@ export type SettingsSidebarTab =
   | "skills"
   | "rules"
   | "dreams"
-  | "integrations"
   | "developer";
 
 type SessionWorkspaceGroup = {
@@ -1259,11 +1257,6 @@ const settingsConnectTabs: Array<{
     id: "networks",
     labelKey: "settings.remoteControl",
     icon: Network,
-  },
-  {
-    id: "integrations",
-    labelKey: "settings.integrations",
-    icon: Link2,
   },
   ...(isViteDev
     ? [

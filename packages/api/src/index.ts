@@ -10,4 +10,4 @@ export * from "./workspace-trust.js";
 export * from "./tools.js";
 export * from "./errors.js";
 export * from "./tasks.js";
-export * from "./github.js";
+export * from "./git.js";

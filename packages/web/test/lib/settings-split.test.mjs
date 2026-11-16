@@ -18,7 +18,6 @@ const PANEL_FILES = [
   ["DreamSettingsPanel", "panels/dream-settings-panel.tsx"],
   ["ExtensionConfigurationPanel", "panels/extension-configuration-panel.tsx"],
   ["HooksSettingsPanel", "panels/hooks-settings-panel.tsx"],
-  ["IntegrationsSettingsPanel", "panels/integrations-settings-panel.tsx"],
   ["McpsSettingsPanel", "panels/mcps-settings-panel.tsx"],
   ["RemoteControlPanel", "panels/remote-control-panel.tsx"],
   ["RulesSettingsPanel", "panels/rules-settings-panel.tsx"],

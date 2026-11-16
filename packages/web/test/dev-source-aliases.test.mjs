@@ -38,14 +38,13 @@ function collectSourceFiles(directory) {
   });
 }
 
-test("wildcard package exports resolve GitHub presentation modules to source", () => {
+test("wildcard package exports resolve shared rendering modules to source", () => {
   for (const subpath of [
-    "pull-request-url",
-    "pull-request-checks-pages",
-    "pull-request-conversation-pages",
+    "rendering/unified-diff-code-view",
+    "rendering/spirit-streamdown-markdown",
   ]) {
-    const resolved = resolveSource(`@spiritagent/github/${subpath}`);
-    assert.equal(resolved, path.join(repoRoot, "packages", "github", "src", subpath));
+    const resolved = resolveSource(`@spiritagent/ui/${subpath}`);
+    assert.equal(resolved, path.join(repoRoot, "packages", "ui", "src", subpath));
     assert.ok(sourceExists(resolved));
   }
 });

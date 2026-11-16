@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { buildPrDiffSnippetText } from "../../src/lib/pr-diff-text.ts";
+import { buildPrDiffSnippetText } from "./ui/lib/pr-diff-text.ts";
 import {
   parsePrDiffWireMeta,
   prDiffContextText,

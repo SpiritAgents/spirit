@@ -5,8 +5,7 @@
 import { useTranslation } from "react-i18next";
 
 import { Monitor, Plug, ScrollText, ShieldCheck, Wand2, Webhook, Wrench } from "lucide-react";
-import type { ElementType } from "react";
-import { getSpiritIconComponent } from "@spiritagent/icons";
+import type { ElementType, ReactNode } from "react";
 
 import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
 import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
@@ -14,7 +13,7 @@ import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catal
 import { DESKTOP_LIST_ITEM_PRIMARY_CLASS } from "@/lib/desktop-typography";
 import { markdownToPlainText } from "@/lib/markdown-plain-text";
 import { cn } from "@/lib/utils";
-import { extensionTabPackagedIconUrl } from "@/lib/extension-tab-frame";
+import { ExtensionTabIcon } from "@/components/extension-tab-icon";
 import type { DesktopExtensionListItem, DesktopMarketplaceCatalogEntry } from "@/types";
 
 /** Structural subset shared by installed list items and marketplace catalog entries. */
@@ -36,7 +35,7 @@ type ContributionEntry = {
   key: string;
   icon: ElementType;
   iconClassName?: string;
-  iconUrl?: string;
+  iconNode?: ReactNode;
   title: string;
   overview?: string;
   /**
@@ -169,16 +168,14 @@ export function MarketplaceContributionGroups({
       label: t("marketplace.contributionGroupAutomationTriggers"),
       items: item.automationTriggers.map((trigger) => ({
         key: `automation-trigger:${trigger.kind}`,
-        icon:
-          trigger.icon.type === "spirit"
-            ? (getSpiritIconComponent(trigger.icon.name) ?? Monitor)
-            : Monitor,
-        ...(trigger.icon.type === "spirit" ? { iconClassName: "text-foreground" } : {}),
-        ...(trigger.icon.type === "file"
-          ? { iconUrl: extensionTabPackagedIconUrl(item.id, trigger.icon.path) }
-          : trigger.icon.type === "image"
-            ? { iconUrl: trigger.icon.dataUrl }
-            : {}),
+        icon: Monitor,
+        iconNode: (
+          <ExtensionTabIcon
+            extensionId={item.id}
+            icon={trigger.icon}
+            className="size-4 text-foreground"
+          />
+        ),
         title: trigger.name,
         overview: trigger.description,
       })),
@@ -210,12 +207,14 @@ export function MarketplaceContributionGroups({
   for (const tab of item.desktopTabs ?? []) {
     desktopItems.push({
       key: `desktop:tab:${tab.id}`,
-      icon:
-        tab.icon.type === "spirit" ? (getSpiritIconComponent(tab.icon.name) ?? Monitor) : Monitor,
-      ...(tab.icon.type === "spirit" ? { iconClassName: "text-foreground" } : {}),
-      ...(tab.icon.type === "file"
-        ? { iconUrl: extensionTabPackagedIconUrl(item.id, tab.icon.path) }
-        : {}),
+      icon: Monitor,
+      iconNode: (
+        <ExtensionTabIcon
+          extensionId={item.id}
+          icon={tab.icon}
+          className="size-4 text-foreground"
+        />
+      ),
       title: tab.name,
     });
   }
@@ -241,13 +240,7 @@ export function MarketplaceContributionGroups({
           <div className="space-y-4">
             {group.items.map((entry) => (
               <div key={entry.key} className="flex items-center gap-3">
-                {entry.iconUrl ? (
-                  <img
-                    aria-hidden
-                    src={entry.iconUrl}
-                    className="size-4 shrink-0 object-contain text-foreground"
-                  />
-                ) : (
+                {entry.iconNode ?? (
                   <entry.icon
                     className={cn("size-4 shrink-0", entry.iconClassName ?? "text-foreground")}
                     aria-hidden

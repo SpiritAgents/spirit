@@ -16,14 +16,6 @@
       "types": "./dist/types.d.ts",
       "default": "./dist/types.js"
     },
-    "./auth-storage": {
-      "types": "./dist/auth-storage.d.ts",
-      "default": "./dist/auth-storage.js"
-    },
-    "./oauth-bridge": {
-      "types": "./dist/oauth-bridge.d.ts",
-      "default": "./dist/oauth-bridge.js"
-    },
     "./*": {
       "types": "./dist/*.d.ts",
       "default": "./dist/*.js"
@@ -36,25 +28,34 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@spiritagent/agent-core": "workspace:*",
-    "@spiritagent/api": "workspace:*",
     "@spiritagent/automations": "workspace:*",
-    "@spiritagent/config": "workspace:*",
     "@spiritagent/extension-toolkit": "workspace:*",
     "@spiritagent/i18n": "workspace:*",
     "@spiritagent/icons": "workspace:*",
     "@spiritagent/ui": "workspace:*",
+    "@streamdown/code": "1.1.1",
+    "@streamdown/math": "1.0.2",
+    "@streamdown/mermaid": "1.0.2",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "diff": "9.0.0",
+    "gitdiff-parser": "0.3.1",
+    "hast-util-sanitize": "5.0.2",
     "i18next": "26.3.0",
     "lucide-react": "1.28.0",
+    "mermaid": "11.16.1",
     "radix-ui": "1.6.7",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "react-i18next": "17.0.8"
+    "react-i18next": "17.0.8",
+    "rehype-sanitize": "6.0.0",
+    "remark-breaks": "4.0.0",
+    "shiki": "3.23.0",
+    "streamdown": "2.5.0",
+    "tailwind-merge": "3.6.0",
+    "unified": "11.0.5"
   },
   "devDependencies": {
-    "@spiritagent/agent-core": "workspace:*",
-    "@spiritagent/api": "workspace:*",
-    "@spiritagent/config": "workspace:*",
     "@tailwindcss/vite": "4.3.3",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.3",

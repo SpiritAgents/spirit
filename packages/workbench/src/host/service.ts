@@ -114,12 +114,6 @@ import type {
   DesktopMarketplaceSource,
   DesktopExtensionCssLayer,
   DesktopGitSnapshot,
-  GetGitHubPullRequestDetailRequest,
-  GetGitHubPullRequestTabCountsRequest,
-  ListGitHubAutomationRepositoriesRequest,
-  ListGitHubPullRequestsRequest,
-  SearchGitHubAutomationRepositoriesRequest,
-  MergeGitHubPullRequestRequest,
   GitHistorySnapshot,
   GitCommitMessageSnapshot,
   GitWorkingTreeSnapshot,
@@ -189,7 +183,7 @@ import type {
   WriteHostTextFileRequest,
   WriteWorkspaceTextFileRequest,
 } from "@spiritagent/api/types";
-import { setGitHubFetchImplementation } from "@spiritagent/github";
+
 import type { DesktopToolRequest, HostCommandName } from "@spiritagent/sessions/host/contracts";
 import { createHostInvokeDispatch } from "./host-invoke-dispatch.js";
 import {
@@ -257,25 +251,7 @@ import {
   forceDeleteWorkspaceEntryCommand,
   type HostWorkspaceGitCommandContext,
 } from "@spiritagent/sessions/host/host-workspace-git-commands";
-import {
-  beginGitHubDeviceLoginCommand,
-  cancelGitHubDeviceLoginCommand,
-  completeGitHubDeviceLoginCommand,
-  disconnectGitHubCommand,
-  getGitHubAuthStatusCommand,
-  getGitHubPullRequestDetailCommand,
-  getGitHubPullRequestConversationCommand,
-  getGitHubPullRequestFilesCommand,
-  getGitHubPullRequestCommitsCommand,
-  getGitHubPullRequestChecksCommand,
-  getGitHubPullRequestForCurrentBranchCommand,
-  listGitHubAutomationRepositoriesCommand,
-  listGitHubPullRequestsCommand,
-  searchGitHubAutomationRepositoriesCommand,
-  getGitHubPullRequestTabCountsCommand,
-  markGitHubPullRequestReadyCommand,
-  mergeGitHubPullRequestCommand,
-} from "@spiritagent/sessions/host/host-github-commands";
+
 import {
   abortConversationCommand,
   abortConversationInContext,
@@ -394,13 +370,12 @@ import {
   startAutomationSchedulerMonitorIfNeeded as startAutomationSchedulerMonitorIfNeededFromService,
   type AutomationSchedulerServiceContext,
 } from "./automation-scheduler-service.js";
-import { resolveGitHubAutomationTriggerMenu } from "./github-automation-trigger-menu.js";
+
 import { assertAutomationMenuConfig } from "./automation-menu-values.js";
 import {
   notifyAutomationRunFinished,
   notifyAutomationTriggerError,
 } from "./automation-notifications.js";
-import { normalizeAutomationTrigger } from "@spiritagent/automations";
 import {
   createAutomationCommand,
   deleteAutomationCommand,
@@ -545,7 +520,7 @@ import {
   collectExtensionSystemPrompts,
   resolveEnabledExtensionViewFile,
   resolveEnabledExtensionTabFile,
-  resolveEnabledExtensionTabIconFile,
+  resolveEnabledExtensionIconFile,
 } from "@spiritagent/sessions/host/extensions";
 import {
   getDesktopExtensionHostAdapter,
@@ -3264,79 +3239,6 @@ export class DesktopHostService {
     return readGitCommitMessageCommand(this.workspaceGitCommandContext(), request);
   }
 
-  async getGitHubAuthStatus() {
-    return getGitHubAuthStatusCommand();
-  }
-
-  async beginGitHubDeviceLogin() {
-    return beginGitHubDeviceLoginCommand();
-  }
-
-  async completeGitHubDeviceLogin() {
-    return completeGitHubDeviceLoginCommand();
-  }
-
-  async cancelGitHubDeviceLogin() {
-    cancelGitHubDeviceLoginCommand();
-  }
-
-  async disconnectGitHub() {
-    return disconnectGitHubCommand();
-  }
-
-  async getGitHubPullRequestForCurrentBranch() {
-    await this.ensureInitialized();
-    const state = this.requireState();
-    return getGitHubPullRequestForCurrentBranchCommand({
-      workspaceRoot: state.workspaceRoot,
-      git: state.git,
-    });
-  }
-
-  async getGitHubPullRequestDetail(request: GetGitHubPullRequestDetailRequest) {
-    return getGitHubPullRequestDetailCommand(request);
-  }
-
-  async getGitHubPullRequestConversation(request: GetGitHubPullRequestDetailRequest) {
-    return getGitHubPullRequestConversationCommand(request);
-  }
-
-  async getGitHubPullRequestFiles(request: GetGitHubPullRequestDetailRequest) {
-    return getGitHubPullRequestFilesCommand(request);
-  }
-
-  async getGitHubPullRequestCommits(request: GetGitHubPullRequestDetailRequest) {
-    return getGitHubPullRequestCommitsCommand(request);
-  }
-
-  async getGitHubPullRequestChecks(request: GetGitHubPullRequestDetailRequest) {
-    return getGitHubPullRequestChecksCommand(request);
-  }
-
-  async mergeGitHubPullRequest(request: MergeGitHubPullRequestRequest) {
-    return mergeGitHubPullRequestCommand(request);
-  }
-
-  async markGitHubPullRequestReady(request: GetGitHubPullRequestDetailRequest) {
-    return markGitHubPullRequestReadyCommand(request);
-  }
-
-  async listGitHubPullRequests(request: ListGitHubPullRequestsRequest) {
-    return listGitHubPullRequestsCommand(request);
-  }
-
-  async listGitHubAutomationRepositories(request: ListGitHubAutomationRepositoriesRequest = {}) {
-    return listGitHubAutomationRepositoriesCommand(request);
-  }
-
-  async searchGitHubAutomationRepositories(request: SearchGitHubAutomationRepositoriesRequest) {
-    return searchGitHubAutomationRepositoriesCommand(request);
-  }
-
-  async getGitHubPullRequestTabCounts(request: GetGitHubPullRequestTabCountsRequest) {
-    return getGitHubPullRequestTabCountsCommand(request);
-  }
-
   async listWorkspaceFileReferenceSuggestions(
     request: QueryWorkspaceFileReferenceSuggestionsRequest,
   ): Promise<WorkspaceFileReferenceSuggestionsResponse> {
@@ -4008,10 +3910,7 @@ export class DesktopHostService {
         if (request.kind === "time") {
           return Promise.resolve(request);
         }
-        if (request.kind === "github") {
-          const { kind: _kind, ...config } = request;
-          return this.validateAutomationTrigger({ kind: request.kind, config });
-        }
+
         return this.validateAutomationTrigger({ kind: request.kind, config: request.config });
       },
       getAutomationCreateDefaults: () => {
@@ -4178,14 +4077,11 @@ export class DesktopHostService {
     session.controllers.add(controller);
     this.automationTriggerMenuSessions.set(sessionId, session);
     try {
-      const page =
-        kind === "github"
-          ? await resolveGitHubAutomationTriggerMenu({
-              path: request.path,
-              ...(request.query === undefined ? {} : { query: request.query }),
-              page: request.page,
-            })
-          : await this.resolveExtensionAutomationTriggerMenu(kind, request, controller.signal);
+      const page = await this.resolveExtensionAutomationTriggerMenu(
+        kind,
+        request,
+        controller.signal,
+      );
       if (controller.signal.aborted) {
         throw new Error("Automation trigger menu request was cancelled.");
       }
@@ -4248,13 +4144,7 @@ export class DesktopHostService {
     request: import("@spiritagent/api/types").ValidateAutomationTriggerRequest,
   ): Promise<import("@spiritagent/api/automations").DesktopAutomationTrigger> {
     assertHostExtensionJsonValue(request.config, "Automation trigger config");
-    if (request.kind === "github") {
-      const trigger = normalizeAutomationTrigger({ kind: "github", ...request.config });
-      if (!trigger || trigger.kind !== "github") {
-        throw new Error("Invalid GitHub Automation trigger config.");
-      }
-      return trigger;
-    }
+
     const contribution = collectAutomationTriggerContributions(
       await this.extensionManager().list(),
     ).find((entry) => entry.kind === request.kind);
@@ -5429,11 +5319,11 @@ export class DesktopHostService {
     return resolveEnabledExtensionTabFile(this.extensionManager(), extensionId, contributionId);
   }
 
-  async resolveExtensionTabIconFile(
+  async resolveExtensionIconFile(
     extensionId: string,
     iconPath: string,
   ): Promise<{ filePath: string; extensionRoot: string } | null> {
-    return resolveEnabledExtensionTabIconFile(this.extensionManager(), extensionId, iconPath);
+    return resolveEnabledExtensionIconFile(this.extensionManager(), extensionId, iconPath);
   }
 
   private async refreshExtensionAuthorizationState(extensionId: string): Promise<void> {
@@ -6133,10 +6023,6 @@ export class DesktopHostService {
 
 const desktopHostService = new DesktopHostService();
 
-export function setDesktopGitHubFetchImplementation(fetchImpl: typeof fetch | undefined): void {
-  setGitHubFetchImplementation(fetchImpl);
-}
-
 export async function invokeDesktopHostCommand(
   command: HostCommandName,
   payload?: unknown,
@@ -6166,11 +6052,11 @@ export async function resolveDesktopExtensionTabFile(
   return desktopHostService.resolveExtensionTabFile(extensionId, contributionId);
 }
 
-export async function resolveDesktopExtensionTabIconFile(
+export async function resolveDesktopExtensionIconFile(
   extensionId: string,
   iconPath: string,
 ): Promise<{ filePath: string; extensionRoot: string } | null> {
-  return desktopHostService.resolveExtensionTabIconFile(extensionId, iconPath);
+  return desktopHostService.resolveExtensionIconFile(extensionId, iconPath);
 }
 
 export function openDesktopHostExtensionUiSession(

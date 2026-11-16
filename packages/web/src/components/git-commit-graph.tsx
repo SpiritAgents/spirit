@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { PrConversationTimelineNode } from "@/components/workspace-pr-conversation-timeline";
+import { TimelineNode } from "@spiritagent/ui/rendering/timeline-node";
 import { WorkspaceGitCommitContextMenuContent } from "@/components/workspace-git-commit-context-menu";
 import { scrollAreaViewport } from "@/lib/scroll-area-viewport";
 import { cn } from "@/lib/utils";
@@ -33,7 +33,7 @@ import type { GitCommitGraphRow, GitCommitRecord, GitHistorySnapshot } from "@/t
 const ROW_HEIGHT_PX = 32;
 const LANE_WIDTH_PX = 16;
 const GUTTER_LEADING_PX = 4;
-/** Half of compact `PrConversationTimelineNode` (size-3.5) — matches `text-xs` row height. */
+/** Half of compact `TimelineNode` (size-3.5) — matches `text-xs` row height. */
 const NODE_RADIUS_PX = 7;
 const TEXT_GAP_PX = 4;
 
@@ -436,7 +436,7 @@ function CommitGraphGutter({
               top: rowCenter(rowIndex),
             }}
           >
-            <PrConversationTimelineNode icon={GitCommit} size="compact" />
+            <TimelineNode icon={GitCommit} size="compact" />
           </div>
         ))}
       </div>

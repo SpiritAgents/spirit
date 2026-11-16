@@ -514,7 +514,7 @@ function assertValidTabs(tabs: readonly DesktopWorkspaceToolTab[]): void {
     }
     ids.add(tab.id);
     if (tab.kind === "built-in") {
-      if (!["files", "terminal", "git", "browser", "pr", "task"].includes(tab.builtInKind)) {
+      if (!["files", "terminal", "git", "browser", "task"].includes(tab.builtInKind)) {
         throw new Error(`Invalid built-in workspace tool tab: ${tab.id}`);
       }
       continue;

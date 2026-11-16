@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { buildPrDiffSnippetFromPatch } from "../../src/lib/pr-diff-text.ts";
+import { buildPrDiffSnippetFromPatch } from "./ui/lib/pr-diff-text.ts";
 import {
   extractPatchBodyForLineRange,
   inferLineRangeFromPatch,
-} from "../../src/lib/pr-diff-patch-slice.ts";
+} from "./ui/lib/pr-diff-patch-slice.ts";
 
 const SAMPLE_PATCH = `@@ -10,6 +10,7 @@
  import foo

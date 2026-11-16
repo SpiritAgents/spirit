@@ -1,5 +1,5 @@
 import { X } from "@spiritagent/icons/x";
-import type { ElementType } from "react";
+import type { ElementType, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { toggleVariants } from "@/components/ui/toggle";
@@ -10,7 +10,7 @@ import type { WorkspaceToolTab } from "@/lib/workspace-tool-tabs";
 type WorkspaceToolTabChipProps = {
   tab: WorkspaceToolTab;
   icon: ElementType;
-  iconUrl?: string;
+  iconNode?: ReactNode;
   label: string;
   selected: boolean;
   onSelect: (tabId: string) => void;
@@ -21,7 +21,7 @@ type WorkspaceToolTabChipProps = {
 export function WorkspaceToolTabChip({
   tab,
   icon: Icon,
-  iconUrl,
+  iconNode,
   label,
   selected,
   onSelect,
@@ -44,11 +44,7 @@ export function WorkspaceToolTabChip({
       )}
       onClick={() => onSelect(tab.id)}
     >
-      {iconUrl ? (
-        <img aria-hidden src={iconUrl} className="size-3.5 shrink-0 object-contain opacity-80" />
-      ) : (
-        <Icon className="size-3.5 shrink-0 opacity-80" aria-hidden strokeWidth={1.75} />
-      )}
+      {iconNode ?? <Icon className="size-3.5 shrink-0 opacity-80" aria-hidden strokeWidth={1.75} />}
       {displayTitle ? (
         <span className="flex min-w-0 flex-auto items-center gap-1.5 overflow-hidden group-hover/tab:workspace-tab-title-fade">
           <span className="truncate">{displayTitle}</span>

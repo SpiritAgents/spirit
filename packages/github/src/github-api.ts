@@ -2,7 +2,7 @@ import { GITHUB_API_BASE_URL } from "./oauth-config.js";
 import { GitHubOAuthError } from "./oauth.js";
 
 export { GITHUB_API_BASE_URL };
-export { githubFetch, setGitHubFetchImplementation } from "./github-fetch.js";
+export { githubFetch } from "./github-fetch.js";
 
 export function githubApiHeaders(accessToken: string): Record<string, string> {
   return {

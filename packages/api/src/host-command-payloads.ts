@@ -39,12 +39,6 @@ import type {
   ReplyPendingQuestionsRequest,
   ReplyWorkspaceCapabilityTrustRequest,
   ForkSessionRequest,
-  GetGitHubPullRequestDetailRequest,
-  GetGitHubPullRequestTabCountsRequest,
-  ListGitHubAutomationRepositoriesRequest,
-  ListGitHubPullRequestsRequest,
-  SearchGitHubAutomationRepositoriesRequest,
-  MergeGitHubPullRequestRequest,
   InvokeExtensionActionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
@@ -86,23 +80,7 @@ export type CommandPayloads = {
   readGitWorkingTree: undefined;
   readGitHistory: { request?: ReadGitHistoryRequest };
   readGitCommitMessage: { request: ReadGitCommitMessageRequest };
-  getGitHubAuthStatus: undefined;
-  beginGitHubDeviceLogin: undefined;
-  completeGitHubDeviceLogin: undefined;
-  cancelGitHubDeviceLogin: undefined;
-  disconnectGitHub: undefined;
-  getGitHubPullRequestForCurrentBranch: undefined;
-  listGitHubPullRequests: { request: ListGitHubPullRequestsRequest };
-  listGitHubAutomationRepositories: { request?: ListGitHubAutomationRepositoriesRequest };
-  searchGitHubAutomationRepositories: { request: SearchGitHubAutomationRepositoriesRequest };
-  getGitHubPullRequestTabCounts: { request: GetGitHubPullRequestTabCountsRequest };
-  getGitHubPullRequestDetail: { request: GetGitHubPullRequestDetailRequest };
-  getGitHubPullRequestConversation: { request: GetGitHubPullRequestDetailRequest };
-  getGitHubPullRequestFiles: { request: GetGitHubPullRequestDetailRequest };
-  getGitHubPullRequestCommits: { request: GetGitHubPullRequestDetailRequest };
-  getGitHubPullRequestChecks: { request: GetGitHubPullRequestDetailRequest };
-  mergeGitHubPullRequest: { request: MergeGitHubPullRequestRequest };
-  markGitHubPullRequestReady: { request: GetGitHubPullRequestDetailRequest };
+
   addModel: { request: AddModelRequest };
   addProviderModels: { request: AddProviderModelsRequest };
   previewModels: { request: PreviewModelsRequest };

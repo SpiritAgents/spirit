@@ -12,27 +12,23 @@ const labels = {
   weeklyPrefix: "Weekly",
   weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
   formatWeekly: (weekday, time) => `Weekly ${weekday} ${time}`,
-  githubPrefix: "GitHub",
-  githubPullRequestCreated: "PR created",
-  githubIssueCreated: "Issue created",
 };
 
-test("formatDesktopAutomationTriggerLabel renders github trigger", () => {
+test("formatDesktopAutomationTriggerLabel renders a contributed trigger", () => {
   assert.equal(
     formatDesktopAutomationTriggerLabel(
       {
-        kind: "github",
-        owner: "acme",
-        repo: "app",
-        event: "pull_request_created",
+        kind: "extension:personal/demo/activity",
+        config: {},
+        label: "Repository Activity",
       },
       labels,
     ),
-    "GitHub · acme/app · PR created",
+    "Repository Activity",
   );
 });
 
-test("isValidDesktopAutomationTrigger requires github owner and repo", () => {
+test("isValidDesktopAutomationTrigger validates schedules and contributed config", () => {
   assert.equal(
     isValidDesktopAutomationTrigger({ kind: "time", schedule: { kind: "hourly" } }),
     true,
@@ -60,19 +56,17 @@ test("isValidDesktopAutomationTrigger requires github owner and repo", () => {
   );
   assert.equal(
     isValidDesktopAutomationTrigger({
-      kind: "github",
-      owner: "acme",
-      repo: "app",
-      event: "issue_created",
+      kind: "extension:personal/demo/activity",
+      config: {},
+      label: "Repository Activity",
     }),
     true,
   );
   assert.equal(
     isValidDesktopAutomationTrigger({
-      kind: "github",
-      owner: "",
-      repo: "app",
-      event: "issue_created",
+      kind: "extension:personal/demo/activity",
+      config: [],
+      label: "Repository Activity",
     }),
     false,
   );

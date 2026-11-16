@@ -170,3 +170,26 @@ test("Automation trigger contributions render their names and descriptions", () 
   expect(getByText("Repository Activity")).toBeTruthy();
   expect(getByText("React to new repository activity.")).toBeTruthy();
 });
+
+test("monochrome file contributions use the shared theme-aware icon renderer", () => {
+  const { container } = render(
+    <MarketplaceContributionGroups
+      item={{
+        id: "personal/demo",
+        desktopTabs: [
+          {
+            id: "notes",
+            name: "Notes",
+            path: "ui/notes.html",
+            defaultScope: "window-shared",
+            icon: { type: "file", path: "icons/notes.svg", monochrome: true },
+          },
+        ],
+      }}
+    />,
+  );
+  const icon = container.querySelector<HTMLElement>('[style*="mask-image"]');
+  expect(icon?.style.maskImage).toContain("icons/notes.svg");
+  expect(icon?.style.backgroundColor).toBe("currentcolor");
+  expect(container.querySelector("img")).toBeNull();
+});
