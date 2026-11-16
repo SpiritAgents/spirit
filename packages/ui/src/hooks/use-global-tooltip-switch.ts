@@ -136,11 +136,13 @@ export function useGlobalTooltipSwitch({
   const pointerDismissedRegistrationsRef = useRef(new Set<string>());
   const pointerRef = useRef<ClientPoint | null>(null);
   const keyboardInputRef = useRef(false);
+  const mountedRef = useRef(false);
   const reconcileFrameRef = useRef<number | null>(null);
   const reconcileRef = useRef<() => void>(() => {});
 
   const schedulePointerReconcile = useCallback(() => {
     if (
+      !mountedRef.current ||
       reconcileFrameRef.current !== null ||
       (!activeSlotRef.current && (!pointerRef.current || keyboardInputRef.current))
     ) {
@@ -559,7 +561,10 @@ export function useGlobalTooltipSwitch({
   ]);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      // Child passive cleanups unregister after the provider cleanup and must not enqueue work.
+      mountedRef.current = false;
       clearHoverOpenTimer();
       clearHoverCloseTimer();
       if (lingerClearTimerRef.current !== undefined) {

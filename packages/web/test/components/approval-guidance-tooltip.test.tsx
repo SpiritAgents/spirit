@@ -2,7 +2,8 @@
 
 import "./setup";
 
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { StrictMode } from "react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { ComposerLabelsProvider } from "@spiritagent/ui/composer";
@@ -54,10 +55,37 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cleanup();
   vi.clearAllTimers();
   vi.useRealTimers();
   vi.unstubAllGlobals();
   document.elementFromPoint = originalHitTest;
+  vi.restoreAllMocks();
+});
+
+test("unmount cancels tooltip reconciliation after child registrations are removed", async () => {
+  const { unmount } = render(
+    <StrictMode>
+      <Fixture />
+    </StrictMode>,
+  );
+  const send = screen.getByRole("button", { name: "Send Guidance" });
+  fireEvent.pointerMove(send, { pointerType: "mouse", clientX: 20, clientY: 20 });
+  fireEvent.pointerOver(send, { pointerType: "mouse", clientX: 20, clientY: 20 });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(400);
+  });
+  expect(screen.getByRole("tooltip").textContent).toContain("Send");
+
+  const requestFrame = vi.spyOn(window, "requestAnimationFrame");
+  const cancelFrame = vi.spyOn(window, "cancelAnimationFrame");
+  unmount();
+
+  const canceledFrames = new Set(cancelFrame.mock.calls.map(([id]) => id));
+  expect(requestFrame.mock.results.length).toBeGreaterThan(0);
+  for (const result of requestFrame.mock.results) {
+    expect(canceledFrames.has(result.value)).toBe(true);
+  }
 });
 
 test("approval guidance hover keeps Composer labels available in the shared tooltip host", async () => {
