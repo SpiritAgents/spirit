@@ -378,3 +378,67 @@ test("loading and retried tabs publish context without relying on the first read
     contentWindow.mockRestore();
   }
 });
+
+test("Composer attachments require capability and an active page; host binds their source", async () => {
+  const onAttachment = vi.fn();
+  const onRequest = vi.fn();
+  const { container, rerender } = render(
+    <ExtensionTabHost
+      tab={tab}
+      contribution={contribution}
+      active
+      onAttachment={onAttachment}
+      onRequest={onRequest}
+    />,
+  );
+  const frame = container.querySelector("iframe")!;
+  const attach = () =>
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          source: frame.contentWindow,
+          data: {
+            ...tab,
+            type: SPIRIT_EXTENSION_TAB_REQUEST,
+            requestId: "attachment",
+            method: "host.composer.attach",
+            params: {
+              kind: "fileSnippet",
+              filePath: "page.ts",
+              lineStart: 1,
+              lineEnd: 2,
+              selectedText: "selected",
+              sourceTabId: "forged",
+            },
+          },
+        }),
+      );
+    });
+  attach();
+  expect(onAttachment).not.toHaveBeenCalled();
+  rerender(
+    <ExtensionTabHost
+      tab={tab}
+      contribution={contribution}
+      active
+      allowComposerAttachments
+      onAttachment={onAttachment}
+      onRequest={onRequest}
+    />,
+  );
+  attach();
+  expect(onAttachment).toHaveBeenCalledOnce();
+  expect(onAttachment.mock.calls[0][0].attachment.sourceTabId).toBe(tab.id);
+  expect(onRequest).not.toHaveBeenCalled();
+  rerender(
+    <ExtensionTabHost
+      tab={tab}
+      contribution={contribution}
+      active={false}
+      allowComposerAttachments
+      onAttachment={onAttachment}
+    />,
+  );
+  attach();
+  expect(onAttachment).toHaveBeenCalledOnce();
+});

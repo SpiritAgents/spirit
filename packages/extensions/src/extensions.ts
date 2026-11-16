@@ -93,6 +93,7 @@ export const SUPPORTED_HOST_EXTENSION_REQUESTED_CAPABILITIES = [
   "automation-triggers",
   "structured-results",
   "desktop-ui",
+  "desktop-composer-attachments",
   "desktop-webview-display",
   "desktop-webview-control",
   "desktop-webview-script",

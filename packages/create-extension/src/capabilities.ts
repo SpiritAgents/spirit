@@ -15,6 +15,7 @@ export const INIT_CAPABILITY_IDS = [
   "desktop-settings-page",
   "desktop-views",
   "desktop-tabs",
+  "desktop-composer-attachments",
   "authorization",
   "automation-triggers",
   "system-prompt",
@@ -252,6 +253,13 @@ document.getElementById("close").addEventListener("click", () => view.close());
 view.mounted();
 `,
     }),
+  },
+  {
+    id: "desktop-composer-attachments",
+    label: "Composer attachments from Desktop tabs",
+    requestedCapabilities: ["desktop-ui", "desktop-composer-attachments"],
+    contributes: () => ({}),
+    files: () => ({}),
   },
   {
     id: "desktop-tabs",

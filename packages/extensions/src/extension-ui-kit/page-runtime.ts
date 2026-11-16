@@ -152,6 +152,10 @@ const page = {
   async openExtensionDetails(): Promise<void> {
     await page.request("host.openExtensionDetails");
   },
+  async addAttachment(attachment: unknown): Promise<void> {
+    if (surface !== "tab") throw new Error("Composer attachments require a live tab.");
+    await page.request("host.composer.attach", attachment);
+  },
   async openExternal(url: string): Promise<void> {
     await page.request("host.openExternal", { url });
   },

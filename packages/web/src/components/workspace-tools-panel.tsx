@@ -1184,6 +1184,18 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   }
                   sessionKey={sessionKey}
                   onRequest={onExtensionTabRequest}
+                  allowComposerAttachments={entry.extension.requestedCapabilities?.includes(
+                    "desktop-composer-attachments",
+                  )}
+                  onAttachment={(input) => {
+                    if (input.kind === "prDiff" && onPrDiffAddToChat)
+                      onPrDiffAddToChat(input.attachment);
+                    else if (input.kind === "fileSnippet" && onFileSnippetAddToChat)
+                      onFileSnippetAddToChat(input.attachment);
+                    else if (input.kind === "terminalSnippet" && onTerminalAddToChat)
+                      onTerminalAddToChat(input.attachment);
+                    else throw new Error("Composer attachment insertion is unavailable.");
+                  }}
                   onChrome={onExtensionTabChrome}
                   subscribeEvents={subscribeExtensionTabEvents}
                   onWebView={onExtensionWebView}

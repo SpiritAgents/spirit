@@ -100,11 +100,37 @@ export interface SpiritDesktopPageApi<TContext = SpiritDesktopTabPageContext> {
   fail(error: unknown): void;
   openExternal(url: string): Promise<void>;
   openExtensionDetails(): Promise<void>;
+  /** Inserts a chip into the owning conversation; never sends a message. Tabs only. */
+  addAttachment(attachment: SpiritComposerAttachment): Promise<void>;
   request(method: string, params?: unknown): Promise<unknown>;
   onEvent(listener: (event: { event: string; params?: unknown }) => void): () => void;
   onContextChange(listener: (context: TContext) => void): () => void;
 }
 
+export type SpiritComposerAttachment =
+  | {
+      kind: "prDiff";
+      prUrl: string;
+      filename: string;
+      lineStart: number;
+      lineEnd: number;
+      diffText: string;
+      status: "open" | "closed" | "merged" | "draft";
+    }
+  | {
+      kind: "fileSnippet";
+      filePath: string;
+      lineStart: number;
+      lineEnd: number;
+      selectedText: string;
+    }
+  | {
+      kind: "terminalSnippet";
+      terminalName: string;
+      lineStart: number;
+      lineEnd: number;
+      selectedText: string;
+    };
 export interface SpiritDesktopTabPageApi extends SpiritDesktopPageApi {
   setChrome(patch: SpiritDesktopTabChromePatch): void;
 }

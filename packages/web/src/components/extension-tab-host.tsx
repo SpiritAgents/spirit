@@ -1,3 +1,7 @@
+import {
+  parseExtensionComposerAttachment,
+  type ExtensionComposerAttachment,
+} from "@/lib/extension-composer-attachment";
 import { openExtensionDetails } from "@/lib/extension-navigation";
 import { extensionTabDisplayName } from "@/lib/extension-tab-contributions";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -37,6 +41,8 @@ export function ExtensionTabHost({
   authorizationConfigured,
   sessionKey,
   onRequest,
+  allowComposerAttachments = false,
+  onAttachment,
   onChrome,
   subscribeEvents,
   onWebView,
@@ -45,6 +51,8 @@ export function ExtensionTabHost({
   tab: WorkspaceExtensionToolTab;
   contribution: DesktopExtensionDesktopTab;
   active: boolean;
+  allowComposerAttachments?: boolean;
+  onAttachment?: (attachment: ExtensionComposerAttachment) => void;
   workspaceRoot?: string;
   gitSnapshot?: { isRepository: boolean; branch?: string; selectedBranch?: string };
   authorizationConfigured?: boolean;
@@ -164,6 +172,29 @@ export function ExtensionTabHost({
       if (event.data.type === SPIRIT_EXTENSION_TAB_REQUEST) {
         const requestId = String(event.data.requestId ?? "");
         if (!requestId) return;
+        if (event.data.method === "host.composer.attach") {
+          try {
+            if (!active || !allowComposerAttachments || !onAttachment)
+              throw new Error("This page cannot add Composer attachments.");
+            onAttachment(parseExtensionComposerAttachment(event.data.params, tab.id));
+            iframe.contentWindow?.postMessage(
+              { type: SPIRIT_EXTENSION_TAB_RESULT, ...tab, requestId, ok: true },
+              "*",
+            );
+          } catch (error) {
+            iframe.contentWindow?.postMessage(
+              {
+                type: SPIRIT_EXTENSION_TAB_RESULT,
+                ...tab,
+                requestId,
+                ok: false,
+                error: String(error),
+              },
+              "*",
+            );
+          }
+          return;
+        }
         if (event.data.method === "host.openExtensionDetails") {
           openExtensionDetails(tab.extensionId);
           iframe.contentWindow?.postMessage(
@@ -214,7 +245,17 @@ export function ExtensionTabHost({
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [attempt, handleWebViewMessage, onRequest, onChrome, sendContext, tab]);
+  }, [
+    attempt,
+    handleWebViewMessage,
+    onRequest,
+    onChrome,
+    sendContext,
+    tab,
+    active,
+    allowComposerAttachments,
+    onAttachment,
+  ]);
 
   useEffect(() => {
     // A cached page can request context before the host listener attaches.
