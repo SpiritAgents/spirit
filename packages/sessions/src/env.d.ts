@@ -378,6 +378,7 @@ declare global {
     ptyKill(id: string): Promise<void>;
     openSystemTerminal(cwd: string): Promise<void>;
     openBrowserUrl(url: string): Promise<void>;
+    openEmailComposer(email: string): Promise<void>;
     subscribeBrowserOpenUrl(callback: (url: string) => void): () => void;
     listLocalListeningEndpoints(): Promise<
       Array<{ port: number; address?: string; processName?: string; url?: string; title?: string }>
