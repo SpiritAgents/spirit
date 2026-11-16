@@ -48,6 +48,7 @@ test("GitHub Automation uses a monochrome contribution glyph instead of the mark
   const index = await readBuiltInMarketplaceIndex();
   const github = index.extensions.find((entry) => entry.name === "github");
   assert.ok(github);
+  assert.equal(github.description, "Pull requests and automations, right in Spirit.");
   assert.equal(github.icon, "extensions/github/icon.svg");
   const triggers = github.manifest.contributes?.automationTriggers;
   assert.ok(Array.isArray(triggers));

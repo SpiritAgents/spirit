@@ -14,7 +14,7 @@
       "source": "./extensions/github",
       "icon": "./extensions/github/icon.svg",
       "displayName": "GitHub",
-      "description": "Native pull requests, authorization, and repository Automations for Spirit Desktop.",
+      "description": "Pull requests and automations, right in Spirit.",
       "author": {
         "name": "Spirit",
         "email": "hi@spirit.dev",
