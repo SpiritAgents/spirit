@@ -1,3 +1,5 @@
+import { openExtensionDetails } from "@/lib/extension-navigation";
+import { extensionTabDisplayName } from "@/lib/extension-tab-contributions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -31,6 +33,8 @@ export function ExtensionTabHost({
   contribution,
   active,
   workspaceRoot,
+  gitSnapshot,
+  authorizationConfigured,
   sessionKey,
   onRequest,
   onChrome,
@@ -42,6 +46,8 @@ export function ExtensionTabHost({
   contribution: DesktopExtensionDesktopTab;
   active: boolean;
   workspaceRoot?: string;
+  gitSnapshot?: { isRepository: boolean; branch?: string; selectedBranch?: string };
+  authorizationConfigured?: boolean;
   sessionKey?: string;
   onRequest?: (request: {
     extensionId: string;
@@ -86,8 +92,14 @@ export function ExtensionTabHost({
         instanceId: tab.instanceId,
         channelId: tab.channelId,
         initialParams: tab.initialParams ?? null,
+        navigationRevision: tab.navigationRevision ?? 0,
         scope: tab.scope,
         workspaceRoot: workspaceRoot ?? "",
+        workspace: {
+          isRepository: gitSnapshot?.isRepository === true,
+          branch: gitSnapshot?.selectedBranch?.trim() || gitSnapshot?.branch?.trim() || "",
+        },
+        authorizationConfigured,
         sessionKey: sessionKey ?? "",
         visible: active,
         locale: i18n.resolvedLanguage ?? i18n.language,
@@ -95,7 +107,18 @@ export function ExtensionTabHost({
       },
       "*",
     );
-  }, [active, sessionKey, tab, workspaceRoot, i18n.resolvedLanguage, i18n.language]);
+  }, [
+    active,
+    sessionKey,
+    tab,
+    workspaceRoot,
+    gitSnapshot?.isRepository,
+    gitSnapshot?.branch,
+    gitSnapshot?.selectedBranch,
+    authorizationConfigured,
+    i18n.resolvedLanguage,
+    i18n.language,
+  ]);
 
   const handleWebViewMessage = useExtensionWebViewBridge({
     tab,
@@ -140,9 +163,17 @@ export function ExtensionTabHost({
       }
       if (event.data.type === SPIRIT_EXTENSION_TAB_REQUEST) {
         const requestId = String(event.data.requestId ?? "");
-        if (!requestId || !onRequest) {
+        if (!requestId) return;
+        if (event.data.method === "host.openExtensionDetails") {
+          openExtensionDetails(tab.extensionId);
+          iframe.contentWindow?.postMessage(
+            { type: SPIRIT_EXTENSION_TAB_RESULT, ...tab, requestId, ok: true },
+            "*",
+          );
           return;
         }
+        // Workbench resolves remaining Host methods before extension backend dispatch.
+        if (!onRequest) return;
         void onRequest({
           extensionId: tab.extensionId,
           contributionId: tab.contributionId,
@@ -235,7 +266,9 @@ export function ExtensionTabHost({
       {status === "error" ? (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-background p-6 text-center text-sm">
           <p className="text-muted-foreground">
-            {t("workspace.extensionTabLoadError", { name: contribution.name })}
+            {t("workspace.extensionTabLoadError", {
+              name: extensionTabDisplayName(contribution, t),
+            })}
           </p>
           <Button
             type="button"
@@ -250,10 +283,10 @@ export function ExtensionTabHost({
       <iframe
         ref={iframeRef}
         key={attempt}
-        title={tab.tabTitle ?? contribution.name}
+        title={tab.tabTitle ?? extensionTabDisplayName(contribution, t)}
         sandbox="allow-scripts"
         src={extensionTabPageUrl(tab)}
-        className={cn("size-full border-0 bg-background", status === "error" && "invisible")}
+        className={cn("size-full border-0 bg-transparent", status === "error" && "invisible")}
         data-extension-tab-active={active}
         onError={() => setStatus("error")}
       />

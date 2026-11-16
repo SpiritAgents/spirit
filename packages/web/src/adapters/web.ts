@@ -492,6 +492,12 @@ export function createWebHostApi(): HostApi {
         revision: 0,
       });
     },
+    invokeExtensionViewRequest() {
+      return Promise.reject(new Error("Extension views are not available on web host"));
+    },
+    openExtensionLink() {
+      return Promise.resolve(false);
+    },
     invokeExtensionTabRequest() {
       return Promise.reject(new Error("Extension tabs are not available on web host"));
     },

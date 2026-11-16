@@ -2,7 +2,15 @@ import { Globe } from "@spiritagent/icons/globe";
 import { Search } from "@spiritagent/icons/search";
 import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react";
+import {
+  useEffect,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentRef,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { ArrowLeft, Blocks, Folder, Sparkles, Store } from "lucide-react";
@@ -88,6 +96,7 @@ type ReviewGateTarget = {
 };
 
 type MarketplaceViewProps = {
+  revealRequest?: { extensionId: string; nonce: number } | null;
   snapshot: {
     marketplaceSources?: DesktopMarketplaceSource[];
     marketplaceCatalogs?: Record<string, DesktopMarketplaceCatalogEntry[]>;
@@ -118,6 +127,7 @@ type MarketplaceViewProps = {
 };
 
 export function MarketplaceView({
+  revealRequest,
   snapshot,
   extensionsBusy,
   onImportExtension,
@@ -144,6 +154,9 @@ export function MarketplaceView({
   const [uninstallDialogOpen, setUninstallDialogOpen] = useState(false);
   /** null = list; non-null = that extension's detail page */
   const [detailExtensionId, setDetailExtensionId] = useState<string | null>(null);
+  useEffect(() => {
+    if (revealRequest) setDetailExtensionId(revealRequest.extensionId);
+  }, [revealRequest]);
   const [addSourceOpen, setAddSourceOpen] = useState(false);
   const [reviewGate, setReviewGate] = useState<ReviewGateTarget | null>(null);
   const [reviewGateOpen, setReviewGateOpen] = useState(false);

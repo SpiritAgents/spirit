@@ -221,11 +221,17 @@ export type HostExtensionDesktopTabScope =
 
 export type HostExtensionDesktopTabIcon =
   | { type: "spirit"; name: string }
-  | { type: "file"; path: string };
+  | { type: "file"; path: string; monochrome?: boolean };
 
 export type HostExtensionDesktopTabRuntimeIcon =
   | HostExtensionDesktopTabIcon
-  | { type: "image"; dataUrl: string };
+  | { type: "image"; dataUrl: string; monochrome?: boolean };
+
+export interface HostExtensionDesktopLinkHandlerDefinition {
+  id: string;
+  origins: string[];
+  tab: string;
+}
 
 export interface HostExtensionDesktopTabDefinition {
   id: string;
@@ -233,6 +239,8 @@ export interface HostExtensionDesktopTabDefinition {
   path: string;
   icon: HostExtensionDesktopTabIcon;
   defaultScope?: HostExtensionDesktopTabScope;
+  authorization?: string;
+  nameKey?: string;
 }
 
 export interface HostExtensionDesktopContributionSet {
@@ -240,6 +248,7 @@ export interface HostExtensionDesktopContributionSet {
   settingsPage?: HostExtensionDesktopSettingsPageDefinition;
   views?: HostExtensionDesktopViewDefinition[];
   tabs?: HostExtensionDesktopTabDefinition[];
+  linkHandlers?: HostExtensionDesktopLinkHandlerDefinition[];
 }
 
 export const SUPPORTED_HOST_EXTENSION_CLI_UI_SLOTS = [
@@ -452,6 +461,7 @@ export interface HostExtensionSecretsAccessor {
 }
 
 export interface HostExtensionActivationContext<THostApi> {
+  signal: AbortSignal;
   extension: HostExtensionRuntimeInfo;
   host: THostApi;
   log(message: string): void;
@@ -487,16 +497,29 @@ export interface CollectExtensionSystemPromptContributionsRequest<THostApi> {
   logger?: Pick<Console, "error" | "log">;
 }
 
+export interface HostExtensionPageContext {
+  workspaceRoot: string;
+  sessionKey: string;
+  branch: string;
+}
+
 export interface HostExtensionTabRequestContext<THostApi> {
+  signal: AbortSignal;
   extension: HostExtensionRuntimeInfo;
   host: THostApi;
   contributionId: string;
   instanceId: string;
   method: string;
   params?: unknown;
+  context: HostExtensionPageContext;
+  settings: HostExtensionSettingsAccessor;
+  secrets: HostExtensionSecretsAccessor;
+  log(message: string): void;
 }
 
 export interface InvokeExtensionTabRequest<THostApi> {
+  signal?: AbortSignal;
+  context: HostExtensionPageContext;
   extensionId: string;
   contributionId: string;
   instanceId: string;
@@ -528,6 +551,7 @@ export interface DispatchExtensionWebViewEventRequest<THostApi> {
 }
 
 export interface HostExtensionActionExecutionContext<THostApi> {
+  signal: AbortSignal;
   extension: HostExtensionRuntimeInfo;
   host: THostApi;
   actionId: string;
@@ -550,6 +574,7 @@ export interface InvokeExtensionActionRequest<THostApi> {
 }
 
 export interface InvokeExtensionAutomationTriggerRequest<THostApi> {
+  locale?: string;
   extensionId: string;
   contributionId: string;
   host: THostApi;
@@ -578,7 +603,20 @@ export interface InvokeExtensionAutomationTriggerPollRequest<
   signal: AbortSignal;
 }
 
+export interface HostExtensionOpenLinkContext<
+  THostApi,
+> extends HostExtensionActionExecutionContext<THostApi> {
+  url: string;
+  sourceTabId?: string;
+}
+
 export interface HostActivatedExtension {
+  onViewRequest?<THostApi>(
+    request: HostExtensionTabRequestContext<THostApi>,
+  ): Promise<unknown> | unknown;
+  onOpenLink?<THostApi>(
+    request: HostExtensionOpenLinkContext<THostApi>,
+  ): Promise<boolean> | boolean;
   actions?: Record<string, HostExtensionActionHandler<unknown>>;
   automationTriggers?: Record<string, AutomationTriggerProvider<unknown>>;
   onWebViewEvent?(event: HostExtensionWebViewEvent): Promise<void> | void;
@@ -637,6 +675,10 @@ export interface HostExtensionManager {
   run<THostApi>(request: RunExtensionRequest<THostApi>): Promise<void>;
   invokeTool<THostApi>(request: InvokeExtensionToolRequest<THostApi>): Promise<string>;
   invokeTabRequest<THostApi>(request: InvokeExtensionTabRequest<THostApi>): Promise<unknown>;
+  invokeViewRequest<THostApi>(request: InvokeExtensionTabRequest<THostApi>): Promise<unknown>;
+  openLink<THostApi>(
+    request: InvokeExtensionActionRequest<THostApi> & { url: string; sourceTabId?: string },
+  ): Promise<boolean>;
   invokeAction<THostApi>(request: InvokeExtensionActionRequest<THostApi>): Promise<unknown>;
   getAuthorizationConfigurations(id: string): Promise<Record<string, boolean>>;
   validateAutomationTrigger<THostApi>(
@@ -715,6 +757,34 @@ export function createHostExtensionManager(
     async invokeTabRequest(request) {
       return invokeExtensionTabRequest(context, activatedExtensions, stateStore, request);
     },
+    async invokeViewRequest(request) {
+      return invokeExtensionPageRequest(context, activatedExtensions, stateStore, request, "view");
+    },
+    async openLink(request) {
+      const target = await requireInstalledExtension(context, request.extensionId);
+      if (!target.enabled) return false;
+      const contribution = target.manifest.contributes?.desktop?.linkHandlers?.find(
+        (item) => item.id === request.actionId,
+      );
+      if (!contribution?.origins.includes(new URL(request.url).origin)) return false;
+      const entry = await ensureActivatedExtension(target, activatedExtensions, stateStore, {
+        host: request.host,
+        log: (message) => request.logger?.log(message),
+      });
+      const handler = entry.activatedExtension?.onOpenLink;
+      if (!handler) throw new Error(`The extension does not export onOpenLink: ${target.id}`);
+      return handler({
+        signal: entry.lifecycle.signal,
+        extension: entry.runtimeInfo,
+        host: bindHostForExtension(request.host, target.id),
+        actionId: request.actionId,
+        url: request.url,
+        ...(request.sourceTabId ? { sourceTabId: request.sourceTabId } : {}),
+        settings: createSettingsAccessor(target, stateStore),
+        secrets: createSecretsAccessor(target, stateStore, entry.lifecycle.signal),
+        log: (message) => request.logger?.log(`[extension:${target.id}] ${message}`),
+      });
+    },
     async invokeAction(request) {
       return invokeExtensionAction(context, activatedExtensions, stateStore, request);
     },
@@ -767,6 +837,8 @@ export function createHostExtensionManager(
 }
 
 interface ActivatedExtensionCacheEntry {
+  lifecycle: AbortController;
+  activation?: Promise<void>;
   id: string;
   installedAtUnixMs: number;
   activationEvents: readonly HostExtensionActivationEventName[];
@@ -1264,11 +1336,12 @@ function automationTriggerBaseContext<THostApi>(
   request: InvokeExtensionAutomationTriggerRequest<THostApi>,
 ) {
   return {
+    ...(request.locale ? { locale: request.locale } : {}),
     extension: entry.runtimeInfo,
     host: bindHostForExtension(request.host, target.id),
     contributionId: request.contributionId,
     settings: createSettingsAccessor(target, stateStore),
-    secrets: createSecretsAccessor(target, stateStore),
+    secrets: createSecretsAccessor(target, stateStore, entry.lifecycle.signal),
   };
 }
 
@@ -1394,6 +1467,7 @@ export async function invokeExtensionAction<THostApi>(
     throw new Error(`The extension does not export the action: ${actionId}`);
   }
   return handler({
+    signal: entry.lifecycle.signal,
     extension: entry.runtimeInfo,
     host: bindHostForExtension(request.host, target.id),
     actionId,
@@ -1402,7 +1476,7 @@ export async function invokeExtensionAction<THostApi>(
       request.logger?.log(`[extension:${target.id}] ${message}`);
     },
     settings: createSettingsAccessor(target, stateStore),
-    secrets: createSecretsAccessor(target, stateStore),
+    secrets: createSecretsAccessor(target, stateStore, entry.lifecycle.signal),
   });
 }
 
@@ -1412,15 +1486,27 @@ export async function invokeExtensionTabRequest<THostApi>(
   stateStore: ExtensionStateStore,
   request: InvokeExtensionTabRequest<THostApi>,
 ): Promise<unknown> {
+  return invokeExtensionPageRequest(context, activatedExtensions, stateStore, request, "tab");
+}
+
+async function invokeExtensionPageRequest<THostApi>(
+  context: ExtensionManagementContext,
+  activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
+  stateStore: ExtensionStateStore,
+  request: InvokeExtensionTabRequest<THostApi>,
+  kind: "tab" | "view",
+): Promise<unknown> {
   const target = await requireInstalledExtension(context, request.extensionId);
   if (!target.enabled) {
     throw new Error(`The extension is disabled: ${target.id}`);
   }
-  const contribution = target.manifest.contributes?.desktop?.tabs?.find(
-    (entry) => entry.id === request.contributionId,
-  );
+  const contribution = (
+    kind === "tab"
+      ? target.manifest.contributes?.desktop?.tabs
+      : target.manifest.contributes?.desktop?.views
+  )?.find((entry) => entry.id === request.contributionId);
   if (!contribution) {
-    throw new Error(`The extension does not declare the tab: ${request.contributionId}`);
+    throw new Error(`The extension does not declare the ${kind}: ${request.contributionId}`);
   }
   const entry = await ensureActivatedExtension(target, activatedExtensions, stateStore, {
     host: request.host,
@@ -1429,16 +1515,28 @@ export async function invokeExtensionTabRequest<THostApi>(
       request.logger?.log(`[extension:${target.id}] ${message}`);
     },
   });
-  const handler = entry.activatedExtension?.onTabRequest;
+  const handler =
+    kind === "tab"
+      ? entry.activatedExtension?.onTabRequest
+      : entry.activatedExtension?.onViewRequest;
   if (!handler) {
-    throw new Error(`The extension does not export onTabRequest: ${target.id}`);
+    throw new Error(`The extension does not export a ${kind} request handler: ${target.id}`);
   }
+  const signal = request.signal
+    ? AbortSignal.any([request.signal, entry.lifecycle.signal])
+    : entry.lifecycle.signal;
+  signal.throwIfAborted();
   return handler({
+    signal,
     extension: entry.runtimeInfo,
     host: bindHostForExtension(request.host, target.id),
     contributionId: request.contributionId,
     instanceId: request.instanceId,
     method: request.method,
+    context: request.context,
+    settings: createSettingsAccessor(target, stateStore),
+    secrets: createSecretsAccessor(target, stateStore, signal),
+    log: (message) => request.logger?.log(`[extension:${target.id}] ${message}`),
     ...(request.params === undefined ? {} : { params: request.params }),
   });
 }
@@ -1615,46 +1713,56 @@ async function ensureActivatedExtension<THostApi>(
 ): Promise<ActivatedExtensionCacheEntry> {
   const cached = activatedExtensions.get(target.id);
   if (cached && cached.installedAtUnixMs === target.installedAtUnixMs) {
+    await cached.activation;
+    cached.lifecycle.signal.throwIfAborted();
     return cached;
   }
-
-  if (cached?.dispose) {
-    await cached.dispose();
+  if (cached) {
+    cached.lifecycle.abort();
+    await cached.dispose?.();
     activatedExtensions.delete(target.id);
   }
-
   const mainEntry = target.manifest.main;
-  if (!mainEntry) {
+  if (!mainEntry)
     throw new Error(`The extension does not declare main and cannot execute: ${target.id}`);
-  }
-
   const mainFilePath = path.join(target.directoryPath, ...mainEntry.split("/"));
-  if (!existsSync(mainFilePath)) {
+  if (!existsSync(mainFilePath))
     throw new Error(`The extension main file does not exist: ${mainEntry}`);
-  }
-
-  const runtimeInfo = createRuntimeInfo(target);
-  const host = bindHostForExtension(options.host, target.id);
-  const activatedExtension = await activateExtension(target, mainFilePath, {
-    host,
-    ...(options.logger ? { logger: options.logger } : {}),
-    log: options.log,
-    settings: createSettingsAccessor(target, stateStore),
-    secrets: createSecretsAccessor(target, stateStore),
-    ...(options.activationEvent ? { activationEvent: options.activationEvent } : {}),
-  });
-
-  const next: ActivatedExtensionCacheEntry = {
+  const entry: ActivatedExtensionCacheEntry = {
     id: target.id,
     installedAtUnixMs: target.installedAtUnixMs,
     activationEvents: target.manifest.activationEvents ?? [],
-    runtimeInfo,
-    ...(activatedExtension ? { activatedExtension } : {}),
-    ...(activatedExtension?.onEvent ? { onEvent: activatedExtension.onEvent } : {}),
-    ...(activatedExtension?.dispose ? { dispose: activatedExtension.dispose } : {}),
+    runtimeInfo: createRuntimeInfo(target),
+    lifecycle: new AbortController(),
   };
-  activatedExtensions.set(target.id, next);
-  return next;
+  // Publish the lifetime before awaiting module activation so disable/remove can cancel it.
+  activatedExtensions.set(target.id, entry);
+  entry.activation = (async () => {
+    const activated = await activateExtension(target, mainFilePath, {
+      host: bindHostForExtension(options.host, target.id),
+      ...(options.logger ? { logger: options.logger } : {}),
+      log: options.log,
+      signal: entry.lifecycle.signal,
+      settings: createSettingsAccessor(target, stateStore),
+      secrets: createSecretsAccessor(target, stateStore, entry.lifecycle.signal),
+      ...(options.activationEvent ? { activationEvent: options.activationEvent } : {}),
+    });
+    if (entry.lifecycle.signal.aborted) {
+      await activated?.dispose?.();
+      entry.lifecycle.signal.throwIfAborted();
+    }
+    if (activated) entry.activatedExtension = activated;
+    if (activated?.onEvent) entry.onEvent = activated.onEvent;
+    if (activated?.dispose) entry.dispose = activated.dispose;
+  })();
+  try {
+    await entry.activation;
+    return entry;
+  } catch (error) {
+    entry.lifecycle.abort();
+    if (activatedExtensions.get(target.id) === entry) activatedExtensions.delete(target.id);
+    throw error;
+  }
 }
 
 function createRuntimeInfo(target: HostInstalledExtension): HostExtensionRuntimeInfo {
@@ -1775,6 +1883,7 @@ function createSettingsAccessor(
 function createSecretsAccessor(
   extension: HostInstalledExtension,
   stateStore: ExtensionStateStore,
+  signal?: AbortSignal,
 ): HostExtensionSecretsAccessor {
   return {
     async get(key) {
@@ -1786,6 +1895,7 @@ function createSecretsAccessor(
       return hasExtensionSecret(stateStore, extension.id, key);
     },
     async set(key, value) {
+      signal?.throwIfAborted();
       assertSecretSlot(extension.manifest, key);
       if (value.length === 0) {
         throw new Error(`Extension secret values must not be empty: ${key}`);
@@ -1798,6 +1908,7 @@ function createSecretsAccessor(
       await stateStore.saveSecret(extension.id, key, value);
     },
     async delete(key) {
+      signal?.throwIfAborted();
       assertSecretSlot(extension.manifest, key);
       await stateStore.deleteSecret?.(extension.id, key);
     },
@@ -2077,6 +2188,7 @@ async function deactivateAllExtensions(
   activatedExtensions: Map<string, ActivatedExtensionCacheEntry>,
 ): Promise<void> {
   for (const entry of activatedExtensions.values()) {
+    entry.lifecycle.abort();
     await entry.dispose?.();
   }
   activatedExtensions.clear();
@@ -2092,6 +2204,7 @@ async function deactivateExtensionById(
     return;
   }
 
+  entry.lifecycle.abort();
   await entry.dispose?.();
   activatedExtensions.delete(normalizedId);
 }
@@ -2233,6 +2346,13 @@ async function parseExtensionManifestFields(
     }
   }
 
+  for (const tab of contributes?.desktop?.tabs ?? []) {
+    if (
+      tab.authorization &&
+      !contributes?.authorizations?.some((item) => item.id === tab.authorization)
+    )
+      throw new Error(`Tab ${tab.id} references an undeclared authorization.`);
+  }
   for (const trigger of contributes?.automationTriggers ?? []) {
     if (
       trigger.authorization &&
@@ -2400,6 +2520,7 @@ async function activateExtension<THostApi>(
   mainFilePath: string,
   options: {
     host: THostApi;
+    signal: AbortSignal;
     logger?: Pick<Console, "error" | "log">;
     log: (message: string) => void;
     settings: HostExtensionSettingsAccessor;
@@ -2426,6 +2547,7 @@ async function activateExtension<THostApi>(
         main: target.manifest.main ?? "",
       },
       host: options.host,
+      signal: options.signal,
       log: options.log,
       settings: options.settings,
       secrets: options.secrets,
@@ -2481,6 +2603,8 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
       ? (value.getSystemPrompt as HostActivatedExtension["getSystemPrompt"])
       : undefined;
   const onEvent = typeof value.onEvent === "function" ? value.onEvent : undefined;
+  const onViewRequest = typeof value.onViewRequest === "function" ? value.onViewRequest : undefined;
+  const onOpenLink = typeof value.onOpenLink === "function" ? value.onOpenLink : undefined;
   const onTabRequest = typeof value.onTabRequest === "function" ? value.onTabRequest : undefined;
   const onWebViewEvent =
     typeof value.onWebViewEvent === "function" ? value.onWebViewEvent : undefined;
@@ -2494,6 +2618,8 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
     !getSystemPrompt &&
     !onEvent &&
     !onTabRequest &&
+    !onViewRequest &&
+    !onOpenLink &&
     !onWebViewEvent &&
     !dispose
   ) {
@@ -2509,6 +2635,10 @@ function resolveActivatedExtension(value: unknown): HostActivatedExtension | und
     systemPrompt ? { systemPrompt } : {},
     getSystemPrompt ? { getSystemPrompt } : {},
     onEvent ? { onEvent: onEvent as HostActivatedExtension["onEvent"] } : {},
+    onViewRequest
+      ? { onViewRequest: onViewRequest as HostActivatedExtension["onViewRequest"] }
+      : {},
+    onOpenLink ? { onOpenLink: onOpenLink as HostActivatedExtension["onOpenLink"] } : {},
     onTabRequest ? { onTabRequest: onTabRequest as HostActivatedExtension["onTabRequest"] } : {},
     onWebViewEvent
       ? { onWebViewEvent: onWebViewEvent as HostActivatedExtension["onWebViewEvent"] }
@@ -2877,7 +3007,36 @@ function optionalDesktopContributionSetField(
   );
   const views = optionalDesktopViewDefinitionsField(value.views, `${fieldPrefix}.views`);
   const tabs = optionalDesktopTabDefinitionsField(value.tabs, `${fieldPrefix}.tabs`);
-  if (css.length === 0 && !settingsPage && views.length === 0 && tabs.length === 0) {
+  const linkHandlers: HostExtensionDesktopLinkHandlerDefinition[] = Array.isArray(
+    value.linkHandlers,
+  )
+    ? value.linkHandlers.map((entry, index) => {
+        if (!isRecord(entry)) throw new Error("Invalid Desktop link handler.");
+        const id = stringField(entry.id, `${fieldPrefix}.linkHandlers[${index}].id`);
+        const tab = stringField(entry.tab, `${fieldPrefix}.linkHandlers[${index}].tab`);
+        if (!EXTENSION_FIELD_KEY_PATTERN.test(id) || !tabs.some((item) => item.id === tab))
+          throw new Error("Link handlers require a valid id and declared tab.");
+        if (!Array.isArray(entry.origins) || entry.origins.length === 0)
+          throw new Error("Link handlers require URL origins.");
+        const origins = entry.origins.map((value) => {
+          if (typeof value !== "string") throw new Error("Invalid link origin.");
+          const url = new URL(value);
+          if (!["http:", "https:"].includes(url.protocol) || url.origin !== value)
+            throw new Error("Link origins must be exact HTTP(S) origins.");
+          return value;
+        });
+        return { id, tab, origins };
+      })
+    : [];
+  if (new Set(linkHandlers.map((item) => item.id)).size !== linkHandlers.length)
+    throw new Error("Duplicate link handler id.");
+  if (
+    css.length === 0 &&
+    !settingsPage &&
+    views.length === 0 &&
+    tabs.length === 0 &&
+    linkHandlers.length === 0
+  ) {
     return undefined;
   }
 
@@ -2886,6 +3045,7 @@ function optionalDesktopContributionSetField(
     ...(settingsPage ? { settingsPage } : {}),
     ...(views.length > 0 ? { views } : {}),
     ...(tabs.length > 0 ? { tabs } : {}),
+    ...(linkHandlers.length > 0 ? { linkHandlers } : {}),
   };
 }
 
@@ -3088,6 +3248,8 @@ function parseDesktopTabDefinition(
     throw new Error(`Invalid extension tab id: ${id}`);
   }
   const name = stringField(value.name, `${fieldPrefix}[${index}].name`);
+  const authorization = optionalStringField(value.authorization);
+  const nameKey = optionalStringField(value.nameKey);
   const tabPath = stringField(value.path, `${fieldPrefix}[${index}].path`);
   assertSafeRelativePath(tabPath, `${fieldPrefix}[${index}].path`);
   if (!tabPath.toLowerCase().endsWith(".html")) {
@@ -3106,6 +3268,8 @@ function parseDesktopTabDefinition(
     path: tabPath,
     icon,
     ...(defaultScope ? { defaultScope } : {}),
+    ...(authorization ? { authorization } : {}),
+    ...(nameKey ? { nameKey } : {}),
   };
 }
 
@@ -3121,6 +3285,8 @@ function parseDesktopTabIcon(value: unknown, fieldPrefix: string): HostExtension
     return { type: "spirit", name };
   }
   if (value.type === "file") {
+    if (value.monochrome !== undefined && typeof value.monochrome !== "boolean")
+      throw new Error("Icon monochrome must be a boolean.");
     const iconPath = stringField(value.path, `${fieldPrefix}.path`);
     assertSafeRelativePath(iconPath, `${fieldPrefix}.path`);
     if (!/\.(?:svg|png|jpe?g|webp)$/iu.test(iconPath)) {
@@ -3128,7 +3294,11 @@ function parseDesktopTabIcon(value: unknown, fieldPrefix: string): HostExtension
         `Extension field ${fieldPrefix}.path must reference an SVG, PNG, JPEG, or WebP icon.`,
       );
     }
-    return { type: "file", path: iconPath };
+    return {
+      type: "file",
+      path: iconPath,
+      ...(value.monochrome === true ? { monochrome: true } : {}),
+    };
   }
   throw new Error(`Extension field ${fieldPrefix}.type must be "spirit" or "file".`);
 }

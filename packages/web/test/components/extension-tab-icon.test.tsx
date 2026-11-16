@@ -29,3 +29,17 @@ test("Spirit, packaged, and runtime icons share one render surface", () => {
   rerender(<ExtensionTabIcon extensionId="personal/demo" icon={{ type: "image", dataUrl }} />);
   expect(container.querySelector("img")?.getAttribute("src")).toBe(dataUrl);
 });
+
+test("monochrome packaged icons inherit native tab color instead of baking in a theme", () => {
+  const { container } = render(
+    <ExtensionTabIcon
+      extensionId="personal/demo"
+      icon={{ type: "file", path: "icons/notes.svg", monochrome: true }}
+      className="size-4"
+    />,
+  );
+  const icon = container.querySelector("span")!;
+  expect(icon.style.backgroundColor).toBe("currentcolor");
+  expect(icon.style.maskImage).toContain("icons/notes.svg");
+  expect(container.querySelector("img")).toBeNull();
+});

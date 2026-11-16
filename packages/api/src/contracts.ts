@@ -91,6 +91,8 @@ export type HostCommandName =
   | "resolveExtensionUi"
   | "getWorkspaceToolTabs"
   | "syncWorkspaceToolTabs"
+  | "invokeExtensionViewRequest"
+  | "openExtensionLink"
   | "invokeExtensionTabRequest"
   | "setExtensionTabChrome"
   | "resetSession"

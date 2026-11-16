@@ -380,6 +380,12 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   syncWorkspaceToolTabs(request: { expectedRevision: number; tabs: unknown; activeTabId: string }) {
     return ipcRenderer.invoke("desktop:invoke", "syncWorkspaceToolTabs", request);
   },
+  invokeExtensionViewRequest(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "invokeExtensionViewRequest", request);
+  },
+  openExtensionLink(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "openExtensionLink", request);
+  },
   invokeExtensionTabRequest(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "invokeExtensionTabRequest", request);
   },

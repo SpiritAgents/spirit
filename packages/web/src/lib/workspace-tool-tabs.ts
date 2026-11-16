@@ -47,6 +47,7 @@ export type WorkspaceExtensionToolTab = WorkspaceToolTabBase & {
   channelId: string;
   scope: WorkspaceExtensionToolTabScope;
   initialParams?: unknown;
+  navigationRevision?: number;
   icon?: DesktopExtensionDesktopTabRuntimeIcon;
 };
 
@@ -92,6 +93,7 @@ export function createExtensionWorkspaceToolTab(input: {
   contributionId: string;
   scope: WorkspaceExtensionToolTabScope;
   initialParams?: unknown;
+  navigationRevision?: number;
   icon?: DesktopExtensionDesktopTabRuntimeIcon;
   tabTitle?: string;
   instanceId?: string;
@@ -107,6 +109,9 @@ export function createExtensionWorkspaceToolTab(input: {
     channelId: input.channelId ?? newTabId(),
     scope: input.scope,
     ...(input.initialParams === undefined ? {} : { initialParams: input.initialParams }),
+    ...(input.navigationRevision === undefined
+      ? {}
+      : { navigationRevision: input.navigationRevision }),
     ...(input.icon ? { icon: input.icon } : {}),
     ...(input.tabTitle ? { tabTitle: input.tabTitle } : {}),
   };

@@ -3385,6 +3385,19 @@ export function useDesktopRuntime() {
     [api],
   );
 
+  const invokeExtensionViewRequest = useCallback(
+    (request: import("../types").DesktopExtensionViewRequest) => {
+      if (!api) return Promise.reject(new Error("Desktop host is unavailable."));
+      return api.invokeExtensionViewRequest(request);
+    },
+    [api],
+  );
+  const openExtensionLink = useCallback(
+    (request: import("../types").DesktopExtensionOpenLinkRequest) =>
+      api?.openExtensionLink(request) ?? Promise.resolve(false),
+    [api],
+  );
+
   const invokeExtensionTabRequest = useCallback(
     async (request: {
       extensionId: string;
@@ -4385,6 +4398,8 @@ export function useDesktopRuntime() {
     syncWorkspaceToolTabs,
     subscribeWorkspaceToolTabsUpdates,
     invokeExtensionTabRequest,
+    invokeExtensionViewRequest,
+    openExtensionLink,
     setExtensionTabChrome,
     subscribeExtensionTabEvents,
     invokeExtensionWebView,

@@ -176,6 +176,9 @@ export async function buildDesktopExtensionListItems(
         ...(item.manifest.contributes?.desktop?.views?.length
           ? { desktopViews: mapDesktopViews(item.manifest.contributes.desktop.views) }
           : {}),
+        ...(item.manifest.contributes?.desktop?.linkHandlers?.length
+          ? { desktopLinkHandlers: item.manifest.contributes.desktop.linkHandlers }
+          : {}),
         ...(item.manifest.contributes?.desktop?.tabs?.length
           ? { desktopTabs: mapDesktopTabs(item.manifest.contributes.desktop.tabs) }
           : {}),
@@ -377,6 +380,9 @@ export async function buildDesktopMarketplaceCatalogEntries(
         ...(manifest.contributes?.desktop?.views?.length
           ? { desktopViews: mapDesktopViews(manifest.contributes.desktop.views) }
           : {}),
+        ...(manifest.contributes?.desktop?.linkHandlers?.length
+          ? { desktopLinkHandlers: manifest.contributes.desktop.linkHandlers }
+          : {}),
         ...(manifest.contributes?.desktop?.tabs?.length
           ? { desktopTabs: mapDesktopTabs(manifest.contributes.desktop.tabs) }
           : {}),
@@ -418,6 +424,8 @@ function mapDesktopTabs(
     path: tab.path,
     icon: tab.icon,
     defaultScope: tab.defaultScope ?? "window-shared",
+    ...(tab.authorization ? { authorization: tab.authorization } : {}),
+    ...(tab.nameKey ? { nameKey: tab.nameKey } : {}),
   }));
 }
 

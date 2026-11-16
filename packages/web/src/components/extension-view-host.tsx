@@ -1,3 +1,4 @@
+import { openExtensionDetails } from "@/lib/extension-navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -196,6 +197,14 @@ export function ExtensionViewHost({
         case EXTENSION_PAGE_REQUEST: {
           const requestId = String(data.requestId ?? "");
           if (!requestId) break;
+          if (data.method === "host.openExtensionDetails") {
+            openExtensionDetails(identity.extensionId);
+            frame?.postMessage(
+              { type: EXTENSION_PAGE_RESULT, ...identity, requestId, ok: true },
+              "*",
+            );
+            break;
+          }
           const operation = onRequest
             ? onRequest({
                 extensionId: identity.extensionId,

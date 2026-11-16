@@ -13,6 +13,8 @@ export function parseHostExtensionTabRuntimeIcon(
     throw new Error("Extension tab icon must be a descriptor object.");
   }
   const record = value as Record<string, unknown>;
+  if (record.monochrome !== undefined && typeof record.monochrome !== "boolean")
+    throw new Error("Icon monochrome must be a boolean.");
   if (record.type === "spirit") {
     if (typeof record.name !== "string" || !isSpiritIconName(record.name)) {
       throw new Error(`Unknown Spirit Icon name: ${String(record.name)}`);
@@ -24,7 +26,11 @@ export function parseHostExtensionTabRuntimeIcon(
       throw new Error("Extension tab icon path must be a string.");
     }
     assertPackagedIconPath(record.path);
-    return { type: "file", path: record.path };
+    return {
+      type: "file",
+      path: record.path,
+      ...(record.monochrome === true ? { monochrome: true } : {}),
+    };
   }
   if (record.type === "image") {
     if (typeof record.dataUrl !== "string") {
@@ -42,7 +48,11 @@ export function parseHostExtensionTabRuntimeIcon(
         `Extension tab images must contain between 1 and ${HOST_EXTENSION_TAB_IMAGE_MAX_BYTES} bytes.`,
       );
     }
-    return { type: "image", dataUrl: record.dataUrl };
+    return {
+      type: "image",
+      dataUrl: record.dataUrl,
+      ...(record.monochrome === true ? { monochrome: true } : {}),
+    };
   }
   throw new Error("Extension tab icon type must be spirit, file, or image.");
 }

@@ -187,6 +187,10 @@ declare global {
     subscribeWorkspaceToolTabsUpdates(
       callback: (snapshot: import("./types").DesktopWorkspaceToolsSnapshot) => void,
     ): () => void;
+    invokeExtensionViewRequest(
+      request: import("./types").DesktopExtensionViewRequest,
+    ): Promise<unknown>;
+    openExtensionLink(request: import("./types").DesktopExtensionOpenLinkRequest): Promise<boolean>;
     invokeExtensionTabRequest(request: {
       extensionId: string;
       contributionId: string;

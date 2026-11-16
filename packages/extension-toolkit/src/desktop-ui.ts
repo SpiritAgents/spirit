@@ -1,10 +1,11 @@
 export type SpiritDesktopTabScope = "window-shared" | "workspace" | "session";
 export type SpiritDesktopTabIcon =
   | { type: "spirit"; name: string }
-  | { type: "file"; path: string }
-  | { type: "image"; dataUrl: string };
+  | { type: "file"; path: string; monochrome?: boolean }
+  | { type: "image"; dataUrl: string; monochrome?: boolean };
 
 export interface SpiritDesktopTabOpenRequest {
+  preferInstanceId?: string;
   contributionId: string;
   scope?:
     | { kind: "window-shared" }
@@ -65,8 +66,11 @@ export interface SpiritDesktopTabPageContext {
   instanceId: string;
   channelId: string;
   initialParams?: unknown;
+  navigationRevision?: number;
   scope: unknown;
   workspaceRoot: string;
+  workspace: { isRepository: boolean; branch: string };
+  authorizationConfigured?: boolean;
   sessionKey: string;
   visible: boolean;
   locale: string;
@@ -94,6 +98,8 @@ export interface SpiritDesktopPageApi<TContext = SpiritDesktopTabPageContext> {
   /** Call after the application has committed its first render. */
   mounted(): void;
   fail(error: unknown): void;
+  openExternal(url: string): Promise<void>;
+  openExtensionDetails(): Promise<void>;
   request(method: string, params?: unknown): Promise<unknown>;
   onEvent(listener: (event: { event: string; params?: unknown }) => void): () => void;
   onContextChange(listener: (context: TContext) => void): () => void;
@@ -141,14 +147,23 @@ export interface SpiritDesktopAutomationTriggerHost {
 
 export interface SpiritDesktopActionHost {
   ui: SpiritDesktopViewHost;
+  tabs: SpiritDesktopTabsHost;
   openExternal(url: string): Promise<void>;
   automationTriggers: SpiritDesktopAutomationTriggerHost;
 }
 
-export interface SpiritDesktopActionContext {
+export interface SpiritExtensionContext {
+  extension: {
+    id: string;
+    name: string;
+    version: string;
+    directoryPath: string;
+    manifestPath: string;
+    main: string;
+  };
   host: SpiritDesktopActionHost;
-  actionId: string;
-  params?: unknown;
+  /** Aborted when this activated extension is disabled, removed, or replaced. */
+  signal: AbortSignal;
   log(message: string): void;
   settings: {
     get(key: string): Promise<string | number | boolean | null | undefined>;
@@ -164,4 +179,24 @@ export interface SpiritDesktopActionContext {
     set(key: string, value: string): Promise<void>;
     delete(key: string): Promise<void>;
   };
+}
+
+export interface SpiritDesktopActionContext extends SpiritExtensionContext {
+  actionId: string;
+  params?: unknown;
+}
+
+export interface SpiritDesktopPageRequestContext extends SpiritExtensionContext {
+  contributionId: string;
+  instanceId: string;
+  method: string;
+  params?: unknown;
+  /** Resolved by the host from the live page, never supplied by the iframe. */
+  context: { workspaceRoot: string; sessionKey: string; branch: string };
+}
+
+export interface SpiritDesktopOpenLinkContext extends SpiritExtensionContext {
+  actionId: string;
+  url: string;
+  sourceTabId?: string;
 }

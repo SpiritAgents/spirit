@@ -547,6 +547,7 @@ export interface DesktopMarketplaceCatalogEntry {
   desktopSettingsPage?: DesktopExtensionDesktopSettingsPage;
   desktopViews?: DesktopExtensionDesktopView[];
   desktopTabs?: DesktopExtensionDesktopTab[];
+  desktopLinkHandlers?: DesktopExtensionLinkHandler[];
   cliHooks?: DesktopExtensionCliUiHookEntry[];
   instructionContributions?: DesktopExtensionInstructionContributionSummary;
   installed: boolean;
@@ -655,11 +656,28 @@ export type DesktopExtensionDesktopTabScope = "window-shared" | "workspace" | "s
 
 export type DesktopExtensionDesktopTabIcon =
   | { type: "spirit"; name: string }
-  | { type: "file"; path: string };
+  | { type: "file"; path: string; monochrome?: boolean };
 
 export type DesktopExtensionDesktopTabRuntimeIcon =
   | DesktopExtensionDesktopTabIcon
-  | { type: "image"; dataUrl: string };
+  | { type: "image"; dataUrl: string; monochrome?: boolean };
+
+export interface DesktopExtensionViewRequest {
+  extensionId: string;
+  viewId: string;
+  requestId: string;
+  method: string;
+  params?: unknown;
+}
+export interface DesktopExtensionOpenLinkRequest {
+  url: string;
+  sourceTabId?: string;
+}
+export interface DesktopExtensionLinkHandler {
+  id: string;
+  origins: string[];
+  tab: string;
+}
 
 export interface DesktopExtensionDesktopTab {
   id: string;
@@ -667,6 +685,8 @@ export interface DesktopExtensionDesktopTab {
   path: string;
   icon: DesktopExtensionDesktopTabIcon;
   defaultScope: DesktopExtensionDesktopTabScope;
+  authorization?: string;
+  nameKey?: string;
 }
 
 export type DesktopWorkspaceBuiltInToolTabKind =
@@ -707,6 +727,7 @@ export interface DesktopWorkspaceExtensionToolTab extends DesktopWorkspaceToolTa
   channelId: string;
   scope: DesktopWorkspaceExtensionToolTabScope;
   initialParams?: unknown;
+  navigationRevision?: number;
   icon?: DesktopExtensionDesktopTabRuntimeIcon;
 }
 
@@ -720,6 +741,7 @@ export type DesktopExtensionTabOpenScope =
   | { kind: "session"; sessionKey?: string };
 
 export interface DesktopExtensionTabOpenRequest {
+  preferInstanceId?: string;
   contributionId: string;
   scope?: DesktopExtensionTabOpenScope;
   initialParams?: unknown;
@@ -890,6 +912,7 @@ export interface DesktopExtensionListItem {
   desktopSettingsPage?: DesktopExtensionDesktopSettingsPage;
   desktopViews?: DesktopExtensionDesktopView[];
   desktopTabs?: DesktopExtensionDesktopTab[];
+  desktopLinkHandlers?: DesktopExtensionLinkHandler[];
   cliHooks?: DesktopExtensionCliUiHookEntry[];
   instructionContributions?: DesktopExtensionInstructionContributionSummary;
   settingsSchema?: DesktopExtensionSettingDefinition[];

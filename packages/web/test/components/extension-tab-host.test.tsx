@@ -4,6 +4,8 @@ import "./setup";
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
+import i18next from "i18next";
+import { I18nextProvider } from "react-i18next";
 
 import { ExtensionTabHost } from "@/components/extension-tab-host";
 import {
@@ -41,6 +43,40 @@ test("extension tab uses a scripts-only sandbox and keeps its instance identity"
   expect(container.firstElementChild?.getAttribute("data-extension-tab-instance")).toBe(
     "instance-1",
   );
+});
+
+test("a loading tab uses its live localized contribution name without pinning a page title", async () => {
+  const localized = i18next.createInstance();
+  await localized.init({
+    lng: "ja",
+    resources: {
+      en: { translation: { notes: "Notes" } },
+      ja: { translation: { notes: "ノート" } },
+    },
+  });
+  const localizedContribution = { ...contribution, nameKey: "notes" };
+  const { container, rerender } = render(
+    <I18nextProvider i18n={localized}>
+      <ExtensionTabHost tab={tab} contribution={localizedContribution} active={false} />
+    </I18nextProvider>,
+  );
+  const iframe = container.querySelector("iframe")!;
+  expect(iframe.title).toBe("ノート");
+  await act(async () => {
+    await localized.changeLanguage("en");
+  });
+  expect(container.querySelector("iframe")).toBe(iframe);
+  expect(iframe.title).toBe("Notes");
+  rerender(
+    <I18nextProvider i18n={localized}>
+      <ExtensionTabHost
+        tab={{ ...tab, tabTitle: "Release Notes" }}
+        contribution={localizedContribution}
+        active={false}
+      />
+    </I18nextProvider>,
+  );
+  expect(iframe.title).toBe("Release Notes");
 });
 
 test("load failure exposes an explicit retryable error", () => {

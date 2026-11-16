@@ -273,6 +273,12 @@ export async function createElectronHostApi(): Promise<HostApi> {
     subscribeWorkspaceToolTabsUpdates(callback) {
       return bridge.subscribeWorkspaceToolTabsUpdates(callback);
     },
+    invokeExtensionViewRequest(request) {
+      return bridge.invokeExtensionViewRequest(request);
+    },
+    openExtensionLink(request) {
+      return bridge.openExtensionLink(request);
+    },
     invokeExtensionTabRequest(request) {
       return bridge.invokeExtensionTabRequest(request);
     },

@@ -527,6 +527,7 @@ test("tab requests activate the owning backend with its declared contribution", 
     const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
     const installed = await manager.installPreparedDirectory({ preparedDirectoryPath: packageDir });
     const result = await manager.invokeTabRequest({
+      context: { workspaceRoot: "/workspace", sessionKey: "session", branch: "main" },
       extensionId: installed.id,
       contributionId: "notes",
       instanceId: "instance-1",
@@ -546,6 +547,7 @@ test("tab requests activate the owning backend with its declared contribution", 
     });
     await assert.rejects(
       manager.invokeTabRequest({
+        context: { workspaceRoot: "/workspace", sessionKey: "session", branch: "main" },
         extensionId: installed.id,
         contributionId: "missing",
         instanceId: "instance-1",

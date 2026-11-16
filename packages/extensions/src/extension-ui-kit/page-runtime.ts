@@ -149,6 +149,12 @@ const page = {
       error: error instanceof Error ? error.message : String(error),
     });
   },
+  async openExtensionDetails(): Promise<void> {
+    await page.request("host.openExtensionDetails");
+  },
+  async openExternal(url: string): Promise<void> {
+    await page.request("host.openExternal", { url });
+  },
   request(method: string, params?: unknown): Promise<unknown> {
     if (closed) return Promise.reject(new Error("The extension page was closed."));
     const requestId =

@@ -1,3 +1,4 @@
+import { OPEN_EXTENSION_DETAILS_EVENT } from "@/lib/extension-navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import type { TFunction } from "i18next";
 
@@ -82,6 +83,22 @@ export function useAppSurfaceNavigation({
       updateSessionNavTarget(null);
     }
   }, [sessionNavTarget, sessionNavPending, updateSessionNavTarget]);
+
+  const [marketplaceReveal, setMarketplaceReveal] = useState<{
+    extensionId: string;
+    nonce: number;
+  } | null>(null);
+  useEffect(() => {
+    const open = (event: Event) => {
+      const extensionId = (event as CustomEvent<{ extensionId: string }>).detail?.extensionId;
+      if (!extensionId) return;
+      setMarketplaceReveal((previous) => ({ extensionId, nonce: (previous?.nonce ?? 0) + 1 }));
+      setLastNonSettingsSurface("marketplace");
+      setActiveSurface("marketplace");
+    };
+    window.addEventListener(OPEN_EXTENSION_DETAILS_EVENT, open);
+    return () => window.removeEventListener(OPEN_EXTENSION_DETAILS_EVENT, open);
+  }, []);
 
   const settingsMode = activeSurface === "settings";
   const marketplaceMode = activeSurface === "marketplace";
@@ -239,6 +256,7 @@ export function useAppSurfaceNavigation({
   );
 
   return {
+    marketplaceReveal,
     activeSurface,
     setActiveSurface,
     activeSurfaceRef,

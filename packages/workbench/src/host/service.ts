@@ -683,10 +683,20 @@ export class DesktopHostService {
 
   private readonly invokeDispatch = createHostInvokeDispatch(this);
   private runtimeTransport: SpiritLlmTransport = createLlmTransport();
-  private readonly extensionStateStore = createDesktopExtensionStateStore({
-    spiritDataDir: spiritDataDir(),
-    hostKind: "desktop",
-  });
+  private readonly extensionStateStore = createDesktopExtensionStateStore(
+    {
+      spiritDataDir: spiritDataDir(),
+      hostKind: "desktop",
+    },
+    (extensionId) => {
+      if (!this.state) return;
+      void this.runSerialized(() => this.refreshExtensionAuthorizationState(extensionId))
+        .then(() => this.emitLiveSnapshotUpdate())
+        .catch((error) =>
+          console.error("[extensions] failed to refresh authorization state", error),
+        );
+    },
+  );
   private readonly hostExtensionManager = createHostExtensionManager({
     spiritDataDir: spiritDataDir(),
     hostKind: "desktop",
@@ -695,6 +705,10 @@ export class DesktopHostService {
   private readonly extensionWarmup = new ExtensionWarmupCoordinator();
   private readonly extensionWebViewEventListeners = new Set<
     (event: import("@spiritagent/api/types").DesktopExtensionWebViewEvent) => void
+  >();
+  private readonly extensionPageRequests = new Map<
+    string,
+    { windowId: string; instanceId: string; controller: AbortController }
   >();
   private readonly extensionTabEventListeners = new Set<
     (event: import("@spiritagent/api/types").DesktopExtensionTabEvent) => void
@@ -2629,7 +2643,7 @@ export class DesktopHostService {
   openLocalExtensionUiSession(request: McpUiOpenRequest): DesktopExtensionViewSession {
     const previous = this.pendingExtensionUiWaiter;
     if (previous) {
-      previous.resolve({ dismissed: true });
+      this.settleLocalExtensionUi(previous.requestId, { dismissed: true });
     }
     const previousRemote = this.pendingRemoteExtensionUi;
     this.pendingRemoteExtensionUi = undefined;
@@ -2668,6 +2682,7 @@ export class DesktopHostService {
     if (this.pendingExtensionUiWaiter?.requestId !== requestId) {
       return false;
     }
+    this.abortExtensionPageRequests(requestId);
     this.pendingExtensionUi = undefined;
     this.pendingExtensionUiWaiter.resolve(result);
     this.pendingExtensionUiWaiter = undefined;
@@ -2729,7 +2744,17 @@ export class DesktopHostService {
     activeTabId: string;
   }): Promise<import("@spiritagent/api/types").DesktopWorkspaceToolsSnapshot> {
     await this.ensureInitialized(undefined, { fastPath: true });
-    return this.workspaceToolTabs.setSnapshot(request);
+    const snapshot = await this.workspaceToolTabs.setSnapshot(request);
+    for (const operation of this.extensionPageRequests.values()) {
+      if (
+        operation.windowId === request.windowId &&
+        !snapshot.tabs.some(
+          (tab) => tab.kind === "extension" && tab.instanceId === operation.instanceId,
+        )
+      )
+        operation.controller.abort();
+    }
+    return snapshot;
   }
 
   subscribeWorkspaceToolTabsUpdates(
@@ -2748,9 +2773,6 @@ export class DesktopHostService {
     },
   ): Promise<import("@spiritagent/api/types").DesktopWorkspaceExtensionToolTab> {
     await this.ensureInitialized(undefined, { fastPath: true });
-    if (request.reuse === "context" && request.initialParams !== undefined) {
-      throw new Error("initialParams is only allowed when opening a new extension tab.");
-    }
     if (request.initialParams !== undefined) {
       assertHostExtensionJsonValue(request.initialParams, "initialParams");
     }
@@ -2791,9 +2813,9 @@ export class DesktopHostService {
       contributionId: request.contributionId,
       scope,
       ...(request.initialParams === undefined ? {} : { initialParams: request.initialParams }),
-      title: contribution.name,
       icon: contribution.icon,
       reuse: request.reuse,
+      ...(request.preferInstanceId ? { preferInstanceId: request.preferInstanceId } : {}),
     });
   }
 
@@ -2812,6 +2834,7 @@ export class DesktopHostService {
     instanceId: string;
   }): Promise<void> {
     await this.ensureInitialized(undefined, { fastPath: true });
+    this.abortExtensionPageRequests(request.instanceId);
     await this.workspaceToolTabs.closeExtensionTab(request);
   }
 
@@ -2873,12 +2896,144 @@ export class DesktopHostService {
       throw new Error("Extension tab identity does not match a live instance.");
     }
     await this.requireExtensionTabContribution(request.extensionId, request.contributionId);
-    return this.extensionManager().invokeTabRequest({
-      ...request,
-      method,
-      host: this.requireExtensionHostAdapter().forExtension(request.extensionId, request.windowId),
-      logger: console,
-    });
+    const host = this.requireExtensionHostAdapter().forExtension(
+      request.extensionId,
+      request.windowId,
+    );
+    if (method === "host.openExternal") {
+      const url = (request.params as { url?: unknown } | undefined)?.url;
+      if (typeof url !== "string") throw new Error("A URL is required.");
+      return host.openExternal(url);
+    }
+    return this.runExtensionPageRequest(request.windowId, request.instanceId, (signal) =>
+      this.extensionManager().invokeTabRequest({
+        ...request,
+        signal,
+        context: this.extensionPageContext(tab.scope),
+        method,
+        host: this.requireExtensionHostAdapter().forExtension(
+          request.extensionId,
+          request.windowId,
+        ),
+        logger: console,
+      }),
+    );
+  }
+
+  private async runExtensionPageRequest(
+    windowId: string,
+    instanceId: string,
+    run: (signal: AbortSignal) => Promise<unknown>,
+  ): Promise<unknown> {
+    const id = crypto.randomUUID();
+    const controller = new AbortController();
+    this.extensionPageRequests.set(id, { windowId, instanceId, controller });
+    try {
+      return await run(controller.signal);
+    } finally {
+      this.extensionPageRequests.delete(id);
+    }
+  }
+
+  private abortExtensionPageRequests(instanceId: string): void {
+    for (const operation of this.extensionPageRequests.values()) {
+      if (operation.instanceId === instanceId) operation.controller.abort();
+    }
+  }
+
+  private extensionPageContext(
+    scope?: import("@spiritagent/api/types").DesktopWorkspaceExtensionToolTabScope,
+  ) {
+    const state = this.requireState();
+    return {
+      workspaceRoot: scope?.kind === "workspace" ? scope.workspaceRoot : state.workspaceRoot,
+      sessionKey:
+        scope?.kind === "session"
+          ? scope.sessionKey
+          : this.resolveTodoSessionKeyForBundle(this.activeBundle()),
+      branch:
+        scope?.kind === "workspace" && scope.workspaceRoot !== state.workspaceRoot
+          ? ""
+          : state.git.selectedBranch?.trim() || state.git.branch?.trim() || "",
+    };
+  }
+
+  async invokeExtensionViewRequest(
+    request: import("@spiritagent/api/types").DesktopExtensionViewRequest & { windowId: string },
+  ): Promise<unknown> {
+    await this.ensureInitialized(undefined, { fastPath: true });
+    const pending = this.pendingExtensionUi;
+    if (
+      !pending ||
+      pending.requestId !== request.requestId ||
+      pending.extensionId !== request.extensionId ||
+      pending.viewId !== request.viewId
+    ) {
+      throw new Error("Extension view identity does not match a live instance.");
+    }
+    if (!(await this.resolveExtensionViewFile(request.extensionId, request.viewId)))
+      throw new Error("The extension view is unavailable.");
+    const host = this.requireExtensionHostAdapter().forExtension(
+      request.extensionId,
+      request.windowId,
+    );
+    if (request.method === "host.openExternal") {
+      const url = (request.params as { url?: unknown } | undefined)?.url;
+      if (typeof url !== "string") throw new Error("A URL is required.");
+      return host.openExternal(url);
+    }
+    return this.runExtensionPageRequest(request.windowId, request.requestId, (signal) =>
+      this.extensionManager().invokeViewRequest({
+        signal,
+        extensionId: request.extensionId,
+        contributionId: request.viewId,
+        instanceId: request.requestId,
+        method: request.method,
+        params: request.params,
+        context: this.extensionPageContext(),
+        host,
+        logger: console,
+      }),
+    );
+  }
+
+  async openExtensionLink(
+    request: import("@spiritagent/api/types").DesktopExtensionOpenLinkRequest & {
+      windowId: string;
+    },
+  ): Promise<boolean> {
+    await this.ensureInitialized(undefined, { fastPath: true });
+    if (!URL.canParse(request.url)) return false;
+    const url = new URL(request.url);
+    const extensions = (await this.extensionManager().list())
+      .filter((item) => item.enabled)
+      .sort((a, b) => a.id.localeCompare(b.id));
+    for (const extension of extensions) {
+      for (const handler of extension.manifest.contributes?.desktop?.linkHandlers ?? []) {
+        if (!handler.origins.includes(url.origin)) continue;
+        const tab = extension.manifest.contributes?.desktop?.tabs?.find(
+          (item) => item.id === handler.tab,
+        );
+        if (tab?.authorization) {
+          const configured = await this.extensionManager().getAuthorizationConfigurations(
+            extension.id,
+          );
+          if (!configured[tab.authorization]) continue;
+        }
+        if (
+          await this.extensionManager().openLink({
+            extensionId: extension.id,
+            actionId: handler.id,
+            url: url.href,
+            sourceTabId: request.sourceTabId,
+            host: this.requireExtensionHostAdapter().forExtension(extension.id, request.windowId),
+            logger: console,
+          })
+        )
+          return true;
+      }
+    }
+    return false;
   }
 
   emitExtensionTabEvent(request: {
@@ -4055,6 +4210,7 @@ export class DesktopHostService {
       throw new Error(`Automation trigger does not have a configuration menu: ${kind}`);
     }
     const page = await this.extensionManager().invokeAutomationTriggerMenu({
+      locale: i18n.language,
       extensionId: contribution.extensionId,
       contributionId: contribution.contributionId,
       path: request.path,
@@ -4106,6 +4262,7 @@ export class DesktopHostService {
       throw new Error(`Unknown Automation trigger contribution: ${request.kind}`);
     }
     const validation = await this.extensionManager().validateAutomationTrigger({
+      locale: i18n.language,
       extensionId: contribution.extensionId,
       contributionId: contribution.contributionId,
       config: request.config,
@@ -5277,6 +5434,33 @@ export class DesktopHostService {
     iconPath: string,
   ): Promise<{ filePath: string; extensionRoot: string } | null> {
     return resolveEnabledExtensionTabIconFile(this.extensionManager(), extensionId, iconPath);
+  }
+
+  private async refreshExtensionAuthorizationState(extensionId: string): Promise<void> {
+    const state = this.requireState();
+    const manager = this.extensionManager();
+    const installed = (await manager.list()).find((item) => item.id === extensionId);
+    if (!installed) return;
+    const [updated] = await buildDesktopExtensionListItems(manager, [installed]);
+    if (!updated) return;
+    state.extensionsList = state.extensionsList.map((item) =>
+      item.id === extensionId ? updated : item,
+    );
+    this.applyAutomationTriggerOverrides();
+    const patch = (item: import("@spiritagent/api/types").DesktopMarketplaceCatalogEntry) =>
+      item.id === extensionId
+        ? {
+            ...item,
+            ...(updated.authorizations ? { authorizations: updated.authorizations } : {}),
+            ...(updated.automationTriggers
+              ? { automationTriggers: updated.automationTriggers }
+              : {}),
+          }
+        : item;
+    state.marketplaceCatalogs = Object.fromEntries(
+      Object.entries(state.marketplaceCatalogs).map(([key, items]) => [key, items.map(patch)]),
+    );
+    state.marketplaceCatalogAll = state.marketplaceCatalogAll.map(patch);
   }
 
   private async refreshExtensionsList(options?: { metadataOnly?: boolean }): Promise<void> {

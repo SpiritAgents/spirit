@@ -815,6 +815,7 @@ export default function App() {
                                 showWorkspaceToggle={false}
                               />
                               <MarketplaceView
+                                revealRequest={surfaceNav.marketplaceReveal}
                                 useTranslucency={useContentTranslucency}
                                 snapshot={snapshot}
                                 extensionsBusy={
@@ -934,6 +935,7 @@ export default function App() {
                       sessionKey={snapshot?.activeSession?.filePath}
                       hostRequest={snapshot?.pendingExtensionUi}
                       onHostResult={runtime.resolveExtensionUi}
+                      onRequest={runtime.invokeExtensionViewRequest}
                     />
 
                     <ActionPickerDialog

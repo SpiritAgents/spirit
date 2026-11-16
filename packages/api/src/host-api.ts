@@ -267,6 +267,12 @@ export interface HostApi {
   subscribeWorkspaceToolTabsUpdates?(
     callback: (snapshot: import("./types.js").DesktopWorkspaceToolsSnapshot) => void,
   ): () => void;
+  invokeExtensionViewRequest(
+    request: import("./types.js").DesktopExtensionViewRequest,
+  ): Promise<unknown>;
+  openExtensionLink(
+    request: import("./types.js").DesktopExtensionOpenLinkRequest,
+  ): Promise<boolean>;
   invokeExtensionTabRequest(request: {
     extensionId: string;
     contributionId: string;

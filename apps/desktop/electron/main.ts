@@ -1409,6 +1409,8 @@ if (gotSpiritSingleInstanceLock) {
           command === "getWorkspaceToolTabs" ||
           command === "syncWorkspaceToolTabs" ||
           command === "invokeExtensionTabRequest" ||
+          command === "invokeExtensionViewRequest" ||
+          command === "openExtensionLink" ||
           command === "setExtensionTabChrome"
         ) {
           return invokeMainDesktopHostCommand(command, {

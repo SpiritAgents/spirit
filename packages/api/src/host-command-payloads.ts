@@ -165,6 +165,10 @@ export type CommandPayloads = {
     tabs: import("./types.js").DesktopWorkspaceToolTab[];
     activeTabId: string;
   };
+  invokeExtensionViewRequest: import("./types.js").DesktopExtensionViewRequest & {
+    windowId: string;
+  };
+  openExtensionLink: import("./types.js").DesktopExtensionOpenLinkRequest & { windowId: string };
   invokeExtensionTabRequest: {
     windowId: string;
     extensionId: string;

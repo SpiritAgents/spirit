@@ -1,3 +1,4 @@
+import { openExtensionDetails } from "@/lib/extension-navigation";
 import { Globe } from "@spiritagent/icons/globe";
 import { getSpiritIconComponent } from "@spiritagent/icons";
 import { Plus } from "@spiritagent/icons/plus";
@@ -108,6 +109,7 @@ import { getTaskTerminal, shouldConfirmTaskTabClose } from "@/lib/task-terminal-
 import { terminateTaskTerminalInstance } from "@/lib/task-run-service";
 import {
   collectExtensionTabContributions,
+  extensionTabDisplayName,
   resolveExtensionTabScope,
   type ExtensionTabContribution,
 } from "@/lib/extension-tab-contributions";
@@ -744,7 +746,6 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
         contributionId: contribution.id,
         scope,
         icon: contribution.icon,
-        tabTitle: contribution.name,
       });
       onTabsChange([...tabs, tab]);
       onActiveTabIdChange(tab.id);
@@ -948,7 +949,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     tab={item}
                     icon={Icon}
                     iconUrl={iconUrl}
-                    label={entry.contribution.name}
+                    label={extensionTabDisplayName(entry.contribution, t)}
                     selected={item.id === activeTabId}
                     onSelect={onActiveTabIdChange}
                     onClose={handleCloseTab}
@@ -1116,14 +1117,23 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   DESKTOP_OVERLAY_LIST_ITEM,
                   "text-popover-foreground",
                 )}
-                onSelect={() => handleAddExtensionTab(entry)}
+                onSelect={() => {
+                  const authorization = entry.extension.authorizations?.find(
+                    (item) => item.id === entry.contribution.authorization,
+                  );
+                  if (entry.contribution.authorization && authorization?.configured !== true)
+                    openExtensionDetails(entry.extension.id);
+                  else handleAddExtensionTab(entry);
+                }}
               >
                 <ExtensionTabIcon
                   extensionId={entry.extension.id}
                   icon={entry.contribution.icon}
                   className="size-4"
                 />
-                <span className="min-w-0 flex-1 truncate">{entry.contribution.name}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  {extensionTabDisplayName(entry.contribution, t)}
+                </span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -1166,6 +1176,12 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   contribution={entry.contribution}
                   active={selected}
                   workspaceRoot={workspaceRoot}
+                  gitSnapshot={gitSnapshot}
+                  authorizationConfigured={
+                    entry.extension.authorizations?.find(
+                      (item) => item.id === entry.contribution.authorization,
+                    )?.configured
+                  }
                   sessionKey={sessionKey}
                   onRequest={onExtensionTabRequest}
                   onChrome={onExtensionTabChrome}
