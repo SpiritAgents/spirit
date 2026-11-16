@@ -124,7 +124,7 @@
   "scripts": {
     "build": "node scripts/build-icons.mjs && tsc -p tsconfig.build.json",
     "typecheck": "node scripts/build-icons.mjs && tsc -p tsconfig.json --noEmit",
-    "test": "node scripts/verify-icons.mjs && node --test scripts/icon-lookup.test.mjs",
+    "test": "node scripts/verify-icons.mjs && node --test scripts/*.test.mjs",
     "prepublishOnly": "pnpm run build && node ../../scripts/publish/assert-no-workspace-deps.mjs"
   },
   "devDependencies": {

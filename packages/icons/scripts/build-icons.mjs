@@ -6,11 +6,12 @@
 // The generated files under src/ are gitignored; icons/*.svg + icons/*.json
 // are the single source of truth. Run via `pnpm build` / `pnpm typecheck`.
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { parseSvgIcon, verifyIcons } from "./verify-icons.mjs";
+import { writeChangedFile } from "./write-changed-file.mjs";
 
 const PACKAGE_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const ICONS_DIR = join(PACKAGE_ROOT, "icons");
@@ -110,9 +111,6 @@ function updatePackageExports(iconNames) {
       default: "./dist/icons/names.js",
     },
   };
-  writeFileSync(join(GENERATED_ICONS_DIR, "names.ts"), renderNamesModule(iconNames));
-  writeFileSync(join(GENERATED_ICONS_DIR, "lookup.ts"), renderLookupModule(iconNames));
-
   for (const name of iconNames) {
     exportsField[`./${name}`] = {
       types: `./dist/icons/${name}.d.ts`,
@@ -120,7 +118,7 @@ function updatePackageExports(iconNames) {
     };
   }
   manifest.exports = exportsField;
-  writeFileSync(PACKAGE_MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
+  writeChangedFile(PACKAGE_MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
 const { errors, iconNames } = verifyIcons();
@@ -132,16 +130,16 @@ if (errors.length > 0) {
 
 mkdirSync(GENERATED_ICONS_DIR, { recursive: true });
 
-writeFileSync(join(GENERATED_ICONS_DIR, "names.ts"), renderNamesModule(iconNames));
-writeFileSync(join(GENERATED_ICONS_DIR, "lookup.ts"), renderLookupModule(iconNames));
+writeChangedFile(join(GENERATED_ICONS_DIR, "names.ts"), renderNamesModule(iconNames));
+writeChangedFile(join(GENERATED_ICONS_DIR, "lookup.ts"), renderLookupModule(iconNames));
 
 for (const name of iconNames) {
   const svgSource = readFileSync(join(ICONS_DIR, `${name}.svg`), "utf8").trim();
   const { elements } = parseSvgIcon(svgSource);
-  writeFileSync(join(GENERATED_ICONS_DIR, `${name}.ts`), renderIconModule(name, elements));
+  writeChangedFile(join(GENERATED_ICONS_DIR, `${name}.ts`), renderIconModule(name, elements));
 }
 
-writeFileSync(BARREL_FILE, renderBarrel(iconNames));
+writeChangedFile(BARREL_FILE, renderBarrel(iconNames));
 updatePackageExports(iconNames);
 
 console.log(
