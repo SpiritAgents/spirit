@@ -1,4 +1,5 @@
 // Extension detail page backed by the marketplace catalog entry (registry data + install state).
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ArrowLeft, Sparkles } from "lucide-react";
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { instantHoverMotionClass } from "@/lib/desktop-chrome";
+import { shouldTriggerEscapeShortcut } from "@/lib/desktop-keyboard-shortcut-eligibility";
 import { desktopTranslucencyTintInnerClass } from "@/lib/desktop-translucency-surface";
 import { cn } from "@/lib/utils";
 import {
@@ -52,6 +54,18 @@ export function MarketplaceDetailView({
   useTranslucency = false,
 }: MarketplaceDetailViewProps) {
   const { t } = useTranslation();
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!shouldTriggerEscapeShortcut(event)) {
+        return;
+      }
+      event.preventDefault();
+      onBack();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onBack]);
 
   return (
     <>

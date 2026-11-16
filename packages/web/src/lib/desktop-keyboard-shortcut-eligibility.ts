@@ -221,15 +221,9 @@ export function resolveModDigitShortcutAction(
   return "session";
 }
 
-/** Escape returns from settings when no modal is open and focus is not in an editable field. */
-export function shouldTriggerSettingsEscapeShortcut(
-  event: KeyboardEventLike,
-  context: SettingsShortcutSurfaceContext,
-): boolean {
+/** Escape can navigate back when no modal is open and focus is not in an editable field. */
+export function shouldTriggerEscapeShortcut(event: KeyboardEventLike): boolean {
   if (event.defaultPrevented) {
-    return false;
-  }
-  if (context.activeSurface !== "settings") {
     return false;
   }
   if (event.key !== "Escape") {
@@ -246,4 +240,12 @@ export function shouldTriggerSettingsEscapeShortcut(
     return false;
   }
   return true;
+}
+
+/** Escape returns from settings under the shared back-navigation rules. */
+export function shouldTriggerSettingsEscapeShortcut(
+  event: KeyboardEventLike,
+  context: SettingsShortcutSurfaceContext,
+): boolean {
+  return context.activeSurface === "settings" && shouldTriggerEscapeShortcut(event);
 }
