@@ -3,6 +3,7 @@ import { useRef, type ReactNode, type RefObject } from "react";
 import { PR_SUBTAB_SHELL_DIVIDER_ATTR } from "./workspace-tools-panel-edge.js";
 import { useWorkspaceToolsShellHorizontalDivider } from "./use-workspace-tools-shell-horizontal-divider.js";
 import { cn } from "../cn.js";
+import { RovingFocusGroup, RovingFocusItem } from "../roving-focus-group.js";
 
 export type DetailPageTabItem<T extends string> = {
   id: T;
@@ -79,36 +80,39 @@ export function DetailPageTabs<T extends string>({
         ref={tabBarRef}
         className={cn("shrink-0 w-full", !edgeToPanelDivider && "border-b border-border/40")}
       >
-        <div
-          className={cn("flex flex-wrap px-3 pb-3", tabListClassBySize[size], tabListClassName)}
-          role="tablist"
-          aria-label={ariaLabel}
-        >
-          {tabs.map(({ id, label }) => {
-            const selected = activeTab === id;
-            const tabId = `detail-page-tab-${id}`;
+        <RovingFocusGroup asChild orientation="horizontal" loop defaultCurrentTabStopId={activeTab}>
+          <div
+            className={cn("flex flex-wrap px-3 pb-3", tabListClassBySize[size], tabListClassName)}
+            role="tablist"
+            aria-label={ariaLabel}
+          >
+            {tabs.map(({ id, label }) => {
+              const selected = activeTab === id;
+              const tabId = `detail-page-tab-${id}`;
 
-            return (
-              <button
-                key={id}
-                id={tabId}
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                aria-controls={selected ? tabPanelId : undefined}
-                className={cn(
-                  tabButtonClassBySize[size],
-                  selected
-                    ? "font-normal text-foreground underline decoration-foreground/80"
-                    : "text-muted-foreground hover:bg-canvas-hover hover:text-chrome-emphasis",
-                )}
-                onClick={() => onTabChange(id)}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+              return (
+                <RovingFocusItem asChild key={id} tabStopId={id} active={selected}>
+                  <button
+                    id={tabId}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    aria-controls={selected ? tabPanelId : undefined}
+                    className={cn(
+                      tabButtonClassBySize[size],
+                      selected
+                        ? "font-normal text-foreground underline decoration-foreground/80"
+                        : "text-muted-foreground hover:bg-canvas-hover hover:text-chrome-emphasis",
+                    )}
+                    onClick={() => onTabChange(id)}
+                  >
+                    {label}
+                  </button>
+                </RovingFocusItem>
+              );
+            })}
+          </div>
+        </RovingFocusGroup>
       </div>
       <div
         id={tabPanelId}

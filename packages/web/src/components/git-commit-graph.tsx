@@ -28,6 +28,11 @@ import { TimelineNode } from "@spiritagent/ui/rendering/timeline-node";
 import { WorkspaceGitCommitContextMenuContent } from "@/components/workspace-git-commit-context-menu";
 import { scrollAreaViewport } from "@/lib/scroll-area-viewport";
 import { cn } from "@/lib/utils";
+import {
+  RovingFocusGroup,
+  RovingFocusItem,
+  useVirtualRovingFocus,
+} from "@/components/ui/roving-focus-group";
 import type { GitCommitGraphRow, GitCommitRecord, GitHistorySnapshot } from "@/types";
 
 const ROW_HEIGHT_PX = 32;
@@ -521,19 +526,21 @@ function CommitGraphRowWithHover({
   const { onPointerEnter, isHighlighted } = useTooltipTriggerProps(row);
 
   const rowButton = (
-    <button
-      type="button"
-      className={cn(
-        "flex w-full min-w-0 items-center py-1 pr-2 text-left",
-        isHighlighted ? "bg-canvas-hover" : "hover:bg-canvas-hover",
-      )}
-      data-commit-oid={row.commit.oid}
-      onPointerEnter={onPointerEnter}
-    >
-      <span className="min-w-0 flex-1 truncate text-xs font-normal leading-snug text-foreground">
-        {row.commit.subject}
-      </span>
-    </button>
+    <RovingFocusItem asChild tabStopId={row.commit.oid}>
+      <button
+        type="button"
+        className={cn(
+          "flex w-full min-w-0 items-center py-1 pr-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50",
+          isHighlighted ? "bg-canvas-hover" : "hover:bg-canvas-hover",
+        )}
+        data-commit-oid={row.commit.oid}
+        onPointerEnter={onPointerEnter}
+      >
+        <span className="min-w-0 flex-1 truncate text-xs font-normal leading-snug text-foreground">
+          {row.commit.subject}
+        </span>
+      </button>
+    </RovingFocusItem>
   );
 
   return (
@@ -625,6 +632,21 @@ export function GitCommitGraph({
     overscan: 12,
     getItemKey: (index) => rows[index]?.commit.oid ?? index,
   });
+  const rovingContainerRef = useRef<HTMLDivElement | null>(null);
+  const rovingItemIds = useMemo(() => rows.map((row) => row.commit.oid), [rows]);
+  const scrollToRovingIndex = useCallback(
+    (index: number) => virtualizer.scrollToIndex(index, { align: "center" }),
+    [virtualizer],
+  );
+  const {
+    onKeyDownCapture: onVirtualRovingKeyDown,
+    onFocusCapture: onVirtualRovingFocus,
+    onBlurCapture: onVirtualRovingBlur,
+  } = useVirtualRovingFocus({
+    containerRef: rovingContainerRef,
+    itemIds: rovingItemIds,
+    scrollToIndex: scrollToRovingIndex,
+  });
 
   if (loading) {
     return (
@@ -670,24 +692,33 @@ export function GitCommitGraph({
       <CommitGraphGutter rows={rows} graphWidth={graphWidth} />
       <Tooltip<GitCommitGraphRow> getItemId={(row) => row.commit.oid}>
         <Tooltip.Zone className="relative">
-          <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
-            {virtualizer.getVirtualItems().map((virtualItem) => {
-              const row = rows[virtualItem.index]!;
-              const rowIndex = virtualItem.index;
-              return (
-                <div
-                  key={row.commit.oid}
-                  className="absolute left-0 top-0 w-full"
-                  style={{ transform: `translateY(${virtualItem.start}px)` }}
-                >
-                  <CommitGraphRowWithHover
-                    row={row}
-                    textInset={textInsetForRow(row, rowIndex, rows)}
-                  />
-                </div>
-              );
-            })}
-          </div>
+          <RovingFocusGroup
+            asChild
+            ref={rovingContainerRef}
+            orientation="vertical"
+            onKeyDownCapture={onVirtualRovingKeyDown}
+            onFocusCapture={onVirtualRovingFocus}
+            onBlurCapture={onVirtualRovingBlur}
+          >
+            <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const row = rows[virtualItem.index]!;
+                const rowIndex = virtualItem.index;
+                return (
+                  <div
+                    key={row.commit.oid}
+                    className="absolute left-0 top-0 w-full"
+                    style={{ transform: `translateY(${virtualItem.start}px)` }}
+                  >
+                    <CommitGraphRowWithHover
+                      row={row}
+                      textInset={textInsetForRow(row, rowIndex, rows)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </RovingFocusGroup>
         </Tooltip.Zone>
         <TooltipContent
           appearance="detail"

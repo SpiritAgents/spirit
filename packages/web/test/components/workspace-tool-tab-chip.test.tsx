@@ -76,6 +76,8 @@ describe("WorkspaceToolTabChip", () => {
     const iconOnlyChip = getByRole("tab", { name: "Files" }).closest(
       "[data-slot='workspace-tool-tab-chip']",
     );
+    expect(getByRole("tab", { name: "Files" }).className).toContain("rounded-lg");
+    expect(getByRole("tab", { name: "Files" }).className).not.toContain("rounded-[inherit]");
     expect(iconOnlyChip?.className.split(/\s+/)).toContain("size-7");
 
     rerender(
@@ -94,6 +96,42 @@ describe("WorkspaceToolTabChip", () => {
     const titledClasses = titledChip?.className.split(/\s+/) ?? [];
     expect(titledClasses).toEqual(expect.arrayContaining(["h-7"]));
     expect(titledClasses).not.toContain("h-8");
+  });
+
+  test("titled tabs fade their titles for both hover and keyboard focus", () => {
+    const { getByRole } = render(
+      <WorkspaceToolTabChip
+        tab={{ id: "file-tab", kind: "built-in", builtInKind: "files", tabTitle: "notes.md" }}
+        icon={FileText}
+        label="Files"
+        selected={false}
+        onSelect={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    const title = getByRole("tab", { name: "notes.md" }).querySelector(
+      "[data-slot='workspace-tool-tab-title']",
+    );
+    expect(title?.className).toContain("group-hover/tab:workspace-tab-title-fade");
+    expect(title?.className).toContain("group-focus-within/tab:workspace-tab-title-fade");
+  });
+
+  test("the close action is a compact circle rather than a rectangular tab overlay", () => {
+    const { getByRole } = render(
+      <WorkspaceToolTabChip
+        tab={{ id: "file-tab", kind: "built-in", builtInKind: "files", tabTitle: "notes.md" }}
+        icon={FileText}
+        label="Files"
+        selected={false}
+        onSelect={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    const closeClasses = getByRole("button", { name: "Close Files tab" }).className.split(/\s+/);
+    expect(closeClasses).toEqual(
+      expect.arrayContaining(["size-5", "rounded-full", "right-1", "top-1/2"]),
+    );
+    expect(closeClasses).not.toEqual(expect.arrayContaining(["inset-y-0", "w-8", "rounded-r-lg"]));
   });
 });
 

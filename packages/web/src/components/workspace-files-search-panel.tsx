@@ -25,6 +25,11 @@ import {
 } from "@/lib/workspace-files-search";
 import type { EditorFileRevealLocation } from "@/lib/workspace-editor-navigation";
 import { cn } from "@/lib/utils";
+import {
+  RovingFocusGroup,
+  RovingFocusItem,
+  useVirtualRovingFocus,
+} from "@/components/ui/roving-focus-group";
 import type {
   WorkspaceContentSearchMatch,
   WorkspaceContentSearchRequest,
@@ -199,6 +204,27 @@ export function WorkspaceFilesSearchPanel({
     estimateSize: () => SEARCH_VIRTUAL_ROW_ESTIMATE_PX,
     overscan: 12,
   });
+  const rovingContainerRef = useRef<HTMLDivElement | null>(null);
+  const rovingItemIds = useMemo(
+    () =>
+      virtualRows.map((row) =>
+        row.kind === "header" ? `header:${row.normalizedPath}` : `match:${row.matchKey}`,
+      ),
+    [virtualRows],
+  );
+  const scrollToRovingIndex = useCallback(
+    (index: number) => virtualizer.scrollToIndex(index, { align: "center" }),
+    [virtualizer],
+  );
+  const {
+    onKeyDownCapture: onVirtualRovingKeyDown,
+    onFocusCapture: onVirtualRovingFocus,
+    onBlurCapture: onVirtualRovingBlur,
+  } = useVirtualRovingFocus({
+    containerRef: rovingContainerRef,
+    itemIds: rovingItemIds,
+    scrollToIndex: scrollToRovingIndex,
+  });
 
   const toggleExpanded = useCallback((relativePath: string) => {
     setExpandedPaths((prev) => {
@@ -319,76 +345,91 @@ export function WorkspaceFilesSearchPanel({
         ) : null}
 
         <ScrollArea ref={scrollAreaRef} className="h-full min-h-0 w-full">
-          <div
-            className="relative w-full px-1 pb-2"
-            style={{ height: `${virtualizer.getTotalSize()}px` }}
+          <RovingFocusGroup
+            asChild
+            ref={rovingContainerRef}
+            orientation="vertical"
+            onKeyDownCapture={onVirtualRovingKeyDown}
+            onFocusCapture={onVirtualRovingFocus}
+            onBlurCapture={onVirtualRovingBlur}
           >
-            {virtualizer.getVirtualItems().map((virtualItem) => {
-              const row = virtualRows[virtualItem.index];
-              if (!row) {
-                return null;
-              }
+            <div
+              className="relative w-full px-1 pb-2"
+              style={{ height: `${virtualizer.getTotalSize()}px` }}
+            >
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const row = virtualRows[virtualItem.index];
+                if (!row) {
+                  return null;
+                }
 
-              if (row.kind === "header") {
-                const headerName = pathBasename(row.relativePath);
-                const PlanTabIcon = resolveWorkspaceFilesTabIcon(headerName);
+                if (row.kind === "header") {
+                  const headerName = pathBasename(row.relativePath);
+                  const PlanTabIcon = resolveWorkspaceFilesTabIcon(headerName);
+                  return (
+                    <div
+                      key={`header:${row.normalizedPath}`}
+                      ref={virtualizer.measureElement}
+                      data-index={virtualItem.index}
+                      className="absolute left-0 top-0 w-full px-1"
+                      style={{ transform: `translateY(${virtualItem.start}px)` }}
+                    >
+                      <RovingFocusItem asChild tabStopId={`header:${row.normalizedPath}`}>
+                        <button
+                          type="button"
+                          className="flex w-full min-w-0 items-center gap-1 rounded-md px-2 py-1 text-left text-xs hover:bg-canvas-hover"
+                          onClick={() => toggleExpanded(row.normalizedPath)}
+                        >
+                          {expandedPaths.has(row.normalizedPath) ? (
+                            <ChevronDown
+                              className="size-3 shrink-0 opacity-70"
+                              aria-hidden
+                              strokeWidth={1.75}
+                            />
+                          ) : (
+                            <ChevronRight
+                              className="size-3 shrink-0 opacity-70"
+                              aria-hidden
+                              strokeWidth={1.75}
+                            />
+                          )}
+                          {PlanTabIcon ? (
+                            <PlanTabIcon
+                              className="size-3.5 shrink-0 opacity-80"
+                              aria-hidden
+                              strokeWidth={1.75}
+                            />
+                          ) : (
+                            <WorkspaceFileIcon name={headerName} className="opacity-80" />
+                          )}
+                          <span className="min-w-0 flex-1 truncate font-normal">
+                            {pathBasename(row.relativePath)}
+                          </span>
+                          <span className="shrink-0 text-muted-foreground">{row.matchCount}</span>
+                        </button>
+                      </RovingFocusItem>
+                    </div>
+                  );
+                }
+
                 return (
                   <div
-                    key={`header:${row.normalizedPath}`}
+                    key={row.matchKey}
                     ref={virtualizer.measureElement}
                     data-index={virtualItem.index}
                     className="absolute left-0 top-0 w-full px-1"
                     style={{ transform: `translateY(${virtualItem.start}px)` }}
                   >
-                    <button
-                      type="button"
-                      className="flex w-full min-w-0 items-center gap-1 rounded-md px-2 py-1 text-left text-xs hover:bg-canvas-hover"
-                      onClick={() => toggleExpanded(row.normalizedPath)}
-                    >
-                      {expandedPaths.has(row.normalizedPath) ? (
-                        <ChevronDown
-                          className="size-3 shrink-0 opacity-70"
-                          aria-hidden
-                          strokeWidth={1.75}
-                        />
-                      ) : (
-                        <ChevronRight
-                          className="size-3 shrink-0 opacity-70"
-                          aria-hidden
-                          strokeWidth={1.75}
-                        />
-                      )}
-                      {PlanTabIcon ? (
-                        <PlanTabIcon
-                          className="size-3.5 shrink-0 opacity-80"
-                          aria-hidden
-                          strokeWidth={1.75}
-                        />
-                      ) : (
-                        <WorkspaceFileIcon name={headerName} className="opacity-80" />
-                      )}
-                      <span className="min-w-0 flex-1 truncate font-normal">
-                        {pathBasename(row.relativePath)}
-                      </span>
-                      <span className="shrink-0 text-muted-foreground">{row.matchCount}</span>
-                    </button>
+                    <WorkspaceSearchMatchRow
+                      tabStopId={`match:${row.matchKey}`}
+                      match={row.match}
+                      onOpen={openMatch}
+                    />
                   </div>
                 );
-              }
-
-              return (
-                <div
-                  key={row.matchKey}
-                  ref={virtualizer.measureElement}
-                  data-index={virtualItem.index}
-                  className="absolute left-0 top-0 w-full px-1"
-                  style={{ transform: `translateY(${virtualItem.start}px)` }}
-                >
-                  <WorkspaceSearchMatchRow match={row.match} onOpen={openMatch} />
-                </div>
-              );
-            })}
-          </div>
+              })}
+            </div>
+          </RovingFocusGroup>
         </ScrollArea>
       </div>
     </div>
@@ -396,9 +437,11 @@ export function WorkspaceFilesSearchPanel({
 }
 
 const WorkspaceSearchMatchRow = memo(function WorkspaceSearchMatchRow({
+  tabStopId,
   match,
   onOpen,
 }: {
+  tabStopId: string;
   match: WorkspaceContentSearchMatch;
   onOpen: (match: WorkspaceContentSearchMatch) => void;
 }) {
@@ -409,26 +452,28 @@ const WorkspaceSearchMatchRow = memo(function WorkspaceSearchMatchRow({
 
   return (
     <div className="min-w-0">
-      <button
-        type="button"
-        className={cn(
-          "flex w-full min-w-0 items-center rounded py-1 pl-7 pr-2 text-left text-xs",
-          "text-foreground/90 hover:bg-canvas-hover",
-        )}
-        onClick={() => onOpen(match)}
-      >
-        <span className="min-w-0 flex-1 truncate">
-          {segments.map((segment, index) =>
-            segment.highlighted ? (
-              <mark key={index} className="rounded-sm bg-primary/20 text-foreground">
-                {segment.text}
-              </mark>
-            ) : (
-              <span key={index}>{segment.text}</span>
-            ),
+      <RovingFocusItem asChild tabStopId={tabStopId}>
+        <button
+          type="button"
+          className={cn(
+            "flex w-full min-w-0 items-center rounded py-1 pl-7 pr-2 text-left text-xs",
+            "text-foreground/90 hover:bg-canvas-hover",
           )}
-        </span>
-      </button>
+          onClick={() => onOpen(match)}
+        >
+          <span className="min-w-0 flex-1 truncate">
+            {segments.map((segment, index) =>
+              segment.highlighted ? (
+                <mark key={index} className="rounded-sm bg-primary/20 text-foreground">
+                  {segment.text}
+                </mark>
+              ) : (
+                <span key={index}>{segment.text}</span>
+              ),
+            )}
+          </span>
+        </button>
+      </RovingFocusItem>
     </div>
   );
 });

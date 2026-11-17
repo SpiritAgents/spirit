@@ -19,6 +19,7 @@ import { MarkdownMessage } from "@/components/markdown-message";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Toggle } from "@/components/ui/toggle";
+import { RovingFocusGroup, RovingFocusItem } from "@/components/ui/roving-focus-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   WorkspaceMarkdownLinkProvider,
@@ -285,44 +286,71 @@ function WorkspaceFilesExplorerToolbar({
       {fileOpen ? (
         <div className="flex shrink-0 items-center gap-0.5">
           {isMarkdownDocument ? (
-            <div className="flex items-center gap-1" role="radiogroup">
-              <Toggle
-                variant="default"
-                size="sm"
-                className="text-xs"
-                pressed={markdownViewMode === "preview"}
-                onPressedChange={(pressed) => {
-                  if (pressed) {
-                    onToggleMarkdownViewMode("preview");
-                  }
-                }}
-                aria-label={t("workspace.markdownPreview")}
-                title={t("workspace.markdownPreview")}
-                disabled={!docReady}
-              >
-                <Eye className="size-3.5" aria-hidden strokeWidth={1.75} />
-                {t("workspace.preview")}
-              </Toggle>
-              <Toggle
-                variant="default"
-                size="sm"
-                className="text-xs"
-                pressed={markdownViewMode === "edit"}
-                onPressedChange={(pressed) => {
-                  if (pressed) {
-                    onToggleMarkdownViewMode("edit");
-                  }
-                }}
-                aria-label={t("workspace.markdownEdit")}
-                title={
-                  docReadOnly ? t("workspace.currentDocReadOnly") : t("workspace.markdownEdit")
-                }
-                disabled={!docReady || docReadOnly}
-              >
-                <Compose className="size-3.5" aria-hidden strokeWidth={1.75} />
-                {t("workspace.edit")}
-              </Toggle>
-            </div>
+            <RovingFocusGroup
+              asChild
+              orientation="horizontal"
+              loop
+              defaultCurrentTabStopId={markdownViewMode}
+            >
+              <div className="flex items-center gap-1" role="radiogroup">
+                <RovingFocusItem
+                  asChild
+                  tabStopId="preview"
+                  active={markdownViewMode === "preview"}
+                  focusable={docReady}
+                >
+                  <Toggle
+                    variant="default"
+                    size="sm"
+                    className="text-xs"
+                    pressed={markdownViewMode === "preview"}
+                    onPressedChange={(pressed) => {
+                      if (pressed) {
+                        onToggleMarkdownViewMode("preview");
+                      }
+                    }}
+                    role="radio"
+                    aria-checked={markdownViewMode === "preview"}
+                    aria-pressed={undefined}
+                    aria-label={t("workspace.markdownPreview")}
+                    title={t("workspace.markdownPreview")}
+                    disabled={!docReady}
+                  >
+                    <Eye className="size-3.5" aria-hidden strokeWidth={1.75} />
+                    {t("workspace.preview")}
+                  </Toggle>
+                </RovingFocusItem>
+                <RovingFocusItem
+                  asChild
+                  tabStopId="edit"
+                  active={markdownViewMode === "edit"}
+                  focusable={docReady && !docReadOnly}
+                >
+                  <Toggle
+                    variant="default"
+                    size="sm"
+                    className="text-xs"
+                    pressed={markdownViewMode === "edit"}
+                    onPressedChange={(pressed) => {
+                      if (pressed) {
+                        onToggleMarkdownViewMode("edit");
+                      }
+                    }}
+                    role="radio"
+                    aria-checked={markdownViewMode === "edit"}
+                    aria-pressed={undefined}
+                    aria-label={t("workspace.markdownEdit")}
+                    title={
+                      docReadOnly ? t("workspace.currentDocReadOnly") : t("workspace.markdownEdit")
+                    }
+                    disabled={!docReady || docReadOnly}
+                  >
+                    <Compose className="size-3.5" aria-hidden strokeWidth={1.75} />
+                    {t("workspace.edit")}
+                  </Toggle>
+                </RovingFocusItem>
+              </div>
+            </RovingFocusGroup>
           ) : null}
           {showStartImplementing ? (
             <button
