@@ -355,6 +355,51 @@ test("plain triggers keep their child and forwarded ref stable while opening", a
   );
 });
 
+test("keyboard focus opens item details, switches with focus, and closes on blur", async () => {
+  render(<Fixture />);
+  const alpha = screen.getByTestId("alpha");
+  const beta = screen.getByTestId("beta");
+
+  fireEvent.keyDown(document.body, { key: "Tab" });
+  act(() => alpha.focus());
+  await advance();
+  expect(screen.getByTestId("detail").textContent).toContain("alpha");
+  expect(alpha.parentElement?.getAttribute("aria-describedby")).toBe(
+    document.querySelector('[role="tooltip"]')?.id,
+  );
+
+  fireEvent.keyDown(alpha, { key: "ArrowDown" });
+  act(() => beta.focus());
+  await advance();
+  expect(screen.getByTestId("detail").textContent).toContain("beta");
+
+  act(() => beta.blur());
+  await advance(300);
+  expect(screen.queryByTestId("detail")).toBeNull();
+});
+
+test("Escape dismisses keyboard-focused details without reopening on the same focus", async () => {
+  render(<Fixture />);
+  const alpha = screen.getByTestId("alpha");
+  fireEvent.keyDown(document.body, { key: "Tab" });
+  act(() => alpha.focus());
+  await advance();
+  expect(screen.getByTestId("detail")).toBeTruthy();
+
+  fireEvent.keyDown(alpha, { key: "Escape" });
+  await advance(300);
+  expect(screen.queryByTestId("detail")).toBeNull();
+});
+
+test("pointer-induced focus does not open keyboard details", async () => {
+  render(<Fixture />);
+  const alpha = screen.getByTestId("alpha");
+  fireEvent.pointerMove(alpha, { pointerType: "mouse", clientX: 20, clientY: 20 });
+  act(() => alpha.focus());
+  await advance(300);
+  expect(screen.queryByTestId("detail")).toBeNull();
+});
+
 test("choosing an option inside a detail keeps both the detail and model menu open", async () => {
   const onDetailChange = vi.fn();
   render(<MenuFixture onDetailChange={onDetailChange} />);

@@ -47,6 +47,7 @@ import { DesktopFormInput } from "@/components/ui/desktop-form-field";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { RovingFocusGroup } from "@/components/ui/roving-focus-group";
 import {
   buildModelCatalogDetailMap,
   buildModelCatalogDisplayTitleMap,
@@ -259,7 +260,7 @@ export function ModelsSettingsPanel({
     }
   };
 
-  const handleProviderListKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+  const handleProviderListKeyDownCapture = (event: KeyboardEvent<HTMLDivElement>) => {
     const item =
       event.target instanceof Element
         ? event.target.closest<HTMLElement>("button:not([disabled])")
@@ -272,18 +273,10 @@ export function ModelsSettingsPanel({
     if (index < 0) {
       return;
     }
-    if (event.key === "ArrowDown") {
+    if (event.key === "ArrowUp" && index === 0) {
       event.preventDefault();
-      focusProviderListButton(items[index + 1]);
-      return;
-    }
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      if (index <= 0) {
-        providerSearchInputRef.current?.focus();
-      } else {
-        focusProviderListButton(items[index - 1]);
-      }
+      event.stopPropagation();
+      providerSearchInputRef.current?.focus();
     }
   };
 
@@ -528,37 +521,54 @@ export function ModelsSettingsPanel({
                       delayDuration={300}
                       disableHoverableContent
                     >
-                      <Tooltip.Zone className="divide-y divide-border/35">
-                        {groupModels.map((model) => {
-                          const modelRef = settingsModelRef(model);
-                          const isActive = modelRefsEqual(modelRef, activeModel);
-                          const isImageDefault =
-                            imageGenerationModel !== undefined &&
-                            modelRefsEqual(modelRef, imageGenerationModel);
-                          const isSecondaryDefault =
-                            secondaryLanguageModel !== undefined &&
-                            modelRefsEqual(modelRef, secondaryLanguageModel);
-                          const supportedDefaultRoles = getSupportedModelDefaultRoles(
-                            model,
-                            activeModel,
-                            imageGenerationModel,
-                            videoGenerationModel,
-                            secondaryLanguageModel,
-                          );
-                          const defaultActionLabel = modelDefaultActionLabel(supportedDefaultRoles);
-                          const rowDisabled = modelsBusy || modelsPreviewBusy;
-                          const hasDetail = catalogDetailByModelName.has(
-                            modelCatalogScopeEntryKey(model),
-                          );
-                          const displayTitle = modelDisplayTitleFromMap(
-                            model,
-                            displayTitleByModelName,
-                          );
+                      <RovingFocusGroup asChild orientation="vertical">
+                        <Tooltip.Zone className="divide-y divide-border/35">
+                          {groupModels.map((model) => {
+                            const modelRef = settingsModelRef(model);
+                            const isActive = modelRefsEqual(modelRef, activeModel);
+                            const isImageDefault =
+                              imageGenerationModel !== undefined &&
+                              modelRefsEqual(modelRef, imageGenerationModel);
+                            const isSecondaryDefault =
+                              secondaryLanguageModel !== undefined &&
+                              modelRefsEqual(modelRef, secondaryLanguageModel);
+                            const supportedDefaultRoles = getSupportedModelDefaultRoles(
+                              model,
+                              activeModel,
+                              imageGenerationModel,
+                              videoGenerationModel,
+                              secondaryLanguageModel,
+                            );
+                            const defaultActionLabel =
+                              modelDefaultActionLabel(supportedDefaultRoles);
+                            const rowDisabled = modelsBusy || modelsPreviewBusy;
+                            const hasDetail = catalogDetailByModelName.has(
+                              modelCatalogScopeEntryKey(model),
+                            );
+                            const displayTitle = modelDisplayTitleFromMap(
+                              model,
+                              displayTitleByModelName,
+                            );
 
-                          if (!hasDetail) {
+                            if (!hasDetail) {
+                              return (
+                                <ModelSettingsRowButton
+                                  key={modelRefKey(modelRef)}
+                                  model={model}
+                                  displayTitle={displayTitle}
+                                  isActive={isActive}
+                                  isImageDefault={isImageDefault}
+                                  isSecondaryDefault={isSecondaryDefault}
+                                  defaultActionLabel={defaultActionLabel}
+                                  disabled={rowDisabled}
+                                  onDefaultAction={() => handleModelDefaultAction(model)}
+                                />
+                              );
+                            }
+
                             return (
-                              <ModelSettingsRowButton
-                                key={modelRefKey(modelRef)}
+                              <ModelSettingsRowWithHover
+                                key={model.name}
                                 model={model}
                                 displayTitle={displayTitle}
                                 isActive={isActive}
@@ -569,23 +579,9 @@ export function ModelsSettingsPanel({
                                 onDefaultAction={() => handleModelDefaultAction(model)}
                               />
                             );
-                          }
-
-                          return (
-                            <ModelSettingsRowWithHover
-                              key={model.name}
-                              model={model}
-                              displayTitle={displayTitle}
-                              isActive={isActive}
-                              isImageDefault={isImageDefault}
-                              isSecondaryDefault={isSecondaryDefault}
-                              defaultActionLabel={defaultActionLabel}
-                              disabled={rowDisabled}
-                              onDefaultAction={() => handleModelDefaultAction(model)}
-                            />
-                          );
-                        })}
-                      </Tooltip.Zone>
+                          })}
+                        </Tooltip.Zone>
+                      </RovingFocusGroup>
                       <TooltipContent
                         appearance="detail"
                         side="right"
@@ -616,43 +612,45 @@ export function ModelsSettingsPanel({
                       </TooltipContent>
                     </Tooltip>
                   ) : (
-                    <div className="divide-y divide-border/35">
-                      {groupModels.map((model) => {
-                        const modelRef = settingsModelRef(model);
-                        const isActive = modelRefsEqual(modelRef, activeModel);
-                        const isImageDefault =
-                          imageGenerationModel !== undefined &&
-                          modelRefsEqual(modelRef, imageGenerationModel);
-                        const isSecondaryDefault =
-                          secondaryLanguageModel !== undefined &&
-                          modelRefsEqual(modelRef, secondaryLanguageModel);
-                        const supportedDefaultRoles = getSupportedModelDefaultRoles(
-                          model,
-                          activeModel,
-                          imageGenerationModel,
-                          videoGenerationModel,
-                          secondaryLanguageModel,
-                        );
-                        const defaultActionLabel = modelDefaultActionLabel(supportedDefaultRoles);
-                        const displayTitle = modelDisplayTitleFromMap(
-                          model,
-                          displayTitleByModelName,
-                        );
-                        return (
-                          <ModelSettingsRowButton
-                            key={modelRefKey(modelRef)}
-                            model={model}
-                            displayTitle={displayTitle}
-                            isActive={isActive}
-                            isImageDefault={isImageDefault}
-                            isSecondaryDefault={isSecondaryDefault}
-                            defaultActionLabel={defaultActionLabel}
-                            disabled={modelsBusy || modelsPreviewBusy}
-                            onDefaultAction={() => handleModelDefaultAction(model)}
-                          />
-                        );
-                      })}
-                    </div>
+                    <RovingFocusGroup asChild orientation="vertical">
+                      <div className="divide-y divide-border/35">
+                        {groupModels.map((model) => {
+                          const modelRef = settingsModelRef(model);
+                          const isActive = modelRefsEqual(modelRef, activeModel);
+                          const isImageDefault =
+                            imageGenerationModel !== undefined &&
+                            modelRefsEqual(modelRef, imageGenerationModel);
+                          const isSecondaryDefault =
+                            secondaryLanguageModel !== undefined &&
+                            modelRefsEqual(modelRef, secondaryLanguageModel);
+                          const supportedDefaultRoles = getSupportedModelDefaultRoles(
+                            model,
+                            activeModel,
+                            imageGenerationModel,
+                            videoGenerationModel,
+                            secondaryLanguageModel,
+                          );
+                          const defaultActionLabel = modelDefaultActionLabel(supportedDefaultRoles);
+                          const displayTitle = modelDisplayTitleFromMap(
+                            model,
+                            displayTitleByModelName,
+                          );
+                          return (
+                            <ModelSettingsRowButton
+                              key={modelRefKey(modelRef)}
+                              model={model}
+                              displayTitle={displayTitle}
+                              isActive={isActive}
+                              isImageDefault={isImageDefault}
+                              isSecondaryDefault={isSecondaryDefault}
+                              defaultActionLabel={defaultActionLabel}
+                              disabled={modelsBusy || modelsPreviewBusy}
+                              onDefaultAction={() => handleModelDefaultAction(model)}
+                            />
+                          );
+                        })}
+                      </div>
+                    </RovingFocusGroup>
                   )}
                 </div>
               );
@@ -938,17 +936,23 @@ export function ModelsSettingsPanel({
               />
             </div>
             <ScrollArea className="h-[min(28rem,calc(100dvh-6rem))]">
-              <div ref={providerListRef} className="px-0.5" onKeyDown={handleProviderListKeyDown}>
-                {filteredProviders.length === 0 ? (
-                  <p className="px-2 py-6 text-center text-sm text-muted-foreground">
-                    {t("app.noMatches")}
-                  </p>
-                ) : (
-                  filteredProviders.map((row) => (
-                    <ProviderPickerRowButton key={row.id} row={row} onSelect={startConnect} />
-                  ))
-                )}
-              </div>
+              <RovingFocusGroup
+                asChild
+                orientation="vertical"
+                onKeyDownCapture={handleProviderListKeyDownCapture}
+              >
+                <div ref={providerListRef} className="px-0.5">
+                  {filteredProviders.length === 0 ? (
+                    <p className="px-2 py-6 text-center text-sm text-muted-foreground">
+                      {t("app.noMatches")}
+                    </p>
+                  ) : (
+                    filteredProviders.map((row) => (
+                      <ProviderPickerRowButton key={row.id} row={row} onSelect={startConnect} />
+                    ))
+                  )}
+                </div>
+              </RovingFocusGroup>
             </ScrollArea>
           </div>
         </DialogContent>

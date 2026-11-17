@@ -62,6 +62,10 @@
    added specificity so hover/focus utilities still win over the translucent base. */
 @custom-variant content-translucent (&:where([data-spirit-content-translucency="true"] *));
 
+/* Pointer hover and keyboard focus are separate states: a keyboard focus ring must not
+   also paint the pointer wash when the pointer happens to rest over the control. */
+@custom-variant hover (&:not(:focus-visible):hover);
+
 /*
  * Opt-in for in-app frosted surfaces (CSS backdrop-blur, not native window material).
  * Chromium 118+ `prefers-reduced-transparency: reduce` paints an opaque theme

@@ -45,6 +45,11 @@ import {
 import { SCROLL_EDGE_FADE_PX, sidebarSessionsScrollInsetClass } from "@/lib/mask-styles";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
+  RovingFocusAction,
+  RovingFocusGroup,
+  RovingFocusItem,
+} from "@/components/ui/roving-focus-group";
+import {
   AnimatedCollapse,
   AnimatedCollapseContent,
   AnimatedCollapseTrigger,
@@ -271,6 +276,7 @@ function visibleCountForSessionIndex(index: number): number {
 }
 
 type SessionListLoadMoreProps = {
+  tabStopId: string;
   hiddenCount: number;
   nested?: boolean;
   disabled?: boolean;
@@ -310,7 +316,7 @@ type WorkspaceSessionGroupCollapsibleProps = {
 };
 
 const sidebarSectionHeaderTriggerClass =
-  "group flex w-full min-w-0 items-center overflow-hidden px-2.5 pb-1 text-left text-[0.65rem] text-chrome-secondary-label outline-none focus-visible:ring-2 focus-visible:ring-ring/40";
+  "group flex w-full min-w-0 items-center overflow-hidden rounded-md px-2.5 py-1 text-left text-[0.65rem] text-chrome-secondary-label outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50";
 
 const sidebarSectionChevronClass =
   "hidden size-3 shrink-0 text-muted-foreground/55 transition-transform duration-150 group-hover:inline-flex group-focus-visible:inline-flex";
@@ -452,6 +458,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
         <div
           className={cn(
             "group/workspace-row flex h-8 w-full min-w-0 items-center overflow-hidden rounded-md",
+            "has-[[data-sidebar-row-primary]:focus-visible]:ring-2 has-[[data-sidebar-row-primary]:focus-visible]:ring-inset has-[[data-sidebar-row-primary]:focus-visible]:ring-ring/50",
             sidebarItemDefaultTextClass,
             isDragging ? sessionRowSelectedClass(translucency) : sessionRowHoverClass(translucency),
             isPressing && !isDragging && "spirit-workspace-group-reorder-grab",
@@ -472,55 +479,57 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
           onClickCapture={onHeaderClickCapture}
           {...headerPointerHandlers}
         >
-          <AnimatedCollapseTrigger
-            disabled={disabled}
-            className={cn(
-              "flex h-8 min-w-0 flex-1 items-center gap-2 overflow-hidden px-2.5 text-left text-sm",
-              "bg-transparent outline-none hover:bg-transparent focus-visible:bg-transparent",
-              sidebarInteractionMotionClass,
-              "focus-visible:ring-2 focus-visible:ring-ring/40",
-            )}
-            title={group.rootPath ?? group.label}
-            data-workspace-path={group.rootPath ?? group.id}
-          >
-            <span className="relative inline-flex size-3.5 shrink-0 items-center justify-center">
-              {expanded ? (
-                <FolderOpen
-                  className={cn(
-                    "size-3.5",
-                    showWorkspaceRowHoverChrome
-                      ? "hidden"
-                      : "group-hover/workspace-row:hidden group-has-[button:focus-visible]/workspace-row:hidden",
-                  )}
-                  aria-hidden
-                  strokeWidth={1.75}
-                />
-              ) : (
-                <FolderClosed
-                  className={cn(
-                    "size-3.5",
-                    showWorkspaceRowHoverChrome
-                      ? "hidden"
-                      : "group-hover/workspace-row:hidden group-has-[button:focus-visible]/workspace-row:hidden",
-                  )}
-                  aria-hidden
-                  strokeWidth={1.75}
-                />
+          <RovingFocusItem asChild tabStopId={`workspace:${group.id}`} focusable={!disabled}>
+            <AnimatedCollapseTrigger
+              disabled={disabled}
+              className={cn(
+                "flex h-8 min-w-0 flex-1 items-center gap-2 overflow-hidden px-2.5 text-left text-sm",
+                "bg-transparent outline-none",
+                sidebarInteractionMotionClass,
               )}
-              <ChevronRight
-                className={cn(
-                  "absolute size-3.5 transition-transform duration-150",
-                  showWorkspaceRowHoverChrome
-                    ? "inline-flex"
-                    : "hidden group-hover/workspace-row:inline-flex group-has-[button:focus-visible]/workspace-row:inline-flex",
-                  expanded && "rotate-90",
+              data-sidebar-row-primary=""
+              title={group.rootPath ?? group.label}
+              data-workspace-path={group.rootPath ?? group.id}
+            >
+              <span className="relative inline-flex size-3.5 shrink-0 items-center justify-center">
+                {expanded ? (
+                  <FolderOpen
+                    className={cn(
+                      "size-3.5",
+                      showWorkspaceRowHoverChrome
+                        ? "hidden"
+                        : "group-hover/workspace-row:hidden group-has-[button:focus-visible]/workspace-row:hidden",
+                    )}
+                    aria-hidden
+                    strokeWidth={1.75}
+                  />
+                ) : (
+                  <FolderClosed
+                    className={cn(
+                      "size-3.5",
+                      showWorkspaceRowHoverChrome
+                        ? "hidden"
+                        : "group-hover/workspace-row:hidden group-has-[button:focus-visible]/workspace-row:hidden",
+                    )}
+                    aria-hidden
+                    strokeWidth={1.75}
+                  />
                 )}
-                aria-hidden
-                strokeWidth={1.75}
-              />
-            </span>
-            <span className={cn("truncate", DESKTOP_SIDEBAR_TEXT_CLASS)}>{group.label}</span>
-          </AnimatedCollapseTrigger>
+                <ChevronRight
+                  className={cn(
+                    "absolute size-3.5 transition-transform duration-150",
+                    showWorkspaceRowHoverChrome
+                      ? "inline-flex"
+                      : "hidden group-hover/workspace-row:inline-flex group-has-[button:focus-visible]/workspace-row:inline-flex",
+                    expanded && "rotate-90",
+                  )}
+                  aria-hidden
+                  strokeWidth={1.75}
+                />
+              </span>
+              <span className={cn("truncate", DESKTOP_SIDEBAR_TEXT_CLASS)}>{group.label}</span>
+            </AnimatedCollapseTrigger>
+          </RovingFocusItem>
           {onNewChatInWorkspace && workspaceRoot ? (
             <Tooltip
               delayDuration={300}
@@ -528,47 +537,43 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
               onOpenChange={setPlusTooltipAnchorLocked}
             >
               <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  data-workspace-new-chat=""
-                  draggable={workspaceNewChatDragEnabled}
-                  className={cn(
-                    "mr-0.5 size-6 shrink-0",
-                    workspaceRowHovered || plusTooltipAnchorLocked
-                      ? "inline-flex"
-                      : "hidden group-has-[button:focus-visible]/workspace-row:inline-flex",
-                    // Keep the trigger mounted in-flow while the tooltip is open
-                    // so the floating content keeps its anchor. Use visibility, not
-                    // opacity: sidebarInteractionMotionClass transitions opacity
-                    // and would fade this button on hide/reshow.
-                    plusTooltipAnchorLocked &&
-                      !workspaceRowHovered &&
-                      "pointer-events-none invisible",
-                    sidebarItemDefaultTextClass,
-                    sidebarInteractionMotionClass,
-                    sidebarItemHoverClass(translucency),
-                  )}
-                  disabled={disabled || newChatBusy}
-                  aria-label={t("sidebar.newChatInWorkspace", { workspace: group.label })}
-                  onClick={() => onNewChatInWorkspace(workspaceRoot)}
-                  onDragStart={(event) => {
-                    if (!split || !workspaceNewChatDragEnabled) {
-                      event.preventDefault();
-                      return;
-                    }
-                    const payload = {
-                      kind: "new-in-workspace" as const,
-                      workspaceRoot,
-                    };
-                    setSidebarSessionDragData(event.dataTransfer, payload);
-                    split.startSidebarSessionDrag(payload);
-                  }}
-                  onDragEnd={() => split?.clearSidebarSessionDrag()}
-                >
-                  <Plus className="size-3.5" aria-hidden strokeWidth={1.75} />
-                </Button>
+                <RovingFocusAction tabStopId={`workspace:${group.id}`}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    data-workspace-new-chat=""
+                    draggable={workspaceNewChatDragEnabled}
+                    className={cn(
+                      "mr-0.5 size-6 shrink-0 focus-visible:ring-2 focus-visible:ring-inset",
+                      // Visibility keeps keyboard/tooltip anchors in-flow without fading.
+                      workspaceRowHovered || plusTooltipAnchorLocked
+                        ? "pointer-events-auto visible"
+                        : "pointer-events-none invisible group-hover/workspace-row:pointer-events-auto group-hover/workspace-row:visible group-focus-within/workspace-row:pointer-events-auto group-focus-within/workspace-row:visible",
+                      sidebarItemDefaultTextClass,
+                      sidebarInteractionMotionClass,
+                      sidebarItemHoverClass(translucency),
+                    )}
+                    disabled={disabled || newChatBusy}
+                    aria-label={t("sidebar.newChatInWorkspace", { workspace: group.label })}
+                    onClick={() => onNewChatInWorkspace(workspaceRoot)}
+                    onDragStart={(event) => {
+                      if (!split || !workspaceNewChatDragEnabled) {
+                        event.preventDefault();
+                        return;
+                      }
+                      const payload = {
+                        kind: "new-in-workspace" as const,
+                        workspaceRoot,
+                      };
+                      setSidebarSessionDragData(event.dataTransfer, payload);
+                      split.startSidebarSessionDrag(payload);
+                    }}
+                    onDragEnd={() => split?.clearSidebarSessionDrag()}
+                  >
+                    <Plus className="size-3.5" aria-hidden strokeWidth={1.75} />
+                  </Button>
+                </RovingFocusAction>
               </TooltipTrigger>
               <TooltipContent side="bottom" sideOffset={4}>
                 {t("sidebar.newChatInWorkspace", { workspace: group.label })}
@@ -610,6 +615,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
                 </SessionListGitTooltip.Row>
               ))}
               <SessionListLoadMore
+                tabStopId={`workspace-load-more:${group.id}`}
                 hiddenCount={hiddenSessionCount}
                 nested
                 disabled={disabled}
@@ -624,6 +630,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
 });
 
 function SessionListLoadMore({
+  tabStopId,
   hiddenCount,
   nested,
   disabled,
@@ -634,24 +641,26 @@ function SessionListLoadMore({
     return null;
   }
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onLoadMore}
-      onContextMenu={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-      }}
-      className={cn(
-        "w-full py-1 text-left text-[0.65rem] text-chrome-secondary-label outline-none",
-        nested ? "pr-2.5 pl-8" : "px-2.5",
-        "rounded-md hover:text-chrome-emphasis/75 focus-visible:text-chrome-emphasis/75",
-        "focus-visible:ring-2 focus-visible:ring-ring/40",
-        disabled && "pointer-events-none opacity-50",
-      )}
-    >
-      {t("sidebar.loadMoreSessions")}
-    </button>
+    <RovingFocusItem asChild tabStopId={tabStopId} focusable={!disabled}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onLoadMore}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+        className={cn(
+          "w-full py-1 text-left text-[0.65rem] text-chrome-secondary-label outline-none",
+          nested ? "pr-2.5 pl-8" : "px-2.5",
+          "rounded-md hover:text-chrome-emphasis/75",
+          "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50",
+          disabled && "pointer-events-none opacity-50",
+        )}
+      >
+        {t("sidebar.loadMoreSessions")}
+      </button>
+    </RovingFocusItem>
   );
 }
 
@@ -743,8 +752,8 @@ const SessionListRow = memo(function SessionListRow({
 
   const rowClassName = cn(
     "group flex w-full min-w-0 items-center overflow-hidden rounded-md text-left text-sm outline-none",
+    "has-[[data-sidebar-row-primary]:focus-visible]:ring-2 has-[[data-sidebar-row-primary]:focus-visible]:ring-inset has-[[data-sidebar-row-primary]:focus-visible]:ring-ring/50",
     sidebarInteractionMotionClass,
-    "focus-visible:ring-2 focus-visible:ring-ring/40",
     "h-8",
     selected
       ? sessionRowSelectedClass(translucency)
@@ -823,32 +832,40 @@ const SessionListRow = memo(function SessionListRow({
       onMouseEnter={() => setSessionRowHovered(true)}
       onMouseLeave={() => setSessionRowHovered(false)}
     >
-      <button
-        type="button"
-        disabled={disabled}
-        draggable={sessionDragEnabled}
-        aria-current={selected ? "true" : undefined}
-        onClick={() => onSelectPath(sessionPath)}
-        onDragStart={handleSessionDragStart}
-        onDragEnd={handleSessionDragEnd}
-        onDoubleClick={(event) => {
-          if (!onRenameStart || disabled || isBusy) {
-            return;
-          }
-          event.preventDefault();
-          event.stopPropagation();
-          onRenameStart();
-        }}
-        className="flex h-full min-w-0 flex-1 basis-0 items-center gap-2 bg-transparent px-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+      <RovingFocusItem
+        asChild
+        tabStopId={`session:${sessionPath}`}
+        active={selected}
+        focusable={!disabled}
       >
-        {leading}
-        <span
-          className={cn("min-w-0 flex-1 basis-0 truncate", DESKTOP_SIDEBAR_TEXT_CLASS)}
-          title={showGitTooltip ? undefined : displayName}
+        <button
+          type="button"
+          data-sidebar-row-primary=""
+          disabled={disabled}
+          draggable={sessionDragEnabled}
+          aria-current={selected ? "true" : undefined}
+          onClick={() => onSelectPath(sessionPath)}
+          onDragStart={handleSessionDragStart}
+          onDragEnd={handleSessionDragEnd}
+          onDoubleClick={(event) => {
+            if (!onRenameStart || disabled || isBusy) {
+              return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            onRenameStart();
+          }}
+          className="flex h-full min-w-0 flex-1 basis-0 items-center gap-2 bg-transparent px-2.5 text-left outline-none"
         >
-          {displayName}
-        </span>
-      </button>
+          {leading}
+          <span
+            className={cn("min-w-0 flex-1 basis-0 truncate", DESKTOP_SIDEBAR_TEXT_CLASS)}
+            title={showGitTooltip ? undefined : displayName}
+          >
+            {displayName}
+          </span>
+        </button>
+      </RovingFocusItem>
       {onTogglePin ? (
         <Tooltip
           delayDuration={300}
@@ -856,37 +873,35 @@ const SessionListRow = memo(function SessionListRow({
           onOpenChange={setPinTooltipAnchorLocked}
         >
           <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              draggable={false}
-              className={cn(
-                "mr-0.5 size-6 shrink-0",
-                sessionRowHovered || pinTooltipAnchorLocked
-                  ? "inline-flex"
-                  : "hidden group-hover:inline-flex group-has-[button:focus-visible]:inline-flex",
-                // Keep the trigger mounted in-flow while the tooltip is open
-                // so the floating content keeps its anchor. Use visibility, not
-                // opacity: sidebarInteractionMotionClass transitions opacity
-                // and would fade this button on hide/reshow.
-                pinTooltipAnchorLocked && !sessionRowHovered && "pointer-events-none invisible",
-                sidebarItemDefaultTextClass,
-                sidebarInteractionMotionClass,
-                sidebarItemHoverClass(translucency),
-              )}
-              aria-label={pinToggleLabel}
-              onClick={(event) => {
-                event.stopPropagation();
-                onTogglePin();
-              }}
-            >
-              {pinned ? (
-                <PinSlash className="size-3.5" aria-hidden strokeWidth={1.75} />
-              ) : (
-                <Pin className="size-3.5" aria-hidden strokeWidth={1.75} />
-              )}
-            </Button>
+            <RovingFocusAction tabStopId={`session:${sessionPath}`}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                draggable={false}
+                className={cn(
+                  "mr-0.5 size-6 shrink-0 focus-visible:ring-2 focus-visible:ring-inset",
+                  // Visibility keeps keyboard/tooltip anchors in-flow without fading.
+                  sessionRowHovered || pinTooltipAnchorLocked
+                    ? "pointer-events-auto visible"
+                    : "pointer-events-none invisible group-hover:pointer-events-auto group-hover:visible group-focus-within:pointer-events-auto group-focus-within:visible",
+                  sidebarItemDefaultTextClass,
+                  sidebarInteractionMotionClass,
+                  sidebarItemHoverClass(translucency),
+                )}
+                aria-label={pinToggleLabel}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onTogglePin();
+                }}
+              >
+                {pinned ? (
+                  <PinSlash className="size-3.5" aria-hidden strokeWidth={1.75} />
+                ) : (
+                  <Pin className="size-3.5" aria-hidden strokeWidth={1.75} />
+                )}
+              </Button>
+            </RovingFocusAction>
           </TooltipTrigger>
           <TooltipContent side="bottom" sideOffset={4}>
             {pinToggleLabel}
@@ -934,13 +949,15 @@ function SessionListNav({
   const canSessionContextMenu = canRenameSession || canDeleteSession;
 
   const nav = (
-    <nav
-      className="flex min-w-0 flex-col gap-0.5"
-      aria-label={ariaLabel}
-      onContextMenuCapture={canSessionContextMenu ? onSessionContextMenuCapture : undefined}
-    >
-      {children}
-    </nav>
+    <RovingFocusGroup asChild orientation="vertical" tabIndex={-1}>
+      <nav
+        className="flex min-w-0 flex-col gap-0.5"
+        aria-label={ariaLabel}
+        onContextMenuCapture={canSessionContextMenu ? onSessionContextMenuCapture : undefined}
+      >
+        {children}
+      </nav>
+    </RovingFocusGroup>
   );
 
   if (!canSessionContextMenu) {
@@ -1063,9 +1080,14 @@ function WorkspaceListNav({
     canRemoveWorkspace || canRenameSession || canDeleteSession || canRevealInExplorer;
 
   const inner = (
-    <div className="min-w-0" onContextMenuCapture={canShowMenu ? onContextMenuCapture : undefined}>
-      {children}
-    </div>
+    <RovingFocusGroup asChild orientation="vertical">
+      <div
+        className="min-w-0"
+        onContextMenuCapture={canShowMenu ? onContextMenuCapture : undefined}
+      >
+        {children}
+      </div>
+    </RovingFocusGroup>
   );
 
   if (!canShowMenu) {
@@ -1269,7 +1291,7 @@ const settingsConnectTabs: Array<{
     : []),
 ];
 
-const sidebarInteractionMotionClass = "!transition-[opacity,transform,box-shadow] duration-150";
+const sidebarInteractionMotionClass = "!transition-[opacity,transform] duration-150";
 
 /** Sidebar interactive items' default text/icon color; hover and selection return to sidebar-foreground */
 const sidebarItemDefaultTextClass = "text-chrome-label";
@@ -1277,16 +1299,13 @@ const sidebarItemDefaultTextClass = "text-chrome-label";
 const sidebarItemActiveTextClass = "!text-chrome-emphasis";
 
 /** Sidebar menu/session row hover: a unified semi-transparent wash, so nested buttons no longer stack a solid accent */
-const sidebarMenuHoverClass = cn(
-  "hover:!bg-canvas-hover focus-visible:!bg-canvas-hover",
-  "hover:!text-chrome-emphasis focus-visible:!text-chrome-emphasis",
-);
+const sidebarMenuHoverClass = cn("hover:!bg-canvas-hover hover:!text-chrome-emphasis");
 
 /** Sidebar menu/session row selected: the same semi-transparent wash as hover, not deepened by selection */
 const sidebarMenuSelectedClass = cn(
-  "!bg-canvas-hover hover:!bg-canvas-hover focus-visible:!bg-canvas-hover",
+  "!bg-canvas-hover hover:!bg-canvas-hover",
   sidebarItemActiveTextClass,
-  "hover:!text-chrome-emphasis focus-visible:!text-chrome-emphasis",
+  "hover:!text-chrome-emphasis",
 );
 
 const SIDEBAR_SCROLL_EDGE_THRESHOLD_PX = 1;
@@ -2149,6 +2168,7 @@ function SessionSidebarInner({
                           </SessionListGitTooltip.Row>
                         ))}
                         <SessionListLoadMore
+                          tabStopId="pinned-load-more"
                           hiddenCount={pinnedSessions.length - pinnedVisibleCount}
                           disabled={disabled}
                           onLoadMore={loadMorePinnedSessions}
@@ -2335,6 +2355,7 @@ function SessionSidebarInner({
                           </SessionListGitTooltip.Row>
                         ))}
                         <SessionListLoadMore
+                          tabStopId="unbound-load-more"
                           hiddenCount={unboundSessions.length - unboundVisibleCount}
                           disabled={disabled}
                           onLoadMore={loadMoreUnboundSessions}

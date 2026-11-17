@@ -69,6 +69,13 @@ type RegistrationTiming = {
 };
 type ClientPoint = { clientX: number; clientY: number };
 
+function isTooltipMenuItemTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest('[role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]') !== null
+  );
+}
+
 export type UseGlobalTooltipSwitchResult = {
   open: boolean;
   openKind: TooltipSwitchOpenKind;
@@ -94,6 +101,8 @@ export type UseGlobalTooltipSwitchResult = {
     registrationId: string,
     event: ReactPointerEvent<HTMLDivElement>,
   ) => void;
+  onTriggerFocus: (element: HTMLElement) => void;
+  onTriggerBlur: (element: HTMLElement, relatedTarget: EventTarget | null) => void;
   dismissActiveItem: () => void;
   dismissIfOpen: () => void;
   onTriggerPointerDown: (registrationId: string, itemId: string) => void;
@@ -491,6 +500,97 @@ export function useGlobalTooltipSwitch({
     [schedulePointerReconcile],
   );
 
+  const onTriggerFocus = useCallback(
+    (element: HTMLElement) => {
+      if (!keyboardInputRef.current) {
+        return;
+      }
+      const registration = triggerElementsRef.current.get(element);
+      const item = registration?.getItem();
+      if (
+        !registration ||
+        registration.itemId === null ||
+        item === null ||
+        timingRef.current.get(registration.registrationId)?.disabled ||
+        isTooltipMenuItemTarget(element) ||
+        isTooltipMenuItemTarget(element.firstElementChild)
+      ) {
+        return;
+      }
+
+      const target: PointerTarget & { itemId: string } = {
+        ...registration,
+        element,
+        itemId: registration.itemId,
+      };
+      const slot = tooltipSwitchSlotKey(target.registrationId, target.itemId);
+      pointerDismissedRegistrationsRef.current.delete(target.registrationId);
+      clearHoverCloseTimer();
+      if (
+        tooltipSwitchSlotsEqual(activeSlotRef.current, slot) &&
+        anchorRef.current === target.element
+      ) {
+        return;
+      }
+      if (activeItemRef.current !== null || lingerActiveItemRef.current !== null) {
+        clearHoverOpenTimer();
+        activateTarget(target, item, "instant");
+        return;
+      }
+
+      const pending = pendingTargetRef.current;
+      if (
+        pending?.target.element === target.element &&
+        pending.target.registrationId === target.registrationId &&
+        pending.target.itemId === target.itemId
+      ) {
+        return;
+      }
+      clearHoverOpenTimer();
+      if (target.openDelayMs === 0) {
+        activateTarget(target, item, "delayed");
+        return;
+      }
+
+      const nextPending = { target, ready: false };
+      pendingTargetRef.current = nextPending;
+      hoverOpenTimerRef.current = setTimeout(() => {
+        hoverOpenTimerRef.current = undefined;
+        const focusedElement = target.element.ownerDocument.activeElement;
+        if (!keyboardInputRef.current || !target.element.contains(focusedElement)) {
+          if (pendingTargetRef.current === nextPending) {
+            clearHoverOpenTimer();
+          }
+          return;
+        }
+        pendingTargetRef.current = null;
+        activateTarget(target, target.getItem(), "delayed");
+      }, target.openDelayMs ?? defaultOpenDelayMs);
+    },
+    [activateTarget, clearHoverCloseTimer, clearHoverOpenTimer, defaultOpenDelayMs],
+  );
+
+  const onTriggerBlur = useCallback(
+    (element: HTMLElement, relatedTarget: EventTarget | null) => {
+      if (relatedTarget instanceof Node && element.contains(relatedTarget)) {
+        return;
+      }
+      if (isEventTargetWithinTooltipCompanionOverlays(relatedTarget)) {
+        return;
+      }
+      clearHoverOpenTimer();
+      const registration = triggerElementsRef.current.get(element);
+      const slot =
+        registration?.itemId != null
+          ? tooltipSwitchSlotKey(registration.registrationId, registration.itemId)
+          : null;
+      if (slot && tooltipSwitchSlotsEqual(activeSlotRef.current, slot)) {
+        scheduleHoverClose();
+      }
+    },
+    [clearHoverOpenTimer, scheduleHoverClose],
+  );
+
   const onTriggerPointerDown = useCallback(
     (registrationId: string, _itemId: string) => {
       pointerDismissedRegistrationsRef.current.add(registrationId);
@@ -516,9 +616,11 @@ export function useGlobalTooltipSwitch({
       }
       keyboardInputRef.current = true;
       setTooltipKeyboardInput(true);
-      if (isEventTargetWithinTooltipCompanionOverlays(event.target)) {
+      if (event.key === "Escape") {
+        commitClose();
+      } else if (isEventTargetWithinTooltipCompanionOverlays(event.target)) {
         clearHoverOpenTimer();
-      } else {
+      } else if (isTooltipMenuItemTarget(event.target)) {
         commitClose();
       }
     };
@@ -604,6 +706,8 @@ export function useGlobalTooltipSwitch({
     setRegistrationTiming,
     getTriggerProps,
     onTriggerZonePointerLeave,
+    onTriggerFocus,
+    onTriggerBlur,
     dismissActiveItem: commitClose,
     dismissIfOpen: commitClose,
     onTriggerPointerDown,

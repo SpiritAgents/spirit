@@ -13,6 +13,7 @@ import {
   useSyncExternalStore,
   type ComponentProps,
   type CSSProperties,
+  type FocusEvent as ReactFocusEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type Ref,
@@ -90,6 +91,8 @@ type TooltipStableActionsValue = Pick<
   | "dismissIfOpen"
   | "dismissActiveItem"
   | "onTriggerPointerDown"
+  | "onTriggerFocus"
+  | "onTriggerBlur"
   | "registerTriggerElement"
 >;
 
@@ -499,6 +502,8 @@ export function TooltipProvider({
       dismissIfOpen: () => globalSwitchRef.current.dismissIfOpen(),
       dismissActiveItem: () => globalSwitchRef.current.dismissActiveItem(),
       onTriggerPointerDown: (...args) => globalSwitchRef.current.onTriggerPointerDown(...args),
+      onTriggerFocus: (...args) => globalSwitchRef.current.onTriggerFocus(...args),
+      onTriggerBlur: (...args) => globalSwitchRef.current.onTriggerBlur(...args),
       registerTriggerElement: (...args) => globalSwitchRef.current.registerTriggerElement(...args),
     }),
     [],
@@ -774,6 +779,12 @@ function TooltipItem<TItem>({ item, children, className }: TooltipItemProps<TIte
         aria-describedby={isAnchor ? tooltipContentId(registration.registrationId) : undefined}
         className={cn("flex w-full min-w-0", className)}
         {...(triggerProps === null ? {} : { onPointerEnter: triggerProps.onPointerEnter })}
+        onFocus={(event) => {
+          actions.onTriggerFocus(event.currentTarget);
+        }}
+        onBlur={(event) => {
+          actions.onTriggerBlur(event.currentTarget, event.relatedTarget);
+        }}
         onPointerDown={() => {
           if (itemId !== null) {
             actions.onTriggerPointerDown(registration.registrationId, itemId);
@@ -795,6 +806,8 @@ function TooltipTrigger({
   className,
   onPointerEnter: onPointerEnterProp,
   onPointerDown: onPointerDownProp,
+  onFocus: onFocusProp,
+  onBlur: onBlurProp,
   ...props
 }: ComponentProps<typeof TooltipPrimitive.Trigger> & {
   item?: TooltipSwitchItem;
@@ -844,6 +857,8 @@ function TooltipTrigger({
         className={className}
         {...(onPointerEnterProp === undefined ? {} : { onPointerEnter: onPointerEnterProp })}
         {...(onPointerDownProp === undefined ? {} : { onPointerDown: onPointerDownProp })}
+        {...(onFocusProp === undefined ? {} : { onFocus: onFocusProp })}
+        {...(onBlurProp === undefined ? {} : { onBlur: onBlurProp })}
         {...props}
       >
         {children}
@@ -875,6 +890,14 @@ function TooltipTrigger({
           actions.onTriggerPointerDown(registration.registrationId, itemId);
         }
         onPointerDownProp?.(event as ReactPointerEvent<HTMLButtonElement>);
+      }}
+      onFocus={(event) => {
+        actions.onTriggerFocus(event.currentTarget);
+        onFocusProp?.(event as ReactFocusEvent<HTMLButtonElement>);
+      }}
+      onBlur={(event) => {
+        actions.onTriggerBlur(event.currentTarget, event.relatedTarget);
+        onBlurProp?.(event as ReactFocusEvent<HTMLButtonElement>);
       }}
     >
       {children}

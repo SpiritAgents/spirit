@@ -14,7 +14,7 @@ import { cn } from "./cn.js";
 export const toggleVariants = cva(
   cn(
     "inline-flex cursor-pointer items-center justify-center gap-1 rounded-lg bg-clip-padding font-normal text-sm whitespace-nowrap outline-none select-none",
-    "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+    "focus-visible:ring-2 focus-visible:ring-ring/50",
     "disabled:pointer-events-none disabled:opacity-50",
     "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   ),

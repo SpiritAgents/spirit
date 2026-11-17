@@ -3,6 +3,7 @@ import { ShieldCheck, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { RovingFocusAction } from "@/components/ui/roving-focus-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +23,7 @@ type MarketplaceInstalledExtensionActionsProps = {
     item: DesktopMarketplaceCatalogEntry,
     authorization: DesktopExtensionAuthorization,
   ) => void;
+  rovingFocusId?: string;
 };
 
 /** Installed-extension actions shared by Marketplace rows and the detail header. */
@@ -32,6 +34,7 @@ export function MarketplaceInstalledExtensionActions({
   onToggleEnabled,
   onRequestUninstall,
   onAuthorize,
+  rovingFocusId,
 }: MarketplaceInstalledExtensionActionsProps) {
   const { t } = useTranslation();
   const authorizations = onAuthorize ? (item.authorizations ?? []) : [];
@@ -45,31 +48,34 @@ export function MarketplaceInstalledExtensionActions({
   return (
     <>
       {pendingAuthorizations.map((authorization) => (
-        <Button
-          key={authorization.id}
-          type="button"
-          variant={authorizationVariant}
-          disabled={disabled || item.enabled === false}
-          className="shrink-0 self-center"
-          data-authorization-configured={authorization.configured}
-          onClick={() => onAuthorize?.(item, authorization)}
-        >
-          <ShieldCheck className="size-4" aria-hidden strokeWidth={1.75} />
-          {t("marketplace.authorize")}
-        </Button>
-      ))}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+        <RovingFocusAction key={authorization.id} tabStopId={rovingFocusId}>
           <Button
             type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8 shrink-0 self-center"
-            title={t("marketplace.moreActions")}
+            variant={authorizationVariant}
+            disabled={disabled || item.enabled === false}
+            className="shrink-0 self-center"
+            data-authorization-configured={authorization.configured}
+            onClick={() => onAuthorize?.(item, authorization)}
           >
-            <Ellipsis className="size-4" aria-hidden strokeWidth={1.75} />
+            <ShieldCheck className="size-4" aria-hidden strokeWidth={1.75} />
+            {t("marketplace.authorize")}
           </Button>
-        </DropdownMenuTrigger>
+        </RovingFocusAction>
+      ))}
+      <DropdownMenu>
+        <RovingFocusAction tabStopId={rovingFocusId}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8 shrink-0 self-center"
+              title={t("marketplace.moreActions")}
+            >
+              <Ellipsis className="size-4" aria-hidden strokeWidth={1.75} />
+            </Button>
+          </DropdownMenuTrigger>
+        </RovingFocusAction>
         <DropdownMenuContent align="end" className="min-w-40 p-0">
           <div className="p-1">
             {configuredAuthorizations.map((authorization) => {

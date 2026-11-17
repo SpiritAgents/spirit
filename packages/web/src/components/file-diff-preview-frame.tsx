@@ -56,9 +56,10 @@ export function FileDiffPreviewFrame({
             "group/file-diff-frame flex w-full min-w-0 items-center gap-1.5 px-2 py-1.5 text-left text-xs",
             // Same default fill as outline controls (background + translucent layer); hover
             // stays on canvas-hover.
-            "bg-background outline-none hover:bg-canvas-hover focus-visible:bg-canvas-hover",
+            "bg-background outline-none hover:bg-canvas-hover",
             DESKTOP_CONTENT_TRANSLUCENT_FILL,
-            "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40",
+            "rounded-md aria-expanded:rounded-b-none",
+            "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50",
           )}
           title={relativePath}
         >

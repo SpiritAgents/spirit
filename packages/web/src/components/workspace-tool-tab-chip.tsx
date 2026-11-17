@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { toggleVariants } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { RovingFocusAction, RovingFocusItem } from "@/components/ui/roving-focus-group";
 import { cn } from "@/lib/utils";
 import type { WorkspaceToolTab } from "@/lib/workspace-tool-tabs";
 
@@ -30,34 +31,40 @@ export function WorkspaceToolTabChip({
   const { t } = useTranslation();
   const displayTitle = tab.kind === "extension" ? (tab.tabTitle ?? label) : tab.tabTitle;
   const tabButton = (
-    <button
-      type="button"
-      role="tab"
-      id={`workspace-tool-tab-${tab.id}`}
-      aria-selected={selected}
-      aria-controls={`workspace-tool-panel-${tab.id}`}
-      tabIndex={selected ? 0 : -1}
-      aria-label={displayTitle ? undefined : label}
-      className={cn(
-        "flex min-w-0 flex-1 items-center gap-1 rounded-[inherit] bg-transparent outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
-        displayTitle ? "px-2" : "justify-center p-0",
-      )}
-      onClick={() => onSelect(tab.id)}
-    >
-      {iconNode ?? <Icon className="size-3.5 shrink-0 opacity-80" aria-hidden strokeWidth={1.75} />}
-      {displayTitle ? (
-        <span className="flex min-w-0 flex-auto items-center gap-1.5 overflow-hidden group-hover/tab:workspace-tab-title-fade">
-          <span className="truncate">{displayTitle}</span>
-          {tab.tabDirty ? (
-            <span
-              className="size-1.5 shrink-0 rounded-full bg-muted-foreground"
-              role="status"
-              aria-label={t("workspace.unsavedChangesIndicator")}
-            />
-          ) : null}
-        </span>
-      ) : null}
-    </button>
+    <RovingFocusItem asChild tabStopId={tab.id} active={selected}>
+      <button
+        type="button"
+        role="tab"
+        id={`workspace-tool-tab-${tab.id}`}
+        aria-selected={selected}
+        aria-controls={`workspace-tool-panel-${tab.id}`}
+        aria-label={displayTitle ? undefined : label}
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-1 rounded-lg bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50",
+          displayTitle ? "px-2" : "justify-center p-0",
+        )}
+        onClick={() => onSelect(tab.id)}
+      >
+        {iconNode ?? (
+          <Icon className="size-3.5 shrink-0 opacity-80" aria-hidden strokeWidth={1.75} />
+        )}
+        {displayTitle ? (
+          <span
+            data-slot="workspace-tool-tab-title"
+            className="flex min-w-0 flex-auto items-center gap-1.5 overflow-hidden group-hover/tab:workspace-tab-title-fade group-focus-within/tab:workspace-tab-title-fade"
+          >
+            <span className="truncate">{displayTitle}</span>
+            {tab.tabDirty ? (
+              <span
+                className="size-1.5 shrink-0 rounded-full bg-muted-foreground"
+                role="status"
+                aria-label={t("workspace.unsavedChangesIndicator")}
+              />
+            ) : null}
+          </span>
+        ) : null}
+      </button>
+    </RovingFocusItem>
   );
 
   return (
@@ -81,17 +88,19 @@ export function WorkspaceToolTabChip({
         </Tooltip>
       )}
       {displayTitle ? (
-        <button
-          type="button"
-          className="absolute inset-y-0 right-0 hidden w-8 items-center justify-end rounded-r-lg bg-transparent pr-2 outline-none group-hover/tab:flex"
-          aria-label={t("workspace.closeTab", { label })}
-          onClick={(event) => {
-            event.stopPropagation();
-            onClose(tab.id);
-          }}
-        >
-          <X className="size-3 opacity-70" aria-hidden strokeWidth={1.75} />
-        </button>
+        <RovingFocusAction tabStopId={tab.id}>
+          <button
+            type="button"
+            className="absolute right-1 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full bg-transparent p-0 opacity-0 outline-none pointer-events-none group-hover/tab:pointer-events-auto group-hover/tab:opacity-100 group-focus-within/tab:pointer-events-auto group-focus-within/tab:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50"
+            aria-label={t("workspace.closeTab", { label })}
+            onClick={(event) => {
+              event.stopPropagation();
+              onClose(tab.id);
+            }}
+          >
+            <X className="size-3 opacity-70" aria-hidden strokeWidth={1.75} />
+          </button>
+        </RovingFocusAction>
       ) : null}
     </div>
   );

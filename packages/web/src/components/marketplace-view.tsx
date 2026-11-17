@@ -36,6 +36,12 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  RovingFocusAction,
+  RovingFocusGrid,
+  RovingFocusGroup,
+  RovingFocusItem,
+} from "@/components/ui/roving-focus-group";
 import { scrollAreaViewport, useStickyHeaderPinned } from "@/hooks/use-sticky-header-pinned";
 import {
   DESKTOP_FORM_INPUT_INNER,
@@ -540,41 +546,45 @@ export function MarketplaceView({
         // outer bleed (sm), and sm:even moves the right column's bleed to the
         // right side — column widths stay equal and the inter-column gap
         // survives between washes.
-        "flex -ml-2 w-[calc(100%+1rem)] items-center rounded-lg hover:bg-canvas-hover sm:w-[calc(100%+0.5rem)] sm:even:ml-0",
+        "flex -ml-2 w-[calc(100%+1rem)] items-center rounded-lg hover:bg-canvas-hover has-[[data-marketplace-row-primary]:focus-visible]:ring-2 has-[[data-marketplace-row-primary]:focus-visible]:ring-inset has-[[data-marketplace-row-primary]:focus-visible]:ring-ring/50 sm:w-[calc(100%+0.5rem)] sm:even:ml-0",
         item.installed && !item.enabled && "opacity-55",
       )}
     >
-      <button
-        type="button"
-        onClick={() => openDetail(item.id)}
-        // pl-2 is the wash's left cushion: on bleeding rows the icon lands
-        // exactly on the container edge; on right-column rows it insets the
-        // icon within the cell instead.
-        className="flex min-w-0 flex-1 items-center gap-3 py-2.5 pl-2 pr-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
-      >
-        <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/50 bg-muted text-muted-foreground">
-          {item.iconUrl ? (
-            <img src={item.iconUrl} alt="" className="size-full object-cover" aria-hidden />
-          ) : (
-            <Sparkles className="size-4" aria-hidden strokeWidth={1.75} />
-          )}
-        </div>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-normal leading-snug text-foreground">
-            {item.displayName}
-          </span>
-          {item.description ? (
-            <span className="block truncate text-xs leading-snug text-muted-foreground">
-              {item.description}
+      <RovingFocusItem asChild tabStopId={item.id}>
+        <button
+          type="button"
+          data-marketplace-row-primary=""
+          onClick={() => openDetail(item.id)}
+          // pl-2 is the wash's left cushion: on bleeding rows the icon lands
+          // exactly on the container edge; on right-column rows it insets the
+          // icon within the cell instead.
+          className="flex min-w-0 flex-1 items-center gap-3 py-2.5 pl-2 pr-3 text-left outline-none"
+        >
+          <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/50 bg-muted text-muted-foreground">
+            {item.iconUrl ? (
+              <img src={item.iconUrl} alt="" className="size-full object-cover" aria-hidden />
+            ) : (
+              <Sparkles className="size-4" aria-hidden strokeWidth={1.75} />
+            )}
+          </div>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-normal leading-snug text-foreground">
+              {item.displayName}
             </span>
-          ) : null}
-        </span>
-      </button>
+            {item.description ? (
+              <span className="block truncate text-xs leading-snug text-muted-foreground">
+                {item.description}
+              </span>
+            ) : null}
+          </span>
+        </button>
+      </RovingFocusItem>
       <div className="flex shrink-0 items-center gap-1.5 pr-2">
         {item.installed ? (
           <>
             <MarketplaceInstalledExtensionActions
               item={item}
+              rovingFocusId={item.id}
               authorizationVariant="secondary"
               disabled={installBusyIds.has(item.id)}
               onToggleEnabled={() => handleToggleEnabled(item)}
@@ -584,23 +594,32 @@ export function MarketplaceView({
           </>
         ) : isInstallUnsupported(item) ? (
           <Tooltip delayDuration={300} disableHoverableContent>
-            <TooltipTrigger>
-              <Button type="button" variant="secondary" disabled className="shrink-0 self-center">
-                {t("marketplace.install")}
-              </Button>
+            <TooltipTrigger asChild>
+              <RovingFocusAction tabStopId={item.id}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  aria-disabled="true"
+                  className="shrink-0 self-center opacity-50"
+                >
+                  {t("marketplace.install")}
+                </Button>
+              </RovingFocusAction>
             </TooltipTrigger>
             <TooltipContent>{t("marketplace.httpLocalSourceInstallUnsupported")}</TooltipContent>
           </Tooltip>
         ) : (
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={installBusyIds.has(item.id)}
-            className="shrink-0 self-center"
-            onClick={() => handleInstall(item)}
-          >
-            {t("marketplace.install")}
-          </Button>
+          <RovingFocusAction tabStopId={item.id}>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={installBusyIds.has(item.id)}
+              className="shrink-0 self-center"
+              onClick={() => handleInstall(item)}
+            >
+              {t("marketplace.install")}
+            </Button>
+          </RovingFocusAction>
         )}
       </div>
     </div>
@@ -679,37 +698,51 @@ export function MarketplaceView({
                 aria-hidden
               />
               <div aria-hidden style={{ height: headerHeight ?? 0 }} />
-              {/* Marketplace domain tabs: below the search box, scroll away with the title,
-                  horizontal scroll instead of wrapping. pt-6 gives the row the same 24px
-                  section rhythm the list uses below (the pinned band carries no bottom
-                  padding; its fade mask only softens the transition). The row hides
-                  entirely when no tab is visible (all sources empty). */}
+              {/* Marketplace domain tabs: below the search box, scroll away with the title.
+                  Keep the existing max-width track, but let focus rings paint beyond it
+                  instead of clipping their leading edge. The row hides when empty. */}
               {showAll ? (
-                <div
-                  className="flex items-center gap-1 overflow-x-auto whitespace-nowrap pb-3 pt-6"
-                  role="tablist"
-                  aria-label={t("marketplace.tabsLabel")}
+                <RovingFocusGroup
+                  asChild
+                  orientation="horizontal"
+                  loop
+                  defaultCurrentTabStopId={resolvedActiveSourceId}
                 >
-                  {/* The All tab is pinned first and is the page default; it is a
-                      pseudo source, so it carries no per-source context menu. */}
-                  <Toggle
-                    size="sm"
-                    pressed={resolvedActiveSourceId === "all"}
-                    onPressedChange={() => setActiveSourceId("all")}
-                    aria-label={t("marketplace.tabAll")}
+                  <div
+                    className="flex items-center gap-1 overflow-x-visible whitespace-nowrap pb-3 pt-6"
+                    role="tablist"
+                    aria-label={t("marketplace.tabsLabel")}
                   >
-                    {t("marketplace.tabAll")}
-                  </Toggle>
-                  {visibleSources.map((source) => (
-                    <MarketplaceSourceTab
-                      key={source.id}
-                      source={source}
-                      active={resolvedActiveSourceId === source.id}
-                      onSelect={setActiveSourceId}
-                      onRemove={handleRemoveSource}
-                    />
-                  ))}
-                </div>
+                    {/* The All tab is pinned first and is the page default; it is a
+                      pseudo source, so it carries no per-source context menu. */}
+                    <RovingFocusItem
+                      asChild
+                      tabStopId="all"
+                      active={resolvedActiveSourceId === "all"}
+                    >
+                      <Toggle
+                        size="sm"
+                        pressed={resolvedActiveSourceId === "all"}
+                        onPressedChange={() => setActiveSourceId("all")}
+                        role="tab"
+                        aria-selected={resolvedActiveSourceId === "all"}
+                        aria-pressed={undefined}
+                        aria-label={t("marketplace.tabAll")}
+                      >
+                        {t("marketplace.tabAll")}
+                      </Toggle>
+                    </RovingFocusItem>
+                    {visibleSources.map((source) => (
+                      <MarketplaceSourceTab
+                        key={source.id}
+                        source={source}
+                        active={resolvedActiveSourceId === source.id}
+                        onSelect={setActiveSourceId}
+                        onRemove={handleRemoveSource}
+                      />
+                    ))}
+                  </div>
+                </RovingFocusGroup>
               ) : null}
 
               {listEmpty ? (
@@ -727,9 +760,11 @@ export function MarketplaceView({
               ) : isFiltering ? (
                 // Search flattens to a single list: no sections, and zero
                 // results still surface as the noMatches state above.
-                <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
-                  {filteredExtensions.map(renderExtensionRow)}
-                </div>
+                <RovingFocusGrid asChild>
+                  <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+                    {filteredExtensions.map(renderExtensionRow)}
+                  </div>
+                </RovingFocusGrid>
               ) : (
                 <>
                   {hasSections ? (

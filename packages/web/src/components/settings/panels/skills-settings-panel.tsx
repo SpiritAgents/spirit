@@ -10,6 +10,7 @@ import { skillRootKindLabel } from "@/components/settings/skill-rule-labels";
 import { SettingsListItemHeading } from "@/components/settings/settings-list-item-heading";
 import type { SettingsViewProps } from "@/components/settings/types";
 import { Button } from "@/components/ui/button";
+import { RovingFocusGroup, RovingFocusItem } from "@/components/ui/roving-focus-group";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
   Dialog,
@@ -138,7 +139,10 @@ export function SkillsSettingsPanel({
         </div>
       </div>
 
-      <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}>
+      <RovingFocusGroup
+        orientation="vertical"
+        className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}
+      >
         {items.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
             {t("settings.noSkillsFound")}
@@ -163,20 +167,26 @@ export function SkillsSettingsPanel({
                   </p>
                 ) : null}
               </div>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="shrink-0 self-start sm:self-center"
-                disabled={skillsBusy}
-                onClick={() => setDeleteTarget({ name: item.name, rootKind: item.rootKind })}
+              <RovingFocusItem
+                asChild
+                tabStopId={`skill:${item.rootKind}:${item.name}`}
+                focusable={!skillsBusy}
               >
-                {t("common.delete")}
-              </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="shrink-0 self-start sm:self-center"
+                  disabled={skillsBusy}
+                  onClick={() => setDeleteTarget({ name: item.name, rootKind: item.rootKind })}
+                >
+                  {t("common.delete")}
+                </Button>
+              </RovingFocusItem>
             </div>
           ))
         )}
-      </div>
+      </RovingFocusGroup>
 
       <AlertDialog
         open={deleteTarget !== null}
@@ -223,31 +233,45 @@ export function SkillsSettingsPanel({
           <div className="grid gap-3 py-1">
             <div className="grid gap-2">
               <Label>{t("settings.saveLocation")}</Label>
-              <div
-                role="tablist"
-                aria-label={t("settings.saveLocation")}
-                className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
+              <RovingFocusGroup
+                asChild
+                orientation="horizontal"
+                loop
+                defaultCurrentTabStopId={createRootKind}
               >
-                {localizedSkillCreateRootOptions.map((opt) => (
-                  <button
-                    key={opt.kind}
-                    type="button"
-                    role="tab"
-                    aria-selected={createRootKind === opt.kind}
-                    className={cn(
-                      DESKTOP_EDITOR_TAB_CLASS,
-                      createRootKind === opt.kind
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-chrome-emphasis",
-                    )}
-                    disabled={skillsBusy}
-                    title={opt.hint}
-                    onClick={() => setCreateRootKind(opt.kind)}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+                <div
+                  role="tablist"
+                  aria-label={t("settings.saveLocation")}
+                  className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
+                >
+                  {localizedSkillCreateRootOptions.map((opt) => (
+                    <RovingFocusItem
+                      asChild
+                      key={opt.kind}
+                      tabStopId={opt.kind}
+                      active={createRootKind === opt.kind}
+                      focusable={!skillsBusy}
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={createRootKind === opt.kind}
+                        className={cn(
+                          DESKTOP_EDITOR_TAB_CLASS,
+                          createRootKind === opt.kind
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-chrome-emphasis",
+                        )}
+                        disabled={skillsBusy}
+                        title={opt.hint}
+                        onClick={() => setCreateRootKind(opt.kind)}
+                      >
+                        {opt.label}
+                      </button>
+                    </RovingFocusItem>
+                  ))}
+                </div>
+              </RovingFocusGroup>
               <p className="text-xs text-muted-foreground">
                 {localizedSkillCreateRootOptions.find((o) => o.kind === createRootKind)?.hint}
               </p>

@@ -15,6 +15,7 @@ import { DESKTOP_SHELL_SECTION_HEADER_MIN_HEIGHT_CLASS } from "@/lib/desktop-chr
 import { GIT_CHANGES_HEADER_SHELL_DIVIDER_ATTR } from "@/lib/workspace-tools-panel-edge";
 import { WorkspaceFileIcon } from "@/components/workspace-file-icon";
 import { cn } from "@/lib/utils";
+import { RovingFocusGroup, RovingFocusItem } from "@/components/ui/roving-focus-group";
 import type {
   DesktopGitSnapshot,
   GitWorkingTreeChange,
@@ -64,33 +65,35 @@ function ChangeRow({
 
   return (
     <li className="min-w-0">
-      <button
-        type="button"
-        disabled={!clickable}
-        className={cn(
-          "flex w-full min-w-0 items-center gap-1.5 px-2 py-1 text-left text-xs",
-          clickable && "cursor-pointer hover:bg-canvas-hover",
-        )}
-        title={change.path}
-        onClick={() => onOpen?.(change.path)}
-      >
-        <WorkspaceFileIcon name={fileName} />
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
-          <span className="shrink-0 truncate text-foreground/90">{fileName}</span>
-          {dirLabel ? (
-            <span className="min-w-0 truncate text-[10px] text-muted-foreground">{dirLabel}</span>
-          ) : null}
-        </div>
-        <span
+      <RovingFocusItem asChild tabStopId={`${change.code}:${change.path}`} focusable={clickable}>
+        <button
+          type="button"
+          disabled={!clickable}
           className={cn(
-            "ml-1 shrink-0 text-[10px] font-normal tabular-nums",
-            gitChangeStatusClassName(change.code),
+            "flex w-full min-w-0 items-center gap-1.5 px-2 py-1 text-left text-xs",
+            clickable && "cursor-pointer hover:bg-canvas-hover",
           )}
-          title={gitChangeStatusTitle(change.code)}
+          title={change.path}
+          onClick={() => onOpen?.(change.path)}
         >
-          {statusLabel}
-        </span>
-      </button>
+          <WorkspaceFileIcon name={fileName} />
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
+            <span className="shrink-0 truncate text-foreground/90">{fileName}</span>
+            {dirLabel ? (
+              <span className="min-w-0 truncate text-[10px] text-muted-foreground">{dirLabel}</span>
+            ) : null}
+          </div>
+          <span
+            className={cn(
+              "ml-1 shrink-0 text-[10px] font-normal tabular-nums",
+              gitChangeStatusClassName(change.code),
+            )}
+            title={gitChangeStatusTitle(change.code)}
+          >
+            {statusLabel}
+          </span>
+        </button>
+      </RovingFocusItem>
     </li>
   );
 }
@@ -178,15 +181,17 @@ export function GitChangesSection({
         ) : null}
         {!loading && isRepository && !error && changes.length > 0 ? (
           <ScrollArea className="h-full min-h-0">
-            <ul className="py-1">
-              {changes.map((change) => (
-                <ChangeRow
-                  key={`${change.code}:${change.path}`}
-                  change={change}
-                  onOpen={onOpenChangedFile}
-                />
-              ))}
-            </ul>
+            <RovingFocusGroup asChild orientation="vertical">
+              <ul className="py-1">
+                {changes.map((change) => (
+                  <ChangeRow
+                    key={`${change.code}:${change.path}`}
+                    change={change}
+                    onOpen={onOpenChangedFile}
+                  />
+                ))}
+              </ul>
+            </RovingFocusGroup>
           </ScrollArea>
         ) : null}
       </div>

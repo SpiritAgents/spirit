@@ -31,7 +31,7 @@ export function RadioGroupItem({
         "after:absolute after:-inset-x-3 after:-inset-y-2",
         "data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground",
         "enabled:hover:not-data-checked:border-outline-border-hover enabled:hover:not-data-checked:bg-outline-fill",
-        "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+        "focus-visible:ring-2 focus-visible:ring-ring/50",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}

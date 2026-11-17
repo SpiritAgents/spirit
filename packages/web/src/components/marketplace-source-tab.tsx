@@ -9,6 +9,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Toggle } from "@/components/ui/toggle";
+import { RovingFocusItem } from "@/components/ui/roving-focus-group";
 import type { DesktopMarketplaceSource } from "@/types";
 
 type MarketplaceSourceTabProps = {
@@ -34,14 +35,19 @@ export function MarketplaceSourceTab({
         : source.displayName;
 
   const tab = (
-    <Toggle
-      size="sm"
-      pressed={active}
-      onPressedChange={() => onSelect(source.id)}
-      aria-label={label}
-    >
-      {label}
-    </Toggle>
+    <RovingFocusItem asChild tabStopId={source.id} active={active}>
+      <Toggle
+        size="sm"
+        pressed={active}
+        onPressedChange={() => onSelect(source.id)}
+        role="tab"
+        aria-selected={active}
+        aria-pressed={undefined}
+        aria-label={label}
+      >
+        {label}
+      </Toggle>
+    </RovingFocusItem>
   );
   if (source.internal) {
     return <span className="contents">{tab}</span>;

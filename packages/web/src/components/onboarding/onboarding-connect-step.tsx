@@ -10,6 +10,7 @@ import {
 } from "@/components/settings/models/provider-picker-rows";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { RovingFocusGroup } from "@/components/ui/roving-focus-group";
 import {
   DESKTOP_OVERLAY_LIST_FILTER_INPUT,
   DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL,
@@ -62,6 +63,8 @@ export function OnboardingConnectControls({
     session: number;
   } | null>(null);
   const scrollRootRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const providerListRef = useRef<HTMLDivElement>(null);
   const [hasMoreBelow, setHasMoreBelow] = useState(() => pinnedBottomFade ?? false);
 
   const filteredProviders = filterProviderRows(
@@ -111,9 +114,17 @@ export function OnboardingConnectControls({
             strokeWidth={1.75}
           />
           <Input
+            ref={searchInputRef}
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "ArrowDown") {
+                return;
+              }
+              event.preventDefault();
+              providerListRef.current?.querySelector<HTMLElement>("button")?.focus();
+            }}
             placeholder={t("common.search")}
             autoComplete="off"
             className={cn(DESKTOP_OVERLAY_LIST_FILTER_INPUT, "pl-8")}
@@ -126,17 +137,33 @@ export function OnboardingConnectControls({
         className="min-h-0 w-full max-w-md flex-1"
         style={bottomScrollFadeMaskStyle(hasMoreBelow, { animate: !freezeBottomFade })}
       >
-        <div className="px-1 pt-2 pb-4">
-          {filteredProviders.length === 0 ? (
-            <p className="px-2 py-6 text-center text-sm text-muted-foreground">
-              {t("app.noMatches")}
-            </p>
-          ) : (
-            filteredProviders.map((row) => (
-              <ProviderPickerRowButton key={row.id} row={row} onSelect={startConnect} />
-            ))
-          )}
-        </div>
+        <RovingFocusGroup
+          asChild
+          orientation="vertical"
+          onKeyDownCapture={(event) => {
+            if (event.key !== "ArrowUp") {
+              return;
+            }
+            const firstButton = providerListRef.current?.querySelector("button");
+            if (firstButton && event.target === firstButton) {
+              event.preventDefault();
+              event.stopPropagation();
+              searchInputRef.current?.focus();
+            }
+          }}
+        >
+          <div ref={providerListRef} className="px-1 pt-2 pb-4">
+            {filteredProviders.length === 0 ? (
+              <p className="px-2 py-6 text-center text-sm text-muted-foreground">
+                {t("app.noMatches")}
+              </p>
+            ) : (
+              filteredProviders.map((row) => (
+                <ProviderPickerRowButton key={row.id} row={row} onSelect={startConnect} />
+              ))
+            )}
+          </div>
+        </RovingFocusGroup>
       </ScrollArea>
 
       {connectTarget !== null ? (

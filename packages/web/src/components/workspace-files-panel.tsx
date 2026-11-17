@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
   type DragEvent,
+  type FocusEvent,
   type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
@@ -40,6 +41,7 @@ import {
 } from "@/lib/workspace-explorer-dir-collapse";
 import { evictRecordKeysUnderPrefix } from "@/lib/workspace-entry-path-sync";
 import { cn } from "@/lib/utils";
+import { RovingFocusGroup, RovingFocusItem } from "@/components/ui/roving-focus-group";
 import type { PlanSnapshot, WorkspaceExplorerEntry, WorkspaceExplorerListResult } from "@/types";
 
 function workspacePlatformKey(base: string): string {
@@ -187,6 +189,7 @@ export type WorkspaceFilesPanelProps = {
 type ExplorerRowProps = {
   target: WorkspaceExplorerContextTarget;
   depth: number;
+  expanded?: boolean;
   selected: boolean;
   renaming: boolean;
   renameValue: string;
@@ -204,6 +207,7 @@ type ExplorerRowProps = {
   onDragOver?: (event: DragEvent<HTMLElement>) => void;
   onDragLeave?: (event: DragEvent<HTMLElement>) => void;
   onDrop?: (event: DragEvent<HTMLElement>) => void;
+  onFocusRoot: () => void;
   children?: ReactNode;
   ignored?: boolean;
   /** Display name when merging directory chains; defaults to `target.name`. */
@@ -213,6 +217,7 @@ type ExplorerRowProps = {
 function ExplorerRow({
   target,
   depth,
+  expanded,
   selected,
   renaming,
   renameValue,
@@ -230,6 +235,7 @@ function ExplorerRow({
   onDragOver,
   onDragLeave,
   onDrop,
+  onFocusRoot,
   children,
   ignored = false,
   label,
@@ -300,26 +306,67 @@ function ExplorerRow({
       {renameInput}
     </div>
   ) : (
-    <button
-      type="button"
-      draggable={draggable}
-      className={rowClassName}
-      style={rowStyle}
-      aria-current={selected ? "true" : undefined}
-      data-explorer-context-path={target.relativePath}
-      data-explorer-context-kind={target.kind}
-      data-explorer-context-name={target.name}
-      {...(onDragOver ? { "data-explorer-folder-drop": target.relativePath } : {})}
-      onClick={onClick}
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-    >
-      {leading}
-      {icon}
-      <span className={labelClassName}>{rowLabel}</span>
-    </button>
+    <RovingFocusItem asChild tabStopId={`entry:${target.relativePath}`} active={selected}>
+      <button
+        type="button"
+        role="treeitem"
+        draggable={draggable}
+        className={rowClassName}
+        style={rowStyle}
+        aria-current={selected ? "true" : undefined}
+        aria-expanded={target.kind === "dir" ? expanded : undefined}
+        data-explorer-context-path={target.relativePath}
+        data-explorer-context-kind={target.kind}
+        data-explorer-context-name={target.name}
+        {...(onDragOver ? { "data-explorer-folder-drop": target.relativePath } : {})}
+        onClick={onClick}
+        onKeyDown={(event) => {
+          if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+            return;
+          }
+          event.preventDefault();
+          event.stopPropagation();
+          if (target.kind === "dir") {
+            if (event.key === "ArrowRight" && !expanded) {
+              onClick();
+              return;
+            }
+            if (event.key === "ArrowLeft" && expanded) {
+              onClick();
+              return;
+            }
+            if (event.key === "ArrowRight" && expanded) {
+              const listItem = event.currentTarget.closest("li");
+              const firstChild = Array.from(
+                listItem?.querySelectorAll<HTMLElement>("[data-roving-focus-item]") ?? [],
+              ).find((element) => element !== event.currentTarget);
+              firstChild?.focus();
+              return;
+            }
+          }
+          if (event.key === "ArrowLeft") {
+            const listItem = event.currentTarget.closest("li");
+            const parentListItem = listItem?.parentElement?.closest("li");
+            const parentTrigger = Array.from(parentListItem?.children ?? []).find((child) =>
+              child.hasAttribute("data-roving-focus-item"),
+            );
+            if (parentTrigger instanceof HTMLElement) {
+              parentTrigger.focus();
+            } else {
+              onFocusRoot();
+            }
+          }
+        }}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+      >
+        {leading}
+        {icon}
+        <span className={labelClassName}>{rowLabel}</span>
+      </button>
+    </RovingFocusItem>
   );
 
   return (
@@ -476,6 +523,7 @@ export function WorkspaceFilesPanel({
   /** Directory click lingering; `""` is the workspace root. Mutually exclusive with the file selected highlight. */
   const [focusedDirectoryRel, setFocusedDirectoryRel] = useState<string | null>(null);
   const [treeHovered, setTreeHovered] = useState(false);
+  const [treeFocused, setTreeFocused] = useState(false);
   const [createTooltipAnchorLocked, setCreateTooltipAnchorLocked] = useState(false);
   const [creatingEntry, setCreatingEntry] = useState<CreatingEntryState | null>(null);
   const [fileContextMenuTarget, setFileContextMenuTarget] =
@@ -487,6 +535,7 @@ export function WorkspaceFilesPanel({
   const createCommitInFlightRef = useRef(false);
   const treeHoverContainerRef = useRef<HTMLDivElement>(null);
   const explorerTreeRef = useRef<HTMLDivElement>(null);
+  const explorerRootTriggerRef = useRef<HTMLButtonElement>(null);
   const prevGitRevisionRef = useRef<number | undefined>(undefined);
   const cacheRef = useRef(cache);
   cacheRef.current = cache;
@@ -1090,6 +1139,18 @@ export function WorkspaceFilesPanel({
     setTreeHovered(false);
   }, []);
 
+  const handleTreeFocus = useCallback(() => {
+    setTreeFocused(true);
+  }, []);
+
+  const handleTreeBlur = useCallback((event: FocusEvent<HTMLDivElement>) => {
+    const related = event.relatedTarget;
+    if (related instanceof Node && treeHoverContainerRef.current?.contains(related)) {
+      return;
+    }
+    setTreeFocused(false);
+  }, []);
+
   const handleCreateTooltipOpenChange = useCallback((kind: "file" | "dir", open: boolean) => {
     if (open) {
       createTooltipOpenKindsRef.current.add(kind);
@@ -1120,35 +1181,52 @@ export function WorkspaceFilesPanel({
   }
 
   const rootLabel = workspaceRootLabel;
+  const treeCreateActionsVisible = treeHovered || treeFocused;
 
   const renderPlanItem = () => (
     <ul className="list-none space-y-0.5 p-0">
       <li className="min-w-0">
-        <button
-          type="button"
-          className={cn(
-            "flex w-full min-w-0 items-center gap-1 rounded px-1 py-0.5 text-left",
-            "text-foreground/90 hover:bg-canvas-hover",
-            onOpenPlan && "cursor-pointer",
-            selectedEntryKey === "plan" && focusedDirectoryRel === null && "bg-canvas-hover",
-          )}
-          style={{ paddingLeft: "4px" }}
-          aria-current={
-            selectedEntryKey === "plan" && focusedDirectoryRel === null ? "true" : undefined
-          }
-          onClick={() => {
-            clearFocusedDirectory();
-            onOpenPlan?.();
-          }}
-          title={plan.path}
+        <RovingFocusItem
+          asChild
+          tabStopId="plan"
+          active={selectedEntryKey === "plan" && focusedDirectoryRel === null}
         >
-          <span className="inline-block size-3.5 shrink-0" aria-hidden />
-          <ListTodo className="size-3.5 shrink-0 opacity-70" aria-hidden strokeWidth={1.75} />
-          <span className="min-w-0 truncate">Plan</span>
-        </button>
+          <button
+            type="button"
+            role="treeitem"
+            className={cn(
+              "flex w-full min-w-0 items-center gap-1 rounded px-1 py-0.5 text-left",
+              "text-foreground/90 hover:bg-canvas-hover",
+              onOpenPlan && "cursor-pointer",
+              selectedEntryKey === "plan" && focusedDirectoryRel === null && "bg-canvas-hover",
+            )}
+            style={{ paddingLeft: "4px" }}
+            aria-current={
+              selectedEntryKey === "plan" && focusedDirectoryRel === null ? "true" : undefined
+            }
+            onClick={() => {
+              clearFocusedDirectory();
+              onOpenPlan?.();
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                event.stopPropagation();
+                explorerRootTriggerRef.current?.focus();
+              }
+            }}
+            title={plan.path}
+          >
+            <span className="inline-block size-3.5 shrink-0" aria-hidden />
+            <ListTodo className="size-3.5 shrink-0 opacity-70" aria-hidden strokeWidth={1.75} />
+            <span className="min-w-0 truncate">Plan</span>
+          </button>
+        </RovingFocusItem>
       </li>
     </ul>
   );
+
+  const focusRoot = () => explorerRootTriggerRef.current?.focus();
 
   const renderDirBody = (rel: string, depth: number) => {
     const state = cache[rel];
@@ -1267,6 +1345,7 @@ export function WorkspaceFilesPanel({
                   <ExplorerRow
                     target={target}
                     depth={depth}
+                    expanded={false}
                     selected={selected}
                     ignored={ignored}
                     renaming={renamingPath === childRel}
@@ -1284,17 +1363,19 @@ export function WorkspaceFilesPanel({
                     icon={fileIcon}
                     draggable
                     onDragStart={(event) => handleDragStart(event, target)}
+                    onFocusRoot={focusRoot}
                   />
                 </Fragment>
               );
             }
 
             return (
-              <Fragment key={dirRel}>
+              <Fragment key={childRel}>
                 {fileCreateRow}
                 <ExplorerRow
                   target={target}
                   depth={depth}
+                  expanded={open}
                   selected={directoryRowFocused(dirRel)}
                   ignored={ignored}
                   renaming={renamingPath === dirRel}
@@ -1341,6 +1422,7 @@ export function WorkspaceFilesPanel({
                     event.stopPropagation();
                     void handleDirectoryDrop(event, dirRel);
                   }}
+                  onFocusRoot={focusRoot}
                 >
                   {open ? <div className="min-w-0">{renderDirBody(dirRel, depth + 1)}</div> : null}
                 </ExplorerRow>
@@ -1383,6 +1465,8 @@ export function WorkspaceFilesPanel({
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
         onMouseEnter={handleTreeMouseEnter}
         onMouseLeave={handleTreeMouseLeave}
+        onFocusCapture={handleTreeFocus}
+        onBlurCapture={handleTreeBlur}
       >
         <ContextMenu>
           <ContextMenuTrigger asChild>
@@ -1399,6 +1483,7 @@ export function WorkspaceFilesPanel({
                   )}
                 >
                   <button
+                    ref={explorerRootTriggerRef}
                     type="button"
                     className={cn(
                       "flex min-w-0 flex-1 items-center gap-1 px-1 py-0.5 text-left",
@@ -1412,6 +1497,26 @@ export function WorkspaceFilesPanel({
                     onClick={() => {
                       setFocusedDirectoryRel("");
                       setRootOpen((open) => !open);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "ArrowLeft" && rootOpen) {
+                        event.preventDefault();
+                        setRootOpen(false);
+                      } else if (event.key === "ArrowRight") {
+                        event.preventDefault();
+                        if (!rootOpen) {
+                          setRootOpen(true);
+                        } else {
+                          explorerTreeRef.current
+                            ?.querySelector<HTMLElement>("[data-roving-focus-item]")
+                            ?.focus();
+                        }
+                      } else if (event.key === "ArrowDown" && rootOpen) {
+                        event.preventDefault();
+                        explorerTreeRef.current
+                          ?.querySelector<HTMLElement>("[data-roving-focus-item]")
+                          ?.focus();
+                      }
                     }}
                   >
                     {rootOpen ? (
@@ -1429,12 +1534,12 @@ export function WorkspaceFilesPanel({
                     )}
                     <span className="min-w-0 truncate">{rootLabel}</span>
                   </button>
-                  {isElectron && (treeHovered || createTooltipAnchorLocked) ? (
+                  {isElectron && (treeCreateActionsVisible || createTooltipAnchorLocked) ? (
                     <div
                       className={cn(
                         "absolute inset-y-0 right-0.5 flex items-center gap-0",
                         createTooltipAnchorLocked &&
-                          !treeHovered &&
+                          !treeCreateActionsVisible &&
                           "pointer-events-none opacity-0",
                       )}
                     >
@@ -1518,15 +1623,16 @@ export function WorkspaceFilesPanel({
                   onMouseDownCapture={handleScrollAreaMouseDownCapture}
                 >
                   <ScrollArea className="min-h-0 flex-1" type="auto">
-                    <div
-                      ref={explorerTreeRef}
-                      role="tree"
-                      aria-label={t("workspace.fileList")}
-                      aria-busy={cache[""]?.status === "loading" ? true : undefined}
-                    >
-                      {renderDirBody("", 0)}
-                      <div className="mt-1">{renderPlanItem()}</div>
-                    </div>
+                    <RovingFocusGroup asChild ref={explorerTreeRef} orientation="vertical">
+                      <div
+                        role="tree"
+                        aria-label={t("workspace.fileList")}
+                        aria-busy={cache[""]?.status === "loading" ? true : undefined}
+                      >
+                        {renderDirBody("", 0)}
+                        <div className="mt-1">{renderPlanItem()}</div>
+                      </div>
+                    </RovingFocusGroup>
                   </ScrollArea>
                 </div>
               ) : (

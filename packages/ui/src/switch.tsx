@@ -16,7 +16,7 @@ export function Switch({
         "peer group/switch inline-flex shrink-0 cursor-pointer items-center rounded-full border border-transparent bg-input p-px outline-none transition-colors",
         "data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px]",
         "data-checked:bg-primary",
-        "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50",
+        "focus-visible:ring-2 focus-visible:ring-ring/50",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}

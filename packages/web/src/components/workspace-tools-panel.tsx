@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { RovingFocusGroup } from "@/components/ui/roving-focus-group";
 import {
   WorkspaceBrowserTab,
   type WorkspaceBrowserTabProps,
@@ -826,63 +827,70 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
           scrollHideDelay={450}
           className="min-h-0 flex-1 self-stretch"
         >
-          <div
-            role="tablist"
-            aria-label={t("workspace.toolTabs")}
-            className="flex items-center gap-1"
+          <RovingFocusGroup
+            asChild
+            orientation="horizontal"
+            loop
+            defaultCurrentTabStopId={activeTabId}
           >
-            {tabs.map((item) => {
-              if (item.kind === "extension") {
-                if (!isWorkspaceToolTabVisibleInContext(item, { workspaceRoot, sessionKey })) {
-                  return null;
+            <div
+              role="tablist"
+              aria-label={t("workspace.toolTabs")}
+              className="flex items-center gap-1"
+            >
+              {tabs.map((item) => {
+                if (item.kind === "extension") {
+                  if (!isWorkspaceToolTabVisibleInContext(item, { workspaceRoot, sessionKey })) {
+                    return null;
+                  }
+                  const entry = extensionContributions.find(
+                    (candidate) =>
+                      candidate.extension.id === item.extensionId &&
+                      candidate.contribution.id === item.contributionId,
+                  );
+                  if (!entry) {
+                    return null;
+                  }
+                  const icon = item.icon ?? entry.contribution.icon;
+                  return (
+                    <WorkspaceToolTabChip
+                      key={item.id}
+                      tab={item}
+                      icon={Globe}
+                      iconNode={
+                        <ExtensionTabIcon
+                          extensionId={item.extensionId}
+                          icon={icon}
+                          className="size-3.5 opacity-80"
+                        />
+                      }
+                      label={extensionTabDisplayName(entry.contribution)}
+                      selected={item.id === activeTabId}
+                      onSelect={onActiveTabIdChange}
+                      onClose={handleCloseTab}
+                    />
+                  );
                 }
-                const entry = extensionContributions.find(
-                  (candidate) =>
-                    candidate.extension.id === item.extensionId &&
-                    candidate.contribution.id === item.contributionId,
-                );
-                if (!entry) {
-                  return null;
-                }
-                const icon = item.icon ?? entry.contribution.icon;
+                const meta = TAB_KIND_META[item.builtInKind];
+                const displayTitle = item.tabTitle;
+                const filesTabIcon = isWorkspaceToolTabKind(item, "files")
+                  ? resolveWorkspaceFilesTabIcon(displayTitle)
+                  : undefined;
+                const Icon = filesTabIcon ?? meta.icon;
                 return (
                   <WorkspaceToolTabChip
                     key={item.id}
                     tab={item}
-                    icon={Globe}
-                    iconNode={
-                      <ExtensionTabIcon
-                        extensionId={item.extensionId}
-                        icon={icon}
-                        className="size-3.5 opacity-80"
-                      />
-                    }
-                    label={extensionTabDisplayName(entry.contribution)}
+                    icon={Icon}
+                    label={workspaceToolTabLabel(item.builtInKind, tabs, item.id, t)}
                     selected={item.id === activeTabId}
                     onSelect={onActiveTabIdChange}
                     onClose={handleCloseTab}
                   />
                 );
-              }
-              const meta = TAB_KIND_META[item.builtInKind];
-              const displayTitle = item.tabTitle;
-              const filesTabIcon = isWorkspaceToolTabKind(item, "files")
-                ? resolveWorkspaceFilesTabIcon(displayTitle)
-                : undefined;
-              const Icon = filesTabIcon ?? meta.icon;
-              return (
-                <WorkspaceToolTabChip
-                  key={item.id}
-                  tab={item}
-                  icon={Icon}
-                  label={workspaceToolTabLabel(item.builtInKind, tabs, item.id, t)}
-                  selected={item.id === activeTabId}
-                  onSelect={onActiveTabIdChange}
-                  onClose={handleCloseTab}
-                />
-              );
-            })}
-          </div>
+              })}
+            </div>
+          </RovingFocusGroup>
         </ScrollArea>
         <Tooltip delayDuration={300} disableHoverableContent>
           <TooltipTrigger asChild>
