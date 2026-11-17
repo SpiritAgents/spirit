@@ -18,3 +18,26 @@ test("trigger authorization hints localize their navigation link with the contri
     assert.match(message, /<authorize>[^<]*{{name}}[^<]*<\/authorize>/, locale);
   }
 });
+
+test("Automation trigger contribution groups use the same Automation semantics as the product", () => {
+  const expected = {
+    en: "Automation Triggers",
+    "zh-CN": "自动化触发器",
+    "zh-TW": "自動化觸發器",
+    ja: "オートメーショントリガー",
+    ko: "자동화 트리거",
+    de: "Automatisierungs-Trigger",
+    fr: "Déclencheurs d’automatisation",
+    es: "Disparadores de automatización",
+    "pt-BR": "Gatilhos de automação",
+    ru: "Триггеры автоматизации",
+  } as const;
+  for (const [locale, label] of Object.entries(expected)) {
+    assert.equal(
+      resources[locale as keyof typeof resources].translation.marketplace
+        .contributionGroupAutomationTriggers,
+      label,
+      locale,
+    );
+  }
+});
