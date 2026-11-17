@@ -167,7 +167,7 @@ function TaskInstanceLimitRow({
         role="radio"
         aria-checked={selected}
         className={cn(
-          "flex min-w-0 cursor-pointer items-center gap-2 px-3 py-3 outline-none select-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60",
+          "flex min-w-0 cursor-pointer items-center gap-2 px-3 py-3 outline-none select-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50",
           // Same wash as the selected fill, so hovering a selected row changes nothing.
           "hover:bg-overlay-hover hover:text-accent-foreground",
           selected && DESKTOP_OVERLAY_LIST_ITEM_SELECTED,

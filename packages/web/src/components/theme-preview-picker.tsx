@@ -92,7 +92,7 @@ function ThemePreviewCard({
       >
         <div
           className={cn(
-            "relative overflow-hidden border transition-[border-color,box-shadow] duration-150",
+            "relative overflow-hidden border transition-[border-color] duration-150",
             sizeClasses.card,
             selected
               ? "border-primary"

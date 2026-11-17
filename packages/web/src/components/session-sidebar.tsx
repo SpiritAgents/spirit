@@ -316,7 +316,7 @@ type WorkspaceSessionGroupCollapsibleProps = {
 };
 
 const sidebarSectionHeaderTriggerClass =
-  "group flex w-full min-w-0 items-center overflow-hidden rounded-md px-2.5 py-1 text-left text-[0.65rem] text-chrome-secondary-label outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40";
+  "group flex w-full min-w-0 items-center overflow-hidden rounded-md px-2.5 py-1 text-left text-[0.65rem] text-chrome-secondary-label outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50";
 
 const sidebarSectionChevronClass =
   "hidden size-3 shrink-0 text-muted-foreground/55 transition-transform duration-150 group-hover:inline-flex group-focus-visible:inline-flex";
@@ -458,7 +458,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
         <div
           className={cn(
             "group/workspace-row flex h-8 w-full min-w-0 items-center overflow-hidden rounded-md",
-            "has-[[data-sidebar-row-primary]:focus-visible]:ring-2 has-[[data-sidebar-row-primary]:focus-visible]:ring-inset has-[[data-sidebar-row-primary]:focus-visible]:ring-ring/40",
+            "has-[[data-sidebar-row-primary]:focus-visible]:ring-2 has-[[data-sidebar-row-primary]:focus-visible]:ring-inset has-[[data-sidebar-row-primary]:focus-visible]:ring-ring/50",
             sidebarItemDefaultTextClass,
             isDragging ? sessionRowSelectedClass(translucency) : sessionRowHoverClass(translucency),
             isPressing && !isDragging && "spirit-workspace-group-reorder-grab",
@@ -654,7 +654,7 @@ function SessionListLoadMore({
           "w-full py-1 text-left text-[0.65rem] text-chrome-secondary-label outline-none",
           nested ? "pr-2.5 pl-8" : "px-2.5",
           "rounded-md hover:text-chrome-emphasis/75",
-          "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40",
+          "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50",
           disabled && "pointer-events-none opacity-50",
         )}
       >
@@ -752,7 +752,7 @@ const SessionListRow = memo(function SessionListRow({
 
   const rowClassName = cn(
     "group flex w-full min-w-0 items-center overflow-hidden rounded-md text-left text-sm outline-none",
-    "has-[[data-sidebar-row-primary]:focus-visible]:ring-2 has-[[data-sidebar-row-primary]:focus-visible]:ring-inset has-[[data-sidebar-row-primary]:focus-visible]:ring-ring/40",
+    "has-[[data-sidebar-row-primary]:focus-visible]:ring-2 has-[[data-sidebar-row-primary]:focus-visible]:ring-inset has-[[data-sidebar-row-primary]:focus-visible]:ring-ring/50",
     sidebarInteractionMotionClass,
     "h-8",
     selected
@@ -1291,7 +1291,7 @@ const settingsConnectTabs: Array<{
     : []),
 ];
 
-const sidebarInteractionMotionClass = "!transition-[opacity,transform,box-shadow] duration-150";
+const sidebarInteractionMotionClass = "!transition-[opacity,transform] duration-150";
 
 /** Sidebar interactive items' default text/icon color; hover and selection return to sidebar-foreground */
 const sidebarItemDefaultTextClass = "text-chrome-label";

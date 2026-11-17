@@ -13,7 +13,7 @@ import { Dialog, DialogClose, DialogContent } from "./dialog.js";
 // backdrop-filter cannot composite correctly during an ancestor opacity animation; the blur must
 // live on the button itself.
 export const IMAGE_PREVIEW_FLOATING_ACTION_BUTTON_CLASS =
-  "size-8 rounded-full border border-border/50 bg-background/55 text-foreground shadow-sm backdrop-blur-xl transition-[opacity,background-color,border-color,box-shadow] duration-200 ease-out hover:border-border/60 hover:bg-background/72 dark:border-white/12 dark:bg-input/30 dark:hover:bg-input/40 supports-[backdrop-filter]:bg-background/40 dark:supports-[backdrop-filter]:bg-input/25";
+  "size-8 rounded-full border border-border/50 bg-background/55 text-foreground shadow-sm backdrop-blur-xl transition-[opacity,background-color,border-color] duration-200 ease-out hover:border-border/60 hover:bg-background/72 dark:border-white/12 dark:bg-input/30 dark:hover:bg-input/40 supports-[backdrop-filter]:bg-background/40 dark:supports-[backdrop-filter]:bg-input/25";
 
 /** The async clipboard API only accepts image/png; other formats are re-encoded through a canvas. */
 export async function copyImageToClipboard(src: string): Promise<void> {

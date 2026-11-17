@@ -59,7 +59,7 @@ export function FileDiffPreviewFrame({
             "bg-background outline-none hover:bg-canvas-hover",
             DESKTOP_CONTENT_TRANSLUCENT_FILL,
             "rounded-md aria-expanded:rounded-b-none",
-            "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40",
+            "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50",
           )}
           title={relativePath}
         >

@@ -56,7 +56,7 @@ export function MarketplaceCatalogSection({
               // text-xs rows with small leading icons (git changes), not the row's
               // gap-3, which is sized for the size-10 icon. The hover text
               // brightening switches instantly (no color transition).
-              className="mt-1 flex -ml-2 w-[calc(100%+1rem)] items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 sm:w-[calc(100%+0.5rem)]"
+              className="mt-1 flex -ml-2 w-[calc(100%+1rem)] items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:w-[calc(100%+0.5rem)]"
             >
               {expanded ? (
                 t("marketplace.showLess")

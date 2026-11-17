@@ -546,7 +546,7 @@ export function MarketplaceView({
         // outer bleed (sm), and sm:even moves the right column's bleed to the
         // right side — column widths stay equal and the inter-column gap
         // survives between washes.
-        "flex -ml-2 w-[calc(100%+1rem)] items-center rounded-lg hover:bg-canvas-hover has-[[data-marketplace-row-primary]:focus-visible]:ring-2 has-[[data-marketplace-row-primary]:focus-visible]:ring-inset has-[[data-marketplace-row-primary]:focus-visible]:ring-ring/60 sm:w-[calc(100%+0.5rem)] sm:even:ml-0",
+        "flex -ml-2 w-[calc(100%+1rem)] items-center rounded-lg hover:bg-canvas-hover has-[[data-marketplace-row-primary]:focus-visible]:ring-2 has-[[data-marketplace-row-primary]:focus-visible]:ring-inset has-[[data-marketplace-row-primary]:focus-visible]:ring-ring/50 sm:w-[calc(100%+0.5rem)] sm:even:ml-0",
         item.installed && !item.enabled && "opacity-55",
       )}
     >

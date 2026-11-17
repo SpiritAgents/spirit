@@ -3,7 +3,7 @@
 
 import { cn } from "./cn.js";
 
-export const instantHoverMotionClass = "!transition-[opacity,transform,box-shadow] duration-150";
+export const instantHoverMotionClass = "!transition-[opacity,transform] duration-150";
 
 export const DESKTOP_CONTENT_TRANSLUCENT_FILL = "content-translucent:bg-content-translucent-fill";
 
@@ -17,8 +17,7 @@ export const DESKTOP_OUTLINE_FILL_HOVER = "hover:bg-outline-fill";
 
 export const DESKTOP_OUTLINE_HOVER = cn(DESKTOP_OUTLINE_BORDER_HOVER, DESKTOP_OUTLINE_FILL_HOVER);
 
-export const DESKTOP_OUTLINE_FOCUSED =
-  "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50";
+export const DESKTOP_OUTLINE_FOCUSED = "focus-visible:ring-2 focus-visible:ring-ring/50";
 
 export const DESKTOP_OUTLINE_BUTTON_HOVER = cn(DESKTOP_OUTLINE_HOVER, "hover:text-chrome-emphasis");
 
@@ -28,7 +27,7 @@ export const DESKTOP_OUTLINE_BUTTON_EXPANDED =
   "aria-expanded:border-outline-border-hover aria-expanded:bg-outline-fill aria-expanded:text-chrome-emphasis";
 
 export const DESKTOP_OUTLINE_FOCUS_VISIBLE_SELECT =
-  "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50";
+  "focus-visible:ring-2 focus-visible:ring-ring/50";
 
 export const DESKTOP_ITEM_CARD_SURFACE = cn(
   "rounded-lg bg-background/80",

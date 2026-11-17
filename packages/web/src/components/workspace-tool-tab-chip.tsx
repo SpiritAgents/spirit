@@ -40,7 +40,7 @@ export function WorkspaceToolTabChip({
         aria-controls={`workspace-tool-panel-${tab.id}`}
         aria-label={displayTitle ? undefined : label}
         className={cn(
-          "flex min-w-0 flex-1 items-center gap-1 rounded-lg bg-transparent outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50",
+          "flex min-w-0 flex-1 items-center gap-1 rounded-lg bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50",
           displayTitle ? "px-2" : "justify-center p-0",
         )}
         onClick={() => onSelect(tab.id)}

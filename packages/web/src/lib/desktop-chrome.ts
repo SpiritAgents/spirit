@@ -24,10 +24,10 @@ export {
 } from "@/lib/desktop-translucency-surface";
 
 /**
- * Instant hover fill — exclude background-color from transitions (session-sidebar precedent).
- * Keeps existing hover:bg-* overlays; only removes bg fade in/out on hover.
+ * Instant hover fill and focus ring — background-color and focus box-shadow do not transition.
+ * Keeps existing hover:bg-* overlays and opacity/transform motion.
  */
-export const instantHoverMotionClass = "!transition-[opacity,transform,box-shadow] duration-150";
+export const instantHoverMotionClass = "!transition-[opacity,transform] duration-150";
 
 /** Translucent hover underlay; background-color does not participate in transitions (text color changes excluded) */
 export const DESKTOP_INSTANT_HOVER_OVERLAY = cn(
@@ -232,9 +232,8 @@ export const DESKTOP_OUTLINE_FILL_HOVER = "hover:bg-outline-fill";
 /** Hover: wash + `--outline-border-hover` so the edge stays readable */
 export const DESKTOP_OUTLINE_HOVER = cn(DESKTOP_OUTLINE_BORDER_HOVER, DESKTOP_OUTLINE_FILL_HOVER);
 
-/** Keyboard focus: hover border/fill. Mouse click does not keep the wash. */
-export const DESKTOP_OUTLINE_FOCUSED =
-  "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50";
+/** Keyboard focus: shared translucent ring without the pointer hover wash. */
+export const DESKTOP_OUTLINE_FOCUSED = "focus-visible:ring-2 focus-visible:ring-ring/50";
 
 /** Card hover wash when replacing `background-color` would punch through translucency */
 export const DESKTOP_OUTLINE_FILL_UNDERLAY =
@@ -263,7 +262,7 @@ export const DESKTOP_OUTLINE_BUTTON_EXPANDED =
 
 /** Select trigger: slightly smaller ring, consistent with the shadcn Select default */
 export const DESKTOP_OUTLINE_FOCUS_VISIBLE_SELECT =
-  "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50";
+  "focus-visible:ring-2 focus-visible:ring-ring/50";
 
 /** Thin-border shell for text inputs/areas, inner field without ring. No hover/focus brightening anywhere: the text cursor already signals the input state. Under All-mode translucency the background turns see-through on the canvas (app-shell marker); portaled overlays (dialogs, menus) live outside the marker and stay solid. */
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL = cn(
