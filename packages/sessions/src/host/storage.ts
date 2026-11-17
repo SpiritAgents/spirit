@@ -558,6 +558,7 @@ export function createDesktopExtensionStateStore(
     spiritDataDir: spiritDataDir(),
     hostKind: "desktop",
   },
+  onSecretsChanged?: (extensionId: string) => void,
 ): ExtensionStateStore {
   const fileStore = createFileExtensionStateStore(context);
 
@@ -574,9 +575,11 @@ export function createDesktopExtensionStateStore(
     },
     async saveSecret(extensionId, key, value) {
       setKeyringPassword(KEYRING_SERVICE, extensionSecretAccount(extensionId, key), value);
+      onSecretsChanged?.(extensionId);
     },
     async deleteSecret(extensionId, key) {
       deleteKeyringPassword(KEYRING_SERVICE, extensionSecretAccount(extensionId, key));
+      onSecretsChanged?.(extensionId);
     },
     async hasSecret(extensionId, key) {
       const value = getKeyringPassword(KEYRING_SERVICE, extensionSecretAccount(extensionId, key));

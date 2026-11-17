@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useWorkspaceToolsChromeActions } from "@/contexts/workspace-tools-chrome-context";
@@ -24,10 +25,7 @@ import {
   type EditorFileTarget,
   type WorkspaceEditorViewMode,
 } from "@/lib/workspace-editor-navigation";
-import {
-  buildOpenPullRequestNavigation,
-  type GitHubPullRequestRevealRequest,
-} from "@/lib/workspace-pr-navigation";
+
 import { resolveWorkspaceGitTab } from "@/lib/workspace-git-navigation";
 import type { DesktopSnapshot } from "@/types";
 
@@ -67,7 +65,7 @@ export function useWorkspaceToolsController({
   const workspaceToolsHostSignatureRef = useRef("");
   const workspaceToolsHostRevisionRef = useRef(-1);
   const browserTabEnabled = runtime.hostKind === "electron";
-  const prTabEnabled = runtime.hostKind === "electron";
+
   const [workspaceFilesPlanRevealNonce, setWorkspaceFilesPlanRevealNonce] = useState(0);
   const [workspaceFilesPlanRevealTargetId, setWorkspaceFilesPlanRevealTargetId] = useState<
     string | null
@@ -88,10 +86,6 @@ export function useWorkspaceToolsController({
   const [workspaceToolsWidthRatio, setWorkspaceToolsWidthRatio] = useState(
     readWorkspaceToolsWidthRatio,
   );
-  const [workspacePrRevealNonce, setWorkspacePrRevealNonce] = useState(0);
-  const [workspacePrRevealTargetId, setWorkspacePrRevealTargetId] = useState<string | null>(null);
-  const [workspacePrRevealRequest, setWorkspacePrRevealRequest] =
-    useState<GitHubPullRequestRevealRequest | null>(null);
 
   const openBrowserUrlInNewTab = useCallback(
     (rawUrl: string) => {
@@ -336,35 +330,19 @@ export function useWorkspaceToolsController({
     [openBrowserUrlInNewTab, runtime.hostKind],
   );
 
-  const openPullRequestInPrTab = useCallback(
-    (request: GitHubPullRequestRevealRequest, preferTabId?: string) => {
-      if (runtime.hostKind !== "electron") {
-        return;
-      }
-      if (preferTabId) {
-        const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, preferTabId);
-        if (isWorkspaceToolTabKind(tab, "pr")) {
-          setWorkspaceToolsOpen(true);
-          setActiveWorkspaceToolTabId(preferTabId);
-          setWorkspacePrRevealTargetId(preferTabId);
-          setWorkspacePrRevealRequest(request);
-          setWorkspacePrRevealNonce((value) => value + 1);
-          return;
-        }
-      }
-      const navigation = buildOpenPullRequestNavigation({
-        tabs: workspaceToolTabsRef.current,
-        activeTabId: activeWorkspaceToolTabIdRef.current,
-        request,
-      });
-      setWorkspaceToolsOpen(true);
-      setWorkspaceToolTabs(navigation.tabs);
-      setActiveWorkspaceToolTabId(navigation.activeTabId);
-      setWorkspacePrRevealTargetId(navigation.prTabId);
-      setWorkspacePrRevealRequest(navigation.request);
-      setWorkspacePrRevealNonce((value) => value + 1);
+  const openWorkspaceUrl = useCallback(
+    (url: string, sourceTabId?: string) => {
+      void runtime
+        .openExtensionLink({ url, sourceTabId })
+        .then((handled) => {
+          if (handled) setWorkspaceToolsOpen(true);
+          else focusOrOpenBrowserUrl(url);
+        })
+        .catch((error: unknown) =>
+          toast.error(error instanceof Error ? error.message : String(error)),
+        );
     },
-    [runtime.hostKind],
+    [runtime.openExtensionLink, focusOrOpenBrowserUrl],
   );
 
   const openWorkspacePlan = useCallback(() => {
@@ -555,6 +533,7 @@ export function useWorkspaceToolsController({
   }, [
     activeFilePath,
     openWorkspacePlan,
+    openWorkspaceUrl,
     snapshot?.plan?.exists,
     snapshot?.plan?.modifiedAtUnixMs,
     snapshot?.plan,
@@ -583,7 +562,7 @@ export function useWorkspaceToolsController({
     workspaceToolsWidthRatio,
     setWorkspaceToolsWidthRatio,
     browserTabEnabled,
-    prTabEnabled,
+
     workspaceFilesPlanRevealNonce,
     workspaceFilesPlanRevealTargetId,
     workspaceFileRevealNonce,
@@ -604,11 +583,9 @@ export function useWorkspaceToolsController({
     revealWorkspaceDirectory,
     revealWorkspaceDirectoryOnTab,
     focusWorkspaceToolTab,
-    openPullRequestInPrTab,
+
     openGitTab,
     openWorkspacePlan,
-    workspacePrRevealNonce,
-    workspacePrRevealTargetId,
-    workspacePrRevealRequest,
+    openWorkspaceUrl,
   };
 }

@@ -14,6 +14,23 @@ export function ExtensionTabIcon({
   icon: DesktopExtensionDesktopTabRuntimeIcon;
   className?: string;
 }) {
+  if (icon.type !== "spirit" && icon.monochrome) {
+    const url =
+      icon.type === "file" ? extensionTabPackagedIconUrl(extensionId, icon.path) : icon.dataUrl;
+    return (
+      <span
+        aria-hidden
+        className={cn("inline-block shrink-0", className)}
+        style={{
+          backgroundColor: "currentColor",
+          maskImage: `url(${JSON.stringify(url)})`,
+          maskSize: "contain",
+          maskRepeat: "no-repeat",
+          maskPosition: "center",
+        }}
+      />
+    );
+  }
   if (icon.type === "file") {
     return (
       <img

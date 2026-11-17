@@ -2,9 +2,8 @@ import type {
   DesktopExtensionDesktopTabRuntimeIcon,
   DesktopExtensionDesktopTabScope,
 } from "@spiritagent/api/types";
-import type { PullRequestChipStatus } from "@spiritagent/ui/composer";
 
-export type WorkspaceToolTabKind = "files" | "terminal" | "git" | "browser" | "pr" | "task";
+export type WorkspaceToolTabKind = "files" | "terminal" | "git" | "browser" | "task";
 export type WorkspaceBuiltInToolTabKind = WorkspaceToolTabKind;
 
 export const BROWSER_NEW_TAB_SENTINEL = "__spirit_browser_new_tab__";
@@ -30,8 +29,6 @@ export type WorkspaceBuiltInToolTab = WorkspaceToolTabBase & {
   /** Only used when builtInKind === "files"; workspace-relative path of the current file. */
   filesWorkspacePath?: string;
   filesViewMode?: "edit" | "preview";
-  /** Only used when builtInKind === "pr"; switches the tab icon to the current PR status. */
-  prStatus?: PullRequestChipStatus;
   /** Only used when builtInKind === "task"; the resolved task key this tab belongs to. */
   taskKey?: string;
   /** Only used when builtInKind === "task"; task labels must not be replaced by process titles. */
@@ -47,6 +44,7 @@ export type WorkspaceExtensionToolTab = WorkspaceToolTabBase & {
   channelId: string;
   scope: WorkspaceExtensionToolTabScope;
   initialParams?: unknown;
+  navigationRevision?: number;
   icon?: DesktopExtensionDesktopTabRuntimeIcon;
 };
 
@@ -57,7 +55,6 @@ const KIND_BASE_LABEL_KEY: Record<WorkspaceToolTabKind, string> = {
   terminal: "workspace.terminal",
   git: "workspace.gitTab",
   browser: "workspace.browser",
-  pr: "workspace.prTab",
   task: "workspace.taskTab",
 };
 
@@ -92,6 +89,7 @@ export function createExtensionWorkspaceToolTab(input: {
   contributionId: string;
   scope: WorkspaceExtensionToolTabScope;
   initialParams?: unknown;
+  navigationRevision?: number;
   icon?: DesktopExtensionDesktopTabRuntimeIcon;
   tabTitle?: string;
   instanceId?: string;
@@ -107,6 +105,9 @@ export function createExtensionWorkspaceToolTab(input: {
     channelId: input.channelId ?? newTabId(),
     scope: input.scope,
     ...(input.initialParams === undefined ? {} : { initialParams: input.initialParams }),
+    ...(input.navigationRevision === undefined
+      ? {}
+      : { navigationRevision: input.navigationRevision }),
     ...(input.icon ? { icon: input.icon } : {}),
     ...(input.tabTitle ? { tabTitle: input.tabTitle } : {}),
   };
@@ -262,13 +263,8 @@ export function normalizeWorkspaceToolTabsForHost(
   tabs: readonly WorkspaceToolTab[],
   activeId: string,
   includeBrowser: boolean,
-  includePr = false,
 ): { tabs: WorkspaceToolTab[]; activeId: string } {
   let nextTabs = [...tabs];
-
-  if (!includePr) {
-    nextTabs = nextTabs.filter((tab) => !isWorkspaceToolTabKind(tab, "pr"));
-  }
 
   if (includeBrowser) {
     if (!nextTabs.some((tab) => isWorkspaceToolTabKind(tab, "browser"))) {
@@ -295,9 +291,6 @@ function shouldEnsureTabKindAfterClose(
 ): boolean {
   if (kind === "browser") {
     return options.includeBrowser === true;
-  }
-  if (kind === "pr") {
-    return false;
   }
   return kind === "files" || kind === "terminal" || kind === "git";
 }

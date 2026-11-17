@@ -6,11 +6,9 @@ import { product } from "@spiritagent/product";
 export const SPIRIT_EXTENSION_UI_HOST = "extension-ui";
 
 export type ExtensionUiProtocolRequest =
-  | { kind: "runtime" }
-  | { kind: "tab-runtime" }
-  | { kind: "view"; extensionId: string; viewId: string }
+  | { kind: "page-runtime" }
   | {
-      kind: "tab";
+      kind: "tab" | "view";
       extensionId: string;
       contributionId: string;
       instanceId: string;
@@ -25,16 +23,13 @@ export function parseExtensionUiUrl(url: URL): ExtensionUiProtocolRequest {
   }
 
   const pathname = url.pathname.replace(/^\/+/u, "");
-  if (pathname === "runtime.js") {
-    return { kind: "runtime" };
-  }
-  if (pathname === "tab-runtime.js") {
-    return { kind: "tab-runtime" };
+  if (pathname === "page-runtime.js") {
+    return { kind: "page-runtime" };
   }
   const segments = pathname.split("/").filter(Boolean);
-  if (segments[0] === "tab") {
+  if (segments[0] === "tab" || segments[0] === "view") {
     if (segments.length < 5) {
-      return { kind: "invalid", reason: "missing tab identity" };
+      return { kind: "invalid", reason: "missing page identity" };
     }
     const extensionId = decodeSegment(segments[1]!);
     const contributionId = decodeSegment(segments[2]!);
@@ -46,10 +41,10 @@ export function parseExtensionUiUrl(url: URL): ExtensionUiProtocolRequest {
       !isSafeIdentitySegment(instanceId) ||
       !isSafeRelativeAssetPath(assetSegments)
     ) {
-      return { kind: "invalid", reason: "illegal tab identity or asset path" };
+      return { kind: "invalid", reason: "illegal page identity or asset path" };
     }
     return {
-      kind: "tab",
+      kind: segments[0],
       extensionId,
       contributionId,
       instanceId,
@@ -67,23 +62,13 @@ export function parseExtensionUiUrl(url: URL): ExtensionUiProtocolRequest {
     }
     return { kind: "tab-icon", extensionId, iconPath: iconSegments.join("/") };
   }
-  if (pathname === "view") {
-    const extensionId = url.searchParams.get("extensionId")?.trim() ?? "";
-    const viewId = url.searchParams.get("viewId")?.trim() ?? "";
-    if (!extensionId || !viewId) {
-      return { kind: "invalid", reason: "missing view identity" };
-    }
-    if (!isSafeExtensionId(extensionId) || !isSafeViewId(viewId)) {
-      return { kind: "invalid", reason: "illegal view identity" };
-    }
-    return { kind: "view", extensionId, viewId };
-  }
-
   return { kind: "invalid", reason: "unknown path" };
 }
 
 function isSafeIdentitySegment(part: string): boolean {
-  return part.length > 0 && part !== "." && part !== ".." && !part.includes("\\");
+  return (
+    part.length > 0 && part !== "." && part !== ".." && !part.includes("\\") && !part.includes("/")
+  );
 }
 
 /** Composite identity: `<sourceId>/<name>`. */
@@ -93,10 +78,6 @@ function isSafeExtensionId(value: string): boolean {
   }
   const parts = value.split("/");
   return parts.length >= 2 && parts.every(isSafeIdentitySegment);
-}
-
-function isSafeViewId(value: string): boolean {
-  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(value);
 }
 
 function decodeSegment(value: string): string {
@@ -120,13 +101,14 @@ function isSafeRelativeAssetPath(segments: readonly string[]): boolean {
         segment !== "." &&
         segment !== ".." &&
         !segment.includes("\\") &&
+        !segment.includes("/") &&
         !segment.includes("\0"),
     )
   );
 }
 
-export function injectExtensionTabRuntime(html: string): string {
-  const runtime = `<script src="${product.urlProtocol}://extension-ui/tab-runtime.js"></script>`;
+export function injectExtensionPageRuntime(html: string): string {
+  const runtime = `<script src="${product.urlProtocol}://extension-ui/page-runtime.js"></script>`;
   if (/<head(?:\s[^>]*)?>/iu.test(html)) {
     return html.replace(/<head(?:\s[^>]*)?>/iu, (head) => `${head}${runtime}`);
   }
@@ -135,11 +117,13 @@ export function injectExtensionTabRuntime(html: string): string {
 
 export function shouldBlockExtensionTabNavigation(currentUrl: string, targetUrl: string): boolean {
   return (
-    currentUrl.startsWith(`${product.urlProtocol}://extension-ui/tab/`) && targetUrl !== currentUrl
+    (currentUrl.startsWith(`${product.urlProtocol}://extension-ui/tab/`) ||
+      currentUrl.startsWith(`${product.urlProtocol}://extension-ui/view/`)) &&
+    targetUrl !== currentUrl
   );
 }
 
-export const EXTENSION_TAB_PAGE_CSP = [
+export const EXTENSION_PAGE_CSP = [
   "default-src 'none'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",

@@ -248,3 +248,5 @@ export function ImagePreviewDialog({
     </Dialog>
   );
 }
+
+export const LOCAL_IMAGE_FLOATING_ACTION_BUTTON_CLASS = "spirit-floating-action-button";

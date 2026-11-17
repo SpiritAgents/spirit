@@ -528,10 +528,9 @@ export function buildApprovalPreviewDemoEntries(): ApprovalPreviewDemoEntry[] {
         kind: "create_automation",
         title: "PR Tracker",
         trigger: {
-          kind: "github",
-          owner: "SpiritAgents",
-          repo: "spirit",
-          event: "pull_request_created",
+          kind: "extension:built-in/github/activity",
+          config: { owner: "SpiritAgents", repo: "spirit", event: "pull_request_created" },
+          label: "Repository Activity",
         },
         approvalLevel: "auto-approval",
         overview: DEMO_AUTOMATION_OVERVIEW,

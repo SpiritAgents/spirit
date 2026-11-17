@@ -499,8 +499,8 @@ export async function invokeExtensionActionCommand(
   ctx: HostExtensionCommandContext,
   request: InvokeExtensionActionRequest,
 ): Promise<unknown> {
-  return ctx.runSerialized(async () => {
-    await ctx.ensureInitialized();
+  await ctx.runSerialized(() => ctx.ensureInitialized());
+  try {
     const extensionId = request.id.trim();
     const actionId = request.actionId.trim();
     if (!extensionId) {
@@ -517,9 +517,10 @@ export async function invokeExtensionActionCommand(
       host: ctx.requireExtensionHostAdapter(),
       logger: console,
     });
-    await ctx.refreshRuntimeAfterExtensionMutation();
     return result;
-  });
+  } finally {
+    await ctx.runSerialized(() => ctx.refreshRuntimeAfterExtensionMutation());
+  }
 }
 
 export async function updateExtensionSettingsCommand(

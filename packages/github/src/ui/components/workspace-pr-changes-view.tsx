@@ -1,0 +1,704 @@
+import { useGitHubLayoutPreferences } from "../lib/layout-prefs.js";
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
+import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentRef,
+  type RefObject,
+} from "react";
+import { useTranslation } from "react-i18next";
+
+import { ReviewCommentHunkView } from "@spiritagent/ui/rendering/review-comment-hunk-view";
+import {
+  TextSelectionActionMenu,
+  TextSelectionActionMenuItem,
+} from "@spiritagent/ui/rendering/text-selection-action-menu";
+import { EditFileLineDeltaBadge } from "@spiritagent/ui/rendering/edit-file-line-delta-badge";
+import { WorkspacePrChangesFileTree } from "./workspace-pr-changes-file-tree.js";
+import { AnimatedCollapse, AnimatedCollapseContent } from "@spiritagent/ui/animated-collapse";
+import { TEXT_LINK_CLASS } from "@spiritagent/ui/link";
+import { ScrollArea } from "@spiritagent/ui/scroll-area";
+import { useCollapsibleChildMount } from "@spiritagent/ui/hooks/use-collapsible-child-mount";
+import {
+  scrollAreaViewport,
+  useStickyHeaderPinned,
+} from "@spiritagent/ui/rendering/use-sticky-header-pinned";
+import { useTextSelectionActionMenu } from "@spiritagent/ui/rendering/use-text-selection-action-menu";
+import { buildPrChangedFilesTree } from "../lib/pr-changed-files-tree.js";
+import { installContainedSelectAll } from "@spiritagent/ui/rendering/contained-text-selection";
+import type { PrDiffAttachment, PullRequestChipStatus } from "@spiritagent/ui/composer";
+import { buildPrDiffSnippetFromPatch, buildPrDiffSnippetText } from "../lib/pr-diff-text.js";
+import { inferLineRangeFromPatch } from "../lib/pr-diff-patch-slice.js";
+import {
+  isNodeInUnifiedDiffCode,
+  readDiffSelectionText,
+  resolveChangedFileFromSelection,
+  resolveDiffSelectionLineRange,
+} from "@spiritagent/ui/rendering/pr-diff-selection";
+import {
+  PR_CHANGES_TREE_MIN_WIDTH_PX,
+  computePrChangesTreeMaxWidthPx,
+} from "../lib/layout-prefs.js";
+import { useWorkspaceToolsShellRowDividers } from "@spiritagent/ui/rendering/use-workspace-tools-shell-row-dividers";
+import { useScrollTopBandOcclusion } from "@spiritagent/ui/rendering/scroll-top-band-occlusion";
+import { useWorkspaceToolsShellHorizontalDivider } from "@spiritagent/ui/rendering/use-workspace-tools-shell-horizontal-divider";
+import { PR_CHANGED_FILE_HEADER_SHELL_DIVIDER_ATTR } from "@spiritagent/ui/rendering/workspace-tools-panel-edge";
+import { cn } from "@spiritagent/ui/cn";
+import type { GitHubPullRequestChangedFile } from "../types.js";
+
+export function prChangedFileAnchorId(filename: string): string {
+  return `pr-change-file-${encodeURIComponent(filename)}`;
+}
+
+function findDiffRootFromSelection(node: Node | null, root: HTMLElement): HTMLElement | null {
+  let current: Node | null = node;
+  while (current && current !== root) {
+    if (current instanceof HTMLElement && current.classList.contains("tool-call-diff")) {
+      return current;
+    }
+    current = current.parentNode;
+  }
+  return null;
+}
+
+function isDiffCodeSelection(selection: Selection, root: HTMLElement): boolean {
+  const anchor = selection.anchorNode;
+  const focus = selection.focusNode;
+  if (!anchor || !focus) {
+    return false;
+  }
+  const diffRoot =
+    findDiffRootFromSelection(anchor, root) ?? findDiffRootFromSelection(focus, root);
+  if (!diffRoot) {
+    return false;
+  }
+  const isInDiffCode = (node: Node | null): boolean => isNodeInUnifiedDiffCode(node, diffRoot);
+  return (
+    isInDiffCode(anchor) &&
+    isInDiffCode(focus) &&
+    resolveChangedFileFromSelection(selection, root) != null
+  );
+}
+
+function isDiffBlockSelection(selection: Selection, root: HTMLElement): boolean {
+  const anchor = selection.anchorNode;
+  const focus = selection.focusNode;
+  if (!anchor || !focus) {
+    return false;
+  }
+  const anchorDiff =
+    findDiffRootFromSelection(anchor, root) ?? findDiffRootFromSelection(focus, root);
+  const focusDiff = findDiffRootFromSelection(focus, root);
+  if (!anchorDiff || anchorDiff !== focusDiff) {
+    return false;
+  }
+  return resolveChangedFileFromSelection(selection, root) != null;
+}
+
+function isPrDiffSelectionAllowed(selection: Selection, root: HTMLElement): boolean {
+  return isDiffCodeSelection(selection, root) || isDiffBlockSelection(selection, root);
+}
+
+function PrChangesSelectionMenu({
+  rootRef,
+  files,
+  prUrl,
+  prStatus,
+  onPrDiffAddToChat,
+}: {
+  rootRef: RefObject<HTMLElement | null>;
+  files: GitHubPullRequestChangedFile[];
+  prUrl: string;
+  prStatus: PullRequestChipStatus;
+  onPrDiffAddToChat?: (attachment: PrDiffAttachment) => void;
+}) {
+  const { t } = useTranslation();
+  const enabled = Boolean(onPrDiffAddToChat && prUrl);
+  const { open, setOpen, anchor, dismiss } = useTextSelectionActionMenu({
+    enabled,
+    rootRef,
+    isSelectionAllowed: isPrDiffSelectionAllowed,
+    readSelectionText: readDiffSelectionText,
+  });
+
+  const handleAddToChat = useCallback(() => {
+    const root = rootRef.current;
+    const selection = typeof window !== "undefined" ? window.getSelection() : null;
+    if (!root || !selection || !onPrDiffAddToChat) {
+      dismiss();
+      return;
+    }
+
+    const filename = resolveChangedFileFromSelection(selection, root);
+    if (!filename) {
+      dismiss();
+      return;
+    }
+
+    const diffRoot = findDiffRootFromSelection(selection.anchorNode, root);
+    const selectedText = readDiffSelectionText(selection);
+    if (!selectedText) {
+      dismiss();
+      return;
+    }
+
+    const filePatch = files.find((file) => file.filename === filename)?.patch;
+    const lineRange =
+      (diffRoot ? resolveDiffSelectionLineRange(diffRoot, selection) : null) ??
+      (filePatch ? inferLineRangeFromPatch(filename, filePatch, selectedText) : null);
+    const diffText =
+      filePatch && lineRange
+        ? buildPrDiffSnippetFromPatch(filename, filePatch, lineRange.lineStart, lineRange.lineEnd)
+        : buildPrDiffSnippetText(filename, selectedText);
+    if (!diffText) {
+      dismiss();
+      return;
+    }
+
+    const attachment: PrDiffAttachment = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      prUrl,
+      filename,
+      lineStart: lineRange?.lineStart ?? 0,
+      lineEnd: lineRange?.lineEnd ?? 0,
+      diffText,
+      status: prStatus,
+    };
+    onPrDiffAddToChat(attachment);
+    dismiss();
+    selection.removeAllRanges();
+  }, [dismiss, files, onPrDiffAddToChat, prStatus, prUrl, rootRef]);
+
+  if (!enabled) {
+    return null;
+  }
+
+  return (
+    <TextSelectionActionMenu open={open} anchor={anchor} onOpenChange={setOpen}>
+      <TextSelectionActionMenuItem
+        label={t("workspace.addSelectionToChat")}
+        onSelect={handleAddToChat}
+      />
+    </TextSelectionActionMenu>
+  );
+}
+
+/** Sticky file header when scrolled: opaque panel background (no backdrop blur). */
+const PR_STICKY_PINNED_HEADER_CLASS = "bg-background";
+
+function PrChangedFileHeaderButton({
+  displayPath,
+  open,
+  additions,
+  deletions,
+  onToggle,
+}: {
+  displayPath: string;
+  open: boolean;
+  additions: number;
+  deletions: number;
+  onToggle: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <button
+      type="button"
+      className={cn(
+        "flex w-full min-w-0 items-center gap-2 px-3 py-3 text-left outline-none cursor-pointer",
+        "focus-visible:ring-2 focus-visible:ring-ring/60",
+      )}
+      aria-expanded={open}
+      aria-label={open ? t("workspace.prChangesFileCollapse") : t("workspace.prChangesFileExpand")}
+      onClick={onToggle}
+    >
+      <ChevronRight
+        className={cn(
+          "size-3 shrink-0 text-muted-foreground/55 transition-all duration-150",
+          open && "rotate-90",
+        )}
+        aria-hidden
+        strokeWidth={1.75}
+      />
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
+        <span className="min-w-0 truncate text-xs leading-relaxed text-foreground">
+          {displayPath}
+        </span>
+        <EditFileLineDeltaBadge
+          delta={{ added: additions, removed: deletions }}
+          className="font-normal"
+        />
+      </div>
+    </button>
+  );
+}
+
+function PrChangedFileCard({
+  file,
+  open,
+  onOpenChange,
+  onOpenExternal,
+  getScrollViewport,
+  dividerAnchorRef,
+  useTranslucency,
+  onPinnedHeaderChange,
+}: {
+  file: GitHubPullRequestChangedFile;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onOpenExternal?: (url: string) => void;
+  getScrollViewport: () => HTMLElement | null;
+  dividerAnchorRef: RefObject<HTMLElement | null>;
+  useTranslucency: boolean;
+  onPinnedHeaderChange: (filename: string, headerElement: HTMLElement | null) => void;
+}) {
+  const { t } = useTranslation();
+  const mounted = useCollapsibleChildMount(open);
+  const stickySentinelRef = useRef<HTMLDivElement>(null);
+  const stickyHeaderRef = useRef<HTMLDivElement>(null);
+  const diffHostRef = useRef<HTMLDivElement>(null);
+  const showExpandedChrome = open || mounted;
+  const pinned = useStickyHeaderPinned(stickySentinelRef, getScrollViewport, showExpandedChrome);
+
+  // Report the pinned header so the parent can render its visible copy outside the masked
+  // scroll root and size the occlusion band. Layout effect: the overlay appears in the same
+  // commit as the pin, so content never flashes beneath the transparent header.
+  useLayoutEffect(() => {
+    onPinnedHeaderChange(file.filename, pinned ? stickyHeaderRef.current : null);
+    return () => onPinnedHeaderChange(file.filename, null);
+  }, [file.filename, onPinnedHeaderChange, pinned]);
+  const displayPath =
+    file.status === "renamed" && file.previousFilename
+      ? `${file.previousFilename} → ${file.filename}`
+      : file.filename;
+
+  useEffect(() => {
+    if (!mounted || !file.patch) {
+      return;
+    }
+    const host = diffHostRef.current;
+    if (!host) {
+      return;
+    }
+    const diffRoot = host.querySelector(".tool-call-diff");
+    if (!(diffRoot instanceof HTMLElement)) {
+      return;
+    }
+    return installContainedSelectAll(diffRoot);
+  }, [file.filename, file.patch, mounted]);
+
+  useWorkspaceToolsShellHorizontalDivider(
+    stickyHeaderRef,
+    {
+      enabled: showExpandedChrome,
+      edge: "bottom",
+      dividerAttr: PR_CHANGED_FILE_HEADER_SHELL_DIVIDER_ATTR,
+      dividerKey: file.filename,
+      dividerAnchorRef,
+      dividerAnchorEdge: "right",
+      watchRefs: [dividerAnchorRef],
+    },
+    [showExpandedChrome, file.filename],
+  );
+
+  return (
+    <section
+      id={prChangedFileAnchorId(file.filename)}
+      className="min-w-0 scroll-mt-0"
+      data-pr-changed-file={file.filename}
+    >
+      <AnimatedCollapse open={open} onOpenChange={onOpenChange} className="min-w-0">
+        {showExpandedChrome ? (
+          <div
+            ref={stickySentinelRef}
+            className="pointer-events-none h-px w-full shrink-0 -mb-px"
+            aria-hidden
+          />
+        ) : null}
+        <div
+          ref={stickyHeaderRef}
+          className={cn(
+            "relative",
+            showExpandedChrome && "sticky top-0 z-10",
+            // Translucency: the in-flow pinned header is clipped by the occlusion mask; the
+            // overlay copy (transparent) is what stays visible, so no opaque paint here.
+            showExpandedChrome && pinned && !useTranslucency
+              ? PR_STICKY_PINNED_HEADER_CLASS
+              : "bg-transparent",
+          )}
+        >
+          <PrChangedFileHeaderButton
+            displayPath={displayPath}
+            open={open}
+            additions={file.additions}
+            deletions={file.deletions}
+            onToggle={() => onOpenChange(!open)}
+          />
+        </div>
+        <AnimatedCollapseContent>
+          {mounted ? (
+            file.patch ? (
+              <div ref={diffHostRef} className="min-w-0">
+                <ReviewCommentHunkView
+                  path={file.filename}
+                  diffHunk={file.patch}
+                  layout="embedded"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2 px-3 pb-3 text-xs text-muted-foreground">
+                <p>{t("workspace.prChangesNoPatch")}</p>
+                {file.blobUrl && onOpenExternal ? (
+                  <button
+                    type="button"
+                    className={TEXT_LINK_CLASS}
+                    onClick={() => onOpenExternal(file.blobUrl!)}
+                  >
+                    {t("workspace.prChangesViewOnGitHub")}
+                  </button>
+                ) : null}
+              </div>
+            )
+          ) : null}
+        </AnimatedCollapseContent>
+      </AnimatedCollapse>
+    </section>
+  );
+}
+
+export type WorkspacePrChangesViewProps = {
+  files: GitHubPullRequestChangedFile[];
+  loading?: boolean;
+  hasMore?: boolean;
+  prUrl?: string;
+  prStatus?: PullRequestChipStatus;
+  onPrDiffAddToChat?: (attachment: PrDiffAttachment) => void;
+  onOpenExternal?: (url: string) => void;
+  /** Windows Mica / macOS Vibrancy: pinned file headers become transparent + occlude content via mask. */
+  useTranslucency?: boolean;
+  className?: string;
+};
+
+export function WorkspacePrChangesView({
+  files,
+  loading = false,
+  hasMore = false,
+  prUrl = "",
+  prStatus = "open",
+  onPrDiffAddToChat,
+  onOpenExternal,
+  useTranslucency = false,
+  className,
+}: WorkspacePrChangesViewProps) {
+  const { readPrChangesTreeWidthPx, writePrChangesTreeWidthPx } = useGitHubLayoutPreferences();
+  const { t } = useTranslation();
+  const splitContainerRef = useRef<HTMLDivElement>(null);
+  const cardsScrollRef = useRef<ComponentRef<typeof ScrollArea>>(null);
+  const [cardsScrollRoot, setCardsScrollRoot] = useState<ComponentRef<typeof ScrollArea> | null>(
+    null,
+  );
+  const setCardsScrollRef = useCallback((node: ComponentRef<typeof ScrollArea> | null) => {
+    cardsScrollRef.current = node;
+    setCardsScrollRoot(node);
+  }, []);
+  const cardsListRef = useRef<HTMLDivElement>(null);
+  const treeAsideRef = useRef<HTMLElement>(null);
+  const treeDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
+  const latestTreeWidthPxRef = useRef(readPrChangesTreeWidthPx());
+  const [treeWidthPx, setTreeWidthPx] = useState(() => readPrChangesTreeWidthPx());
+  const [isResizingTree, setIsResizingTree] = useState(false);
+  const [containerWidthPx, setContainerWidthPx] = useState(0);
+  const [expandedFilenames, setExpandedFilenames] = useState<Set<string>>(() => new Set());
+
+  const treeNodes = useMemo(() => buildPrChangedFilesTree(files), [files]);
+  const showFileList = files.length > 0;
+
+  const getCardsScrollViewport = useCallback(() => scrollAreaViewport(cardsScrollRef.current), []);
+
+  // Translucency pinned-header overlay: cards report their pinned in-flow headers; the visible
+  // header is rendered outside the scroll root (the occlusion mask clips every DOM descendant
+  // of the masked root, including the in-flow copies). When several sections report pinned,
+  // the last one in file order owns the viewport top (earlier sections have scrolled past).
+  const [pinnedHeaders, setPinnedHeaders] = useState<ReadonlyMap<string, HTMLElement>>(
+    () => new Map(),
+  );
+  const handlePinnedHeaderChange = useCallback(
+    (filename: string, headerElement: HTMLElement | null) => {
+      setPinnedHeaders((previous) => {
+        if (previous.get(filename) === (headerElement ?? undefined)) {
+          return previous;
+        }
+        const next = new Map(previous);
+        if (headerElement) {
+          next.set(filename, headerElement);
+        } else {
+          next.delete(filename);
+        }
+        return next;
+      });
+    },
+    [],
+  );
+  const pinnedOverlayFile = useMemo(() => {
+    let chosen: GitHubPullRequestChangedFile | null = null;
+    for (const file of files) {
+      if (pinnedHeaders.has(file.filename)) {
+        chosen = file;
+      }
+    }
+    return chosen;
+  }, [files, pinnedHeaders]);
+  const pinnedOverlayElement = pinnedOverlayFile
+    ? (pinnedHeaders.get(pinnedOverlayFile.filename) ?? null)
+    : null;
+  const { occlusionStyle: cardsOcclusionStyle, bandHeight: pinnedHeaderBandHeight } =
+    useScrollTopBandOcclusion(
+      cardsScrollRoot,
+      pinnedOverlayElement,
+      useTranslucency && pinnedOverlayFile != null,
+    );
+
+  const setFileOpen = useCallback((filename: string, nextOpen: boolean) => {
+    setExpandedFilenames((previous) => {
+      const next = new Set(previous);
+      if (nextOpen) {
+        next.add(filename);
+      } else {
+        next.delete(filename);
+      }
+      return next;
+    });
+  }, []);
+
+  useWorkspaceToolsShellRowDividers(
+    cardsListRef,
+    [files.length, hasMore, expandedFilenames.size, pinnedHeaderBandHeight],
+    {
+      enabled: showFileList,
+      trailingDivider: !hasMore,
+      dividerAnchorRef: treeAsideRef,
+      dividerAnchorEdge: "right",
+      layoutWatchRef: treeAsideRef,
+      clipTopInsetPx:
+        useTranslucency && pinnedOverlayFile != null ? (pinnedHeaderBandHeight ?? 0) : 0,
+    },
+  );
+
+  latestTreeWidthPxRef.current = treeWidthPx;
+  const treeDragCursor = useDragResizeCursor();
+
+  const maxTreeWidthPx = useMemo(
+    () =>
+      containerWidthPx > 0
+        ? computePrChangesTreeMaxWidthPx(containerWidthPx)
+        : computePrChangesTreeMaxWidthPx(1200),
+    [containerWidthPx],
+  );
+
+  const clampTreeWidth = useCallback(
+    (value: number) => Math.min(maxTreeWidthPx, Math.max(PR_CHANGES_TREE_MIN_WIDTH_PX, value)),
+    [maxTreeWidthPx],
+  );
+
+  useEffect(() => {
+    const container = splitContainerRef.current;
+    if (!container) {
+      return;
+    }
+    const syncContainerWidth = () => {
+      setContainerWidthPx(container.clientWidth);
+    };
+    syncContainerWidth();
+    const observer = new ResizeObserver(syncContainerWidth);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [files.length]);
+
+  useEffect(() => {
+    if (treeWidthPx <= maxTreeWidthPx) {
+      return;
+    }
+    setTreeWidthPx(clampTreeWidth(treeWidthPx));
+  }, [clampTreeWidth, maxTreeWidthPx, treeWidthPx]);
+
+  const onTreeResizePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      setIsResizingTree(true);
+      treeDragRef.current = { startX: event.clientX, startWidth: treeWidthPx };
+      treeDragCursor.start(
+        resizeCursor(treeWidthPx, PR_CHANGES_TREE_MIN_WIDTH_PX, maxTreeWidthPx, "right"),
+      );
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    [maxTreeWidthPx, treeDragCursor, treeWidthPx],
+  );
+
+  const onTreeResizePointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const drag = treeDragRef.current;
+      if (!drag) {
+        return;
+      }
+      const delta = event.clientX - drag.startX;
+      const next = clampTreeWidth(drag.startWidth + delta);
+      treeDragCursor.update(
+        resizeCursor(next, PR_CHANGES_TREE_MIN_WIDTH_PX, maxTreeWidthPx, "right"),
+      );
+      latestTreeWidthPxRef.current = next;
+      setTreeWidthPx(next);
+    },
+    [clampTreeWidth, maxTreeWidthPx, treeDragCursor],
+  );
+
+  const endTreeResize = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      treeDragCursor.end();
+      setIsResizingTree(false);
+      if (treeDragRef.current) {
+        const containerWidth = splitContainerRef.current?.clientWidth ?? 0;
+        writePrChangesTreeWidthPx(
+          latestTreeWidthPxRef.current,
+          containerWidth > 0 ? containerWidth : undefined,
+        );
+      }
+      treeDragRef.current = null;
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // already released
+      }
+    },
+    [treeDragCursor],
+  );
+
+  const navigateToFile = useCallback((filename: string) => {
+    setExpandedFilenames((previous) => {
+      const next = new Set(previous);
+      next.add(filename);
+      return next;
+    });
+
+    requestAnimationFrame(() => {
+      const viewport = scrollAreaViewport(cardsScrollRef.current);
+      const section = viewport?.querySelector<HTMLElement>(
+        `[data-pr-changed-file="${CSS.escape(filename)}"]`,
+      );
+      section?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  }, []);
+
+  if (loading && files.length === 0) {
+    return (
+      <p className={cn("px-3 pt-3 text-xs text-muted-foreground", className)}>
+        {t("workspace.prChangesLoading")}
+      </p>
+    );
+  }
+
+  if (files.length === 0) {
+    return (
+      <p className={cn("px-3 pt-3 text-xs text-muted-foreground", className)}>
+        {t("workspace.prChangesEmpty")}
+      </p>
+    );
+  }
+
+  return (
+    <div
+      ref={splitContainerRef}
+      className={cn(
+        "flex h-full min-h-0 min-w-0 flex-1 flex-row items-stretch overflow-hidden",
+        isResizingTree && "select-none",
+        className,
+      )}
+    >
+      <aside
+        ref={treeAsideRef}
+        className="flex min-h-0 shrink-0 flex-col border-r border-border/40"
+        style={{ width: treeWidthPx }}
+      >
+        <ScrollArea className="h-full min-h-0 flex-1" type="auto">
+          <WorkspacePrChangesFileTree nodes={treeNodes} onSelectFile={navigateToFile} />
+        </ScrollArea>
+      </aside>
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={t("workspace.prChangesResizeTreeWidth")}
+        className={cn(
+          "group relative z-10 -ml-px w-1 shrink-0 touch-none select-none self-stretch",
+          "before:absolute before:inset-y-0 before:-right-1 before:w-3 before:content-['']",
+        )}
+        style={{
+          cursor: resizeCursor(treeWidthPx, PR_CHANGES_TREE_MIN_WIDTH_PX, maxTreeWidthPx, "right"),
+        }}
+        onPointerDown={onTreeResizePointerDown}
+        onPointerMove={onTreeResizePointerMove}
+        onPointerUp={endTreeResize}
+        onPointerCancel={endTreeResize}
+      >
+        <div
+          className="pointer-events-none absolute inset-y-0 left-0 w-px bg-transparent transition-colors group-hover:bg-border/55"
+          aria-hidden
+        />
+      </div>
+      <div className="relative min-h-0 min-w-0 flex-1">
+        <ScrollArea
+          ref={setCardsScrollRef}
+          className="h-full min-h-0 w-full"
+          type="auto"
+          style={cardsOcclusionStyle}
+        >
+          <div ref={cardsListRef}>
+            {files.map((file) => (
+              <PrChangedFileCard
+                key={file.filename}
+                file={file}
+                open={expandedFilenames.has(file.filename)}
+                onOpenExternal={onOpenExternal}
+                getScrollViewport={getCardsScrollViewport}
+                dividerAnchorRef={treeAsideRef}
+                useTranslucency={useTranslucency}
+                onPinnedHeaderChange={handlePinnedHeaderChange}
+                onOpenChange={(nextOpen) => setFileOpen(file.filename, nextOpen)}
+              />
+            ))}
+            {hasMore ? (
+              <p className="px-3 py-2 text-xs text-muted-foreground/75 dark:text-muted-foreground/65">
+                {t("workspace.prChangesHasMore")}
+              </p>
+            ) : null}
+          </div>
+        </ScrollArea>
+        {useTranslucency && pinnedOverlayFile ? (
+          <div className="absolute inset-x-0 top-0 z-20">
+            <PrChangedFileHeaderButton
+              displayPath={
+                pinnedOverlayFile.status === "renamed" && pinnedOverlayFile.previousFilename
+                  ? `${pinnedOverlayFile.previousFilename} → ${pinnedOverlayFile.filename}`
+                  : pinnedOverlayFile.filename
+              }
+              open
+              additions={pinnedOverlayFile.additions}
+              deletions={pinnedOverlayFile.deletions}
+              onToggle={() => setFileOpen(pinnedOverlayFile.filename, false)}
+            />
+          </div>
+        ) : null}
+      </div>
+      <PrChangesSelectionMenu
+        rootRef={cardsListRef}
+        files={files}
+        prUrl={prUrl}
+        prStatus={prStatus}
+        onPrDiffAddToChat={onPrDiffAddToChat}
+      />
+    </div>
+  );
+}

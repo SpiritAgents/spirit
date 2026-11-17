@@ -1,0 +1,12 @@
+@import "tailwindcss";
+@import "@spiritagent/ui/theme.css";
+@import "@spiritagent/ui/native-interactions.css";
+@source "../../../../ui/src";
+@custom-variant dark (&:is(.dark *));
+
+body {
+  margin: 0;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-sans, system-ui);
+}

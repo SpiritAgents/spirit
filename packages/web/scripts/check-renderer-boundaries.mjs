@@ -25,7 +25,7 @@ const SAFE_SUBPATHS = new Map([
       "workspace-file-reference-query",
       "approval-level",
       "workspace-trust",
-      "github",
+      "git",
       "tasks",
       "automations",
       "remote-control",
@@ -35,15 +35,6 @@ const SAFE_SUBPATHS = new Map([
   ["@spiritagent/sessions", new Set(["background-task-path"])],
   ["@spiritagent/tools", new Set(["tool-output-archive-path"])],
   ["@spiritagent/tasks", new Set([undefined, "runtime"])],
-  [
-    "@spiritagent/github",
-    new Set([
-      "pull-request-url",
-      "pull-request-checks-pages",
-      "pull-request-conversation-pages",
-      "types",
-    ]),
-  ],
   ["@spiritagent/code-completion", new Set(["monaco", "delete-diff-preview"])],
 ]);
 

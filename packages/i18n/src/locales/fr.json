@@ -153,15 +153,6 @@
       "linux": "Affiche {{product.name}} dans la barre d'état système."
     },
     "appearance": "Apparence",
-    "integrations": "Intégrations",
-    "integrationsGitHub": "GitHub",
-    "integrationsGitHubConnect": "Connecter GitHub",
-    "integrationsGitHubDisconnect": "Déconnecter",
-    "integrationsGitHubChecking": "Vérification de la connexion GitHub…",
-    "integrationsGitHubConnectedAs": "Connecté en tant que @{{login}}",
-    "integrationsDeviceWaiting": "En attente d'autorisation",
-    "integrationsOpenDevicePage": "Ouvrir la page de vérification GitHub",
-    "integrationsDesktopOnly": "L'intégration GitHub est uniquement disponible dans l'application de bureau.",
     "developer": "Développeur",
     "agents": "Agents",
     "tab": "Tab",
@@ -606,7 +597,6 @@
     "generateComposerSeed": "Créer une automatisation. Exigences : ",
     "create": "Créer une automatisation",
     "empty": "Aucune automatisation configurée",
-    "githubDisconnectedPause": "GitHub déconnecté ; déclencheurs de dépôt en pause",
     "detailBack": "Automatisations",
     "detailTabsAria": "Détail de l'automatisation",
     "tabHistory": "Historique",
@@ -637,6 +627,7 @@
       "repositoryLoadFailed": "Échec du chargement des dépôts. Réessayez.",
       "triggerLoadFailed": "Échec du chargement des options de déclencheur",
       "triggerEmpty": "Aucune option de déclencheur disponible",
+      "authorizationRequired": "<authorize>Autorisez {{name}}</authorize> pour créer des automatisations",
       "pullRequestCreated": "Pull request créée",
       "issueCreated": "Issue créée"
     },
@@ -906,9 +897,7 @@
       "createAutomationHourly": "Création de {{title}} exécutée toutes les heures",
       "createAutomationDaily": "Création de {{title}} exécutée chaque jour à {{time}}",
       "createAutomationWeekly": "Création de {{title}} exécutée chaque {{weekday}} à {{time}}",
-      "createAutomationGithubIssue": "Création de {{title}} exécutée quand une issue est créée dans {{repo}}",
-      "createAutomationWithTrigger": "Créer {title} pour exécuter {trigger}",
-      "createAutomationGithubPullRequest": "Création de {{title}} exécutée quand une pull request est créée dans {{repo}}",
+      "createAutomationWithTrigger": "Créer {{title}} pour exécuter {{trigger}}",
       "editFile": "Modification de fichier",
       "deleteFile": "Suppression de fichier",
       "applyPatch": "Application du patch",
@@ -978,9 +967,7 @@
     "taskTab": "Tâche",
     "prElectronOnly": "Les Pull Requests sont disponibles uniquement dans la version de bureau Electron.",
     "prGitHubAuthChecking": "Vérification de la connexion GitHub…",
-    "prGitHubConnectLink": "Connecter",
-    "prGitHubConnectTooltipBefore": "Veuillez ",
-    "prGitHubConnectPromptBefore": "Veuillez ",
+    "prGitHubAuthorizationRequired": "<authorize>Autorisez GitHub</authorize> pour utiliser Pull Requests",
     "prNoRepo": "L'espace de travail n'est pas un dépôt Git.",
     "prNoGitHubOrigin": "Aucun dépôt distant GitHub origin trouvé pour ce dépôt.",
     "prNoOpenPullRequest": "Aucune Pull Request ouverte pour la branche {{branch}}.",
@@ -1651,5 +1638,14 @@
       "pairingRequired": "Terminez d'abord l'appairage initial.",
       "invalidProvider": "Argument de fournisseur invalide."
     }
+  },
+  "github": {
+    "connect": "Connecter GitHub",
+    "disconnect": "Déconnecter",
+    "connectedAs": "Connecté en tant que @{{login}}",
+    "waiting": "En attente d'autorisation",
+    "openDevicePage": "Ouvrir la page de vérification GitHub",
+    "desktopOnly": "L'intégration GitHub est uniquement disponible dans l'application de bureau.",
+    "oauthUnavailable": "L’autorisation GitHub sera disponible une fois l’application OAuth de Spirit configurée."
   }
 }

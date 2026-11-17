@@ -169,10 +169,7 @@ test("approval preview demo entries render through the real approval prompt buil
   assert.ok(automation.body.startsWith("Read the sessions that finished"));
 
   const githubAutomation = views[12];
-  assert.equal(
-    githubAutomation.title,
-    "Create PR Tracker to run when a pull request is opened in SpiritAgents/spirit",
-  );
+  assert.equal(githubAutomation.title, "Create PR Tracker to run with Repository Activity");
 
   const ls = views[14];
   // The ls title lists the directory path directly.

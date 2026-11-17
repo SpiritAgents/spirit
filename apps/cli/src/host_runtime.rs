@@ -369,6 +369,11 @@ fn automation_approval_level_label(approval_level: &str) -> String {
 
 fn automation_trigger_label(trigger: &Value) -> String {
     let kind = trigger.get("kind").and_then(Value::as_str).unwrap_or("");
+    if kind.starts_with("extension:")
+        && let Some(label) = trigger.get("label").and_then(Value::as_str)
+    {
+        return label.to_owned();
+    }
     if kind == "time" {
         let schedule = trigger.get("schedule").cloned().unwrap_or(Value::Null);
         let schedule_kind = schedule.get("kind").and_then(Value::as_str).unwrap_or("");
@@ -392,23 +397,6 @@ fn automation_trigger_label(trigger: &Value) -> String {
             )
             .into_owned();
         }
-    }
-    if kind == "github" {
-        let owner = trigger.get("owner").and_then(Value::as_str).unwrap_or("");
-        let repo = trigger.get("repo").and_then(Value::as_str).unwrap_or("");
-        let event = trigger.get("event").and_then(Value::as_str).unwrap_or("");
-        let event_label = if event == "pull_request_created" {
-            t!("tui.tool.approval.schedule.event_pull_request_created").into_owned()
-        } else {
-            t!("tui.tool.approval.schedule.event_issue_created").into_owned()
-        };
-        return t!(
-            "tui.tool.approval.schedule.github",
-            owner = owner,
-            repo = repo,
-            event = event_label
-        )
-        .into_owned();
     }
     trigger.to_string()
 }
@@ -1081,12 +1069,25 @@ fn generated_media_paths_from_output(output: &str, prefixes: &[&str]) -> Vec<Str
 #[cfg(test)]
 mod tests {
     use super::{
-        ToolUiPhase, ToolUiRequest, build_tool_preview_block, build_tool_result_block,
-        format_tool_ui_message, tool_approval_block, tool_request_args_excerpt,
+        ToolUiPhase, ToolUiRequest, automation_trigger_label, build_tool_preview_block,
+        build_tool_result_block, format_tool_ui_message, tool_approval_block,
+        tool_request_args_excerpt,
     };
     use crate::host_protocol::{BridgeToolApprovalPrompt, BridgeToolApprovalRequest};
     use rust_i18n::t;
     use serde_json::{Value, json};
+
+    #[test]
+    fn automation_trigger_uses_the_validated_provider_label() {
+        assert_eq!(
+            automation_trigger_label(&json!({
+                "kind": "extension:personal/demo/activity",
+                "config": {"repository": "demo"},
+                "label": "Repository Activity"
+            })),
+            "Repository Activity"
+        );
+    }
 
     #[test]
     fn shell_tool_args_excerpt_keeps_reason_field() {

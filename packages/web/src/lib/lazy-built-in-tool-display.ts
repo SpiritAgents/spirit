@@ -122,23 +122,6 @@ function tryParsePartialCreateAutomationTrigger(
     return undefined;
   }
 
-  if (triggerKind === "github") {
-    const owner = extractCompletePartialStringField(gatewayJson, "owner");
-    const repo = extractCompletePartialStringField(gatewayJson, "repo");
-    const eventMatch = gatewayJson.match(/"event"\s*:\s*"((?:\\.|[^"\\])*)"/u);
-    const event = eventMatch?.[1] ? decodePartialJsonString(eventMatch[1]) : undefined;
-    if (!owner || !repo || (event !== "pull_request_created" && event !== "issue_created")) {
-      return undefined;
-    }
-    const trigger: DesktopAutomationTrigger = {
-      kind: "github",
-      owner,
-      repo,
-      event,
-    };
-    return isValidDesktopAutomationTrigger(trigger) ? trigger : undefined;
-  }
-
   return undefined;
 }
 
@@ -284,9 +267,6 @@ export function defaultDesktopAutomationTriggerFormatLabels(): DesktopAutomation
     weeklyPrefix: "Weekly",
     weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
     formatWeekly: (weekday, time) => `Weekly ${weekday} ${time}`,
-    githubPrefix: "GitHub",
-    githubPullRequestCreated: "PR created",
-    githubIssueCreated: "Issue created",
   };
 }
 

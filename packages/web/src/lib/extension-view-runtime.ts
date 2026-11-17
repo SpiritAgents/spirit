@@ -2,9 +2,9 @@ import type { DesktopExtensionDesktopViewChrome } from "@/types";
 
 export interface ExtensionViewOpenRequest {
   requestId: string;
+  channelId: string;
   extensionId: string;
   viewId: string;
-  viewUrl: string;
   title?: string;
   width?: number;
   height?: number;
@@ -41,7 +41,10 @@ export function subscribeOpenExtensionView(listener: OpenListener): () => void {
 }
 
 export function openExtensionView(
-  request: Omit<ExtensionViewOpenRequest, "requestId"> & { requestId?: string },
+  request: Omit<ExtensionViewOpenRequest, "requestId" | "channelId"> & {
+    requestId?: string;
+    channelId?: string;
+  },
 ): Promise<unknown> {
   if (pending) {
     pending.reject(new Error("Another extension view is already open."));
@@ -49,12 +52,18 @@ export function openExtensionView(
   }
 
   const requestId = request.requestId ?? crypto.randomUUID();
-  current = { ...request, requestId };
+  current = { ...request, requestId, channelId: request.channelId ?? crypto.randomUUID() };
   const promise = new Promise<unknown>((resolve, reject) => {
     pending = { resolve, reject };
   });
   emit();
   return promise;
+}
+
+export function updateOpenExtensionView(requestId: string, params: unknown): void {
+  if (current?.requestId !== requestId) return;
+  current = { ...current, params };
+  emit();
 }
 
 export function resolveOpenExtensionView(requestId: string, result: unknown): void {

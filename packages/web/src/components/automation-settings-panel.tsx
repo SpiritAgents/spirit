@@ -34,9 +34,7 @@ type AutomationSettingsPanelProps = {
   definition: DesktopAutomationDefinition | undefined;
   snapshot: DesktopSnapshot | null;
   disabled?: boolean;
-  githubConnected: boolean;
-  githubAuthChecking?: boolean;
-  onOpenIntegrationsSettings?: () => void;
+
   onSave(patch: DesktopUpdateAutomationRequest): void | Promise<void>;
   onAddWorkspace?(): void | Promise<void>;
   triggerRuntime: AutomationTriggerRuntime;
@@ -55,9 +53,7 @@ export function AutomationSettingsPanel({
   definition,
   snapshot,
   disabled,
-  githubConnected,
-  githubAuthChecking,
-  onOpenIntegrationsSettings,
+
   onSave,
   onAddWorkspace,
   triggerRuntime,
@@ -173,7 +169,6 @@ export function AutomationSettingsPanel({
     resolvedWorkspaceRoot.trim().length > 0 &&
     !isEmptyModelRef(modelRef) &&
     isValidDesktopAutomationTrigger(trigger) &&
-    (trigger.kind !== "github" || githubConnected) &&
     patch !== null;
 
   if (!definition) {
@@ -212,9 +207,7 @@ export function AutomationSettingsPanel({
             <AutomationTriggerMenu
               trigger={trigger}
               disabled={disabled}
-              githubConnected={githubConnected}
-              githubAuthChecking={githubAuthChecking}
-              onOpenIntegrationsSettings={onOpenIntegrationsSettings}
+
               onTriggerChange={setTrigger}
               runtime={triggerRuntime}
             />

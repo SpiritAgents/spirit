@@ -163,29 +163,6 @@ test("normalizeWorkspaceToolTabsForHost adds browser on electron host", () => {
   );
 });
 
-test("addWorkspaceToolTab can append pr tab", () => {
-  const tabs = createDefaultWorkspaceToolTabs();
-  const { tabs: next, activeId } = addWorkspaceToolTab(tabs, "pr");
-  assert.equal(next.at(-1)?.builtInKind, "pr");
-  assert.equal(activeId, next.at(-1)?.id);
-});
-
-test("normalizeWorkspaceToolTabsForHost strips pr on web host", () => {
-  const tabs = [...createDefaultWorkspaceToolTabs(), createWorkspaceToolTab("pr")];
-  const prTab = tabs.find((tab) => tab.builtInKind === "pr");
-  assert.ok(prTab);
-  const normalized = normalizeWorkspaceToolTabsForHost(tabs, prTab.id, false, false);
-  assert.equal(
-    normalized.tabs.some((tab) => tab.builtInKind === "pr"),
-    false,
-  );
-});
-
-test("workspaceToolTabLabel supports pr tab", () => {
-  const tab = createWorkspaceToolTab("pr");
-  assert.equal(workspaceToolTabLabel("pr", [tab], tab.id, t), "Pull Request");
-});
-
 test("createInitialWorkspaceToolsState uses same tabs for active id", () => {
   const { tabs, activeTabId } = createInitialWorkspaceToolsState();
   assert.ok(tabs.some((t) => t.id === activeTabId));

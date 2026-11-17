@@ -273,6 +273,12 @@ export async function createElectronHostApi(): Promise<HostApi> {
     subscribeWorkspaceToolTabsUpdates(callback) {
       return bridge.subscribeWorkspaceToolTabsUpdates(callback);
     },
+    invokeExtensionViewRequest(request) {
+      return bridge.invokeExtensionViewRequest(request);
+    },
+    openExtensionLink(request) {
+      return bridge.openExtensionLink(request);
+    },
     invokeExtensionTabRequest(request) {
       return bridge.invokeExtensionTabRequest(request);
     },
@@ -378,57 +384,7 @@ export async function createElectronHostApi(): Promise<HostApi> {
     readGitCommitMessage(request) {
       return bridge.readGitCommitMessage(request);
     },
-    getGitHubAuthStatus() {
-      return bridge.getGitHubAuthStatus();
-    },
-    beginGitHubDeviceLogin() {
-      return bridge.beginGitHubDeviceLogin();
-    },
-    completeGitHubDeviceLogin() {
-      return bridge.completeGitHubDeviceLogin();
-    },
-    cancelGitHubDeviceLogin() {
-      return bridge.cancelGitHubDeviceLogin();
-    },
-    disconnectGitHub() {
-      return bridge.disconnectGitHub();
-    },
-    getGitHubPullRequestForCurrentBranch() {
-      return bridge.getGitHubPullRequestForCurrentBranch();
-    },
-    listGitHubPullRequests(request) {
-      return bridge.listGitHubPullRequests(request);
-    },
-    listGitHubAutomationRepositories(request = {}) {
-      return bridge.listGitHubAutomationRepositories(request);
-    },
-    searchGitHubAutomationRepositories(request) {
-      return bridge.searchGitHubAutomationRepositories(request);
-    },
-    getGitHubPullRequestTabCounts(request) {
-      return bridge.getGitHubPullRequestTabCounts(request);
-    },
-    getGitHubPullRequestDetail(request) {
-      return bridge.getGitHubPullRequestDetail(request);
-    },
-    getGitHubPullRequestConversation(request) {
-      return bridge.getGitHubPullRequestConversation(request);
-    },
-    getGitHubPullRequestFiles(request) {
-      return bridge.getGitHubPullRequestFiles(request);
-    },
-    getGitHubPullRequestCommits(request) {
-      return bridge.getGitHubPullRequestCommits(request);
-    },
-    getGitHubPullRequestChecks(request) {
-      return bridge.getGitHubPullRequestChecks(request);
-    },
-    mergeGitHubPullRequest(request) {
-      return bridge.mergeGitHubPullRequest(request);
-    },
-    markGitHubPullRequestReady(request) {
-      return bridge.markGitHubPullRequestReady(request);
-    },
+
     readWorkspaceTextFile(relativePath, options) {
       return bridge.readWorkspaceTextFile(relativePath, options);
     },

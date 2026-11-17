@@ -1,3 +1,9 @@
+import {
+  parseExtensionComposerAttachment,
+  type ExtensionComposerAttachment,
+} from "@/lib/extension-composer-attachment";
+import { openExtensionDetails } from "@/lib/extension-navigation";
+import { extensionTabDisplayName } from "@/lib/extension-tab-contributions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -13,10 +19,8 @@ import {
   SPIRIT_EXTENSION_TAB_READY,
   SPIRIT_EXTENSION_TAB_READY_REQUEST,
 } from "@/lib/extension-tab-frame";
-import {
-  collectHostDocumentChrome,
-  collectHostStylesheetCssText,
-} from "@/lib/extension-view-tokens";
+import { collectHostDocumentChrome, collectHostThemeCssText } from "@/lib/extension-view-tokens";
+import { EXTENSION_PAGE_ERROR } from "@/lib/extension-page-frame";
 import { cn } from "@/lib/utils";
 import { useExtensionWebViewBridge } from "@/hooks/useExtensionWebViewBridge";
 import type {
@@ -33,8 +37,12 @@ export function ExtensionTabHost({
   contribution,
   active,
   workspaceRoot,
+  gitSnapshot,
+  authorizationConfigured,
   sessionKey,
   onRequest,
+  allowComposerAttachments = false,
+  onAttachment,
   onChrome,
   subscribeEvents,
   onWebView,
@@ -43,7 +51,11 @@ export function ExtensionTabHost({
   tab: WorkspaceExtensionToolTab;
   contribution: DesktopExtensionDesktopTab;
   active: boolean;
+  allowComposerAttachments?: boolean;
+  onAttachment?: (attachment: ExtensionComposerAttachment) => void;
   workspaceRoot?: string;
+  gitSnapshot?: { isRepository: boolean; branch?: string; selectedBranch?: string };
+  authorizationConfigured?: boolean;
   sessionKey?: string;
   onRequest?: (request: {
     extensionId: string;
@@ -61,7 +73,7 @@ export function ExtensionTabHost({
   onWebView?: (request: DesktopExtensionWebViewRequest) => Promise<unknown>;
   subscribeWebViewEvents?: (callback: (event: DesktopExtensionWebViewEvent) => void) => () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [attempt, setAttempt] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -88,15 +100,33 @@ export function ExtensionTabHost({
         instanceId: tab.instanceId,
         channelId: tab.channelId,
         initialParams: tab.initialParams ?? null,
+        navigationRevision: tab.navigationRevision ?? 0,
         scope: tab.scope,
         workspaceRoot: workspaceRoot ?? "",
+        workspace: {
+          isRepository: gitSnapshot?.isRepository === true,
+          branch: gitSnapshot?.selectedBranch?.trim() || gitSnapshot?.branch?.trim() || "",
+        },
+        authorizationConfigured,
         sessionKey: sessionKey ?? "",
         visible: active,
-        theme: { ...chrome, cssText: collectHostStylesheetCssText() },
+        locale: i18n.resolvedLanguage ?? i18n.language,
+        theme: { ...chrome, cssText: collectHostThemeCssText() },
       },
       "*",
     );
-  }, [active, sessionKey, tab, workspaceRoot]);
+  }, [
+    active,
+    sessionKey,
+    tab,
+    workspaceRoot,
+    gitSnapshot?.isRepository,
+    gitSnapshot?.branch,
+    gitSnapshot?.selectedBranch,
+    authorizationConfigured,
+    i18n.resolvedLanguage,
+    i18n.language,
+  ]);
 
   const handleWebViewMessage = useExtensionWebViewBridge({
     tab,
@@ -131,15 +161,50 @@ export function ExtensionTabHost({
         sendContext();
         return;
       }
+      if (event.data.type === EXTENSION_PAGE_ERROR) {
+        setStatus("error");
+        return;
+      }
       if (event.data.type === SPIRIT_EXTENSION_TAB_READY) {
         setStatus("ready");
         return;
       }
       if (event.data.type === SPIRIT_EXTENSION_TAB_REQUEST) {
         const requestId = String(event.data.requestId ?? "");
-        if (!requestId || !onRequest) {
+        if (!requestId) return;
+        if (event.data.method === "host.composer.attach") {
+          try {
+            if (!active || !allowComposerAttachments || !onAttachment)
+              throw new Error("This page cannot add Composer attachments.");
+            onAttachment(parseExtensionComposerAttachment(event.data.params, tab.id));
+            iframe.contentWindow?.postMessage(
+              { type: SPIRIT_EXTENSION_TAB_RESULT, ...tab, requestId, ok: true },
+              "*",
+            );
+          } catch (error) {
+            iframe.contentWindow?.postMessage(
+              {
+                type: SPIRIT_EXTENSION_TAB_RESULT,
+                ...tab,
+                requestId,
+                ok: false,
+                error: String(error),
+              },
+              "*",
+            );
+          }
           return;
         }
+        if (event.data.method === "host.openExtensionDetails") {
+          openExtensionDetails(tab.extensionId);
+          iframe.contentWindow?.postMessage(
+            { type: SPIRIT_EXTENSION_TAB_RESULT, ...tab, requestId, ok: true },
+            "*",
+          );
+          return;
+        }
+        // Workbench resolves remaining Host methods before extension backend dispatch.
+        if (!onRequest) return;
         void onRequest({
           extensionId: tab.extensionId,
           contributionId: tab.contributionId,
@@ -180,25 +245,31 @@ export function ExtensionTabHost({
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [attempt, handleWebViewMessage, onRequest, onChrome, sendContext, tab]);
+  }, [
+    attempt,
+    handleWebViewMessage,
+    onRequest,
+    onChrome,
+    sendContext,
+    tab,
+    active,
+    allowComposerAttachments,
+    onAttachment,
+  ]);
 
   useEffect(() => {
-    if (status === "ready") {
-      sendContext();
-    }
-  }, [active, sendContext, status]);
+    // A cached page can request context before the host listener attaches.
+    sendContext();
+  }, [attempt, sendContext]);
 
   useEffect(() => {
-    if (status !== "ready") {
-      return;
-    }
     const observer = new MutationObserver(sendContext);
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["class", "style"],
     });
     return () => observer.disconnect();
-  }, [sendContext, status]);
+  }, [sendContext]);
 
   useEffect(() => {
     if (!subscribeEvents) {
@@ -236,7 +307,9 @@ export function ExtensionTabHost({
       {status === "error" ? (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-background p-6 text-center text-sm">
           <p className="text-muted-foreground">
-            {t("workspace.extensionTabLoadError", { name: contribution.name })}
+            {t("workspace.extensionTabLoadError", {
+              name: extensionTabDisplayName(contribution, t),
+            })}
           </p>
           <Button
             type="button"
@@ -251,10 +324,10 @@ export function ExtensionTabHost({
       <iframe
         ref={iframeRef}
         key={attempt}
-        title={tab.tabTitle ?? contribution.name}
+        title={tab.tabTitle ?? extensionTabDisplayName(contribution, t)}
         sandbox="allow-scripts"
         src={extensionTabPageUrl(tab)}
-        className={cn("size-full border-0 bg-background", status === "error" && "invisible")}
+        className={cn("size-full border-0 bg-transparent", status === "error" && "invisible")}
         data-extension-tab-active={active}
         onError={() => setStatus("error")}
       />

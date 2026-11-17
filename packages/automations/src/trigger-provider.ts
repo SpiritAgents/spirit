@@ -39,6 +39,7 @@ export interface AutomationTriggerValidation {
 }
 
 export interface AutomationTriggerContext<THostApi = unknown> {
+  locale?: string;
   host: THostApi;
   contributionId: string;
   settings: AutomationTriggerSettingsAccessor;

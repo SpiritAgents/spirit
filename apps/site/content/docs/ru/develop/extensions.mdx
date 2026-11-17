@@ -186,7 +186,7 @@ my-extension/
 | `views[].height` | Необязательно. Максимальная высота. Пропуск — высота по содержимому. Если view выше, iframe прокручивается.                                                                              |
 | `views[].chrome` | Необязательно. Оформление диалога: `default` (заголовок + закрыть), `close-only` (скрыть заголовок, оставить закрыть) или `none` (скрыть оба). Пропуск равносилен `default`.             |
 
-Экспорт по умолчанию: `export default function View({ params, close })`. `close(result)` завершает view. Хост внедряет React и `@spirit/desktop-ui`.
+View и Tab — HTML-страницы с собственными JavaScript, CSS и зависимостями. Хост предоставляет `window.spirit.page`; View закрывается через `window.spirit.view.close(result)`. Дождитесь `ready()`, выполните рендеринг и вызовите `mounted()`. `onContextChange()` передаёт изменения параметров, языка и темы. Хост не предоставляет React import map.
 
 ### `contributes.cli`
 

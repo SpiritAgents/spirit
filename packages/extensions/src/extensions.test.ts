@@ -422,12 +422,12 @@ test("desktop views-only contributions parse and reject illegal view paths", asy
         requestedCapabilities: ["desktop-ui"],
         contributes: {
           desktop: {
-            views: [{ id: "enable", path: "ui/enable.mjs", title: "Enable", width: 480 }],
+            views: [{ id: "enable", path: "ui/enable.html", title: "Enable", width: 480 }],
           },
         },
       },
       {
-        "ui/enable.mjs": "export default function View({ close }) { close({}); }\n",
+        "ui/enable.html": "<!doctype html><html><body>Enable</body></html>\n",
       },
     );
     const installed = await installPreparedExtensionDirectory(
@@ -435,7 +435,7 @@ test("desktop views-only contributions parse and reject illegal view paths", asy
       { preparedDirectoryPath: viewsOnlyDir },
     );
     assert.deepEqual(installed.manifest.contributes?.desktop, {
-      views: [{ id: "enable", path: "ui/enable.mjs", title: "Enable", width: 480 }],
+      views: [{ id: "enable", path: "ui/enable.html", title: "Enable", width: 480 }],
     });
 
     const sourcePathDir = join(preparedRoot, "tsx-path");
@@ -451,7 +451,7 @@ test("desktop views-only contributions parse and reject illegal view paths", asy
           { spiritDataDir, hostKind: "desktop" },
           { preparedDirectoryPath: sourcePathDir },
         ),
-      /precompiled \.js or \.mjs/,
+      /\.html page/,
     );
 
     const duplicateDir = join(preparedRoot, "duplicate-id");
@@ -460,8 +460,8 @@ test("desktop views-only contributions parse and reject illegal view paths", asy
       contributes: {
         desktop: {
           views: [
-            { id: "enable", path: "ui/a.mjs" },
-            { id: "enable", path: "ui/b.mjs" },
+            { id: "enable", path: "ui/a.html" },
+            { id: "enable", path: "ui/b.html" },
           ],
         },
       },
@@ -527,6 +527,7 @@ test("tab requests activate the owning backend with its declared contribution", 
     const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
     const installed = await manager.installPreparedDirectory({ preparedDirectoryPath: packageDir });
     const result = await manager.invokeTabRequest({
+      context: { workspaceRoot: "/workspace", sessionKey: "session", branch: "main" },
       extensionId: installed.id,
       contributionId: "notes",
       instanceId: "instance-1",
@@ -546,6 +547,7 @@ test("tab requests activate the owning backend with its declared contribution", 
     });
     await assert.rejects(
       manager.invokeTabRequest({
+        context: { workspaceRoot: "/workspace", sessionKey: "session", branch: "main" },
         extensionId: installed.id,
         contributionId: "missing",
         instanceId: "instance-1",
@@ -732,12 +734,14 @@ test("desktop views parse chrome modes and reject invalid values", async () => {
         requestedCapabilities: ["desktop-ui"],
         contributes: {
           desktop: {
-            views: [{ id: "enable", path: "ui/enable.mjs", title: "Enable", chrome: "close-only" }],
+            views: [
+              { id: "enable", path: "ui/enable.html", title: "Enable", chrome: "close-only" },
+            ],
           },
         },
       },
       {
-        "ui/enable.mjs": "export default function View({ close }) { close({}); }\n",
+        "ui/enable.html": "<!doctype html><html><body>Enable</body></html>\n",
       },
     );
     const installed = await installPreparedExtensionDirectory(
@@ -745,14 +749,14 @@ test("desktop views parse chrome modes and reject invalid values", async () => {
       { preparedDirectoryPath: closeOnlyDir },
     );
     assert.deepEqual(installed.manifest.contributes?.desktop, {
-      views: [{ id: "enable", path: "ui/enable.mjs", title: "Enable", chrome: "close-only" }],
+      views: [{ id: "enable", path: "ui/enable.html", title: "Enable", chrome: "close-only" }],
     });
 
     const invalidDir = join(preparedRoot, "invalid-chrome");
     await writeMinimalExtensionPackage(invalidDir, {
       requestedCapabilities: ["desktop-ui"],
       contributes: {
-        desktop: { views: [{ id: "enable", path: "ui/enable.mjs", chrome: "hidden" }] },
+        desktop: { views: [{ id: "enable", path: "ui/enable.html", chrome: "hidden" }] },
       },
     });
     await assert.rejects(

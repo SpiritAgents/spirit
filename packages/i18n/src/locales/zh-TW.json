@@ -153,15 +153,6 @@
       "linux": "在系統匣顯示 {{product.name}}。"
     },
     "appearance": "外觀",
-    "integrations": "整合",
-    "integrationsGitHub": "GitHub",
-    "integrationsGitHubConnect": "連接 GitHub",
-    "integrationsGitHubDisconnect": "中斷連接",
-    "integrationsGitHubChecking": "正在檢查 GitHub 連線⋯",
-    "integrationsGitHubConnectedAs": "以 @{{login}} 身份連接",
-    "integrationsDeviceWaiting": "等待授權",
-    "integrationsOpenDevicePage": "開啟 GitHub 驗證頁面",
-    "integrationsDesktopOnly": "GitHub 整合僅在桌面應用程式中可用。",
     "developer": "開發者",
     "agents": "Agents",
     "tab": "Tab",
@@ -606,7 +597,6 @@
     "generateComposerSeed": "建立自動化。需求：",
     "create": "建立自動化",
     "empty": "尚未設定任何自動化",
-    "githubDisconnectedPause": "GitHub 已中斷連線；儲存庫觸發器已暫停",
     "detailBack": "自動化",
     "detailTabsAria": "自動化詳細資料",
     "tabHistory": "歷史記錄",
@@ -637,6 +627,7 @@
       "repositoryLoadFailed": "無法載入儲存庫。請再試一次。",
       "triggerLoadFailed": "載入觸發程序選項失敗",
       "triggerEmpty": "沒有可用的觸發程序選項",
+      "authorizationRequired": "<authorize>授權 {{name}}</authorize> 以建立自動化",
       "pullRequestCreated": "Pull request 已建立",
       "issueCreated": "Issue 已建立"
     },
@@ -906,9 +897,7 @@
       "createAutomationHourly": "建立每小時執行的{{title}}",
       "createAutomationDaily": "建立每天 {{time}} 執行的{{title}}",
       "createAutomationWeekly": "建立每{{weekday}} {{time}} 執行的{{title}}",
-      "createAutomationGithubIssue": "建立每當 GitHub 儲存庫 {{repo}} 有新 Issue 時執行的{{title}}",
-      "createAutomationWithTrigger": "建立「{title}」以執行{trigger}",
-      "createAutomationGithubPullRequest": "建立每當 GitHub 儲存庫 {{repo}} 有新 Pull Request 時執行的{{title}}",
+      "createAutomationWithTrigger": "建立「{{title}}」以執行{{trigger}}",
       "editFile": "編輯檔案",
       "deleteFile": "刪除檔案",
       "applyPatch": "套用修補",
@@ -978,9 +967,7 @@
     "taskTab": "工作",
     "prElectronOnly": "Pull Requests 僅在 Electron 桌面版中可用。",
     "prGitHubAuthChecking": "正在檢查 GitHub 連線…",
-    "prGitHubConnectLink": "連線",
-    "prGitHubConnectTooltipBefore": "請 ",
-    "prGitHubConnectPromptBefore": "請 ",
+    "prGitHubAuthorizationRequired": "<authorize>授權 GitHub</authorize> 以使用 Pull Request",
     "prNoRepo": "工作區不是一個 Git 儲存庫。",
     "prNoGitHubOrigin": "此儲存庫未找到 GitHub origin 遠端。",
     "prNoOpenPullRequest": "分支 {{branch}} 沒有開啟的 pull request。",
@@ -1651,5 +1638,14 @@
       "pairingRequired": "需要先完成首次配對。",
       "invalidProvider": "無效的提供商參數。"
     }
+  },
+  "github": {
+    "connect": "連接 GitHub",
+    "disconnect": "中斷連接",
+    "connectedAs": "以 @{{login}} 身份連接",
+    "waiting": "等待授權",
+    "openDevicePage": "開啟 GitHub 驗證頁面",
+    "desktopOnly": "GitHub 整合僅在桌面應用程式中可用。",
+    "oauthUnavailable": "Spirit 的 OAuth 應用程式設定完成前，GitHub 授權暫不可用。"
   }
 }

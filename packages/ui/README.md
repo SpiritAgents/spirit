@@ -8,9 +8,37 @@ Shared React primitives for Spirit desktop and the marketing site. Apps supply t
 - React 18+
 - Tailwind CSS v4 (scan `src` with `@source` and import `theme.css`)
 
+## Native Interaction Policy
+
+Workbench and Native extension pages import `@spiritagent/ui/native-interactions.css`
+alongside their own Tailwind stylesheet. This keeps chrome unselectable by default
+and makes clickable controls follow the Host's live `spirit-clickable-pointer`
+document class instead of utility or browser defaults. Disabled controls retain
+their disabled cursor; drag and resize cursors remain independent.
+
+Editable fields, Markdown, and diff code remain selectable. Other copyable content
+opts in with `data-spirit-selectable="text"`. Do not mark entire pages or UI panels
+selectable. The extension page bridge already synchronizes Host document classes;
+extensions must compile these shared rules into their own packaged CSS.
+
 ## Model Picker
 
 Hosts supply `ModelPickerLabelsProvider` and `ModelPickerRuntimeProvider` around their pickers. The shared tooltip host may sit above these providers; [`ModelPickerMenu`](src/model-picker/model-picker-menu.tsx) carries each picker's current labels and runtime into its registered inspector content so hover details retain the same context as the menu.
+
+## Markdown and Diff Rendering
+
+The `@spiritagent/ui/rendering` entry point supplies native Markdown, Mermaid,
+highlighted unified diffs, and text-selection actions. Import
+`@spiritagent/ui/rendering/styles.css` alongside the host's Tailwind stylesheet.
+These components use the same rendering implementation in the workbench and
+extension pages; they do not import workbench state, navigation controllers, or
+filesystem services.
+
+Pass the resolved theme to `SpiritStreamdownMarkdown`, provide link handling
+through `WorkspaceMarkdownLinkProvider`, and supply media readers explicitly
+when local or managed media is allowed. Localization comes from the caller's
+React i18next provider. Rendering-specific dependencies are optional peers for
+consumers that only use the basic controls.
 
 ## License
 

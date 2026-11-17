@@ -29,9 +29,7 @@ type AutomationDetailViewProps = {
   ): void | Promise<void>;
   onAddWorkspace?(): void | Promise<void>;
   settingsDisabled?: boolean;
-  githubConnected: boolean;
-  githubAuthChecking?: boolean;
-  onOpenIntegrationsSettings?: () => void;
+
   triggerRuntime: AutomationTriggerRuntime;
 };
 
@@ -95,9 +93,7 @@ export function AutomationDetailView({
   updateAutomation,
   onAddWorkspace,
   settingsDisabled,
-  githubConnected,
-  githubAuthChecking,
-  onOpenIntegrationsSettings,
+
   triggerRuntime,
 }: AutomationDetailViewProps) {
   const { t } = useTranslation();
@@ -180,9 +176,7 @@ export function AutomationDetailView({
                 definition={definition}
                 snapshot={snapshot}
                 disabled={settingsDisabled}
-                githubConnected={githubConnected}
-                githubAuthChecking={githubAuthChecking}
-                onOpenIntegrationsSettings={onOpenIntegrationsSettings}
+
                 onAddWorkspace={onAddWorkspace}
                 triggerRuntime={triggerRuntime}
                 onSave={async (patch) => {

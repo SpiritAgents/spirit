@@ -1,8 +1,14 @@
-import { SPIRIT_EXTENSION_UI_ORIGIN } from "@/lib/extension-view-frame";
+import { extensionPageUrl, SPIRIT_EXTENSION_UI_ORIGIN } from "@/lib/extension-page-frame";
 
-export const SPIRIT_EXTENSION_TAB_READY_REQUEST = "spirit-extension-tab-ready-request";
-export const SPIRIT_EXTENSION_TAB_READY = "spirit-extension-tab-ready";
-export const SPIRIT_EXTENSION_TAB_CONTEXT = "spirit-extension-tab-context";
+export {
+  EXTENSION_PAGE_READY_REQUEST as SPIRIT_EXTENSION_TAB_READY_REQUEST,
+  EXTENSION_PAGE_READY as SPIRIT_EXTENSION_TAB_READY,
+  EXTENSION_PAGE_CONTEXT as SPIRIT_EXTENSION_TAB_CONTEXT,
+  EXTENSION_PAGE_REQUEST as SPIRIT_EXTENSION_TAB_REQUEST,
+  EXTENSION_PAGE_RESULT as SPIRIT_EXTENSION_TAB_RESULT,
+  EXTENSION_PAGE_EVENT as SPIRIT_EXTENSION_TAB_EVENT,
+  EXTENSION_PAGE_CLOSED as SPIRIT_EXTENSION_TAB_CLOSED,
+} from "./extension-page-frame";
 
 export function extensionTabPageUrl(input: {
   extensionId: string;
@@ -10,10 +16,7 @@ export function extensionTabPageUrl(input: {
   instanceId: string;
   channelId: string;
 }): string {
-  const extension = encodeURIComponent(input.extensionId);
-  const contribution = encodeURIComponent(input.contributionId);
-  const instance = encodeURIComponent(input.instanceId);
-  return `${SPIRIT_EXTENSION_UI_ORIGIN}/tab/${extension}/${contribution}/${instance}/index.html?channelId=${encodeURIComponent(input.channelId)}`;
+  return extensionPageUrl("tab", input);
 }
 
 export function extensionTabPackagedIconUrl(extensionId: string, iconPath: string): string {
@@ -21,11 +24,7 @@ export function extensionTabPackagedIconUrl(extensionId: string, iconPath: strin
   return `${SPIRIT_EXTENSION_UI_ORIGIN}/tab-icon/${encodeURIComponent(extensionId)}/${path}`;
 }
 
-export const SPIRIT_EXTENSION_TAB_REQUEST = "spirit-extension-tab-request";
-export const SPIRIT_EXTENSION_TAB_RESULT = "spirit-extension-tab-result";
-export const SPIRIT_EXTENSION_TAB_EVENT = "spirit-extension-tab-event";
 export const SPIRIT_EXTENSION_TAB_CHROME = "spirit-extension-tab-chrome";
-export const SPIRIT_EXTENSION_TAB_CLOSED = "spirit-extension-tab-closed";
 export const SPIRIT_EXTENSION_WEB_VIEW_REQUEST = "spirit-extension-web-view-request";
 export const SPIRIT_EXTENSION_WEB_VIEW_RESULT = "spirit-extension-web-view-result";
 export const SPIRIT_EXTENSION_WEB_VIEW_EVENT = "spirit-extension-web-view-event";

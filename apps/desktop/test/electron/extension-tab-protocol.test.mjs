@@ -3,9 +3,9 @@ import { test } from "vitest";
 import { product } from "@spiritagent/product";
 
 import {
-  EXTENSION_TAB_PAGE_CSP,
+  EXTENSION_PAGE_CSP,
   extensionAssetMimeType,
-  injectExtensionTabRuntime,
+  injectExtensionPageRuntime,
   parseExtensionUiUrl,
   shouldBlockExtensionTabNavigation,
 } from "../../electron/extension-ui-protocol.ts";
@@ -28,8 +28,8 @@ test("tab protocol resolves encoded identities and packaged assets", () => {
     { kind: "tab-icon", extensionId: "personal/demo", iconPath: "assets/icon.svg" },
   );
   assert.equal(
-    parseExtensionUiUrl(new URL("spirit://extension-ui/tab-runtime.js")).kind,
-    "tab-runtime",
+    parseExtensionUiUrl(new URL("spirit://extension-ui/page-runtime.js")).kind,
+    "page-runtime",
   );
 });
 
@@ -55,14 +55,14 @@ test("tab protocol rejects traversal and malformed identities", () => {
 
 test("HTML receives the external runtime without inline host privileges", () => {
   assert.equal(
-    injectExtensionTabRuntime(
+    injectExtensionPageRuntime(
       "<!doctype html><html><head><title>Demo</title></head><body></body></html>",
     ),
-    `<!doctype html><html><head><script src="${product.urlProtocol}://extension-ui/tab-runtime.js"></script><title>Demo</title></head><body></body></html>`,
+    `<!doctype html><html><head><script src="${product.urlProtocol}://extension-ui/page-runtime.js"></script><title>Demo</title></head><body></body></html>`,
   );
-  assert.match(EXTENSION_TAB_PAGE_CSP, /default-src 'none'/);
-  assert.match(EXTENSION_TAB_PAGE_CSP, /frame-src 'none'/);
-  assert.doesNotMatch(EXTENSION_TAB_PAGE_CSP, /allow-same-origin/);
+  assert.match(EXTENSION_PAGE_CSP, /default-src 'none'/);
+  assert.match(EXTENSION_PAGE_CSP, /frame-src 'none'/);
+  assert.doesNotMatch(EXTENSION_PAGE_CSP, /allow-same-origin/);
   assert.equal(extensionAssetMimeType("app.mjs"), "text/javascript; charset=utf-8");
   assert.equal(extensionAssetMimeType("icon.svg"), "image/svg+xml");
 });

@@ -37,7 +37,6 @@ import {
 import { emptySegments, syncSegmentsFromExternalValue } from "@spiritagent/ui/composer";
 import { isAgentModeChipKind } from "@spiritagent/ui/composer";
 import { buildPostSendComposerSegments } from "@spiritagent/ui/composer";
-import { clearGitHubAutomationRepositoriesCache } from "@/lib/github-automation-repositories-cache";
 import { isSubagentToolCallPending } from "@/lib/subagent-viewer-pending";
 import { resolveWorkspaceDisplayLabel } from "@/lib/workspace-display-label";
 import {
@@ -126,10 +125,6 @@ import type {
   GitWorkingTreeSnapshot,
   ReadGitHistoryRequest,
   ReadGitCommitMessageRequest,
-  GetGitHubPullRequestDetailRequest,
-  GetGitHubPullRequestTabCountsRequest,
-  ListGitHubPullRequestsRequest,
-  MergeGitHubPullRequestRequest,
   ApprovalLevel,
   LocalFileComposerRoute,
   WorkLocationKind,
@@ -3385,6 +3380,19 @@ export function useDesktopRuntime() {
     [api],
   );
 
+  const invokeExtensionViewRequest = useCallback(
+    (request: import("../types").DesktopExtensionViewRequest) => {
+      if (!api) return Promise.reject(new Error("Desktop host is unavailable."));
+      return api.invokeExtensionViewRequest(request);
+    },
+    [api],
+  );
+  const openExtensionLink = useCallback(
+    (request: import("../types").DesktopExtensionOpenLinkRequest) =>
+      api?.openExtensionLink(request) ?? Promise.resolve(false),
+    [api],
+  );
+
   const invokeExtensionTabRequest = useCallback(
     async (request: {
       extensionId: string;
@@ -3887,160 +3895,6 @@ export function useDesktopRuntime() {
     [api],
   );
 
-  const getGitHubAuthStatus = useCallback(async () => {
-    if (!api) {
-      return { connected: false };
-    }
-    return api.getGitHubAuthStatus();
-  }, [api]);
-
-  const beginGitHubDeviceLogin = useCallback(async () => {
-    if (!api) {
-      throw new Error(i18n.t("error.hostNotReady"));
-    }
-    return api.beginGitHubDeviceLogin();
-  }, [api]);
-
-  const completeGitHubDeviceLogin = useCallback(async () => {
-    if (!api) {
-      throw new Error(i18n.t("error.hostNotReady"));
-    }
-    return api.completeGitHubDeviceLogin();
-  }, [api]);
-
-  const cancelGitHubDeviceLogin = useCallback(async () => {
-    if (!api) {
-      return;
-    }
-    await api.cancelGitHubDeviceLogin();
-  }, [api]);
-
-  const disconnectGitHub = useCallback(async () => {
-    if (!api) {
-      return { connected: false };
-    }
-    const status = await api.disconnectGitHub();
-    clearGitHubAutomationRepositoriesCache();
-    return status;
-  }, [api]);
-
-  const getGitHubPullRequestForCurrentBranch = useCallback(async () => {
-    if (!api) {
-      return { repository: null, branch: null, pullRequest: null };
-    }
-    return api.getGitHubPullRequestForCurrentBranch();
-  }, [api]);
-
-  const getGitHubPullRequestDetail = useCallback(
-    async (request: GetGitHubPullRequestDetailRequest) => {
-      if (!api) {
-        throw new Error(i18n.t("error.hostNotReady"));
-      }
-      return api.getGitHubPullRequestDetail(request);
-    },
-    [api],
-  );
-
-  const getGitHubPullRequestConversation = useCallback(
-    async (request: GetGitHubPullRequestDetailRequest) => {
-      if (!api) {
-        throw new Error(i18n.t("error.hostNotReady"));
-      }
-      return api.getGitHubPullRequestConversation(request);
-    },
-    [api],
-  );
-
-  const getGitHubPullRequestFiles = useCallback(
-    async (request: GetGitHubPullRequestDetailRequest) => {
-      if (!api) {
-        throw new Error(i18n.t("error.hostNotReady"));
-      }
-      return api.getGitHubPullRequestFiles(request);
-    },
-    [api],
-  );
-
-  const getGitHubPullRequestCommits = useCallback(
-    async (request: GetGitHubPullRequestDetailRequest) => {
-      if (!api) {
-        throw new Error(i18n.t("error.hostNotReady"));
-      }
-      return api.getGitHubPullRequestCommits(request);
-    },
-    [api],
-  );
-
-  const getGitHubPullRequestChecks = useCallback(
-    async (request: GetGitHubPullRequestDetailRequest) => {
-      if (!api) {
-        throw new Error(i18n.t("error.hostNotReady"));
-      }
-      return api.getGitHubPullRequestChecks(request);
-    },
-    [api],
-  );
-
-  const mergeGitHubPullRequest = useCallback(
-    async (request: MergeGitHubPullRequestRequest) => {
-      if (!api) {
-        throw new Error(i18n.t("error.hostNotReady"));
-      }
-      return api.mergeGitHubPullRequest(request);
-    },
-    [api],
-  );
-
-  const markGitHubPullRequestReady = useCallback(
-    async (request: GetGitHubPullRequestDetailRequest) => {
-      if (!api) {
-        throw new Error(i18n.t("error.hostNotReady"));
-      }
-      return api.markGitHubPullRequestReady(request);
-    },
-    [api],
-  );
-
-  const listGitHubPullRequests = useCallback(
-    async (request: ListGitHubPullRequestsRequest) => {
-      if (!api) {
-        return { items: [], totalCount: 0, hasMore: false };
-      }
-      return api.listGitHubPullRequests(request);
-    },
-    [api],
-  );
-
-  const listGitHubAutomationRepositories = useCallback(
-    async (page?: number) => {
-      if (!api) {
-        return { items: [], hasNextPage: false };
-      }
-      return api.listGitHubAutomationRepositories(page !== undefined ? { page } : {});
-    },
-    [api],
-  );
-
-  const searchGitHubAutomationRepositories = useCallback(
-    async (query: string, page?: number) => {
-      if (!api) {
-        return { items: [], totalCount: 0 };
-      }
-      return api.searchGitHubAutomationRepositories({ query, ...(page ? { page } : {}) });
-    },
-    [api],
-  );
-
-  const getGitHubPullRequestTabCounts = useCallback(
-    async (request: GetGitHubPullRequestTabCountsRequest) => {
-      if (!api) {
-        return { open: 0, closed: 0 };
-      }
-      return api.getGitHubPullRequestTabCounts(request);
-    },
-    [api],
-  );
-
   const readWorkspaceTextFile = useCallback(
     async (
       relativePath: string,
@@ -4338,23 +4192,7 @@ export function useDesktopRuntime() {
     readGitWorkingTree,
     readGitHistory,
     readGitCommitMessage,
-    getGitHubAuthStatus,
-    beginGitHubDeviceLogin,
-    completeGitHubDeviceLogin,
-    cancelGitHubDeviceLogin,
-    disconnectGitHub,
-    getGitHubPullRequestForCurrentBranch,
-    listGitHubPullRequests,
-    listGitHubAutomationRepositories,
-    searchGitHubAutomationRepositories,
-    getGitHubPullRequestTabCounts,
-    getGitHubPullRequestDetail,
-    getGitHubPullRequestConversation,
-    getGitHubPullRequestFiles,
-    getGitHubPullRequestCommits,
-    getGitHubPullRequestChecks,
-    mergeGitHubPullRequest,
-    markGitHubPullRequestReady,
+
     readWorkspaceTextFile,
     searchWorkspaceContent,
     writeWorkspaceTextFile,
@@ -4385,6 +4223,8 @@ export function useDesktopRuntime() {
     syncWorkspaceToolTabs,
     subscribeWorkspaceToolTabsUpdates,
     invokeExtensionTabRequest,
+    invokeExtensionViewRequest,
+    openExtensionLink,
     setExtensionTabChrome,
     subscribeExtensionTabEvents,
     invokeExtensionWebView,

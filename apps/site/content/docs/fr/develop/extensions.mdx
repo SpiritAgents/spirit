@@ -186,7 +186,7 @@ Requiert `desktop-ui`.
 | `views[].height` | Facultatif. Hauteur maximale. L'omission épouse le contenu. Au-delà, l'iframe défile.                                                                                                                   |
 | `views[].chrome` | Facultatif. Chrome de la boîte de dialogue : `default` (titre + fermer), `close-only` (masquer le titre, garder fermer) ou `none` (masquer les deux). L'omission équivaut à `default`.                  |
 
-Export par défaut : `export default function View({ params, close })`. `close(result)` termine la vue. L'hôte injecte React et `@spirit/desktop-ui`.
+Les Views et Tabs sont des pages HTML avec leur propre JavaScript, CSS et dépendances. L’hôte fournit `window.spirit.page` ; les Views se ferment avec `window.spirit.view.close(result)`. Attendez `ready()`, effectuez le rendu, puis appelez `mounted()`. `onContextChange()` transmet les paramètres, la langue et le thème. Aucune import map React n’est fournie.
 
 ### `contributes.cli`
 

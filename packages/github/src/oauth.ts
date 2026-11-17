@@ -5,6 +5,7 @@ import {
   GITHUB_OAUTH_USER_LOOKUP_TIMEOUT_MS,
   isRetriableGitHubHttpStatus,
   retryGitHubOAuthUntil,
+  throwIfGitHubFetchAborted,
   type GitHubOAuthRetryAttempt,
 } from "./oauth-fetch-retry.js";
 
@@ -18,14 +19,19 @@ export class GitHubOAuthError extends Error {
   }
 }
 
-export async function fetchGitHubUserLogin(accessToken: string): Promise<string> {
+export async function fetchGitHubUserLogin(
+  accessToken: string,
+  signal?: AbortSignal,
+): Promise<string> {
   return retryGitHubOAuthUntil({
     expiresAtMs: Date.now() + GITHUB_OAUTH_USER_LOOKUP_TIMEOUT_MS,
     intervalMs: GITHUB_OAUTH_USER_LOOKUP_INTERVAL_MS,
     timedOutMessage: "GitHub user lookup timed out.",
+    signal,
     attempt: async (): Promise<GitHubOAuthRetryAttempt<string>> => {
       try {
         const response = await githubFetch(`${GITHUB_API_BASE_URL}/user`, {
+          signal,
           headers: {
             Accept: "application/vnd.github+json",
             Authorization: `Bearer ${accessToken}`,
@@ -51,6 +57,7 @@ export async function fetchGitHubUserLogin(accessToken: string): Promise<string>
         }
         return { outcome: "success", value: login };
       } catch (error) {
+        throwIfGitHubFetchAborted(signal);
         if (error instanceof GitHubOAuthError) {
           throw error;
         }

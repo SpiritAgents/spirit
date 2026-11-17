@@ -13,7 +13,6 @@ export const settingsPageTitleKey: Record<SettingsSidebarTab, string> = {
   dreams: "settings.dreams",
   appearance: "settings.appearance",
   networks: "settings.remoteControl",
-  integrations: "settings.integrations",
   developer: "settings.developer",
 };
 

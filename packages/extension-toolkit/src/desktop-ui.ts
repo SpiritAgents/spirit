@@ -1,18 +1,11 @@
-/** Props for a precompiled Desktop view: `export default function View(props)`. */
-export interface SpiritDesktopViewProps {
-  params: unknown;
-  close: (result?: unknown) => void;
-}
-
-export type SpiritDesktopView = (props: SpiritDesktopViewProps) => unknown;
-
 export type SpiritDesktopTabScope = "window-shared" | "workspace" | "session";
 export type SpiritDesktopTabIcon =
   | { type: "spirit"; name: string }
-  | { type: "file"; path: string }
-  | { type: "image"; dataUrl: string };
+  | { type: "file"; path: string; monochrome?: boolean }
+  | { type: "image"; dataUrl: string; monochrome?: boolean };
 
 export interface SpiritDesktopTabOpenRequest {
+  preferInstanceId?: string;
   contributionId: string;
   scope?:
     | { kind: "window-shared" }
@@ -73,10 +66,14 @@ export interface SpiritDesktopTabPageContext {
   instanceId: string;
   channelId: string;
   initialParams?: unknown;
+  navigationRevision?: number;
   scope: unknown;
   workspaceRoot: string;
+  workspace: { isRepository: boolean; branch: string };
+  authorizationConfigured?: boolean;
   sessionKey: string;
   visible: boolean;
+  locale: string;
   theme: {
     htmlClassName: string;
     htmlStyle: string;
@@ -84,12 +81,62 @@ export interface SpiritDesktopTabPageContext {
   };
 }
 
-export interface SpiritDesktopTabPageApi {
-  ready(): Promise<SpiritDesktopTabPageContext>;
+export interface SpiritDesktopViewPageContext {
+  extensionId: string;
+  contributionId: string;
+  instanceId: string;
+  channelId: string;
+  params?: unknown;
+  visible: boolean;
+  locale: string;
+  theme: SpiritDesktopTabPageContext["theme"];
+}
+
+/** Common document bridge; bundle application dependencies with the extension page. */
+export interface SpiritDesktopPageApi<TContext = SpiritDesktopTabPageContext> {
+  ready(): Promise<TContext>;
+  /** Call after the application has committed its first render. */
+  mounted(): void;
+  fail(error: unknown): void;
+  openExternal(url: string): Promise<void>;
+  openExtensionDetails(): Promise<void>;
+  /** Inserts a chip into the owning conversation; never sends a message. Tabs only. */
+  addAttachment(attachment: SpiritComposerAttachment): Promise<void>;
   request(method: string, params?: unknown): Promise<unknown>;
   onEvent(listener: (event: { event: string; params?: unknown }) => void): () => void;
+  onContextChange(listener: (context: TContext) => void): () => void;
+}
+
+export type SpiritComposerAttachment =
+  | {
+      kind: "prDiff";
+      prUrl: string;
+      filename: string;
+      lineStart: number;
+      lineEnd: number;
+      diffText: string;
+      status: "open" | "closed" | "merged" | "draft";
+    }
+  | {
+      kind: "fileSnippet";
+      filePath: string;
+      lineStart: number;
+      lineEnd: number;
+      selectedText: string;
+    }
+  | {
+      kind: "terminalSnippet";
+      terminalName: string;
+      lineStart: number;
+      lineEnd: number;
+      selectedText: string;
+    };
+export interface SpiritDesktopTabPageApi extends SpiritDesktopPageApi {
   setChrome(patch: SpiritDesktopTabChromePatch): void;
-  onContextChange(listener: (context: SpiritDesktopTabPageContext) => void): () => void;
+}
+
+export interface SpiritDesktopViewPageApi extends SpiritDesktopPageApi<SpiritDesktopViewPageContext> {
+  close(result?: unknown): void;
 }
 
 export interface SpiritDesktopWebViewPageApi {
@@ -109,6 +156,7 @@ export interface SpiritDesktopWebViewsPageApi {
 export interface SpiritDesktopViewSession {
   readonly requestId: string;
   readonly result: Promise<unknown>;
+  update(params: unknown): void;
   close(result?: unknown): void;
 }
 
@@ -125,14 +173,23 @@ export interface SpiritDesktopAutomationTriggerHost {
 
 export interface SpiritDesktopActionHost {
   ui: SpiritDesktopViewHost;
+  tabs: SpiritDesktopTabsHost;
   openExternal(url: string): Promise<void>;
   automationTriggers: SpiritDesktopAutomationTriggerHost;
 }
 
-export interface SpiritDesktopActionContext {
+export interface SpiritExtensionContext {
+  extension: {
+    id: string;
+    name: string;
+    version: string;
+    directoryPath: string;
+    manifestPath: string;
+    main: string;
+  };
   host: SpiritDesktopActionHost;
-  actionId: string;
-  params?: unknown;
+  /** Aborted when this activated extension is disabled, removed, or replaced. */
+  signal: AbortSignal;
   log(message: string): void;
   settings: {
     get(key: string): Promise<string | number | boolean | null | undefined>;
@@ -148,4 +205,24 @@ export interface SpiritDesktopActionContext {
     set(key: string, value: string): Promise<void>;
     delete(key: string): Promise<void>;
   };
+}
+
+export interface SpiritDesktopActionContext extends SpiritExtensionContext {
+  actionId: string;
+  params?: unknown;
+}
+
+export interface SpiritDesktopPageRequestContext extends SpiritExtensionContext {
+  contributionId: string;
+  instanceId: string;
+  method: string;
+  params?: unknown;
+  /** Resolved by the host from the live page, never supplied by the iframe. */
+  context: { workspaceRoot: string; sessionKey: string; branch: string };
+}
+
+export interface SpiritDesktopOpenLinkContext extends SpiritExtensionContext {
+  actionId: string;
+  url: string;
+  sourceTabId?: string;
 }

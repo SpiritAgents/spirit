@@ -99,12 +99,12 @@ export class WorkspaceToolTabsStore {
   }
 
   openExtensionTab(input: {
+    preferInstanceId?: string;
     windowId: string;
     extensionId: string;
     contributionId: string;
     scope: DesktopWorkspaceExtensionToolTab["scope"];
     initialParams?: unknown;
-    title: string;
     icon?: DesktopWorkspaceExtensionToolTab["icon"];
     reuse: "new" | "context";
   }): Promise<DesktopWorkspaceExtensionToolTab> {
@@ -112,15 +112,23 @@ export class WorkspaceToolTabsStore {
       await this.ensureLoaded();
       const record = await this.ensureWindow(input.windowId);
       if (input.reuse === "context") {
-        const existing = record.tabs.find(
+        const candidates = record.tabs.filter(
           (tab): tab is DesktopWorkspaceExtensionToolTab =>
             tab.kind === "extension" &&
             tab.extensionId === input.extensionId &&
             tab.contributionId === input.contributionId &&
             JSON.stringify(tab.scope) === JSON.stringify(input.scope),
         );
+        const existing =
+          candidates.find((tab) => tab.instanceId === input.preferInstanceId) ??
+          candidates.find((tab) => tab.id === record.activeTabId) ??
+          candidates[0];
         if (existing) {
-          if (record.activeTabId !== existing.id) {
+          if (record.activeTabId !== existing.id || input.initialParams !== undefined) {
+            if (input.initialParams !== undefined) {
+              existing.initialParams = structuredClone(input.initialParams);
+              existing.navigationRevision = (existing.navigationRevision ?? 0) + 1;
+            }
             record.activeTabId = existing.id;
             record.revision += 1;
             await this.persist();
@@ -135,7 +143,6 @@ export class WorkspaceToolTabsStore {
         scope: input.scope,
         ...(input.initialParams === undefined ? {} : { initialParams: input.initialParams }),
         ...(input.icon ? { icon: input.icon } : {}),
-        tabTitle: input.title,
       });
       record.tabs = [...record.tabs, tab];
       record.activeTabId = tab.id;
@@ -464,6 +471,9 @@ function persistTab(tab: DesktopWorkspaceToolTab): PersistedTab {
       contributionId: tab.contributionId,
       instanceId: tab.instanceId,
       scope: structuredClone(tab.scope),
+      ...(tab.navigationRevision === undefined
+        ? {}
+        : { navigationRevision: tab.navigationRevision }),
       ...(tab.initialParams === undefined
         ? {}
         : { initialParams: structuredClone(tab.initialParams) }),
@@ -491,6 +501,7 @@ function restoreTab(tab: PersistedTab): DesktopWorkspaceToolTab {
     contributionId: tab.contributionId,
     instanceId: tab.instanceId,
     scope: tab.scope,
+    ...(tab.navigationRevision === undefined ? {} : { navigationRevision: tab.navigationRevision }),
     ...(tab.initialParams === undefined ? {} : { initialParams: tab.initialParams }),
   });
 }
@@ -503,7 +514,7 @@ function assertValidTabs(tabs: readonly DesktopWorkspaceToolTab[]): void {
     }
     ids.add(tab.id);
     if (tab.kind === "built-in") {
-      if (!["files", "terminal", "git", "browser", "pr", "task"].includes(tab.builtInKind)) {
+      if (!["files", "terminal", "git", "browser", "task"].includes(tab.builtInKind)) {
         throw new Error(`Invalid built-in workspace tool tab: ${tab.id}`);
       }
       continue;

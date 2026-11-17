@@ -1,162 +1,121 @@
 /** @vitest-environment jsdom */
-
-import { product } from "@spiritagent/product";
 import "./setup";
-
-import { act, render } from "@testing-library/react";
-import { afterEach, expect, test } from "vitest";
-
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, expect, test, vi } from "vitest";
 import { ExtensionViewHost } from "@/components/extension-view-host";
 import {
-  SPIRIT_EXTENSION_VIEW_READY_MESSAGE,
-  SPIRIT_EXTENSION_VIEW_SIZE_MESSAGE,
-} from "@/lib/extension-view-frame";
-import { closeAllOpenExtensionViews, openExtensionView } from "@/lib/extension-view-runtime";
+  EXTENSION_PAGE_READY,
+  EXTENSION_PAGE_SIZE,
+  EXTENSION_PAGE_ERROR,
+  EXTENSION_PAGE_CLOSE,
+} from "@/lib/extension-page-frame";
+import {
+  closeAllOpenExtensionViews,
+  openExtensionView,
+  updateOpenExtensionView,
+} from "@/lib/extension-view-runtime";
 
 afterEach(() => {
   closeAllOpenExtensionViews();
+  vi.useRealTimers();
 });
-
-test("iframe is sandboxed to scripts only and uses the View default-export srcdoc", async () => {
+const identity = {
+  extensionId: "built-in/demo",
+  contributionId: "main",
+  instanceId: "request-1",
+  channelId: "channel-1",
+};
+function open(chrome?: "default" | "close-only" | "none", height?: number) {
+  let result: Promise<unknown>;
   act(() => {
-    void openExtensionView({
-      requestId: "req-host",
-      extensionId: "built-in/demo",
-      viewId: "main",
-      viewUrl: `${product.urlProtocol}://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main`,
-      title: "Demo View",
+    result = openExtensionView({
+      requestId: identity.instanceId,
+      channelId: identity.channelId,
+      extensionId: identity.extensionId,
+      viewId: identity.contributionId,
+      title: "Demo",
+      chrome,
+      height,
+      params: { step: 1 },
     });
   });
-
-  await act(async () => {
-    render(<ExtensionViewHost />);
-  });
-  const iframe = document.querySelector("iframe");
-  expect(iframe).toBeTruthy();
-  expect(iframe?.getAttribute("sandbox")).toBe("allow-scripts");
-  expect(iframe?.getAttribute("sandbox")).not.toContain("allow-same-origin");
-  expect(iframe?.srcdoc).toContain("default-export function View({ params, close })");
-});
-
-function renderOpenExtensionView(chrome?: "default" | "close-only" | "none") {
-  act(() => {
-    void openExtensionView({
-      requestId: `req-chrome-${chrome ?? "default"}`,
-      extensionId: "built-in/demo",
-      viewId: "main",
-      viewUrl: `${product.urlProtocol}://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main`,
-      title: "Demo View",
-      ...(chrome ? { chrome } : {}),
-    });
-  });
+  render(<ExtensionViewHost />);
+  return { frame: document.querySelector("iframe")!, result: result! };
 }
-
-test("default chrome shows the dialog title and close button", async () => {
-  renderOpenExtensionView();
-  await act(async () => {
-    render(<ExtensionViewHost />);
-  });
-  const header = document.querySelector("[data-slot='dialog-header']");
-  expect(header).toBeTruthy();
-  expect(header?.classList.contains("sr-only")).toBe(false);
-  expect(document.querySelector("[data-slot='dialog-title']")?.textContent).toBe("Demo View");
-  expect(document.querySelector("[data-slot='dialog-close']")).toBeTruthy();
-});
-
-test("close-only chrome hides the title visually and keeps the close button", async () => {
-  renderOpenExtensionView("close-only");
-  await act(async () => {
-    render(<ExtensionViewHost />);
-  });
-  const header = document.querySelector("[data-slot='dialog-header']");
-  expect(header?.classList.contains("sr-only")).toBe(true);
-  expect(document.querySelector("[data-slot='dialog-title']")?.textContent).toBe("Demo View");
-  expect(document.querySelector("[data-slot='dialog-close']")).toBeTruthy();
-});
-
-test("none chrome hides the title visually and omits the close button", async () => {
-  renderOpenExtensionView("none");
-  await act(async () => {
-    render(<ExtensionViewHost />);
-  });
-  const header = document.querySelector("[data-slot='dialog-header']");
-  expect(header?.classList.contains("sr-only")).toBe(true);
-  expect(document.querySelector("[data-slot='dialog-title']")?.textContent).toBe("Demo View");
-  expect(document.querySelector("[data-slot='dialog-close']")).toBeNull();
-});
-
-function dialogContentStyle(): CSSStyleDeclaration | undefined {
-  const content = document.querySelector("[data-slot='dialog-content']");
-  return content instanceof HTMLElement ? content.style : undefined;
-}
-
-function dispatchFrameMessage(iframe: HTMLIFrameElement, data: unknown): void {
+function message(frame: HTMLIFrameElement, type: string, extra: Record<string, unknown> = {}) {
   act(() => {
     window.dispatchEvent(
       new MessageEvent("message", {
-        data,
-        source: iframe.contentWindow,
+        source: frame.contentWindow,
+        data: { ...identity, type, ...extra },
       }),
     );
   });
 }
-
-test("omitted height hugs content and does not fix the dialog or iframe min-height", async () => {
-  renderOpenExtensionView();
-  await act(async () => {
-    render(<ExtensionViewHost />);
-  });
-  const iframe = document.querySelector("iframe");
-  expect(iframe).toBeTruthy();
-  expect(iframe?.className).not.toContain("min-h-64");
-  expect(iframe?.className).not.toContain("h-full");
-  expect(dialogContentStyle()?.height).toBe("");
+test("View loads a packaged document with scripts-only sandbox", () => {
+  const { frame } = open();
+  expect(frame.getAttribute("sandbox")).toBe("allow-scripts");
+  expect(frame.src).toContain("/view/built-in%2Fdemo/main/request-1/index.html");
+  expect(frame.getAttribute("srcdoc")).toBeNull();
 });
-
-test("declared height is an iframe max-height instead of a fixed dialog height", async () => {
-  act(() => {
-    void openExtensionView({
-      requestId: "req-max-height",
-      extensionId: "built-in/demo",
-      viewId: "main",
-      viewUrl: `${product.urlProtocol}://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main`,
-      title: "Demo View",
-      height: 360,
-    });
-  });
-  await act(async () => {
-    render(<ExtensionViewHost />);
-  });
-  const iframe = document.querySelector("iframe");
-  expect(iframe?.style.maxHeight).toBe("360px");
-  expect(iframe?.style.overflowY).toBe("auto");
-  expect(dialogContentStyle()?.height).toBe("");
+test.each(["default", "close-only", "none"] as const)(
+  "%s chrome preserves native dialog semantics",
+  (chrome) => {
+    open(chrome);
+    expect(
+      document.querySelector("[data-slot='dialog-header']")?.classList.contains("sr-only"),
+    ).toBe(chrome !== "default");
+    expect(Boolean(document.querySelector("[data-slot='dialog-close']"))).toBe(chrome !== "none");
+  },
+);
+test("state updates preserve the iframe, identity and ready state", () => {
+  const { frame } = open();
+  message(frame, EXTENSION_PAGE_READY);
+  act(() => updateOpenExtensionView(identity.instanceId, { step: 2 }));
+  expect(document.querySelector("iframe")).toBe(frame);
+  expect(frame.dataset.extensionPageState).toBe("ready");
 });
-
-test("size messages from the iframe set the iframe height", async () => {
-  act(() => {
-    void openExtensionView({
-      requestId: "req-size",
-      extensionId: "built-in/demo",
-      viewId: "main",
-      viewUrl: `${product.urlProtocol}://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main`,
-      title: "Demo View",
-    });
-  });
-  await act(async () => {
-    render(<ExtensionViewHost />);
-  });
-  const iframe = document.querySelector("iframe");
-  expect(iframe).toBeTruthy();
-  dispatchFrameMessage(iframe!, {
-    type: SPIRIT_EXTENSION_VIEW_READY_MESSAGE,
-    requestId: "req-size",
-  });
-  expect(iframe?.style.height).toBe("");
-  dispatchFrameMessage(iframe!, {
-    type: SPIRIT_EXTENSION_VIEW_SIZE_MESSAGE,
-    requestId: "req-size",
-    height: 280,
-  });
-  expect(iframe?.style.height).toBe("280px");
+test("live pointer preference changes reach the existing View document", async () => {
+  const originalClass = document.documentElement.className;
+  const { frame } = open();
+  const postMessage = vi.spyOn(frame.contentWindow!, "postMessage");
+  try {
+    for (const enabled of [true, false]) {
+      await act(async () => {
+        document.documentElement.classList.toggle("spirit-clickable-pointer", enabled);
+      });
+      const [context] = postMessage.mock.calls.at(-1)!;
+      expect(context.theme.htmlClassName.includes("spirit-clickable-pointer")).toBe(enabled);
+      expect(document.querySelector("iframe")).toBe(frame);
+    }
+  } finally {
+    act(() => closeAllOpenExtensionViews());
+    document.documentElement.className = originalClass;
+    postMessage.mockRestore();
+  }
+});
+test("only matching frame identities can resize or close", async () => {
+  const { frame, result } = open(undefined, 360);
+  message(frame, EXTENSION_PAGE_READY);
+  message(frame, EXTENSION_PAGE_SIZE, { channelId: "wrong", height: 280 });
+  expect(frame.style.height).toBe("160px");
+  message(frame, EXTENSION_PAGE_SIZE, { height: 280 });
+  expect(frame.style.height).toBe("280px");
+  expect(frame.style.maxHeight).toBe("360px");
+  message(frame, EXTENSION_PAGE_CLOSE, { result: { done: true } });
+  expect(await result).toEqual({ done: true });
+});
+test("failed pages show an explicit error and a close control even with no chrome", () => {
+  const { frame } = open("none");
+  message(frame, EXTENSION_PAGE_ERROR);
+  expect(screen.getByRole("alert")).toBeTruthy();
+  expect(document.querySelector("[data-slot='dialog-close']")).toBeTruthy();
+  expect(frame.dataset.extensionPageState).toBe("error");
+});
+test("timeout is failure, never a blank successful view", () => {
+  vi.useFakeTimers();
+  const { frame } = open();
+  act(() => vi.advanceTimersByTime(10_000));
+  expect(frame.dataset.extensionPageState).toBe("error");
+  expect(screen.getByRole("alert")).toBeTruthy();
 });

@@ -96,3 +96,33 @@ describe("WorkspaceToolTabChip", () => {
     expect(titledClasses).not.toContain("h-8");
   });
 });
+
+test("extension chips render their shared icon node without an image-only path", () => {
+  const { container } = render(
+    <WorkspaceToolTabChip
+      tab={{
+        id: "extension-tab",
+        kind: "extension",
+        extensionId: "personal/demo",
+        contributionId: "notes",
+        instanceId: "instance",
+        channelId: "channel",
+        scope: { kind: "window-shared" },
+        tabTitle: "Notes",
+      }}
+      icon={FileText}
+      iconNode={
+        <span
+          data-testid="extension-icon"
+          style={{ backgroundColor: "currentColor", maskImage: "url(icons/notes.svg)" }}
+        />
+      }
+      label="Notes"
+      selected
+      onSelect={() => {}}
+      onClose={() => {}}
+    />,
+  );
+  expect(container.querySelector('[data-testid="extension-icon"]')).toBeTruthy();
+  expect(container.querySelector("img")).toBeNull();
+});

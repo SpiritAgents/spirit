@@ -40,9 +40,7 @@ type CreateAutomationDialogProps = {
   onOpenChange(open: boolean): void;
   snapshot: DesktopSnapshot | null;
   disabled?: boolean;
-  githubConnected: boolean;
-  githubAuthChecking?: boolean;
-  onOpenIntegrationsSettings?: () => void;
+
   onSubmit(request: DesktopCreateAutomationRequest): void | Promise<void>;
   onAddWorkspace?(): void | Promise<void>;
   triggerRuntime: AutomationTriggerRuntime;
@@ -53,9 +51,7 @@ export function CreateAutomationDialog({
   onOpenChange,
   snapshot,
   disabled,
-  githubConnected,
-  githubAuthChecking,
-  onOpenIntegrationsSettings,
+
   onSubmit,
   onAddWorkspace,
   triggerRuntime,
@@ -106,8 +102,7 @@ export function CreateAutomationDialog({
     (workspaceBinding === "none" || workspaceRoot.trim().length > 0) &&
     resolvedWorkspaceRoot.trim().length > 0 &&
     !isEmptyModelRef(modelRef) &&
-    isValidDesktopAutomationTrigger(trigger) &&
-    (trigger.kind !== "github" || githubConnected);
+    isValidDesktopAutomationTrigger(trigger);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -145,9 +140,7 @@ export function CreateAutomationDialog({
             <AutomationTriggerMenu
               trigger={trigger}
               disabled={disabled}
-              githubConnected={githubConnected}
-              githubAuthChecking={githubAuthChecking}
-              onOpenIntegrationsSettings={onOpenIntegrationsSettings}
+
               onTriggerChange={setTrigger}
               runtime={triggerRuntime}
             />

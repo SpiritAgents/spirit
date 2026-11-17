@@ -1,5 +1,5 @@
+import { openExtensionDetails } from "@/lib/extension-navigation";
 import { Globe } from "@spiritagent/icons/globe";
-import { getSpiritIconComponent } from "@spiritagent/icons";
 import { Plus } from "@spiritagent/icons/plus";
 import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
 import {
@@ -15,16 +15,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  FileText,
-  GitBranch,
-  GitPullRequest,
-  GitPullRequestClosed,
-  GitPullRequestDraft,
-  Maximize2,
-  Minimize2,
-  Terminal,
-} from "lucide-react";
+import { FileText, GitBranch, Maximize2, Minimize2, Terminal } from "lucide-react";
 import {
   NewToolTabShortcutKbd,
   WorkspaceToolsFullScreenShortcutKbd,
@@ -39,14 +30,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { GitHubConnectTooltipContent } from "@/components/github-sign-in-prompt";
 import {
   WorkspaceBrowserTab,
   type WorkspaceBrowserTabProps,
 } from "@/components/workspace-browser-tab";
 import { WorkspaceFilesTab } from "@/components/workspace-files-tab";
 import { WorkspaceGitTab } from "@/components/workspace-git-tab";
-import { WorkspacePrTab } from "@/components/workspace-pr-tab";
+
 import { WorkspaceTerminalTab } from "@/components/workspace-terminal-tab";
 import { WorkspaceTaskTerminalTab } from "@/components/workspace-task-terminal-tab";
 import { WorkspaceToolTabChip } from "@/components/workspace-tool-tab-chip";
@@ -70,7 +60,7 @@ import {
   workspaceToolsWidthExpression,
   writeWorkspaceToolsWidthRatio,
 } from "@/lib/layout-prefs";
-import type { PullRequestChipStatus } from "@spiritagent/ui/composer";
+
 import { cn } from "@/lib/utils";
 import {
   registerWorkspaceNewToolTabShortcut,
@@ -87,7 +77,7 @@ import {
 import { useSessionSidebarChrome } from "@/contexts/session-sidebar-chrome-context";
 import { setWorkspacePanelRegionActive } from "@/lib/desktop-keyboard-shortcut-eligibility";
 import { isDarwinElectronShell } from "@/lib/desktop-shell";
-import { useGitHubAuthConnected } from "@/hooks/use-github-auth-connected";
+
 import { useDarwinWindowFullscreen } from "@/hooks/useDarwinWindowFullscreen";
 import { useWorkspaceToolsShellHorizontalDivider } from "@/lib/use-workspace-tools-shell-horizontal-divider";
 import { WORKSPACE_TOOL_TABS_SHELL_DIVIDER_ATTR } from "@/lib/workspace-tools-panel-edge";
@@ -108,18 +98,14 @@ import { getTaskTerminal, shouldConfirmTaskTabClose } from "@/lib/task-terminal-
 import { terminateTaskTerminalInstance } from "@/lib/task-run-service";
 import {
   collectExtensionTabContributions,
+  extensionTabDisplayName,
   resolveExtensionTabScope,
   type ExtensionTabContribution,
 } from "@/lib/extension-tab-contributions";
-import { extensionTabPackagedIconUrl } from "@/lib/extension-tab-frame";
 import type {
   DesktopGitSnapshot,
   DesktopExtensionListItem,
   WorkspaceContentInvalidation,
-  GetGitHubPullRequestDetailRequest,
-  GitHubAuthStatus,
-  GitHubPullRequestDetail,
-  GitHubPullRequestForBranchResult,
   GitHistorySnapshot,
   GitWorkingTreeSnapshot,
   SubmitGitChipRequest,
@@ -138,7 +124,6 @@ const TAB_KIND_META: Record<WorkspaceToolTabKind, { labelKey: string; icon: type
   terminal: { labelKey: "workspace.terminal", icon: Terminal },
   git: { labelKey: "workspace.gitTab", icon: GitBranch },
   browser: { labelKey: "workspace.browser", icon: Globe },
-  pr: { labelKey: "workspace.prTab", icon: GitPullRequest },
   task: { labelKey: "workspace.taskTab", icon: Terminal },
 };
 
@@ -194,9 +179,7 @@ export type WorkspaceToolsDockProps = {
   searchWorkspaceContent?: (
     request: import("@/types").WorkspaceContentSearchRequest,
   ) => Promise<import("@/types").WorkspaceContentSearchResult>;
-  prRevealNonce?: number;
-  prRevealTabId?: string | null;
-  prRevealRequest?: import("@/lib/workspace-pr-navigation").GitHubPullRequestRevealRequest | null;
+
   onOpenWorkspaceFile?: (
     relativePath: string,
     options?: { viewMode?: WorkspaceEditorViewMode },
@@ -225,37 +208,7 @@ export type WorkspaceToolsDockProps = {
   /** The Electron desktop build can create/use browser tabs; on the Web host the menu item is visible but disabled. */
   browserTabEnabled?: boolean;
   /** The Electron desktop build can create PR tabs; on the Web host the menu item is visible but disabled. */
-  prTabEnabled?: boolean;
-  onOpenIntegrationsSettings?: () => void;
-  getGitHubAuthStatus: () => Promise<GitHubAuthStatus>;
-  getGitHubPullRequestForCurrentBranch: () => Promise<GitHubPullRequestForBranchResult>;
-  listGitHubPullRequests: (
-    request: import("@/types").ListGitHubPullRequestsRequest,
-  ) => Promise<import("@/types").GitHubPullRequestListSnapshot>;
-  getGitHubPullRequestTabCounts: (
-    request: import("@/types").GetGitHubPullRequestTabCountsRequest,
-  ) => Promise<import("@/types").GitHubPullRequestTabCounts>;
-  getGitHubPullRequestDetail: (
-    request: GetGitHubPullRequestDetailRequest,
-  ) => Promise<GitHubPullRequestDetail>;
-  getGitHubPullRequestConversation: (
-    request: GetGitHubPullRequestDetailRequest,
-  ) => Promise<import("@/types").GitHubPullRequestConversationSnapshot>;
-  getGitHubPullRequestFiles: (
-    request: GetGitHubPullRequestDetailRequest,
-  ) => Promise<import("@/types").GitHubPullRequestFilesSnapshot>;
-  getGitHubPullRequestCommits: (
-    request: GetGitHubPullRequestDetailRequest,
-  ) => Promise<import("@/types").GitHubPullRequestCommitsSnapshot>;
-  getGitHubPullRequestChecks: (
-    request: GetGitHubPullRequestDetailRequest,
-  ) => Promise<import("@/types").GitHubPullRequestChecksSnapshot>;
-  mergeGitHubPullRequest: (
-    request: import("@/types").MergeGitHubPullRequestRequest,
-  ) => Promise<import("@/types").GitHubPullRequestMergeResult>;
-  markGitHubPullRequestReady: (
-    request: GetGitHubPullRequestDetailRequest,
-  ) => Promise<GitHubPullRequestDetail>;
+
   /** Right panel width as a proportion of the viewport. */
   widthRatio: number;
   minWidthPx?: number;
@@ -295,19 +248,6 @@ type WorkspaceToolsDockShellProps = Pick<
 > & {
   contentProps: WorkspaceToolsDockContentProps;
 };
-
-function resolvePrTabStatusIcon(status: PullRequestChipStatus) {
-  switch (status) {
-    case "draft":
-      return GitPullRequestDraft;
-    case "closed":
-      return GitPullRequestClosed;
-    case "open":
-    case "merged":
-    default:
-      return GitPullRequest;
-  }
-}
 
 function WorkspaceToolsDockInner(props: WorkspaceToolsDockProps) {
   const {
@@ -589,9 +529,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   fileRevealLine = null,
   fileRevealColumn = null,
   searchWorkspaceContent,
-  prRevealNonce = 0,
-  prRevealTabId = null,
-  prRevealRequest = null,
+
   onOpenWorkspaceFile,
   onOpenWorkspaceFileInNewTab,
   tabs,
@@ -606,19 +544,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   onGitCommitAddToChat,
   onBrowserOpenInNewTab,
   browserTabEnabled = false,
-  prTabEnabled = false,
-  onOpenIntegrationsSettings,
-  getGitHubAuthStatus,
-  getGitHubPullRequestForCurrentBranch,
-  listGitHubPullRequests,
-  getGitHubPullRequestTabCounts,
-  getGitHubPullRequestDetail,
-  getGitHubPullRequestConversation,
-  getGitHubPullRequestFiles,
-  getGitHubPullRequestCommits,
-  getGitHubPullRequestChecks,
-  mergeGitHubPullRequest,
-  markGitHubPullRequestReady,
+
   gitSnapshot,
   workspaceContentInvalidation,
   gitChipBusy = false,
@@ -640,9 +566,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   const darwinWindowFullscreen = useDarwinWindowFullscreen(darwinElectron);
   const workspaceToolsOpenRef = useRef(workspaceToolsOpen);
   workspaceToolsOpenRef.current = workspaceToolsOpen;
-  const gitHubAuthConnected = useGitHubAuthConnected(getGitHubAuthStatus, prTabEnabled);
-  const prMenuBlocked =
-    prTabEnabled && (gitHubAuthConnected === null || gitHubAuthConnected === false);
+
   /** Mount the terminal only after the user first switches to the Terminal tab (so the default tab does not trigger node-pty); keep it mounted after switching away. */
   const [mountedTerminalTabIds, setMountedTerminalTabIds] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -707,9 +631,6 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
       if (kind === "browser" && !browserTabEnabled) {
         return;
       }
-      if (kind === "pr" && (!prTabEnabled || gitHubAuthConnected !== true)) {
-        return;
-      }
       const vacant = tabs.find((tab) => isWorkspaceToolTabKind(tab, kind) && !tab.tabTitle);
       if (vacant) {
         onActiveTabIdChange(vacant.id);
@@ -723,8 +644,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     },
     [
       browserTabEnabled,
-      gitHubAuthConnected,
-      prTabEnabled,
+
       onActiveTabIdChange,
       onTabsChange,
       tabs,
@@ -744,7 +664,6 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
         contributionId: contribution.id,
         scope,
         icon: contribution.icon,
-        tabTitle: contribution.name,
       });
       onTabsChange([...tabs, tab]);
       onActiveTabIdChange(tab.id);
@@ -871,15 +790,6 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     [onTabsChange],
   );
 
-  const handleTabPrStatusChange = useCallback(
-    (tabId: string, status: PullRequestChipStatus | undefined) => {
-      onTabsChange((prev) =>
-        prev.map((item) => (item.id === tabId ? { ...item, prStatus: status } : item)),
-      );
-    },
-    [onTabsChange],
-  );
-
   // While full screen, the pinned conversation chrome (new chat, and on Win/Linux the sidebar
   // toggle) floats over the tab row's left edge; grow the margin to clear it. Margin (not
   // padding) so the tab bar's border box and -webkit-app-region: drag do not cover the pins. Keyed
@@ -934,21 +844,19 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   return null;
                 }
                 const icon = item.icon ?? entry.contribution.icon;
-                const Icon =
-                  icon.type === "spirit" ? (getSpiritIconComponent(icon.name) ?? Globe) : Globe;
-                const iconUrl =
-                  icon.type === "file"
-                    ? extensionTabPackagedIconUrl(item.extensionId, icon.path)
-                    : icon.type === "image"
-                      ? icon.dataUrl
-                      : undefined;
                 return (
                   <WorkspaceToolTabChip
                     key={item.id}
                     tab={item}
-                    icon={Icon}
-                    iconUrl={iconUrl}
-                    label={entry.contribution.name}
+                    icon={Globe}
+                    iconNode={
+                      <ExtensionTabIcon
+                        extensionId={item.extensionId}
+                        icon={icon}
+                        className="size-3.5 opacity-80"
+                      />
+                    }
+                    label={extensionTabDisplayName(entry.contribution, t)}
                     selected={item.id === activeTabId}
                     onSelect={onActiveTabIdChange}
                     onClose={handleCloseTab}
@@ -960,10 +868,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
               const filesTabIcon = isWorkspaceToolTabKind(item, "files")
                 ? resolveWorkspaceFilesTabIcon(displayTitle)
                 : undefined;
-              const Icon =
-                isWorkspaceToolTabKind(item, "pr") && item.prStatus
-                  ? resolvePrTabStatusIcon(item.prStatus)
-                  : (filesTabIcon ?? meta.icon);
+              const Icon = filesTabIcon ?? meta.icon;
               return (
                 <WorkspaceToolTabChip
                   key={item.id}
@@ -1049,23 +954,15 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
               DESKTOP_OVERLAY_LIST_LIST_GAP,
             )}
           >
-            {(["files", "terminal", "git", "browser", "pr"] as const).map((kind) => {
+            {(["files", "terminal", "git", "browser"] as const).map((kind) => {
               const meta = TAB_KIND_META[kind];
               const Icon = meta.icon;
               const browserDisabled = kind === "browser" && !browserTabEnabled;
-              const prHostDisabled = kind === "pr" && !prTabEnabled;
-              const prAuthBlocked = kind === "pr" && prMenuBlocked;
-              const disabled = browserDisabled || prHostDisabled || prAuthBlocked;
+              const disabled = browserDisabled;
               const menuItem = (
                 <DropdownMenuItem
                   disabled={disabled}
-                  title={
-                    browserDisabled
-                      ? t("workspace.browserElectronOnly")
-                      : prHostDisabled
-                        ? t("workspace.prElectronOnly")
-                        : undefined
-                  }
+                  title={browserDisabled ? t("workspace.browserElectronOnly") : undefined}
                   className={cn(
                     "flex w-full cursor-pointer select-none items-center gap-2 rounded-sm text-left outline-none",
                     DESKTOP_OVERLAY_LIST_ITEM,
@@ -1080,31 +977,10 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                 </DropdownMenuItem>
               );
 
-              if (kind !== "pr" || !prAuthBlocked || prHostDisabled) {
-                return (
-                  <span key={kind} className="flex w-full min-w-0">
-                    {menuItem}
-                  </span>
-                );
-              }
-
               return (
-                <Tooltip key={kind} delayDuration={300}>
-                  <TooltipTrigger asChild>
-                    <span className="flex w-full min-w-0">{menuItem}</span>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={8}>
-                    {gitHubAuthConnected === null ? (
-                      t("workspace.prGitHubAuthChecking")
-                    ) : (
-                      <GitHubConnectTooltipContent
-                        onSignIn={() => {
-                          onOpenIntegrationsSettings?.();
-                        }}
-                      />
-                    )}
-                  </TooltipContent>
-                </Tooltip>
+                <span key={kind} className="flex w-full min-w-0">
+                  {menuItem}
+                </span>
               );
             })}
             {extensionContributions.map((entry) => (
@@ -1116,14 +992,23 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   DESKTOP_OVERLAY_LIST_ITEM,
                   "text-popover-foreground",
                 )}
-                onSelect={() => handleAddExtensionTab(entry)}
+                onSelect={() => {
+                  const authorization = entry.extension.authorizations?.find(
+                    (item) => item.id === entry.contribution.authorization,
+                  );
+                  if (entry.contribution.authorization && authorization?.configured !== true)
+                    openExtensionDetails(entry.extension.id);
+                  else handleAddExtensionTab(entry);
+                }}
               >
                 <ExtensionTabIcon
                   extensionId={entry.extension.id}
                   icon={entry.contribution.icon}
                   className="size-4"
                 />
-                <span className="min-w-0 flex-1 truncate">{entry.contribution.name}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  {extensionTabDisplayName(entry.contribution, t)}
+                </span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -1166,8 +1051,26 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   contribution={entry.contribution}
                   active={selected}
                   workspaceRoot={workspaceRoot}
+                  gitSnapshot={gitSnapshot}
+                  authorizationConfigured={
+                    entry.extension.authorizations?.find(
+                      (item) => item.id === entry.contribution.authorization,
+                    )?.configured
+                  }
                   sessionKey={sessionKey}
                   onRequest={onExtensionTabRequest}
+                  allowComposerAttachments={entry.extension.requestedCapabilities?.includes(
+                    "desktop-composer-attachments",
+                  )}
+                  onAttachment={(input) => {
+                    if (input.kind === "prDiff" && onPrDiffAddToChat)
+                      onPrDiffAddToChat(input.attachment);
+                    else if (input.kind === "fileSnippet" && onFileSnippetAddToChat)
+                      onFileSnippetAddToChat(input.attachment);
+                    else if (input.kind === "terminalSnippet" && onTerminalAddToChat)
+                      onTerminalAddToChat(input.attachment);
+                    else throw new Error("Composer attachment insertion is unavailable.");
+                  }}
                   onChrome={onExtensionTabChrome}
                   subscribeEvents={subscribeExtensionTabEvents}
                   onWebView={onExtensionWebView}
@@ -1193,10 +1096,6 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
             isWorkspaceToolTabKind(item, "files") &&
             !fileRevealEnabled &&
             Boolean(item.filesWorkspacePath);
-          const prRevealEnabled =
-            isWorkspaceToolTabKind(item, "pr") &&
-            prRevealTabId != null &&
-            item.id === prRevealTabId;
 
           return (
             <div
@@ -1316,37 +1215,6 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                             onBrowserElementPicked({ ...attachment, sourceTabId: item.id })
                         : undefined
                     }
-                  />
-                </div>
-              ) : isWorkspaceToolTabKind(item, "pr") ? (
-                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-                  <WorkspacePrTab
-                    gitSnapshot={gitSnapshot}
-                    isActive={selected}
-                    prTabEnabled={prTabEnabled}
-                    onOpenIntegrationsSettings={onOpenIntegrationsSettings}
-                    getGitHubAuthStatus={getGitHubAuthStatus}
-                    getGitHubPullRequestForCurrentBranch={getGitHubPullRequestForCurrentBranch}
-                    listGitHubPullRequests={listGitHubPullRequests}
-                    getGitHubPullRequestTabCounts={getGitHubPullRequestTabCounts}
-                    getGitHubPullRequestDetail={getGitHubPullRequestDetail}
-                    getGitHubPullRequestConversation={getGitHubPullRequestConversation}
-                    getGitHubPullRequestFiles={getGitHubPullRequestFiles}
-                    getGitHubPullRequestCommits={getGitHubPullRequestCommits}
-                    getGitHubPullRequestChecks={getGitHubPullRequestChecks}
-                    mergeGitHubPullRequest={mergeGitHubPullRequest}
-                    markGitHubPullRequestReady={markGitHubPullRequestReady}
-                    prRevealEnabled={prRevealEnabled}
-                    prRevealNonce={prRevealEnabled ? prRevealNonce : 0}
-                    prRevealRequest={prRevealEnabled ? prRevealRequest : null}
-                    onPrDiffAddToChat={
-                      onPrDiffAddToChat
-                        ? (attachment) => onPrDiffAddToChat({ ...attachment, sourceTabId: item.id })
-                        : undefined
-                    }
-                    useTranslucency={useTranslucency}
-                    onTitleChange={(title) => handleTabTitleChange(item.id, title)}
-                    onPrStatusChange={(status) => handleTabPrStatusChange(item.id, status)}
                   />
                 </div>
               ) : (

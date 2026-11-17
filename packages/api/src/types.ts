@@ -42,7 +42,7 @@ import type { WorkspaceFileReferenceSuggestionsResult } from "./workspace-file-r
 import type { ApprovalLevel } from "./approval-level.js";
 import type { WorkLocationKind } from "./work-location.js";
 import type { LocalFileComposerRoute } from "./local-file-composer-route.js";
-import type { DesktopGitSnapshot } from "./github.js";
+import type { DesktopGitSnapshot } from "./git.js";
 import type {
   WorkspaceCapabilityTrustDecision,
   WorkspaceCapabilityTrustRequest,
@@ -547,6 +547,7 @@ export interface DesktopMarketplaceCatalogEntry {
   desktopSettingsPage?: DesktopExtensionDesktopSettingsPage;
   desktopViews?: DesktopExtensionDesktopView[];
   desktopTabs?: DesktopExtensionDesktopTab[];
+  desktopLinkHandlers?: DesktopExtensionLinkHandler[];
   cliHooks?: DesktopExtensionCliUiHookEntry[];
   instructionContributions?: DesktopExtensionInstructionContributionSummary;
   installed: boolean;
@@ -655,11 +656,28 @@ export type DesktopExtensionDesktopTabScope = "window-shared" | "workspace" | "s
 
 export type DesktopExtensionDesktopTabIcon =
   | { type: "spirit"; name: string }
-  | { type: "file"; path: string };
+  | { type: "file"; path: string; monochrome?: boolean };
 
 export type DesktopExtensionDesktopTabRuntimeIcon =
   | DesktopExtensionDesktopTabIcon
-  | { type: "image"; dataUrl: string };
+  | { type: "image"; dataUrl: string; monochrome?: boolean };
+
+export interface DesktopExtensionViewRequest {
+  extensionId: string;
+  viewId: string;
+  requestId: string;
+  method: string;
+  params?: unknown;
+}
+export interface DesktopExtensionOpenLinkRequest {
+  url: string;
+  sourceTabId?: string;
+}
+export interface DesktopExtensionLinkHandler {
+  id: string;
+  origins: string[];
+  tab: string;
+}
 
 export interface DesktopExtensionDesktopTab {
   id: string;
@@ -667,15 +685,11 @@ export interface DesktopExtensionDesktopTab {
   path: string;
   icon: DesktopExtensionDesktopTabIcon;
   defaultScope: DesktopExtensionDesktopTabScope;
+  authorization?: string;
+  nameKey?: string;
 }
 
-export type DesktopWorkspaceBuiltInToolTabKind =
-  | "files"
-  | "terminal"
-  | "git"
-  | "browser"
-  | "pr"
-  | "task";
+export type DesktopWorkspaceBuiltInToolTabKind = "files" | "terminal" | "git" | "browser" | "task";
 
 export type DesktopWorkspaceExtensionToolTabScope =
   | { kind: "window-shared" }
@@ -694,7 +708,6 @@ export interface DesktopWorkspaceBuiltInToolTab extends DesktopWorkspaceToolTabB
   browserUrl?: string;
   filesWorkspacePath?: string;
   filesViewMode?: "edit" | "preview";
-  prStatus?: import("@spiritagent/ui/composer").PullRequestChipStatus;
   taskKey?: string;
   pinnedTitle?: boolean;
 }
@@ -707,6 +720,7 @@ export interface DesktopWorkspaceExtensionToolTab extends DesktopWorkspaceToolTa
   channelId: string;
   scope: DesktopWorkspaceExtensionToolTabScope;
   initialParams?: unknown;
+  navigationRevision?: number;
   icon?: DesktopExtensionDesktopTabRuntimeIcon;
 }
 
@@ -720,6 +734,7 @@ export type DesktopExtensionTabOpenScope =
   | { kind: "session"; sessionKey?: string };
 
 export interface DesktopExtensionTabOpenRequest {
+  preferInstanceId?: string;
   contributionId: string;
   scope?: DesktopExtensionTabOpenScope;
   initialParams?: unknown;
@@ -890,6 +905,7 @@ export interface DesktopExtensionListItem {
   desktopSettingsPage?: DesktopExtensionDesktopSettingsPage;
   desktopViews?: DesktopExtensionDesktopView[];
   desktopTabs?: DesktopExtensionDesktopTab[];
+  desktopLinkHandlers?: DesktopExtensionLinkHandler[];
   cliHooks?: DesktopExtensionCliUiHookEntry[];
   instructionContributions?: DesktopExtensionInstructionContributionSummary;
   settingsSchema?: DesktopExtensionSettingDefinition[];
@@ -1557,10 +1573,7 @@ export type {
   DesktopAutomationSchedule,
   DesktopAutomationWeekday,
 } from "./lib/automation-schedule.js";
-export type {
-  DesktopAutomationGitHubEvent,
-  DesktopAutomationTrigger,
-} from "./lib/automation-trigger.js";
+export type { DesktopAutomationTrigger } from "./lib/automation-trigger.js";
 
 export type DesktopTaskMenuItem = TaskMenuItem;
 
@@ -1568,14 +1581,6 @@ export type DesktopResolveTaskForRunResult =
   | { status: "ok"; task: ResolvedTask; defaultShell: TaskShellDefinition }
   | { status: "notFound" }
   | { status: "unsupported" };
-
-export type {
-  DesktopGitHubAutomationRepositoryItem,
-  ListGitHubAutomationRepositoriesRequest,
-  SearchGitHubAutomationRepositoriesRequest,
-  GitHubAutomationRepositoriesSnapshot,
-  SearchGitHubAutomationRepositoriesSnapshot,
-} from "./github.js";
 
 export type DesktopAutomationRunStatus = "running" | "blocked" | "completed" | "failed";
 
@@ -1645,7 +1650,7 @@ export interface WorkspaceContentInvalidation {
   reason: WorkspaceContentInvalidationReason;
 }
 
-export type { DesktopGitSnapshot } from "./github.js";
+export type { DesktopGitSnapshot } from "./git.js";
 
 export interface GitWorkingTreeChange {
   path: string;
@@ -1705,45 +1710,6 @@ export interface GitCommitMessageSnapshot {
   authoredAt: string;
   fullMessage: string;
 }
-
-export type {
-  GitHubAuthStatus,
-  GitHubDeviceAuthChallenge,
-  GitHubPullRequestConversationSnapshot,
-  GitHubPullRequestConversationItem,
-  GitHubPullRequestChangedFile,
-  GitHubPullRequestFileStatus,
-  GitHubPullRequestFilesSnapshot,
-  GitHubPullRequestCommit,
-  GitHubPullRequestCommitsSnapshot,
-  GitHubPullRequestCheck,
-  GitHubPullRequestCheckState,
-  GitHubPullRequestChecksSnapshot,
-  GitHubPullRequestConversationCommit,
-  GitHubPullRequestConversationMerged,
-  GitHubPullRequestConversationIssueComment,
-  GitHubPullRequestConversationReview,
-  GitHubPullRequestConversationReviewThread,
-  GitHubPullRequestReviewComment,
-  GitHubPullRequestReviewState,
-  GitHubPullRequestDetail,
-  GitHubPullRequestForBranchResult,
-  GitHubPullRequestSummary,
-  GitHubPullRequestListItem,
-  GitHubPullRequestListSnapshot,
-  GitHubPullRequestTabCounts,
-  GitHubPullRequestTaskListProgress,
-  GitHubRepositoryRef,
-} from "./github.js";
-
-export type {
-  ListGitHubPullRequestsRequest,
-  GetGitHubPullRequestTabCountsRequest,
-  GetGitHubPullRequestDetailRequest,
-  MergeGitHubPullRequestRequest,
-} from "./github.js";
-
-export type { GitHubPullRequestMergeMethod, GitHubPullRequestMergeResult } from "./github.js";
 
 export interface ModelProfileSnapshot {
   /** Provider entry id (`providers[].id` in config.json). */

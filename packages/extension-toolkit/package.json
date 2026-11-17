@@ -22,6 +22,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./desktop-ui": {
+      "types": "./dist/desktop-ui.d.ts",
+      "default": "./dist/desktop-ui.js"
     }
   },
   "publishConfig": {

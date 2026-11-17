@@ -1,0 +1,39 @@
+@import "tailwindcss";
+@import "@spiritagent/ui/theme.css";
+@import "@spiritagent/ui/native-interactions.css";
+@import "@spiritagent/ui/rendering/styles.css";
+@source "../../../ui/src";
+@source "../../node_modules/streamdown/dist/*.js";
+@source "../../node_modules/@streamdown/code/dist/*.js";
+@source "../../node_modules/@streamdown/math/dist/*.js";
+@custom-variant dark (&:is(.dark *));
+@custom-variant motion-reduce (&:is(html.spirit-reduce-motion *));
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  html.spirit-font-smoothing {
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    margin: 0;
+    color: var(--foreground);
+    background: transparent;
+  }
+  pre {
+    @apply font-sans;
+  }
+}
+[data-github-tab],
+[data-github-tab] body,
+[data-github-tab] #root {
+  height: 100%;
+  overflow: hidden;
+}

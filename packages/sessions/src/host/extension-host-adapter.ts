@@ -20,6 +20,7 @@ export interface DesktopExtensionMessageBoxRequest {
 export interface DesktopExtensionViewSession {
   readonly requestId: string;
   readonly result: Promise<unknown>;
+  update(params: unknown): void;
   close(result?: unknown): void;
 }
 

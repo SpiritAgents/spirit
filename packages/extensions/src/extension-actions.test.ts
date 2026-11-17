@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
@@ -169,5 +169,206 @@ test("authorization configuration reports only secret presence", async () => {
   } finally {
     await rm(spiritDataDir, { recursive: true, force: true });
     await rm(preparedRoot, { recursive: true, force: true });
+  }
+});
+
+test("disabling an extension cancels its action and rejects late secret writes", async () => {
+  const root = await mkdtemp(join(tmpdir(), "spirit-action-lifetime-"));
+  const values = new Map<string, string>();
+  const packageDir = join(root, "package");
+  let started!: () => void;
+  let release!: () => void;
+  const began = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  try {
+    await writeActionPackage(packageDir);
+    await writeFile(
+      join(packageDir, "index.js"),
+      `export function activate() { return { actions: { async authorize(context) {
+      context.host.started(); await context.host.gate;
+      await context.secrets.set("oauthAccessToken", "must-not-be-written");
+    } } }; }`,
+    );
+    const manager = createHostExtensionManager({
+      spiritDataDir: join(root, "data"),
+      hostKind: "desktop",
+      stateStore: {
+        async loadSettings() {
+          return {};
+        },
+        async saveSettings() {},
+        async saveSecret(_id, key, value) {
+          values.set(key, value);
+        },
+      },
+    });
+    const extension = await manager.installPreparedDirectory({ preparedDirectoryPath: packageDir });
+    const action = manager.invokeAction({
+      extensionId: extension.id,
+      actionId: "authorize",
+      host: { started, gate },
+    });
+    await began;
+    await manager.setEnabled(extension.id, false);
+    release();
+    await assert.rejects(action, /abort/i);
+    assert.equal(values.size, 0);
+  } finally {
+    release?.();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("concurrent callers share activation and removal cancels activation in flight", async () => {
+  const root = await mkdtemp(join(tmpdir(), "spirit-activation-lifetime-"));
+  const packageDir = join(root, "package");
+  let starts = 0;
+  let started!: () => void;
+  let release!: () => void;
+  const began = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  try {
+    await writeActionPackage(packageDir);
+    await writeFile(
+      join(packageDir, "index.js"),
+      `export async function activate(context) {
+      context.host.started(); await context.host.gate;
+      await context.secrets.set("oauthAccessToken", "must-not-be-written");
+      return { actions: { authorize() { return true; } } };
+    }`,
+    );
+    const manager = createHostExtensionManager({
+      spiritDataDir: join(root, "data"),
+      hostKind: "desktop",
+      stateStore: {
+        async loadSettings() {
+          return {};
+        },
+        async saveSettings() {},
+        async saveSecret() {
+          assert.fail("late secret write");
+        },
+      },
+    });
+    const extension = await manager.installPreparedDirectory({ preparedDirectoryPath: packageDir });
+    const request = {
+      extensionId: extension.id,
+      actionId: "authorize",
+      host: {
+        started() {
+          starts++;
+          started();
+        },
+        gate,
+      },
+    };
+    const results = Promise.allSettled([
+      manager.invokeAction(request),
+      manager.invokeAction(request),
+    ]);
+    await began;
+    await manager.setEnabled(extension.id, false);
+    release();
+    assert.ok((await results).every((result) => result.status === "rejected"));
+    assert.equal(starts, 1);
+  } finally {
+    release?.();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("page and link handlers receive scoped backend services and declared origins", async () => {
+  const root = await mkdtemp(join(tmpdir(), "spirit-page-context-"));
+  try {
+    const packageDir = join(root, "package");
+    await writeActionPackage(packageDir);
+    const dumpPath = join(packageDir, ".spirit", "extension.json");
+    const dump = JSON.parse(await readFile(dumpPath, "utf8"));
+    dump.manifest.requestedCapabilities.push("desktop-ui");
+    dump.manifest.contributes.desktop = {
+      tabs: [
+        {
+          id: "notes",
+          name: "Notes",
+          path: "page.html",
+          icon: { type: "spirit", name: "globe" },
+          authorization: "oauth",
+        },
+      ],
+      views: [{ id: "authorize", path: "page.html" }],
+      linkHandlers: [{ id: "notes", tab: "notes", origins: ["https://example.test"] }],
+    };
+    await writeFile(dumpPath, JSON.stringify(dump));
+    await writeFile(join(packageDir, "page.html"), "<!doctype html><html></html>");
+    await writeFile(
+      join(packageDir, "index.js"),
+      `export function activate() {
+      const handler = async (request) => ({ context: request.context, hasSecret: await request.secrets.has("oauthAccessToken"), hasSettings: typeof request.settings.get === "function", host: request.host.boundExtensionId });
+      return { onTabRequest: handler, onViewRequest: handler, onOpenLink(request) { request.host.opened(request.url); return true; } };
+    }`,
+    );
+    const manager = createHostExtensionManager({
+      spiritDataDir: join(root, "data"),
+      hostKind: "desktop",
+    });
+    const extension = await manager.installPreparedDirectory({ preparedDirectoryPath: packageDir });
+    const opened: string[] = [];
+    const host = {
+      forExtension(id: string) {
+        return { boundExtensionId: id, opened: (url: string) => opened.push(url) };
+      },
+    };
+    const context = { workspaceRoot: "/workspace", sessionKey: "session", branch: "feature" };
+    const request = {
+      extensionId: extension.id,
+      instanceId: "instance",
+      method: "read",
+      context,
+      host,
+    };
+    for (const [kind, id] of [
+      ["tab", "notes"],
+      ["view", "authorize"],
+    ] as const) {
+      const result =
+        kind === "tab"
+          ? await manager.invokeTabRequest({ ...request, contributionId: id })
+          : await manager.invokeViewRequest({ ...request, contributionId: id });
+      assert.deepEqual(result, {
+        context,
+        hasSecret: false,
+        hasSettings: true,
+        host: extension.id,
+      });
+    }
+    assert.equal(
+      await manager.openLink({
+        extensionId: extension.id,
+        actionId: "notes",
+        url: "https://other.test/item",
+        host,
+      }),
+      false,
+    );
+    assert.equal(
+      await manager.openLink({
+        extensionId: extension.id,
+        actionId: "notes",
+        url: "https://example.test/item",
+        host,
+      }),
+      true,
+    );
+    assert.deepEqual(opened, ["https://example.test/item"]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });

@@ -60,7 +60,7 @@ export type ConversationPaneHostProps = {
   onRenameSession?: (path: string, displayName: string) => void | Promise<void>;
   onTogglePinSession?: (path: string, pinned: boolean) => void | Promise<void>;
   workspaceTools: WorkspaceTools;
-  onOpenIntegrationsSettings: () => void;
+
   onCompactionDemoStop: () => void;
   onLongConversationListDemoStop: () => void;
   onApprovalPreviewDemoStop: () => void;

@@ -31,7 +31,6 @@ test("runtime restart watches cover the Workbench domain graph", () => {
     "@spiritagent/code-completion",
     "@spiritagent/config",
     "@spiritagent/extensions",
-    "@spiritagent/github",
     "@spiritagent/hooks",
     "@spiritagent/http",
     "@spiritagent/i18n",
@@ -51,17 +50,19 @@ test("runtime restart watches cover the Workbench domain graph", () => {
   }
 
   for (const name of [
+    "@spiritagent/github",
     "@spiritagent/brand",
     "@spiritagent/icons",
     "@spiritagent/ui",
     "@spiritagent/web",
   ]) {
-    assert.ok(!names.includes(name), `${name} should remain on the Vite source path`);
+    assert.ok(!names.includes(name), `${name} should not be a Workbench runtime dependency`);
   }
 
   const dirs = developmentRestartWatchDirs(desktopRoot, repoRoot);
   assert.ok(dirs.includes(path.join(desktopRoot, "dist-electron")));
-  assert.ok(dirs.includes(path.join(repoRoot, "packages", "github", "dist")));
+  assert.ok(dirs.includes(path.join(repoRoot, "packages", "extensions", "dist")));
+  assert.ok(!dirs.includes(path.join(repoRoot, "packages", "github", "dist")));
   assert.ok(dirs.includes(path.join(repoRoot, "packages", "instructions", "dist")));
   assert.ok(dirs.includes(path.join(repoRoot, "packages", "tasks", "dist")));
   assert.ok(dirs.includes(path.join(repoRoot, "packages", "tools", "dist")));

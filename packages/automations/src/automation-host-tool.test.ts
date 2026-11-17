@@ -65,19 +65,15 @@ test("parseCreateAutomationTrigger rejects invalid time schedule", () => {
   );
 });
 
-test("parseCreateAutomationTrigger accepts github trigger", () => {
+test("parseCreateAutomationTrigger accepts contributed trigger", () => {
   assert.deepEqual(
     parseCreateAutomationTrigger({
-      kind: "github",
-      owner: "acme",
-      repo: "app",
-      event: "issue_created",
+      kind: "extension:personal/demo/activity",
+      config: { repository: "demo" },
     }),
     {
-      kind: "github",
-      owner: "acme",
-      repo: "app",
-      event: "issue_created",
+      kind: "extension:personal/demo/activity",
+      config: { repository: "demo" },
     },
   );
 });
@@ -86,17 +82,13 @@ test("parseCreateAutomationTriggerInput requires trigger", () => {
   assert.deepEqual(
     parseCreateAutomationTriggerInput({
       trigger: {
-        kind: "github",
-        owner: "acme",
-        repo: "app",
-        event: "pull_request_created",
+        kind: "extension:personal/demo/activity",
+        config: { repository: "demo" },
       },
     }),
     {
-      kind: "github",
-      owner: "acme",
-      repo: "app",
-      event: "pull_request_created",
+      kind: "extension:personal/demo/activity",
+      config: { repository: "demo" },
     },
   );
   assert.throws(
@@ -156,8 +148,8 @@ test("contributed trigger schemas are exposed as closed oneOf branches", () => {
   ]);
   const properties = definition.inputSchema.properties as Record<string, unknown>;
   const trigger = properties.trigger as { oneOf: Array<Record<string, unknown>> };
-  assert.equal(trigger.oneOf.length, 3);
-  assert.deepEqual(trigger.oneOf[2], {
+  assert.equal(trigger.oneOf.length, 2);
+  assert.deepEqual(trigger.oneOf[1], {
     type: "object",
     properties: {
       kind: { type: "string", const: "extension:personal/demo/activity" },

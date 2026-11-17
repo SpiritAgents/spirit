@@ -103,6 +103,10 @@ export interface HostCommandDelegate {
   resolveExtensionUi(request: CommandPayloads["resolveExtensionUi"]["request"]): Promise<unknown>;
   getWorkspaceToolTabs(windowId: string): Promise<unknown>;
   syncWorkspaceToolTabs(request: CommandPayloads["syncWorkspaceToolTabs"]): Promise<unknown>;
+  invokeExtensionViewRequest(
+    request: CommandPayloads["invokeExtensionViewRequest"],
+  ): Promise<unknown>;
+  openExtensionLink(request: CommandPayloads["openExtensionLink"]): Promise<boolean>;
   invokeExtensionTabRequest(
     request: CommandPayloads["invokeExtensionTabRequest"],
   ): Promise<unknown>;
@@ -168,45 +172,7 @@ export interface HostCommandDelegate {
   readGitCommitMessage(
     request: CommandPayloads["readGitCommitMessage"]["request"],
   ): Promise<unknown>;
-  getGitHubAuthStatus(): Promise<unknown>;
-  beginGitHubDeviceLogin(): Promise<unknown>;
-  completeGitHubDeviceLogin(): Promise<unknown>;
-  cancelGitHubDeviceLogin(): Promise<unknown>;
-  disconnectGitHub(): Promise<unknown>;
-  getGitHubPullRequestForCurrentBranch(): Promise<unknown>;
-  listGitHubPullRequests(
-    request: CommandPayloads["listGitHubPullRequests"]["request"],
-  ): Promise<unknown>;
-  listGitHubAutomationRepositories(
-    request?: CommandPayloads["listGitHubAutomationRepositories"]["request"],
-  ): Promise<unknown>;
-  searchGitHubAutomationRepositories(
-    request: CommandPayloads["searchGitHubAutomationRepositories"]["request"],
-  ): Promise<unknown>;
-  getGitHubPullRequestTabCounts(
-    request: CommandPayloads["getGitHubPullRequestTabCounts"]["request"],
-  ): Promise<unknown>;
-  getGitHubPullRequestDetail(
-    request: CommandPayloads["getGitHubPullRequestDetail"]["request"],
-  ): Promise<unknown>;
-  getGitHubPullRequestConversation(
-    request: CommandPayloads["getGitHubPullRequestConversation"]["request"],
-  ): Promise<unknown>;
-  getGitHubPullRequestFiles(
-    request: CommandPayloads["getGitHubPullRequestFiles"]["request"],
-  ): Promise<unknown>;
-  getGitHubPullRequestCommits(
-    request: CommandPayloads["getGitHubPullRequestCommits"]["request"],
-  ): Promise<unknown>;
-  getGitHubPullRequestChecks(
-    request: CommandPayloads["getGitHubPullRequestChecks"]["request"],
-  ): Promise<unknown>;
-  mergeGitHubPullRequest(
-    request: CommandPayloads["mergeGitHubPullRequest"]["request"],
-  ): Promise<unknown>;
-  markGitHubPullRequestReady(
-    request: CommandPayloads["markGitHubPullRequestReady"]["request"],
-  ): Promise<unknown>;
+
   readWorkspaceTextFile(
     relativePath: string,
     options?: import("@spiritagent/api/types").ReadWorkspaceTextFileOptions,
@@ -326,6 +292,8 @@ const hostCommandDispatch = {
   resolveExtensionUi: (host, payload) => host.resolveExtensionUi(payload.request),
   getWorkspaceToolTabs: (host, payload) => host.getWorkspaceToolTabs(payload.windowId),
   syncWorkspaceToolTabs: (host, payload) => host.syncWorkspaceToolTabs(payload),
+  invokeExtensionViewRequest: (host, payload) => host.invokeExtensionViewRequest(payload),
+  openExtensionLink: (host, payload) => host.openExtensionLink(payload),
   invokeExtensionTabRequest: (host, payload) => host.invokeExtensionTabRequest(payload),
   setExtensionTabChrome: (host, payload) => host.updateExtensionTab(payload),
   resetSession: (host, payload) =>
@@ -374,27 +342,7 @@ const hostCommandDispatch = {
   readGitWorkingTree: (host) => host.readGitWorkingTree(),
   readGitHistory: (host, payload) => host.readGitHistory(payload.request ?? {}),
   readGitCommitMessage: (host, payload) => host.readGitCommitMessage(payload.request),
-  getGitHubAuthStatus: (host) => host.getGitHubAuthStatus(),
-  beginGitHubDeviceLogin: (host) => host.beginGitHubDeviceLogin(),
-  completeGitHubDeviceLogin: (host) => host.completeGitHubDeviceLogin(),
-  cancelGitHubDeviceLogin: (host) => host.cancelGitHubDeviceLogin(),
-  disconnectGitHub: (host) => host.disconnectGitHub(),
-  getGitHubPullRequestForCurrentBranch: (host) => host.getGitHubPullRequestForCurrentBranch(),
-  listGitHubPullRequests: (host, payload) => host.listGitHubPullRequests(payload.request),
-  listGitHubAutomationRepositories: (host, payload) =>
-    host.listGitHubAutomationRepositories(payload.request),
-  searchGitHubAutomationRepositories: (host, payload) =>
-    host.searchGitHubAutomationRepositories(payload.request),
-  getGitHubPullRequestTabCounts: (host, payload) =>
-    host.getGitHubPullRequestTabCounts(payload.request),
-  getGitHubPullRequestDetail: (host, payload) => host.getGitHubPullRequestDetail(payload.request),
-  getGitHubPullRequestConversation: (host, payload) =>
-    host.getGitHubPullRequestConversation(payload.request),
-  getGitHubPullRequestFiles: (host, payload) => host.getGitHubPullRequestFiles(payload.request),
-  getGitHubPullRequestCommits: (host, payload) => host.getGitHubPullRequestCommits(payload.request),
-  getGitHubPullRequestChecks: (host, payload) => host.getGitHubPullRequestChecks(payload.request),
-  mergeGitHubPullRequest: (host, payload) => host.mergeGitHubPullRequest(payload.request),
-  markGitHubPullRequestReady: (host, payload) => host.markGitHubPullRequestReady(payload.request),
+
   readWorkspaceTextFile: (host, payload) =>
     host.readWorkspaceTextFile(
       payload.relativePath,

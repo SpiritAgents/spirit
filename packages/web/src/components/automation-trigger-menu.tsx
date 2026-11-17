@@ -1,11 +1,11 @@
+import { openExtensionDetails } from "@/lib/extension-navigation";
 import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { Clock } from "lucide-react";
+import { TEXT_LINK_POPOVER_CLASS } from "@spiritagent/ui/link";
 
 import { ExtensionTabIcon } from "@/components/extension-tab-icon";
-import { GitHubConnectTooltipContent } from "@/components/github-sign-in-prompt";
-import { GitHubMarkIcon } from "@/components/github-mark-icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,9 +66,7 @@ export type AutomationTriggerRuntime = {
 type AutomationTriggerMenuProps = {
   trigger: DesktopAutomationTrigger;
   disabled?: boolean;
-  githubConnected: boolean;
-  githubAuthChecking?: boolean;
-  onOpenIntegrationsSettings?: () => void;
+
   onTriggerChange(trigger: DesktopAutomationTrigger): void;
   runtime: AutomationTriggerRuntime;
 };
@@ -76,14 +74,12 @@ type AutomationTriggerMenuProps = {
 export function AutomationTriggerMenu({
   trigger,
   disabled,
-  githubConnected,
-  githubAuthChecking,
-  onOpenIntegrationsSettings,
+
   onTriggerChange,
   runtime,
 }: AutomationTriggerMenuProps) {
   const { t } = useTranslation();
-  const [githubSubOpen, setGithubSubOpen] = useState(false);
+
   const label = formatDesktopAutomationTriggerLabel(trigger, buildAutomationTriggerFormatLabels(t));
   const timeSchedule: ApiDesktopAutomationSchedule =
     trigger.kind === "time" ? trigger.schedule : { kind: "daily", hour: 20, minute: 0 };
@@ -117,27 +113,6 @@ export function AutomationTriggerMenu({
         className={cn(DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH, "z-[120] p-0")}
       >
         <div className={DESKTOP_OVERLAY_SHORT_LIST_PADDING}>
-          <ContributedTriggerItem
-            contribution={{
-              kind: "github",
-              extensionId: "github",
-              contributionId: "github",
-              name: t("automations.trigger.github"),
-              description: "GitHub repository events",
-              configuration: "menu",
-              inputSchema: { type: "object" },
-              icon: { type: "spirit", name: "globe" },
-              authorization: { id: "github", action: "github", configured: githubConnected },
-            }}
-            icon={<GitHubMarkIcon className="size-3.5 shrink-0" />}
-            disabled={disabled}
-            authorizationChecking={githubAuthChecking}
-            onOpenIntegrationsSettings={onOpenIntegrationsSettings}
-            onTriggerChange={onTriggerChange}
-            runtime={runtime}
-            open={githubConnected ? githubSubOpen : false}
-            onOpenChange={setGithubSubOpen}
-          />
           <DropdownMenuSub>
             <DropdownMenuSubTrigger disabled={disabled} className="gap-2">
               <Clock className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
@@ -176,8 +151,7 @@ function ContributedTriggerItem({
   contribution,
   icon,
   disabled,
-  authorizationChecking,
-  onOpenIntegrationsSettings,
+
   onTriggerChange,
   runtime,
   open,
@@ -186,8 +160,7 @@ function ContributedTriggerItem({
   contribution: DesktopExtensionAutomationTrigger;
   icon?: ReactNode;
   disabled?: boolean;
-  authorizationChecking?: boolean;
-  onOpenIntegrationsSettings?: () => void;
+
   onTriggerChange(trigger: DesktopAutomationTrigger): void;
   runtime: AutomationTriggerRuntime;
   open?: boolean;
@@ -214,27 +187,22 @@ function ContributedTriggerItem({
           </span>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={8}>
-          {authorizationChecking ? (
-            t("workspace.prGitHubAuthChecking")
-          ) : contribution.kind === "github" ? (
-            <GitHubConnectTooltipContent onSignIn={() => onOpenIntegrationsSettings?.()} />
-          ) : (
-            <button
-              type="button"
-              className="text-xs text-link hover:text-link-hover"
-              onClick={() => {
-                void runtime
-                  .invokeExtensionAction?.({
-                    id: contribution.extensionId,
-                    actionId: authorization.action,
-                    params: { authorizationId: authorization.id },
-                  })
-                  .catch(() => undefined);
+          <span>
+            <Trans
+              t={t}
+              i18nKey="automations.trigger.authorizationRequired"
+              values={{ name: contribution.name }}
+              components={{
+                authorize: (
+                  <button
+                    type="button"
+                    className={TEXT_LINK_POPOVER_CLASS}
+                    onClick={() => openExtensionDetails(contribution.extensionId)}
+                  />
+                ),
               }}
-            >
-              {t("marketplace.authorize")}
-            </button>
-          )}
+            />
+          </span>
         </TooltipContent>
       </Tooltip>
     );
@@ -379,10 +347,7 @@ function AutomationTriggerMenuPage({
     return () => observer.disconnect();
   }, [pageInfo.hasMore, loadingMore]);
 
-  const searchPlaceholder =
-    contribution.kind === "github"
-      ? t("automations.trigger.repositorySearchPlaceholder")
-      : pageInfo.searchPlaceholder;
+  const searchPlaceholder = pageInfo.searchPlaceholder;
 
   return (
     <>
@@ -409,20 +374,14 @@ function AutomationTriggerMenuPage({
             <p className="px-2 py-3 text-xs text-muted-foreground">{t("common.loading")}</p>
           ) : error ? (
             <div className="flex items-center justify-between gap-2 px-2 py-3 text-xs">
-              <span className="text-destructive">
-                {contribution.kind === "github"
-                  ? t("automations.trigger.repositoryLoadFailed")
-                  : t("automations.trigger.triggerLoadFailed")}
-              </span>
+              <span className="text-destructive">{t("automations.trigger.triggerLoadFailed")}</span>
               <button type="button" className="text-link" onClick={() => void load(1, false)}>
                 {t("common.retry")}
               </button>
             </div>
           ) : items.length === 0 ? (
             <p className="px-2 py-3 text-xs text-muted-foreground">
-              {contribution.kind === "github"
-                ? t("automations.trigger.repositoryEmpty")
-                : t("automations.trigger.triggerEmpty")}
+              {t("automations.trigger.triggerEmpty")}
             </p>
           ) : (
             items.map((item) => (
@@ -463,13 +422,7 @@ function AutomationTriggerMenuNode({
   onTriggerChange(trigger: DesktopAutomationTrigger): void;
   runtime: AutomationTriggerRuntime;
 }) {
-  const { t } = useTranslation();
-  const label =
-    contribution.kind === "github" && item.id === "pull_request_created"
-      ? t("automations.trigger.pullRequestCreated")
-      : contribution.kind === "github" && item.id === "issue_created"
-        ? t("automations.trigger.issueCreated")
-        : item.label;
+  const label = item.label;
   const content = (
     <>
       {item.icon ? (

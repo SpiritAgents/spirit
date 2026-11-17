@@ -4,9 +4,13 @@ import "./setup";
 
 import { fireEvent, render, waitFor } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
+import i18next from "i18next";
+import { I18nextProvider } from "react-i18next";
+import { resources } from "@spiritagent/i18n";
 
 import { AutomationTriggerMenu } from "@/components/automation-trigger-menu";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { OPEN_EXTENSION_DETAILS_EVENT } from "@/lib/extension-navigation";
 import type { DesktopExtensionAutomationTrigger } from "@/types";
 
 class ObserverStub {
@@ -58,7 +62,6 @@ test("a native nested trigger selection is validated before changing the draft",
     <TooltipProvider>
       <AutomationTriggerMenu
         trigger={{ kind: "time", schedule: { kind: "hourly" } }}
-        githubConnected={false}
         onTriggerChange={onTriggerChange}
         runtime={triggerRuntime}
       />
@@ -87,7 +90,6 @@ test("Desktop-only trigger contributions are hidden when the runtime is unavaila
     <TooltipProvider>
       <AutomationTriggerMenu
         trigger={{ kind: "time", schedule: { kind: "hourly" } }}
-        githubConnected={false}
         onTriggerChange={() => {}}
         runtime={runtime({ supportsExtensionTriggers: false })}
       />
@@ -96,3 +98,72 @@ test("Desktop-only trigger contributions are hidden when the runtime is unavaila
   fireEvent.pointerDown(getByRole("button", { name: /Hourly/ }), { button: 0 });
   expect(queryByText("Repository Activity")).toBeNull();
 });
+
+test.each([
+  {
+    locale: "en",
+    link: "Authorize Repository Activity",
+    message: "Authorize Repository Activity to create automations",
+  },
+  {
+    locale: "zh-CN",
+    link: "授权 Repository Activity",
+    message: "授权 Repository Activity 以创建自动化",
+  },
+])(
+  "an unauthorized trigger explains its navigation in $locale",
+  async ({ locale, link, message }) => {
+    const localized = i18next.createInstance();
+    await localized.init({
+      resources,
+      lng: locale,
+      fallbackLng: "en",
+      interpolation: { escapeValue: false },
+    });
+    const triggerRuntime = runtime({
+      contributions: [
+        { ...contribution, authorization: { id: "oauth", action: "authorize", configured: false } },
+      ],
+      invokeExtensionAction: vi.fn(),
+    });
+    const onTriggerChange = vi.fn();
+    const navigate = vi.fn();
+    const originalHitTest = document.elementFromPoint;
+    window.addEventListener(OPEN_EXTENSION_DETAILS_EVENT, navigate);
+    try {
+      const { getByRole, findByRole } = render(
+        <I18nextProvider i18n={localized}>
+          <TooltipProvider>
+            <AutomationTriggerMenu
+              trigger={{ kind: "time", schedule: { kind: "hourly" } }}
+              onTriggerChange={onTriggerChange}
+              runtime={triggerRuntime}
+            />
+          </TooltipProvider>
+        </I18nextProvider>,
+      );
+      fireEvent.pointerDown(getByRole("button"), { button: 0 });
+      const row = getByRole("menuitem", { name: contribution.name });
+      expect(row.getAttribute("aria-disabled")).toBe("true");
+      document.elementFromPoint = vi.fn(() => row);
+      fireEvent.pointerMove(row.parentElement!, { pointerType: "mouse", clientX: 20, clientY: 20 });
+      fireEvent.pointerOver(row.parentElement!, { pointerType: "mouse", clientX: 20, clientY: 20 });
+      await findByRole("tooltip");
+      const action = getByRole("button", { name: link });
+      expect(action.parentElement?.textContent).toBe(message);
+      expect(action.classList.contains("underline")).toBe(true);
+      fireEvent.click(action);
+      expect(navigate).toHaveBeenCalledOnce();
+      expect((navigate.mock.calls[0][0] as CustomEvent).detail).toEqual({
+        extensionId: contribution.extensionId,
+      });
+      expect(triggerRuntime.resolveMenu).not.toHaveBeenCalled();
+      expect(triggerRuntime.validate).not.toHaveBeenCalled();
+      expect(triggerRuntime.invokeExtensionAction).not.toHaveBeenCalled();
+      expect(onTriggerChange).not.toHaveBeenCalled();
+    } finally {
+      document.elementFromPoint = originalHitTest;
+      window.removeEventListener(OPEN_EXTENSION_DETAILS_EVENT, navigate);
+    }
+  },
+);

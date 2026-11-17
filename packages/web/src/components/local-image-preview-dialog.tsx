@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 
 import { ImagePreviewDialog } from "@/components/ui/image-preview-dialog";
 
-export const LOCAL_IMAGE_FLOATING_ACTION_BUTTON_CLASS = "spirit-floating-action-button";
+export { LOCAL_IMAGE_FLOATING_ACTION_BUTTON_CLASS } from "@spiritagent/ui/image-preview-dialog";
 
 export function LocalImagePreviewDialog({
   open,

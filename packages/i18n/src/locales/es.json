@@ -153,15 +153,6 @@
       "linux": "Muestra {{product.name}} en la bandeja del sistema."
     },
     "appearance": "Apariencia",
-    "integrations": "Integraciones",
-    "integrationsGitHub": "GitHub",
-    "integrationsGitHubConnect": "Conectar GitHub",
-    "integrationsGitHubDisconnect": "Desconectar",
-    "integrationsGitHubChecking": "Verificando conexión con GitHub…",
-    "integrationsGitHubConnectedAs": "Conectado como @{{login}}",
-    "integrationsDeviceWaiting": "Esperando autorización",
-    "integrationsOpenDevicePage": "Abrir página de verificación de GitHub",
-    "integrationsDesktopOnly": "La integración con GitHub solo está disponible en la aplicación de escritorio.",
     "developer": "Desarrollador",
     "agents": "Agentes",
     "tab": "Tabulación",
@@ -606,7 +597,6 @@
     "generateComposerSeed": "Crear una automatización. Requisitos: ",
     "create": "Crear automatización",
     "empty": "No hay automatizaciones configuradas",
-    "githubDisconnectedPause": "GitHub desconectado; disparadores de repositorio pausados",
     "detailBack": "Automatizaciones",
     "detailTabsAria": "Detalle de automatización",
     "tabHistory": "Historial",
@@ -637,6 +627,7 @@
       "repositoryLoadFailed": "Error al cargar repositorios. Inténtalo de nuevo.",
       "triggerLoadFailed": "No se pudieron cargar las opciones del disparador",
       "triggerEmpty": "No hay opciones de disparador disponibles",
+      "authorizationRequired": "<authorize>Autoriza {{name}}</authorize> para crear automatizaciones",
       "pullRequestCreated": "Pull request creado",
       "issueCreated": "Issue creado"
     },
@@ -906,9 +897,7 @@
       "createAutomationHourly": "Crear {{title}} que se ejecuta cada hora",
       "createAutomationDaily": "Crear {{title}} que se ejecuta a diario a las {{time}}",
       "createAutomationWeekly": "Crear {{title}} que se ejecuta cada {{weekday}} a las {{time}}",
-      "createAutomationGithubIssue": "Crear {{title}} que se ejecuta cuando se crea un issue en {{repo}}",
-      "createAutomationWithTrigger": "Crear {title} para ejecutar {trigger}",
-      "createAutomationGithubPullRequest": "Crear {{title}} que se ejecuta cuando se crea una pull request en {{repo}}",
+      "createAutomationWithTrigger": "Crear {{title}} para ejecutar {{trigger}}",
       "editFile": "Editar archivo",
       "deleteFile": "Eliminar archivo",
       "applyPatch": "Aplicar parche",
@@ -978,9 +967,7 @@
     "taskTab": "Tarea",
     "prElectronOnly": "Los Pull Requests solo están disponibles en la versión de escritorio Electron.",
     "prGitHubAuthChecking": "Verificando conexión con GitHub…",
-    "prGitHubConnectLink": "Conectar",
-    "prGitHubConnectTooltipBefore": "Por favor ",
-    "prGitHubConnectPromptBefore": "Por favor ",
+    "prGitHubAuthorizationRequired": "<authorize>Autoriza GitHub</authorize> para usar Pull Requests",
     "prNoRepo": "El espacio de trabajo no es un repositorio Git.",
     "prNoGitHubOrigin": "No se encontró un remoto origin de GitHub para este repositorio.",
     "prNoOpenPullRequest": "No hay pull request abierto para la rama {{branch}}.",
@@ -1651,5 +1638,14 @@
       "pairingRequired": "Primero completa el emparejamiento inicial.",
       "invalidProvider": "Argumento de proveedor no válido."
     }
+  },
+  "github": {
+    "connect": "Conectar GitHub",
+    "disconnect": "Desconectar",
+    "connectedAs": "Conectado como @{{login}}",
+    "waiting": "Esperando autorización",
+    "openDevicePage": "Abrir página de verificación de GitHub",
+    "desktopOnly": "La integración con GitHub solo está disponible en la aplicación de escritorio.",
+    "oauthUnavailable": "La autorización de GitHub estará disponible cuando se configure la aplicación OAuth de Spirit."
   }
 }

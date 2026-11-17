@@ -1,5 +1,3 @@
-import { parseGitHubPullRequestUrl } from "@spiritagent/github/pull-request-url";
-
 import type { ComposerChipNavigateMeta } from "./composer-chip-navigate-meta.js";
 import { looksLikeAbsolutePath } from "./file-picker-path.js";
 import { tryResolveWorkspaceRelativePath } from "./read-file-tool-navigation.js";
@@ -40,8 +38,7 @@ export type ComposerChipNavigateSession = {
 export type ComposerChipNavigateEnv = {
   tabs: readonly WorkspaceToolTab[];
   supportsBrowserTabs: boolean;
-  supportsPrTabs: boolean;
-  githubConnected: boolean;
+
   sessions: readonly ComposerChipNavigateSession[];
   skills: readonly ComposerChipNavigateSkill[];
   workspaceRoot: string;
@@ -63,7 +60,7 @@ export type ComposerChipNavigateAction =
   | { type: "focus-tab"; tabId: string }
   | { type: "open-browser"; url: string; preferTabId?: string }
   | { type: "open-git"; preferTabId?: string }
-  | { type: "open-pr"; owner: string; repo: string; number: number; preferTabId?: string }
+  | { type: "open-url"; url: string; sourceTabId?: string }
   | { type: "open-session"; chatPath: string }
   | {
       type: "scroll-quote";
@@ -173,22 +170,15 @@ export function resolveComposerChipNavigate(
       };
     }
     case "prDiff": {
-      if (!env.supportsPrTabs || !env.githubConnected) {
-        return { navigable: false };
-      }
-      const parsed = parseGitHubPullRequestUrl(target.prUrl);
-      if (!parsed) {
-        return { navigable: false };
-      }
-      const tab = trackedTabOfKind(env.tabs, target.sourceTabId, "pr");
+      if (!env.supportsBrowserTabs || !URL.canParse(target.prUrl)) return { navigable: false };
+      const url = new URL(target.prUrl);
+      if (url.protocol !== "https:" && url.protocol !== "http:") return { navigable: false };
       return {
         navigable: true,
         action: {
-          type: "open-pr",
-          owner: parsed.owner,
-          repo: parsed.repo,
-          number: parsed.number,
-          ...(tab ? { preferTabId: tab.id } : {}),
+          type: "open-url",
+          url: url.href,
+          ...(target.sourceTabId ? { sourceTabId: target.sourceTabId } : {}),
         },
       };
     }

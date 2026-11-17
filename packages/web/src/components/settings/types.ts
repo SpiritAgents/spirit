@@ -16,8 +16,6 @@ import type {
   DesktopDreamOverviewItem,
   DesktopMcpServerInspection,
   DesktopSnapshot,
-  GitHubAuthStatus,
-  GitHubDeviceAuthChallenge,
   ModelRef,
   PreviewModelsRequest,
   PreviewModelsResponse,
@@ -115,9 +113,4 @@ export type SettingsViewProps = {
   onStartToolCardPreviewDemo?: () => void;
   /** Windows Mica / macOS Vibrancy: the inner layer is transparent to avoid double-tint darkening with settings-shell. */
   useTranslucency?: boolean;
-  getGitHubAuthStatus: () => Promise<GitHubAuthStatus>;
-  beginGitHubDeviceLogin: () => Promise<GitHubDeviceAuthChallenge>;
-  completeGitHubDeviceLogin: () => Promise<GitHubAuthStatus>;
-  cancelGitHubDeviceLogin: () => Promise<void>;
-  disconnectGitHub: () => Promise<GitHubAuthStatus>;
 };

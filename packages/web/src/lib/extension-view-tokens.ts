@@ -3,20 +3,19 @@ export interface HostDocumentChrome {
   htmlStyle: string;
 }
 
-/** Read live stylesheet text from the host document. Do not maintain a second token file. */
-export function collectHostStylesheetCssText(doc: Document = document): string {
-  const parts: string[] = [];
-  for (const sheet of Array.from(doc.styleSheets)) {
-    try {
-      const text = Array.from(sheet.cssRules, (rule) => rule.cssText).join("\n");
-      if (text.trim()) {
-        parts.push(text);
-      }
-    } catch {
-      // Cross-origin sheets cannot be read; skip. Href reuse is optional.
-    }
+/** Share resolved design tokens, not the host application's component stylesheet. */
+export function collectHostThemeCssText(doc: Document = document): string {
+  const computed = doc.defaultView?.getComputedStyle(doc.documentElement);
+  if (!computed) return "";
+  const declarations: string[] = [];
+  for (const name of Array.from(computed)) {
+    if (name.startsWith("--")) declarations.push(`${name}:${computed.getPropertyValue(name)};`);
   }
-  return parts.join("\n");
+  for (const name of ["font-family", "font-size", "color-scheme"]) {
+    const value = computed.getPropertyValue(name);
+    if (value) declarations.push(`${name}:${value};`);
+  }
+  return `:root{${declarations.join("")}}`;
 }
 
 export function collectHostDocumentChrome(doc: Document = document): HostDocumentChrome {

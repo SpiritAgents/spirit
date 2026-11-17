@@ -4,6 +4,8 @@ import "./setup";
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
+import i18next from "i18next";
+import { I18nextProvider } from "react-i18next";
 
 import { ExtensionTabHost } from "@/components/extension-tab-host";
 import {
@@ -41,6 +43,40 @@ test("extension tab uses a scripts-only sandbox and keeps its instance identity"
   expect(container.firstElementChild?.getAttribute("data-extension-tab-instance")).toBe(
     "instance-1",
   );
+});
+
+test("a loading tab uses its live localized contribution name without pinning a page title", async () => {
+  const localized = i18next.createInstance();
+  await localized.init({
+    lng: "ja",
+    resources: {
+      en: { translation: { notes: "Notes" } },
+      ja: { translation: { notes: "ノート" } },
+    },
+  });
+  const localizedContribution = { ...contribution, nameKey: "notes" };
+  const { container, rerender } = render(
+    <I18nextProvider i18n={localized}>
+      <ExtensionTabHost tab={tab} contribution={localizedContribution} active={false} />
+    </I18nextProvider>,
+  );
+  const iframe = container.querySelector("iframe")!;
+  expect(iframe.title).toBe("ノート");
+  await act(async () => {
+    await localized.changeLanguage("en");
+  });
+  expect(container.querySelector("iframe")).toBe(iframe);
+  expect(iframe.title).toBe("Notes");
+  rerender(
+    <I18nextProvider i18n={localized}>
+      <ExtensionTabHost
+        tab={{ ...tab, tabTitle: "Release Notes" }}
+        contribution={localizedContribution}
+        active={false}
+      />
+    </I18nextProvider>,
+  );
+  expect(iframe.title).toBe("Release Notes");
 });
 
 test("load failure exposes an explicit retryable error", () => {
@@ -114,7 +150,7 @@ test("ready requests receive initial parameters, scope, visibility, and host the
   expect(postMessage).toHaveBeenCalled();
   const [context] = postMessage.mock.calls.at(-1)!;
   expect(context).toMatchObject({
-    type: "spirit-extension-tab-context",
+    type: "spirit-extension-page-context",
     extensionId: "personal/demo",
     contributionId: "notes",
     instanceId: "instance-1",
@@ -144,6 +180,29 @@ test("ready requests receive initial parameters, scope, visibility, and host the
     workspaceRoot: "/repo-two",
     sessionKey: "session-two",
   });
+});
+
+test("live pointer preference changes reach the existing Tab document", async () => {
+  const originalClass = document.documentElement.className;
+  const { container, unmount } = render(
+    <ExtensionTabHost tab={tab} contribution={contribution} active />,
+  );
+  const iframe = container.querySelector("iframe")!;
+  const postMessage = vi.spyOn(iframe.contentWindow!, "postMessage");
+  try {
+    for (const enabled of [true, false]) {
+      await act(async () => {
+        document.documentElement.classList.toggle("spirit-clickable-pointer", enabled);
+      });
+      const [context] = postMessage.mock.calls.at(-1)!;
+      expect(context.theme.htmlClassName.includes("spirit-clickable-pointer")).toBe(enabled);
+      expect(container.querySelector("iframe")).toBe(iframe);
+    }
+  } finally {
+    unmount();
+    document.documentElement.className = originalClass;
+    postMessage.mockRestore();
+  }
 });
 
 test("page requests are identity checked and answered on the same channel", async () => {
@@ -269,4 +328,140 @@ test("backend events and teardown reach only the owning page channel", () => {
     expect.objectContaining({ type: SPIRIT_EXTENSION_TAB_CLOSED, channelId: tab.channelId }),
     "*",
   );
+});
+test("loading and retried tabs publish context without relying on the first ready request", async () => {
+  const originalClasses = document.documentElement.className;
+  const postMessage = vi.fn();
+  const childWindow = { postMessage } as unknown as Window;
+  const contentWindow = vi
+    .spyOn(HTMLIFrameElement.prototype, "contentWindow", "get")
+    .mockReturnValue(childWindow);
+  let rendered: ReturnType<typeof render> | undefined;
+  try {
+    rendered = render(
+      <ExtensionTabHost
+        tab={{ ...tab, initialParams: { step: 1 } }}
+        contribution={contribution}
+        active
+      />,
+    );
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "spirit-extension-page-context",
+        initialParams: { step: 1 },
+        instanceId: tab.instanceId,
+      }),
+      "*",
+    );
+    expect(
+      rendered.container
+        .querySelector("[data-extension-tab-state]")
+        ?.getAttribute("data-extension-tab-state"),
+    ).toBe("loading");
+    postMessage.mockClear();
+    rendered.rerender(
+      <ExtensionTabHost
+        tab={{ ...tab, initialParams: { step: 2 } }}
+        contribution={contribution}
+        active
+      />,
+    );
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ initialParams: { step: 2 } }),
+      "*",
+    );
+    postMessage.mockClear();
+    const wasDark = document.documentElement.classList.contains("dark");
+    await act(async () => {
+      document.documentElement.classList.toggle("dark", !wasDark);
+    });
+    const context = postMessage.mock.calls.at(-1)?.[0];
+    expect(context?.theme.htmlClassName.includes("dark")).toBe(!wasDark);
+    dispatchFrameMessage(
+      rendered.container.querySelector("iframe")!,
+      "spirit-extension-page-error",
+    );
+    postMessage.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "spirit-extension-page-context",
+        initialParams: { step: 2 },
+      }),
+      "*",
+    );
+    expect(
+      rendered.container
+        .querySelector("[data-extension-tab-state]")
+        ?.getAttribute("data-extension-tab-state"),
+    ).toBe("loading");
+  } finally {
+    rendered?.unmount();
+    document.documentElement.className = originalClasses;
+    contentWindow.mockRestore();
+  }
+});
+
+test("Composer attachments require capability and an active page; host binds their source", async () => {
+  const onAttachment = vi.fn();
+  const onRequest = vi.fn();
+  const { container, rerender } = render(
+    <ExtensionTabHost
+      tab={tab}
+      contribution={contribution}
+      active
+      onAttachment={onAttachment}
+      onRequest={onRequest}
+    />,
+  );
+  const frame = container.querySelector("iframe")!;
+  const attach = () =>
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          source: frame.contentWindow,
+          data: {
+            ...tab,
+            type: SPIRIT_EXTENSION_TAB_REQUEST,
+            requestId: "attachment",
+            method: "host.composer.attach",
+            params: {
+              kind: "fileSnippet",
+              filePath: "page.ts",
+              lineStart: 1,
+              lineEnd: 2,
+              selectedText: "selected",
+              sourceTabId: "forged",
+            },
+          },
+        }),
+      );
+    });
+  attach();
+  expect(onAttachment).not.toHaveBeenCalled();
+  rerender(
+    <ExtensionTabHost
+      tab={tab}
+      contribution={contribution}
+      active
+      allowComposerAttachments
+      onAttachment={onAttachment}
+      onRequest={onRequest}
+    />,
+  );
+  attach();
+  expect(onAttachment).toHaveBeenCalledOnce();
+  expect(onAttachment.mock.calls[0][0].attachment.sourceTabId).toBe(tab.id);
+  expect(onRequest).not.toHaveBeenCalled();
+  rerender(
+    <ExtensionTabHost
+      tab={tab}
+      contribution={contribution}
+      active={false}
+      allowComposerAttachments
+      onAttachment={onAttachment}
+    />,
+  );
+  attach();
+  expect(onAttachment).toHaveBeenCalledOnce();
 });

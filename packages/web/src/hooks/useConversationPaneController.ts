@@ -51,7 +51,7 @@ export type UseConversationPaneControllerOptions = {
   onNewChat?: () => void;
   onBeginSideChat?: () => void;
   workspaceTools: WorkspaceTools;
-  onOpenIntegrationsSettings: () => void;
+
   t: TFunction;
   language: string;
   conversationAbortShortcutTargetRef?: ConversationAbortShortcutTargetRef;
@@ -75,7 +75,7 @@ export function useConversationPaneController({
   onNewChat,
   onBeginSideChat,
   workspaceTools,
-  onOpenIntegrationsSettings: _onOpenIntegrationsSettings,
+
   t,
   language,
   conversationAbortShortcutTargetRef,

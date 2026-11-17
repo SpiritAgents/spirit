@@ -212,7 +212,6 @@ test("stale renderer snapshots yield to host mutations but queued renderer write
       extensionId: "personal/demo",
       contributionId: "notes",
       scope: { kind: "window-shared" },
-      title: "Notes",
       reuse: "new",
     });
     const emitted: unknown[] = [];
@@ -253,7 +252,6 @@ test("extension open reuse, chrome updates, ownership checks, and close share on
       contributionId: "notes",
       scope: { kind: "workspace", workspaceRoot: "/repo" },
       initialParams: { value: 1 },
-      title: "Notes",
       icon: { type: "spirit", name: "globe" },
       reuse: "new",
     });
@@ -262,22 +260,22 @@ test("extension open reuse, chrome updates, ownership checks, and close share on
       extensionId: "personal/demo",
       contributionId: "notes",
       scope: { kind: "workspace", workspaceRoot: "/repo" },
-      title: "Notes",
       reuse: "new",
     });
     assert.notEqual(first.instanceId, second.instanceId);
+    assert.equal(first.tabTitle, undefined);
+    assert.equal(second.tabTitle, undefined);
 
     const reused = await store.openExtensionTab({
       windowId: "main",
       extensionId: "personal/demo",
       contributionId: "notes",
       scope: { kind: "workspace", workspaceRoot: "/repo" },
-      title: "Ignored",
       reuse: "context",
     });
-    assert.equal(reused.instanceId, first.instanceId);
-    assert.deepEqual(reused.initialParams, { value: 1 });
-    assert.equal((await store.getSnapshot("main")).activeTabId, first.instanceId);
+    assert.equal(reused.instanceId, second.instanceId);
+    assert.equal(reused.initialParams, undefined);
+    assert.equal((await store.getSnapshot("main")).activeTabId, second.instanceId);
 
     await store.updateExtensionTab({
       windowId: "main",
@@ -312,6 +310,51 @@ test("extension open reuse, chrome updates, ownership checks, and close share on
     );
     const restored = await new WorkspaceToolTabsStore(filePath).getSnapshot("main");
     assert.equal(restored.tabs.filter((tab) => tab.kind === "extension").length, 1);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("context navigation prefers the source, then active tab, and persists undelivered targets", async () => {
+  const { directory, filePath } = await fixture();
+  try {
+    const store = new WorkspaceToolTabsStore(filePath);
+    const base = {
+      windowId: "window",
+      extensionId: "personal/demo",
+      contributionId: "notes",
+      scope: { kind: "window-shared" as const },
+    };
+    const first = await store.openExtensionTab({ ...base, reuse: "new" });
+    const second = await store.openExtensionTab({ ...base, reuse: "new" });
+    const active = await store.openExtensionTab({
+      ...base,
+      reuse: "context",
+      initialParams: { target: 1 },
+    });
+    assert.equal(active.id, second.id);
+    const source = await store.openExtensionTab({
+      ...base,
+      reuse: "context",
+      preferInstanceId: first.instanceId,
+      initialParams: { target: 2 },
+    });
+    assert.equal(source.id, first.id);
+    assert.deepEqual(source.initialParams, { target: 2 });
+    assert.equal(source.navigationRevision, 1);
+    const next = await store.openExtensionTab({
+      ...base,
+      reuse: "context",
+      initialParams: { target: 2 },
+    });
+    assert.equal(next.id, first.id);
+    assert.equal(next.navigationRevision, 2);
+    const restarted = new WorkspaceToolTabsStore(filePath);
+    const restored = (await restarted.getSnapshot("window")).tabs.find(
+      (tab) => tab.id === first.id,
+    ) as DesktopWorkspaceExtensionToolTab;
+    assert.deepEqual(restored.initialParams, { target: 2 });
+    assert.equal(restored.navigationRevision, 2);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

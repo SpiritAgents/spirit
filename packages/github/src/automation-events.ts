@@ -1,6 +1,6 @@
 import { githubApiHeaders, githubFetch, readGitHubJson } from "./github-api.js";
 import { GITHUB_API_BASE_URL } from "./oauth-config.js";
-import type { HostAutomationGitHubEvent } from "./automation-types.js";
+import type { GitHubAutomationEvent } from "./automation-types.js";
 
 export interface GitHubAutomationIssueItem {
   number: number;
@@ -113,7 +113,7 @@ export async function fetchRepositoryMaxIssueNumber(
 
 export function matchesGitHubAutomationEvent(
   item: GitHubAutomationIssueItem,
-  event: HostAutomationGitHubEvent,
+  event: GitHubAutomationEvent,
 ): boolean {
   if (event === "pull_request_created") {
     return item.isPullRequest;
@@ -123,7 +123,7 @@ export function matchesGitHubAutomationEvent(
 
 export function filterNewGitHubAutomationEvents(
   items: GitHubAutomationIssueItem[],
-  event: HostAutomationGitHubEvent,
+  event: GitHubAutomationEvent,
   lastSeenNumber: number,
 ): GitHubAutomationIssueItem[] {
   return items

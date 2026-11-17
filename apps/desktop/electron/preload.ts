@@ -380,6 +380,12 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   syncWorkspaceToolTabs(request: { expectedRevision: number; tabs: unknown; activeTabId: string }) {
     return ipcRenderer.invoke("desktop:invoke", "syncWorkspaceToolTabs", request);
   },
+  invokeExtensionViewRequest(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "invokeExtensionViewRequest", request);
+  },
+  openExtensionLink(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "openExtensionLink", request);
+  },
   invokeExtensionTabRequest(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "invokeExtensionTabRequest", request);
   },
@@ -523,57 +529,7 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   readGitCommitMessage(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "readGitCommitMessage", { request });
   },
-  getGitHubAuthStatus() {
-    return ipcRenderer.invoke("desktop:invoke", "getGitHubAuthStatus");
-  },
-  beginGitHubDeviceLogin() {
-    return ipcRenderer.invoke("desktop:invoke", "beginGitHubDeviceLogin");
-  },
-  completeGitHubDeviceLogin() {
-    return ipcRenderer.invoke("desktop:invoke", "completeGitHubDeviceLogin");
-  },
-  cancelGitHubDeviceLogin() {
-    return ipcRenderer.invoke("desktop:invoke", "cancelGitHubDeviceLogin");
-  },
-  disconnectGitHub() {
-    return ipcRenderer.invoke("desktop:invoke", "disconnectGitHub");
-  },
-  getGitHubPullRequestForCurrentBranch() {
-    return ipcRenderer.invoke("desktop:invoke", "getGitHubPullRequestForCurrentBranch");
-  },
-  listGitHubPullRequests(request: unknown) {
-    return ipcRenderer.invoke("desktop:invoke", "listGitHubPullRequests", { request });
-  },
-  listGitHubAutomationRepositories(request: unknown = {}) {
-    return ipcRenderer.invoke("desktop:invoke", "listGitHubAutomationRepositories", { request });
-  },
-  searchGitHubAutomationRepositories(request: unknown) {
-    return ipcRenderer.invoke("desktop:invoke", "searchGitHubAutomationRepositories", { request });
-  },
-  getGitHubPullRequestTabCounts(request: unknown) {
-    return ipcRenderer.invoke("desktop:invoke", "getGitHubPullRequestTabCounts", { request });
-  },
-  getGitHubPullRequestDetail(request: unknown) {
-    return ipcRenderer.invoke("desktop:invoke", "getGitHubPullRequestDetail", { request });
-  },
-  getGitHubPullRequestConversation(request: unknown) {
-    return ipcRenderer.invoke("desktop:invoke", "getGitHubPullRequestConversation", { request });
-  },
-  getGitHubPullRequestFiles(request: unknown) {
-    return ipcRenderer.invoke("desktop:invoke", "getGitHubPullRequestFiles", { request });
-  },
-  getGitHubPullRequestCommits(request: unknown) {
-    return ipcRenderer.invoke("desktop:invoke", "getGitHubPullRequestCommits", { request });
-  },
-  getGitHubPullRequestChecks(request: unknown) {
-    return ipcRenderer.invoke("desktop:invoke", "getGitHubPullRequestChecks", { request });
-  },
-  mergeGitHubPullRequest(request: unknown) {
-    return ipcRenderer.invoke("desktop:invoke", "mergeGitHubPullRequest", { request });
-  },
-  markGitHubPullRequestReady(request: unknown) {
-    return ipcRenderer.invoke("desktop:invoke", "markGitHubPullRequestReady", { request });
-  },
+
   readWorkspaceTextFile(relativePath: string, options?: { optional?: boolean }) {
     return ipcRenderer.invoke("desktop:invoke", "readWorkspaceTextFile", {
       relativePath,

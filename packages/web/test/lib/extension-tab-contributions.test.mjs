@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import {
   collectExtensionTabContributions,
+  extensionTabDisplayName,
   resolveExtensionTabScope,
 } from "../../src/lib/extension-tab-contributions.ts";
 
@@ -12,6 +13,16 @@ const tab = (id, name = id) => ({
   path: `${id}.html`,
   icon: { type: "spirit", name: "globe" },
   defaultScope: "window-shared",
+});
+
+test("contribution titles follow the current locale while literal names stay literal", () => {
+  let locale = "ja";
+  const translate = (key) => ({ en: { notes: "Notes" }, ja: { notes: "ノート" } })[locale][key];
+  const contribution = { ...tab("notes", "Notes"), nameKey: "notes" };
+  assert.equal(extensionTabDisplayName(contribution, translate), "ノート");
+  locale = "en";
+  assert.equal(extensionTabDisplayName(contribution, translate), "Notes");
+  assert.equal(extensionTabDisplayName(tab("activity", "Activity"), translate), "Activity");
 });
 
 test("collects only enabled Desktop tab contributions in display order", () => {
