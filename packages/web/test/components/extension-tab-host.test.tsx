@@ -54,7 +54,7 @@ test("a loading tab uses its live localized contribution name without pinning a 
       ja: { translation: { notes: "ノート" } },
     },
   });
-  const localizedContribution = { ...contribution, nameKey: "notes" };
+  const localizedContribution = { ...contribution, name: "ノート" };
   const { container, rerender } = render(
     <I18nextProvider i18n={localized}>
       <ExtensionTabHost tab={tab} contribution={localizedContribution} active={false} />
@@ -65,6 +65,15 @@ test("a loading tab uses its live localized contribution name without pinning a 
   await act(async () => {
     await localized.changeLanguage("en");
   });
+  rerender(
+    <I18nextProvider i18n={localized}>
+      <ExtensionTabHost
+        tab={tab}
+        contribution={{ ...localizedContribution, name: "Notes" }}
+        active={false}
+      />
+    </I18nextProvider>,
+  );
   expect(container.querySelector("iframe")).toBe(iframe);
   expect(iframe.title).toBe("Notes");
   rerender(

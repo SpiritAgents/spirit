@@ -682,6 +682,10 @@
     "addFromUrl": "從 URL 新增",
     "tabAll": "全部",
     "featured": "精選",
+    "categories": {
+      "development": "開發",
+      "other": "其他"
+    },
     "other": "其他",
     "seeMoreNamed": "檢視 {{names}}",
     "seeMoreWithCount": "檢視 {{names}} 及另外 {{count}} 個",

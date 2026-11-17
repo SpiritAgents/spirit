@@ -1,0 +1,24 @@
+{
+  "metadata": {
+    "displayName": "GitHub",
+    "description": "Solicitudes de incorporación y automatizaciones, directamente en Spirit.",
+    "keywords": {
+      "pullRequests": "solicitudes de incorporación",
+      "repositories": "repositorios",
+      "automations": "automatizaciones"
+    }
+  },
+  "settings": {
+    "prOverviewRatio": { "title": "Proporción del resumen de solicitudes" },
+    "prFilesWidth": { "title": "Ancho de archivos modificados" }
+  },
+  "authorization": { "oauth": { "displayName": "OAuth" } },
+  "automation": {
+    "activity": {
+      "name": "GitHub",
+      "description": "Nuevas solicitudes de incorporación o incidencias en un repositorio."
+    }
+  },
+  "views": { "authorize": { "title": "GitHub" } },
+  "tabs": { "pullRequests": { "name": "Solicitudes de incorporación" } }
+}

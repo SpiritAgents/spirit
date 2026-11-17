@@ -14,6 +14,7 @@ import {
   removeMarketplaceSource,
   type MarketplaceSourceManagerContext,
 } from "./sources.js";
+import { localizedTestFields } from "@spiritagent/extension-toolkit/test-localization";
 
 const execFileAsync = promisify(execFile);
 
@@ -26,8 +27,7 @@ const FIXTURE_INDEX = {
       name: "i-am-a-extension",
       version: "1.0.0",
       source: "./extensions/i-am-a-extension",
-      displayName: "Fixture",
-      description: "Fixture extension.",
+      ...localizedTestFields("Fixture", "Fixture extension."),
       manifest: { supportedHosts: ["cli"] },
     },
   ],

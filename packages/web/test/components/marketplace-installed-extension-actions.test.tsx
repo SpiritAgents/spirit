@@ -32,7 +32,12 @@ function renderActions(authorization: DesktopExtensionAuthorization) {
 
 describe("MarketplaceInstalledExtensionActions", () => {
   test("an unconfigured authorization stays in the primary action position", () => {
-    const authorization = { id: "oauth", action: "authorize", configured: false };
+    const authorization = {
+      id: "oauth",
+      displayName: "OAuth",
+      action: "authorize",
+      configured: false,
+    };
     const { item, onAuthorize, getByRole, queryByRole } = renderActions(authorization);
 
     const button = getByRole("button", { name: "Authorize" });
@@ -46,7 +51,12 @@ describe("MarketplaceInstalledExtensionActions", () => {
   });
 
   test("a configured authorization moves to the overflow menu", () => {
-    const authorization = { id: "oauth", action: "authorize", configured: true };
+    const authorization = {
+      id: "oauth",
+      displayName: "OAuth",
+      action: "authorize",
+      configured: true,
+    };
     const { item, onAuthorize, getByRole, queryByRole } = renderActions(authorization);
 
     expect(queryByRole("button", { name: "Authorize" })).toBeNull();
@@ -63,8 +73,8 @@ describe("MarketplaceInstalledExtensionActions", () => {
       enabled: true,
       installed: true,
       authorizations: [
-        { id: "oauth", action: "authorize", configured: true },
-        { id: "devops", action: "manage", configured: true },
+        { id: "oauth", displayName: "OAuth", action: "authorize", configured: true },
+        { id: "devops", displayName: "DevOps", action: "manage", configured: true },
       ],
     } as DesktopMarketplaceCatalogEntry;
     const { getByRole } = render(

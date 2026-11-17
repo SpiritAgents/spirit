@@ -218,12 +218,38 @@ test("host.resolveActiveSkill resolves extension skills with base-name precedenc
         name: "fixture-skills",
         version: "0.0.1",
         sourceId: "personal",
-        displayName: "Fixture Skills",
-        description: "Fixture extension skills.",
+        defaultLocale: "en",
+        messages: {
+          en: {
+            metadata: {
+              displayName: "Fixture Skills",
+              description: "Fixture extension skills.",
+            },
+            skills: {
+              shared: { displayName: "Shared", summary: "Shared skill." },
+              "extension-only": { displayName: "Extension Only", summary: "Extension skill." },
+            },
+          },
+        },
+        displayName: { message: "metadata.displayName" },
+        description: { message: "metadata.description" },
         manifest: {
           supportedHosts: ["cli"],
           requestedCapabilities: ["skills"],
-          contributes: { skills: true },
+          contributes: {
+            skills: [
+              {
+                name: "shared",
+                displayName: { message: "skills.shared.displayName" },
+                summary: { message: "skills.shared.summary" },
+              },
+              {
+                name: "extension-only",
+                displayName: { message: "skills.extension-only.displayName" },
+                summary: { message: "skills.extension-only.summary" },
+              },
+            ],
+          },
         },
       }),
     );
@@ -485,8 +511,14 @@ function fixtureEntry(
     name,
     version,
     source: `./extensions/${name}`,
-    displayName: name,
-    description: `${name} extension.`,
+    defaultLocale: "en",
+    messages: {
+      en: {
+        metadata: { displayName: name, description: `${name} extension.` },
+      },
+    },
+    displayName: { message: "metadata.displayName" },
+    description: { message: "metadata.description" },
     ...(reviewStatus ? { reviewStatus } : {}),
     manifest: { supportedHosts: ["desktop", "cli"] },
   };

@@ -715,6 +715,10 @@
     "addFromUrl": "Add from URL",
     "tabAll": "All",
     "featured": "Featured",
+    "categories": {
+      "development": "Development",
+      "other": "Other"
+    },
     "other": "Other",
     "seeMoreNamed": "See {{names}}",
     "seeMoreWithCount": "See {{names}} and {{count}} more",

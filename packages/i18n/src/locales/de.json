@@ -682,6 +682,10 @@
     "addFromUrl": "Von URL hinzufügen",
     "tabAll": "Alle",
     "featured": "Empfohlen",
+    "categories": {
+      "development": "Entwicklung",
+      "other": "Weitere"
+    },
     "other": "Weitere",
     "seeMoreNamed": "{{names}} anzeigen",
     "seeMoreWithCount": "{{names}} und {{count}} weitere anzeigen",

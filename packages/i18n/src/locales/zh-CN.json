@@ -690,6 +690,10 @@
     "addFromUrl": "从 URL 添加",
     "tabAll": "全部",
     "featured": "精选",
+    "categories": {
+      "development": "开发",
+      "other": "其它"
+    },
     "other": "其它",
     "seeMoreNamed": "查看 {{names}}",
     "seeMoreWithCount": "查看 {{names}} 及另外 {{count}} 个",

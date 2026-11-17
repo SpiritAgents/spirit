@@ -139,14 +139,27 @@ export const CAPABILITY_DEFINITIONS: readonly CapabilityDefinition[] = [
     id: "skills",
     label: "Skills (skills/<name>/SKILL.md)",
     requestedCapabilities: ["skills"],
-    contributes: () => ({ skills: true }),
+    contributes: (input) => ({
+      skills: [
+        {
+          name: input.name,
+          displayName: { message: "skills.example.displayName" },
+          summary: { message: "skills.example.summary" },
+        },
+      ],
+    }),
     files: (input) => ({ [`skills/${input.name}/SKILL.md`]: skillMarkdown(input) }),
   },
   {
     id: "rules",
     label: "Rules (rule.md)",
     requestedCapabilities: ["rules"],
-    contributes: () => ({ rules: true }),
+    contributes: () => ({
+      rules: {
+        displayName: { message: "rules.displayName" },
+        summary: { message: "rules.summary" },
+      },
+    }),
     files: (input) => ({
       "rule.md": `# ${input.title} Rules\n\nWrite the rules the agent should follow here.\n`,
     }),
@@ -155,7 +168,15 @@ export const CAPABILITY_DEFINITIONS: readonly CapabilityDefinition[] = [
     id: "mcp",
     label: "MCP servers (mcp.json)",
     requestedCapabilities: ["mcp"],
-    contributes: () => ({ mcp: true }),
+    contributes: () => ({
+      mcp: [
+        {
+          name: "example",
+          displayName: { message: "mcp.example.displayName" },
+          transport: "stdio",
+        },
+      ],
+    }),
     files: () => ({
       "mcp.json": `${JSON.stringify(
         {
@@ -179,7 +200,14 @@ export const CAPABILITY_DEFINITIONS: readonly CapabilityDefinition[] = [
     id: "hooks",
     label: "Hooks (hooks.json)",
     requestedCapabilities: ["hooks"],
-    contributes: () => ({ hooks: true }),
+    contributes: () => ({
+      hooks: [
+        {
+          event: "sessionStart",
+          displayName: { message: "hooks.sessionStart.displayName" },
+        },
+      ],
+    }),
     files: (input) => ({
       // The hook runner spawns command as an executable file resolved inside
       // the extension directory — inline shell strings are not commands.
@@ -209,6 +237,10 @@ echo "session started with ${input.name}"
         {
           name: "hello",
           description: `Say hello from ${input.title}.`,
+          presentation: {
+            displayName: { message: "tools.hello.displayName" },
+            summary: { message: "tools.hello.summary" },
+          },
           inputSchema: { type: "object", properties: {}, additionalProperties: false },
         },
       ],
@@ -228,7 +260,9 @@ echo "session started with ${input.name}"
     id: "desktop-settings-page",
     label: "Desktop settings page (contributes.desktop.settingsPage)",
     requestedCapabilities: ["desktop-ui"],
-    contributes: (input) => ({ desktop: { settingsPage: { title: input.title } } }),
+    contributes: () => ({
+      desktop: { settingsPage: { title: { message: "desktop.settingsPage.title" } } },
+    }),
     files: () => ({}),
   },
   {
@@ -236,7 +270,11 @@ echo "session started with ${input.name}"
     label: "Desktop views (contributes.desktop.views)",
     requestedCapabilities: ["desktop-ui"],
     contributes: () => ({
-      desktop: { views: [{ id: "main", path: "ui/view.html", title: "View" }] },
+      desktop: {
+        views: [
+          { id: "main", path: "ui/view.html", title: { message: "desktop.views.main.title" } },
+        ],
+      },
     }),
     files: () => ({
       "ui/view.html": `<!doctype html>
@@ -265,12 +303,12 @@ view.mounted();
     id: "desktop-tabs",
     label: "Desktop tabs (contributes.desktop.tabs + page channel)",
     requestedCapabilities: ["desktop-ui"],
-    contributes: (input) => ({
+    contributes: () => ({
       desktop: {
         tabs: [
           {
             id: "main",
-            name: input.title,
+            name: { message: "desktop.tabs.main.name" },
             path: "ui/tab.html",
             icon: { type: "spirit", name: "compose" },
             defaultScope: "window-shared",
@@ -322,9 +360,22 @@ button { width: fit-content; }
     requestedCapabilities: ["secret-storage", "desktop-ui"],
     manifest: () => ({ secretSlots: ["oauthAccessToken"] }),
     contributes: () => ({
-      authorizations: [{ id: "oauth", action: "authorize", secretSlots: ["oauthAccessToken"] }],
+      authorizations: [
+        {
+          id: "oauth",
+          displayName: { message: "authorization.oauth.displayName" },
+          action: "authorize",
+          secretSlots: ["oauthAccessToken"],
+        },
+      ],
       desktop: {
-        views: [{ id: "authorize", path: "ui/authorize.html", title: "Authorize" }],
+        views: [
+          {
+            id: "authorize",
+            path: "ui/authorize.html",
+            title: { message: "desktop.views.authorize.title" },
+          },
+        ],
       },
     }),
     files: () => ({
@@ -348,12 +399,12 @@ view.mounted();
     id: "automation-triggers",
     label: "Automation triggers (validate + Native menu + poll)",
     requestedCapabilities: ["automation-triggers"],
-    contributes: (input) => ({
+    contributes: () => ({
       automationTriggers: [
         {
           id: "activity",
-          name: input.title,
-          description: `React to activity from ${input.title}.`,
+          name: { message: "automation.activity.name" },
+          description: { message: "automation.activity.description" },
           icon: { type: "spirit", name: "compose" },
           configuration: "menu",
           inputSchema: {

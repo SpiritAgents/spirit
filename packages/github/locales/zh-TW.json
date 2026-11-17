@@ -1,0 +1,24 @@
+{
+  "metadata": {
+    "displayName": "GitHub",
+    "description": "在 Spirit 中處理拉取請求與自動化。",
+    "keywords": {
+      "pullRequests": "拉取請求",
+      "repositories": "存放庫",
+      "automations": "自動化"
+    }
+  },
+  "settings": {
+    "prOverviewRatio": { "title": "拉取請求概覽比例" },
+    "prFilesWidth": { "title": "變更檔案寬度" }
+  },
+  "authorization": { "oauth": { "displayName": "OAuth" } },
+  "automation": {
+    "activity": {
+      "name": "GitHub",
+      "description": "接收存放庫中的新拉取請求或議題。"
+    }
+  },
+  "views": { "authorize": { "title": "GitHub" } },
+  "tabs": { "pullRequests": { "name": "拉取請求" } }
+}

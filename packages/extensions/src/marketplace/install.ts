@@ -39,6 +39,8 @@ export function buildExtensionDumpFromEntry(
   const icon = options?.icon ?? entry.icon;
   return {
     schemaVersion: EXTENSION_DUMP_SCHEMA_VERSION,
+    defaultLocale: entry.defaultLocale,
+    messages: entry.messages,
     name: entry.name,
     version: entry.version,
     sourceId,

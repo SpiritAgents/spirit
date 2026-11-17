@@ -21,14 +21,14 @@ import {
   updateExtensionById,
   type MarketplaceHostContext,
 } from "./resolve.js";
+import { localizedTestFields } from "@spiritagent/extension-toolkit/test-localization";
 
 function makeEntry(name: string, version: string, reviewStatus?: string): Record<string, unknown> {
   return {
     name,
     version,
     source: `./extensions/${name}`,
-    displayName: name,
-    description: `${name} extension.`,
+    ...localizedTestFields(name, `${name} extension.`),
     ...(reviewStatus ? { reviewStatus } : {}),
     manifest: { supportedHosts: ["desktop"] },
   };
@@ -301,8 +301,7 @@ test("built-in and personal installs have no manual update semantics", async () 
           name: "extension-personal",
           version: "1.0.0",
           sourceId: "personal",
-          displayName: "Personal demo",
-          description: "Personal fixture.",
+          ...localizedTestFields("Personal demo", "Personal fixture."),
           manifest: { supportedHosts: ["desktop"] },
         },
         null,

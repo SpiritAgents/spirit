@@ -24,10 +24,10 @@ export const EXTENSION_RULE_FILE_NAME = "rule.md";
 export const EXTENSION_SKILLS_DIR_NAME = SKILLS_DIR_NAME;
 
 export interface MarketplaceInstructionContributionDeclarations {
-  mcp?: true;
-  hooks?: true;
-  skills?: true;
-  rules?: true;
+  mcp?: Array<{ name: string; transport: "stdio" | "http" }>;
+  hooks?: Array<{ event: string }>;
+  skills?: Array<{ name: string }>;
+  rules?: { displayName: unknown; summary: unknown };
 }
 
 export interface MarketplaceContributionFileReaders {
@@ -37,9 +37,11 @@ export interface MarketplaceContributionFileReaders {
 
 export interface MarketplaceContributionContentValidators {
   /** Throws when the parsed mcp.json content is invalid. */
-  parseMcpConfigFile(parsed: unknown): void;
+  parseMcpConfigFile(parsed: unknown): {
+    servers: Record<string, { transport: { type: "stdio" | "http" } }>;
+  };
   /** Throws when the parsed hooks.json content is invalid. */
-  parseHooksConfigFile(parsed: unknown): void;
+  parseHooksConfigFile(parsed: unknown): { hooks: Record<string, unknown[]> };
 }
 
 export interface AssertDeclaredInstructionContributionFilesOptions extends MarketplaceContributionFileReaders {
@@ -64,36 +66,57 @@ export async function assertDeclaredInstructionContributionFiles(
   }
   const fieldPrefix = options.fieldPrefix ?? "manifest.contributes";
 
-  if (contributes.mcp === true) {
-    await assertDeclaredJsonContributionFile(
+  if (contributes.mcp) {
+    const config = await assertDeclaredJsonContributionFile(
       readRelativeTextFile,
       EXTENSION_MCP_CONFIG_FILE_NAME,
       `${fieldPrefix}.mcp`,
       options.validators.parseMcpConfigFile,
     );
+    const actual = Object.entries(config.servers).map(([name, server]) => ({
+      name,
+      transport: server.transport.type,
+    }));
+    assertMatchingContributionIds(
+      contributes.mcp.map((entry) => `${entry.name}:${entry.transport}`),
+      actual.map((entry) => `${entry.name}:${entry.transport}`),
+      `${fieldPrefix}.mcp`,
+    );
   }
-  if (contributes.hooks === true) {
-    await assertDeclaredJsonContributionFile(
+  if (contributes.hooks) {
+    const config = await assertDeclaredJsonContributionFile(
       readRelativeTextFile,
       EXTENSION_HOOKS_CONFIG_FILE_NAME,
       `${fieldPrefix}.hooks`,
       options.validators.parseHooksConfigFile,
     );
+    assertMatchingContributionIds(
+      contributes.hooks.map((entry) => entry.event),
+      Object.entries(config.hooks)
+        .filter(([, definitions]) => definitions.length > 0)
+        .map(([event]) => event),
+      `${fieldPrefix}.hooks`,
+    );
   }
-  if (contributes.rules === true) {
+  if (contributes.rules) {
     await assertDeclaredRulesContributionFile(readRelativeTextFile, `${fieldPrefix}.rules`);
   }
-  if (contributes.skills === true) {
-    await assertDeclaredSkillsContributionFiles(options, fieldPrefix);
+  if (contributes.skills) {
+    const skills = await assertDeclaredSkillsContributionFiles(options, fieldPrefix);
+    assertMatchingContributionIds(
+      contributes.skills.map((entry) => entry.name),
+      skills,
+      `${fieldPrefix}.skills`,
+    );
   }
 }
 
-async function assertDeclaredJsonContributionFile(
+async function assertDeclaredJsonContributionFile<T>(
   readRelativeTextFile: NonNullable<MarketplaceContributionFileReaders["readRelativeTextFile"]>,
   fileName: string,
   fieldName: string,
-  validate: (parsed: unknown) => void,
-): Promise<void> {
+  validate: (parsed: unknown) => T,
+): Promise<T> {
   const raw = await readRelativeTextFile(fileName, fieldName);
   let parsed: unknown;
   try {
@@ -102,7 +125,7 @@ async function assertDeclaredJsonContributionFile(
     throw new Error(`The extension ${fileName} is not valid JSON.`);
   }
   try {
-    validate(parsed);
+    return validate(parsed);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     throw new Error(`The extension ${fileName} is invalid: ${detail}`);
@@ -122,7 +145,7 @@ async function assertDeclaredRulesContributionFile(
 async function assertDeclaredSkillsContributionFiles(
   options: AssertDeclaredInstructionContributionFilesOptions,
   fieldPrefix: string,
-): Promise<void> {
+): Promise<string[]> {
   const readRelativeTextFile = options.readRelativeTextFile;
   const listRelativeChildDirectories = options.listRelativeChildDirectories;
   if (!readRelativeTextFile || !listRelativeChildDirectories) {
@@ -149,6 +172,21 @@ async function assertDeclaredSkillsContributionFiles(
   if (validSkills.length === 0) {
     throw new Error(
       `The extension declares ${fieldPrefix}.skills but has no valid ${EXTENSION_SKILLS_DIR_NAME}/*/${SKILL_FILE_NAME}.`,
+    );
+  }
+  return validSkills;
+}
+
+function assertMatchingContributionIds(
+  declared: readonly string[],
+  actual: readonly string[],
+  fieldName: string,
+): void {
+  const expected = [...declared].sort();
+  const received = [...actual].sort();
+  if (JSON.stringify(expected) !== JSON.stringify(received)) {
+    throw new Error(
+      `${fieldName} presentation declarations must match package contents; expected [${expected.join(", ")}], found [${received.join(", ")}].`,
     );
   }
 }

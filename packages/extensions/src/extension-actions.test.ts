@@ -6,6 +6,7 @@ import { test } from "vitest";
 
 import { createHostExtensionManager, installPreparedExtensionDirectory } from "./index.js";
 import type { ExtensionStateStore } from "./storage.js";
+import { localizedTestPackage } from "@spiritagent/extension-toolkit/test-localization";
 
 async function writeActionPackage(
   packageDir: string,
@@ -25,16 +26,14 @@ async function writeActionPackage(
       name: "action-demo",
       version: "1.0.0",
       sourceId: "personal",
-      displayName: "Action Demo",
-      description: "Action Demo extension.",
-      manifest: {
+      ...localizedTestPackage("Action Demo", "Action Demo extension.", {
         supportedHosts: ["desktop"],
         requestedCapabilities: ["secret-storage"],
         secretSlots,
         contributes: {
           authorizations: [{ id: "oauth", action: "authorize", secretSlots: authorizationSlots }],
         },
-      },
+      }),
     })}\n`,
   );
   await writeFile(
@@ -297,7 +296,7 @@ test("page and link handlers receive scoped backend services and declared origin
       tabs: [
         {
           id: "notes",
-          name: "Notes",
+          name: { message: "desktop.tabs.notes.name" },
           path: "page.html",
           icon: { type: "spirit", name: "globe" },
           authorization: "oauth",

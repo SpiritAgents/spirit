@@ -1,0 +1,24 @@
+{
+  "metadata": {
+    "displayName": "GitHub",
+    "description": "Запросы на слияние и автоматизация прямо в Spirit.",
+    "keywords": {
+      "pullRequests": "запросы на слияние",
+      "repositories": "репозитории",
+      "automations": "автоматизация"
+    }
+  },
+  "settings": {
+    "prOverviewRatio": { "title": "Пропорция обзора запросов на слияние" },
+    "prFilesWidth": { "title": "Ширина изменённых файлов" }
+  },
+  "authorization": { "oauth": { "displayName": "OAuth" } },
+  "automation": {
+    "activity": {
+      "name": "GitHub",
+      "description": "Новые запросы на слияние или задачи в репозитории."
+    }
+  },
+  "views": { "authorize": { "title": "GitHub" } },
+  "tabs": { "pullRequests": { "name": "Запросы на слияние" } }
+}

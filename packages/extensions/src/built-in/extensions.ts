@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -27,7 +27,7 @@ import {
   type MarketplaceRegistryRoot,
   type MarketplaceSourceRecord,
 } from "../marketplace/types.js";
-import type { ExtensionHostKind } from "../storage.js";
+import { resolveExtensionPaths, type ExtensionHostKind } from "../storage.js";
 import { loadBuiltInState } from "./state.js";
 
 /**
@@ -207,6 +207,7 @@ async function ensureBuiltInExtensionsInner(
   const removed = new Set(state.removedExtensionIds.map((id) => id.toLowerCase()));
   const installed = await request.manager.list();
   const installedById = new Map(installed.map((item) => [item.id, item]));
+  const installedDirectoryNames = await listInstalledBuiltInDirectoryNames(spiritDataDir, hostKind);
 
   const index = await readBuiltInMarketplaceIndex(request.registryRoot);
   const source = builtInMarketplaceSourceRecord(index, request.registryRoot);
@@ -219,7 +220,7 @@ async function ensureBuiltInExtensionsInner(
     }
     const id = composeExtensionId(source.id, entry.name);
     const installedItem = installedById.get(id);
-    if (installedItem) {
+    if (installedItem || installedDirectoryNames.has(entry.name)) {
       // Recopy even when the marketplace version is unchanged. Built-in
       // edits (MCP server stubs, hints, assets) usually keep the same
       // version, so a version gate would leave the installed tree stale.
@@ -243,6 +244,21 @@ async function ensureBuiltInExtensionsInner(
   }
 
   return seeded;
+}
+
+async function listInstalledBuiltInDirectoryNames(
+  spiritDataDir: string,
+  hostKind: ExtensionHostKind,
+): Promise<Set<string>> {
+  const paths = resolveExtensionPaths({ spiritDataDir, hostKind });
+  try {
+    const entries = await readdir(path.join(paths.extensionsDir, BUILT_IN_MARKETPLACE_SOURCE_ID), {
+      withFileTypes: true,
+    });
+    return new Set(entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name));
+  } catch {
+    return new Set();
+  }
 }
 
 export async function listMarketplaceCatalog(

@@ -682,6 +682,10 @@
     "addFromUrl": "URL から追加",
     "tabAll": "すべて",
     "featured": "注目",
+    "categories": {
+      "development": "開発",
+      "other": "その他"
+    },
     "other": "その他",
     "seeMoreNamed": "{{names}} を表示",
     "seeMoreWithCount": "{{names}} と他 {{count}} 件を表示",

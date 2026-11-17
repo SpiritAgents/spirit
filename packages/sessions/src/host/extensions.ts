@@ -14,6 +14,7 @@ import {
   collectHostExtensionContributedTools,
   extensionExposesModelContext,
   installSourceForSourceId,
+  localizeExtensionText,
   summarizeDeclaredExtensionContributionPoints,
   type HostExtensionDesktopViewDefinition,
   type HostExtensionDesktopTabDefinition,
@@ -56,6 +57,7 @@ function mapDesktopAuthorizations(
   }
   return authorizations.map((authorization) => ({
     id: authorization.id,
+    displayName: authorization.displayName,
     action: authorization.action,
     ...(configurations?.[authorization.id] === undefined
       ? {}
@@ -152,7 +154,8 @@ export async function buildDesktopExtensionListItems(
           ? {
               contributedTools: item.manifest.contributes.tools.map((tool) => ({
                 name: tool.name,
-                description: tool.description,
+                displayName: tool.presentation!.displayName,
+                summary: tool.presentation!.summary,
                 ...(tool.approvalMode ? { approvalMode: tool.approvalMode } : {}),
                 ...(tool.executionMode ? { executionMode: tool.executionMode } : {}),
               })),
@@ -254,6 +257,7 @@ function isMarketplaceCatalogInstalled(item: HostInstalledExtension): boolean {
 export async function buildDesktopMarketplaceCatalogEntries(
   items: readonly MarketplaceCatalogItem[],
   installedExtensions: readonly import("../types.js").DesktopExtensionListItem[] = [],
+  options: { locale?: string } = {},
 ): Promise<DesktopMarketplaceCatalogEntry[]> {
   const installedById = new Map(installedExtensions.map((extension) => [extension.id, extension]));
   return Promise.all(
@@ -262,30 +266,28 @@ export async function buildDesktopMarketplaceCatalogEntries(
       const manifest = await buildHostExtensionManifestFromDump(
         buildExtensionDumpFromEntry(entry, source.id),
         item.contentDir,
+        options,
       );
 
-      let instructionContributions: DesktopMarketplaceCatalogEntry["instructionContributions"];
-      if (item.contentDir) {
-        const summary = await summarizeDeclaredExtensionContributionPoints({
-          id: `${source.id}/${entry.name}`,
-          sourceId: source.id,
-          relativePath: `${source.id}/${entry.name}`,
-          manifest,
-          directoryPath: item.contentDir,
-          manifestPath: "",
-          installedAtUnixMs: 0,
-          enabled: true,
-          installSource: installSourceForSourceId(source.id),
-        });
-        instructionContributions = summary
-          ? {
-              ...(summary.mcp?.length ? { mcp: summary.mcp } : {}),
-              ...(summary.hooks?.length ? { hooks: summary.hooks } : {}),
-              ...(summary.skills?.length ? { skills: summary.skills } : {}),
-              ...(summary.rules ? { rules: summary.rules } : {}),
-            }
-          : undefined;
-      }
+      const summary = await summarizeDeclaredExtensionContributionPoints({
+        id: `${source.id}/${entry.name}`,
+        sourceId: source.id,
+        relativePath: `${source.id}/${entry.name}`,
+        manifest,
+        directoryPath: item.contentDir ?? "",
+        manifestPath: "",
+        installedAtUnixMs: 0,
+        enabled: true,
+        installSource: installSourceForSourceId(source.id),
+      });
+      const instructionContributions = summary
+        ? {
+            ...(summary.mcp?.length ? { mcp: summary.mcp } : {}),
+            ...(summary.hooks?.length ? { hooks: summary.hooks } : {}),
+            ...(summary.skills?.length ? { skills: summary.skills } : {}),
+            ...(summary.rules ? { rules: summary.rules } : {}),
+          }
+        : undefined;
 
       let iconUrl = item.iconUrl;
       if (iconUrl && !/^https?:\/\//u.test(iconUrl)) {
@@ -302,8 +304,8 @@ export async function buildDesktopMarketplaceCatalogEntries(
         sourceId: source.id,
         sourceName: source.name,
         name: entry.name,
-        displayName: entry.displayName,
-        description: entry.description,
+        displayName: localizeExtensionText(entry, entry.displayName, options.locale),
+        description: localizeExtensionText(entry, entry.description, options.locale),
         version: entry.version,
         ...(entry.author
           ? {
@@ -315,7 +317,13 @@ export async function buildDesktopMarketplaceCatalogEntries(
             }
           : {}),
         ...(entry.category ? { category: entry.category } : {}),
-        ...(entry.keywords?.length ? { keywords: [...entry.keywords] } : {}),
+        ...(entry.keywords?.length
+          ? {
+              keywords: entry.keywords.map((keyword) =>
+                localizeExtensionText(entry, keyword, options.locale),
+              ),
+            }
+          : {}),
         ...(entry.homepage ? { homepage: entry.homepage } : {}),
         ...(entry.featured !== undefined ? { featured: entry.featured } : {}),
         reviewStatus: entry.reviewStatus,
@@ -356,7 +364,8 @@ export async function buildDesktopMarketplaceCatalogEntries(
           ? {
               contributedTools: manifest.contributes.tools.map((tool) => ({
                 name: tool.name,
-                description: tool.description,
+                displayName: tool.presentation!.displayName,
+                summary: tool.presentation!.summary,
                 ...(tool.approvalMode ? { approvalMode: tool.approvalMode } : {}),
                 ...(tool.executionMode ? { executionMode: tool.executionMode } : {}),
               })),
@@ -425,7 +434,6 @@ function mapDesktopTabs(
     icon: tab.icon,
     defaultScope: tab.defaultScope ?? "window-shared",
     ...(tab.authorization ? { authorization: tab.authorization } : {}),
-    ...(tab.nameKey ? { nameKey: tab.nameKey } : {}),
   }));
 }
 

@@ -16,11 +16,22 @@ function validEntry(): Record<string, unknown> {
     version: "1.0.0",
     source: { source: "npm", package: "@spiritagents/extension-hello@1.0.0" },
     icon: "extensions/extension-hello/icon.svg",
-    displayName: "Hello",
-    description: "Example Spirit extension.",
+    defaultLocale: "en",
+    messages: {
+      en: {
+        metadata: {
+          displayName: "Hello",
+          description: "Example Spirit extension.",
+          keywords: { example: "example", smoke: "smoke" },
+        },
+        skills: { example: { displayName: "Example Skill", summary: "Example skill summary." } },
+      },
+    },
+    displayName: { message: "metadata.displayName" },
+    description: { message: "metadata.description" },
     author: { name: "Spirit", email: "support@spirit.dev" },
-    category: "developer-tools",
-    keywords: ["example", "smoke"],
+    category: "development",
+    keywords: [{ message: "metadata.keywords.example" }, { message: "metadata.keywords.smoke" }],
     homepage: "https://spirit.dev/extensions/extension-hello",
     featured: true,
     reviewStatus: "verified",
@@ -28,7 +39,15 @@ function validEntry(): Record<string, unknown> {
       supportedHosts: ["cli", "desktop"],
       activationEvents: ["onStartup"],
       requestedCapabilities: ["skills"],
-      contributes: { skills: true },
+      contributes: {
+        skills: [
+          {
+            name: "example",
+            displayName: { message: "skills.example.displayName" },
+            summary: { message: "skills.example.summary" },
+          },
+        ],
+      },
     },
   };
 }
@@ -62,11 +81,14 @@ test("parseMarketplaceIndex accepts the spec example shape", () => {
   assert.equal(entry.reviewStatus, "verified");
   assert.equal(entry.featured, true);
   assert.deepEqual(entry.author, { name: "Spirit", email: "support@spirit.dev" });
-  assert.deepEqual(entry.keywords, ["example", "smoke"]);
+  assert.deepEqual(entry.keywords, [
+    { message: "metadata.keywords.example" },
+    { message: "metadata.keywords.smoke" },
+  ]);
   assert.equal(entry.homepage, "https://spirit.dev/extensions/extension-hello");
   assert.deepEqual(entry.manifest.supportedHosts, ["cli", "desktop"]);
   assert.deepEqual(entry.manifest.requestedCapabilities, ["skills"]);
-  assert.equal(entry.manifest.contributes?.skills, true);
+  assert.equal(entry.manifest.contributes?.skills?.[0]?.name, "example");
 });
 
 test("parseMarketplaceIndex accepts npm-style person strings for owner and author", () => {
@@ -229,7 +251,15 @@ test("instruction contributions must agree with requestedCapabilities", () => {
   entry["manifest"] = {
     supportedHosts: ["cli"],
     requestedCapabilities: [],
-    contributes: { skills: true },
+    contributes: {
+      skills: [
+        {
+          name: "example",
+          displayName: { message: "skills.example.displayName" },
+          summary: { message: "skills.example.summary" },
+        },
+      ],
+    },
   };
   assert.throws(() => parseMarketplaceIndex(doc), /contributes\.skills but is missing skills/);
   entry["manifest"] = {
@@ -262,25 +292,61 @@ test("displayName and description are required list-level metadata", () => {
   const doc = validIndex();
   const entry = (doc["extensions"] as Record<string, unknown>[])[0]!;
   delete entry["displayName"];
-  assert.throws(() => parseMarketplaceIndex(doc), /displayName must be a non-empty string/);
-  entry["displayName"] = "Hello";
+  assert.throws(() => parseMarketplaceIndex(doc), /displayName must be a message reference/);
+  entry["displayName"] = { message: "metadata.displayName" };
   delete entry["description"];
-  assert.throws(() => parseMarketplaceIndex(doc), /description must be a non-empty string/);
+  assert.throws(() => parseMarketplaceIndex(doc), /description must be a message reference/);
+});
+
+test("locale catalogs must be complete and resolve every declared message", () => {
+  const incomplete = validIndex();
+  const entry = (incomplete["extensions"] as Record<string, unknown>[])[0]!;
+  entry["messages"] = {
+    en: (entry["messages"] as Record<string, unknown>).en,
+    "zh-CN": { metadata: { displayName: "你好" } },
+  };
+  assert.throws(() => parseMarketplaceIndex(incomplete), /same message keys/);
+
+  const unknown = validIndex();
+  const unknownEntry = (unknown["extensions"] as Record<string, unknown>[])[0]!;
+  unknownEntry["displayName"] = { message: "metadata.missing" };
+  assert.throws(() => parseMarketplaceIndex(unknown), /unknown message "metadata.missing"/);
+});
+
+test("locale catalogs preserve interpolation and rich-text placeholders", () => {
+  const doc = validIndex();
+  const entry = (doc["extensions"] as Record<string, unknown>[])[0]!;
+  const english = structuredClone(
+    (entry["messages"] as Record<string, unknown>).en as Record<string, unknown>,
+  );
+  entry["messages"] = {
+    en: english,
+    "zh-CN": structuredClone(english),
+  };
+  const localized = (entry["messages"] as Record<string, { metadata: { description: string } }>)[
+    "zh-CN"
+  ]!;
+  localized.metadata.description = "你好 {{name}}";
+  assert.throws(() => parseMarketplaceIndex(doc), /preserve interpolation variables/);
+});
+
+test("categories use the Spirit taxonomy instead of extension-authored labels", () => {
+  const doc = validIndex();
+  const entry = (doc["extensions"] as Record<string, unknown>[])[0]!;
+  entry["category"] = "developer-tools";
+  assert.throws(() => parseMarketplaceIndex(doc), /category must be one of: development/);
 });
 
 test("parseExtensionDump validates the install-record schema", () => {
   const dump = parseExtensionDump({
+    ...validEntry(),
     schemaVersion: 1,
-    name: "extension-hello",
-    version: "1.0.0",
     sourceId: "built-in",
-    displayName: "Hello",
-    description: "Example Spirit extension.",
     icon: ".spirit/icon.svg",
     manifest: {
       supportedHosts: ["cli"],
       requestedCapabilities: ["skills"],
-      contributes: { skills: true },
+      contributes: (validEntry().manifest as Record<string, unknown>).contributes,
     },
   });
   assert.equal(dump.sourceId, "built-in");
@@ -294,11 +360,8 @@ test("parseExtensionDump validates the install-record schema", () => {
   assert.throws(
     () =>
       parseExtensionDump({
+        ...validEntry(),
         schemaVersion: 1,
-        name: "extension-hello",
-        version: "1.0.0",
-        displayName: "Hello",
-        description: "x",
         manifest: { supportedHosts: ["cli"] },
       }),
     /sourceId must be a non-empty string/,

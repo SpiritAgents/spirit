@@ -909,6 +909,9 @@ importers:
       '@spiritagent/extension-toolkit':
         specifier: workspace:*
         version: link:../extension-toolkit
+      '@spiritagent/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@spiritagent/icons':
         specifier: workspace:*
         version: link:../icons

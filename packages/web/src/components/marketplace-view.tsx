@@ -15,9 +15,6 @@ import { useTranslation } from "react-i18next";
 
 import { ArrowLeft, Blocks, Folder, Sparkles, Store } from "lucide-react";
 
-import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
-import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
-
 import { MarketplaceAddSourceDialog } from "@/components/marketplace-add-source-dialog";
 import { MarketplaceCatalogSection } from "@/components/marketplace-catalog-section";
 import { MarketplaceDetailView } from "@/components/marketplace-detail-view";
@@ -144,7 +141,7 @@ export function MarketplaceView({
   extensionsInstalling = false,
   useTranslucency = false,
 }: MarketplaceViewProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [searchText, setSearchText] = useState("");
   // "all" is a UI-level pseudo source: the merged view over every added marketplace.
   const [activeSourceId, setActiveSourceId] = useState("all");
@@ -347,7 +344,11 @@ export function MarketplaceView({
   // Category sections group the remaining rows; an "Other" section trails
   // them and exists only to follow real category sections — with no
   // categorized rows at all, the rest stays a flat list.
-  const categorySections = groupMarketplaceEntriesByCategory(restExtensions);
+  const categorySections = groupMarketplaceEntriesByCategory(
+    restExtensions,
+    (category) => t(`marketplace.categories.${category}`),
+    i18n.language,
+  );
   const showCategorySections = !isFiltering && categorySections.length > 0;
   // The first section header gets the section-rhythm gap below the tab bar; a
   // flat list keeps the tab row's tighter pb-3-only gap.
@@ -751,10 +752,8 @@ export function MarketplaceView({
                   {showCategorySections ? (
                     categorySections.map((section) => {
                       const sectionTitle = section.category
-                        ? formatTitleFromId(section.category, {
-                            casingOverrides: WELL_KNOWN_CASING_OVERRIDES,
-                          })
-                        : t("marketplace.other");
+                        ? t(`marketplace.categories.${section.category}`)
+                        : t("marketplace.categories.other");
                       return (
                         <MarketplaceCatalogSection
                           key={section.category ?? "other"}

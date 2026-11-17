@@ -1,0 +1,24 @@
+{
+  "metadata": {
+    "displayName": "GitHub",
+    "description": "在 Spirit 中处理拉取请求和自动化。",
+    "keywords": {
+      "pullRequests": "拉取请求",
+      "repositories": "仓库",
+      "automations": "自动化"
+    }
+  },
+  "settings": {
+    "prOverviewRatio": { "title": "拉取请求概览比例" },
+    "prFilesWidth": { "title": "变更文件宽度" }
+  },
+  "authorization": { "oauth": { "displayName": "OAuth" } },
+  "automation": {
+    "activity": {
+      "name": "GitHub",
+      "description": "接收仓库中新拉取请求或问题。"
+    }
+  },
+  "views": { "authorize": { "title": "GitHub" } },
+  "tabs": { "pullRequests": { "name": "拉取请求" } }
+}

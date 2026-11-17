@@ -5,6 +5,7 @@ import path from "node:path";
 import { test } from "vitest";
 
 import { readMarketplaceCatalog, readMarketplaceCatalogForSource } from "./catalog.js";
+import { localizeExtensionText } from "../localization.js";
 import { importPreparedDirectoryToPersonal } from "./import-zip.js";
 import { listAllMarketplaceSources, type MarketplaceHostContext } from "./resolve.js";
 import { addMarketplaceSource } from "./sources.js";
@@ -38,8 +39,14 @@ async function writeUserRegistryEntries(
           name: entryName,
           version: "1.0.0",
           source: `./extensions/${entryName}`,
-          displayName: entryDisplayName,
-          description: `${entryName} extension.`,
+          defaultLocale: "en",
+          messages: {
+            en: {
+              metadata: { displayName: entryDisplayName, description: `${entryName} extension.` },
+            },
+          },
+          displayName: { message: "metadata.displayName" },
+          description: { message: "metadata.description" },
           reviewStatus: "verified",
           ...(featured ? { featured: true } : {}),
           manifest: { supportedHosts: ["desktop"] },
@@ -76,8 +83,14 @@ async function importPersonalExtension(
         name,
         version: "1.0.0",
         sourceId: "self-declared",
-        displayName: displayName ?? name,
-        description: `${name} extension.`,
+        defaultLocale: "en",
+        messages: {
+          en: {
+            metadata: { displayName: displayName ?? name, description: `${name} extension.` },
+          },
+        },
+        displayName: { message: "metadata.displayName" },
+        description: { message: "metadata.description" },
         manifest: { supportedHosts: ["desktop"] },
       },
       null,
@@ -115,7 +128,9 @@ test("readMarketplaceCatalog merges every configured source", async () => {
 
     // The merged catalog sorts globally by display name, not by source order
     // (Personal precedes user sources, yet "Alpha User" precedes "Zebra Personal").
-    const displayOrder = items.map((item) => item.entry.displayName);
+    const displayOrder = items.map((item) =>
+      localizeExtensionText(item.entry, item.entry.displayName, "en"),
+    );
     assert.ok(
       displayOrder.indexOf("Alpha User") < displayOrder.indexOf("Zebra Personal"),
       `expected global display-name order, got: ${displayOrder.join(", ")}`,
@@ -144,7 +159,7 @@ test("readMarketplaceCatalogForSource sorts by display name, not file order", as
 
     const { items } = await readMarketplaceCatalogForSource(context, source);
     assert.deepEqual(
-      items.map((item) => item.entry.displayName),
+      items.map((item) => localizeExtensionText(item.entry, item.entry.displayName, "en")),
       ["Alpha User", "Zebra User"],
     );
   } finally {
@@ -171,7 +186,7 @@ test("readMarketplaceCatalogForSource lists featured entries first", async () =>
 
     const { items } = await readMarketplaceCatalogForSource(context, source);
     assert.deepEqual(
-      items.map((item) => item.entry.displayName),
+      items.map((item) => localizeExtensionText(item.entry, item.entry.displayName, "en")),
       ["Zebra User", "Alpha User"],
     );
   } finally {

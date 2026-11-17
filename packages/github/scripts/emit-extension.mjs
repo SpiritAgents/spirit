@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { GitPullRequest } from "lucide-react";
-import { copyFile, mkdir, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
 const output = path.join(root, "dist/extension");
@@ -32,3 +32,25 @@ await writeFile(
   renderToStaticMarkup(createElement(GitPullRequest, { strokeWidth: 1.75, stroke: "black" })) +
     "\n",
 );
+
+const declaration = JSON.parse(await readFile(path.join(root, "spirit-extension.json"), "utf8"));
+const localesRoot = path.join(root, "locales");
+const messages = {};
+for (const fileName of (await readdir(localesRoot)).sort()) {
+  if (!fileName.endsWith(".json")) continue;
+  const locale = fileName.slice(0, -".json".length);
+  messages[locale] = JSON.parse(await readFile(path.join(localesRoot, fileName), "utf8"));
+}
+const dumpDir = path.join(output, ".spirit");
+await mkdir(dumpDir, { recursive: true });
+await writeFile(
+  path.join(dumpDir, "extension.json"),
+  `${JSON.stringify({ ...declaration, messages }, null, 2)}\n`,
+);
+await mkdir(path.join(output, "locales"), { recursive: true });
+for (const locale of Object.keys(messages)) {
+  await copyFile(
+    path.join(localesRoot, `${locale}.json`),
+    path.join(output, "locales", `${locale}.json`),
+  );
+}

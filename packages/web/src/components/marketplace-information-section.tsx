@@ -3,9 +3,6 @@
 
 import { useTranslation } from "react-i18next";
 
-import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
-import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
-
 import type { DesktopMarketplaceCatalogEntry } from "@/types";
 
 /** Display text for a website link: strip the protocol scheme and trailing slashes. */
@@ -26,9 +23,7 @@ export function MarketplaceInformationSection({ item }: { item: DesktopMarketpla
     rows.push({
       key: "category",
       label: t("marketplace.infoCategory"),
-      // Same well-known casing table as the marketplace list's section headers
-      // (ai → AI, not Ai).
-      value: formatTitleFromId(category, { casingOverrides: WELL_KNOWN_CASING_OVERRIDES }),
+      value: t(`marketplace.categories.${category}`),
     });
   }
   // Version is always present on a catalog entry.

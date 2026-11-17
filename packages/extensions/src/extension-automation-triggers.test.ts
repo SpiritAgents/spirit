@@ -7,6 +7,7 @@ import { test } from "vitest";
 import { collectAutomationTriggerContributions } from "./automation-triggers.js";
 import { createHostExtensionManager, installPreparedExtensionDirectory } from "./index.js";
 import type { ExtensionStateStore } from "./storage.js";
+import { localizedTestPackage } from "@spiritagent/extension-toolkit/test-localization";
 
 async function writeTriggerPackage(
   packageDir: string,
@@ -42,9 +43,7 @@ async function writeTriggerPackage(
       name: "trigger-demo",
       version: "1.0.0",
       sourceId: "personal",
-      displayName: "Trigger Demo",
-      description: "Trigger Demo extension.",
-      manifest: {
+      ...localizedTestPackage("Trigger Demo", "Trigger Demo extension.", {
         supportedHosts: ["desktop"],
         requestedCapabilities: ["secret-storage", "automation-triggers"],
         secretSlots: ["oauthAccessToken"],
@@ -53,7 +52,7 @@ async function writeTriggerPackage(
           automationTriggers: [trigger],
         },
         ...options?.manifestOverrides,
-      },
+      }),
     })}\n`,
   );
   await writeFile(

@@ -18,6 +18,8 @@ export interface MarketplaceCategorySection {
  */
 export function groupMarketplaceEntriesByCategory(
   items: readonly DesktopMarketplaceCatalogEntry[],
+  categoryLabel: (category: string) => string = (category) => category,
+  locale = "en",
 ): MarketplaceCategorySection[] {
   const byCategory = new Map<string, DesktopMarketplaceCatalogEntry[]>();
   const uncategorized: DesktopMarketplaceCatalogEntry[] = [];
@@ -35,7 +37,7 @@ export function groupMarketplaceEntriesByCategory(
     }
   }
   const sections: MarketplaceCategorySection[] = [...byCategory.entries()]
-    .sort(([left], [right]) => left.localeCompare(right, "en"))
+    .sort(([left], [right]) => categoryLabel(left).localeCompare(categoryLabel(right), locale))
     .map(([category, sectionItems]) => ({ category, items: sectionItems }));
   if (sections.length > 0 && uncategorized.length > 0) {
     sections.push({ items: uncategorized });

@@ -692,6 +692,10 @@
     "addFromUrl": "Добавить по URL",
     "tabAll": "Все",
     "featured": "Рекомендуемые",
+    "categories": {
+      "development": "Разработка",
+      "other": "Другие"
+    },
     "other": "Другие",
     "seeMoreNamed": "Показать {{names}}",
     "seeMoreWithCount": "Показать {{names}} и ещё {{count}}",

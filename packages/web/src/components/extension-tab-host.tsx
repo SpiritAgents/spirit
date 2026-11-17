@@ -308,7 +308,7 @@ export function ExtensionTabHost({
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-background p-6 text-center text-sm">
           <p className="text-muted-foreground">
             {t("workspace.extensionTabLoadError", {
-              name: extensionTabDisplayName(contribution, t),
+              name: extensionTabDisplayName(contribution),
             })}
           </p>
           <Button
@@ -324,7 +324,7 @@ export function ExtensionTabHost({
       <iframe
         ref={iframeRef}
         key={attempt}
-        title={tab.tabTitle ?? extensionTabDisplayName(contribution, t)}
+        title={tab.tabTitle ?? extensionTabDisplayName(contribution)}
         sandbox="allow-scripts"
         src={extensionTabPageUrl(tab)}
         className={cn("size-full border-0 bg-transparent", status === "error" && "invisible")}

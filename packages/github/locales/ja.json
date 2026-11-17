@@ -1,0 +1,24 @@
+{
+  "metadata": {
+    "displayName": "GitHub",
+    "description": "プルリクエストと自動化を Spirit で。",
+    "keywords": {
+      "pullRequests": "プルリクエスト",
+      "repositories": "リポジトリ",
+      "automations": "自動化"
+    }
+  },
+  "settings": {
+    "prOverviewRatio": { "title": "プルリクエスト概要の比率" },
+    "prFilesWidth": { "title": "変更ファイルの幅" }
+  },
+  "authorization": { "oauth": { "displayName": "OAuth" } },
+  "automation": {
+    "activity": {
+      "name": "GitHub",
+      "description": "リポジトリの新しいプルリクエストやイシューを受け取ります。"
+    }
+  },
+  "views": { "authorize": { "title": "GitHub" } },
+  "tabs": { "pullRequests": { "name": "プルリクエスト" } }
+}

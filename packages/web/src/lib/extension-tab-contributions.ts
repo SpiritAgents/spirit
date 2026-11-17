@@ -10,11 +10,8 @@ export interface ExtensionTabContribution {
   contribution: DesktopExtensionDesktopTab;
 }
 
-export function extensionTabDisplayName(
-  contribution: DesktopExtensionDesktopTab,
-  translate: (key: string) => string,
-): string {
-  return contribution.nameKey ? translate(contribution.nameKey) : contribution.name;
+export function extensionTabDisplayName(contribution: DesktopExtensionDesktopTab): string {
+  return contribution.name;
 }
 
 export function collectExtensionTabContributions(

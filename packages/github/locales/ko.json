@@ -1,0 +1,24 @@
+{
+  "metadata": {
+    "displayName": "GitHub",
+    "description": "Spirit에서 풀 리퀘스트와 자동화를 처리하세요.",
+    "keywords": {
+      "pullRequests": "풀 리퀘스트",
+      "repositories": "리포지터리",
+      "automations": "자동화"
+    }
+  },
+  "settings": {
+    "prOverviewRatio": { "title": "풀 리퀘스트 개요 비율" },
+    "prFilesWidth": { "title": "변경된 파일 너비" }
+  },
+  "authorization": { "oauth": { "displayName": "OAuth" } },
+  "automation": {
+    "activity": {
+      "name": "GitHub",
+      "description": "리포지터리의 새 풀 리퀘스트 또는 이슈를 받습니다."
+    }
+  },
+  "views": { "authorize": { "title": "GitHub" } },
+  "tabs": { "pullRequests": { "name": "풀 리퀘스트" } }
+}

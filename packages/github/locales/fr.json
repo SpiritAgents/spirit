@@ -1,0 +1,24 @@
+{
+  "metadata": {
+    "displayName": "GitHub",
+    "description": "Pull requests et automatisations, directement dans Spirit.",
+    "keywords": {
+      "pullRequests": "pull requests",
+      "repositories": "dépôts",
+      "automations": "automatisations"
+    }
+  },
+  "settings": {
+    "prOverviewRatio": { "title": "Ratio d’aperçu des pull requests" },
+    "prFilesWidth": { "title": "Largeur des fichiers modifiés" }
+  },
+  "authorization": { "oauth": { "displayName": "OAuth" } },
+  "automation": {
+    "activity": {
+      "name": "GitHub",
+      "description": "Nouvelles pull requests ou issues dans un dépôt."
+    }
+  },
+  "views": { "authorize": { "title": "GitHub" } },
+  "tabs": { "pullRequests": { "name": "Pull Requests" } }
+}

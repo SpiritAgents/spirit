@@ -27,6 +27,8 @@ export interface ExtensionManagementContext {
   spiritDataDir: string;
   hostKind: ExtensionHostKind;
   stateStore?: ExtensionStateStore;
+  /** Current UI locale; a callback keeps long-lived managers reactive to language changes. */
+  locale?: string | (() => string);
 }
 
 export interface ExtensionPaths {

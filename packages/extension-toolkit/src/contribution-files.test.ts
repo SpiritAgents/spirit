@@ -7,22 +7,30 @@ import {
   type MarketplaceContributionFileReaders,
 } from "./contribution-files.js";
 
-const VALID_MCP_JSON = JSON.stringify({ mcpServers: { demo: { command: "demo" } } });
-const VALID_HOOKS_JSON = JSON.stringify({ hooks: [] });
+const MCP_DECLARATION = [{ name: "demo", transport: "stdio" as const }];
+const HOOKS_DECLARATION = [{ event: "sessionStart" }];
+const RULES_DECLARATION = { displayName: {}, summary: {} };
+const SKILLS_DECLARATION = [{ name: "demo-skill" }];
+const VALID_MCP_JSON = JSON.stringify({
+  servers: { demo: { transport: { type: "stdio" } } },
+});
+const VALID_HOOKS_JSON = JSON.stringify({ hooks: { sessionStart: [{}] } });
 const VALID_RULE_MD = "# Rules\n\nBe nice.";
 const VALID_SKILL_MD = "---\nname: demo-skill\ndescription: Demo skill.\n---\n\nBody.";
 
 function noopValidators() {
   return {
-    parseMcpConfigFile(parsed: unknown): void {
-      if (typeof parsed !== "object" || parsed === null || !("mcpServers" in parsed)) {
-        throw new Error("mcpServers missing");
+    parseMcpConfigFile(parsed: unknown) {
+      if (typeof parsed !== "object" || parsed === null || !("servers" in parsed)) {
+        throw new Error("servers missing");
       }
+      return parsed as { servers: Record<string, { transport: { type: "stdio" | "http" } }> };
     },
-    parseHooksConfigFile(parsed: unknown): void {
+    parseHooksConfigFile(parsed: unknown) {
       if (typeof parsed !== "object" || parsed === null || !("hooks" in parsed)) {
         throw new Error("hooks missing");
       }
+      return parsed as { hooks: Record<string, unknown[]> };
     },
   };
 }
@@ -63,7 +71,10 @@ test("no instruction declarations means no file reads", async () => {
 
 test("missing readers reject declared contributions", async () => {
   await assert.rejects(
-    assertDeclaredInstructionContributionFiles({ mcp: true }, { validators: noopValidators() }),
+    assertDeclaredInstructionContributionFiles(
+      { mcp: MCP_DECLARATION },
+      { validators: noopValidators() },
+    ),
     /cannot read extension contribution files/,
   );
 });
@@ -71,27 +82,27 @@ test("missing readers reject declared contributions", async () => {
 test("mcp declaration requires a valid mcp.json", async () => {
   await assert.rejects(
     assertDeclaredInstructionContributionFiles(
-      { mcp: true },
+      { mcp: MCP_DECLARATION },
       { ...readersFromFiles({}), validators: noopValidators() },
     ),
     /file does not exist: mcp.json/,
   );
   await assert.rejects(
     assertDeclaredInstructionContributionFiles(
-      { mcp: true },
+      { mcp: MCP_DECLARATION },
       { ...readersFromFiles({ "mcp.json": "{ not json" }), validators: noopValidators() },
     ),
     /mcp.json is not valid JSON/,
   );
   await assert.rejects(
     assertDeclaredInstructionContributionFiles(
-      { mcp: true },
+      { mcp: MCP_DECLARATION },
       { ...readersFromFiles({ "mcp.json": "{}" }), validators: noopValidators() },
     ),
-    /mcp.json is invalid: mcpServers missing/,
+    /mcp.json is invalid: servers missing/,
   );
   await assertDeclaredInstructionContributionFiles(
-    { mcp: true },
+    { mcp: MCP_DECLARATION },
     { ...readersFromFiles({ "mcp.json": VALID_MCP_JSON }), validators: noopValidators() },
   );
 });
@@ -99,13 +110,13 @@ test("mcp declaration requires a valid mcp.json", async () => {
 test("hooks declaration requires a valid hooks.json", async () => {
   await assert.rejects(
     assertDeclaredInstructionContributionFiles(
-      { hooks: true },
+      { hooks: HOOKS_DECLARATION },
       { ...readersFromFiles({ "hooks.json": "[]" }), validators: noopValidators() },
     ),
     /hooks.json is invalid: hooks missing/,
   );
   await assertDeclaredInstructionContributionFiles(
-    { hooks: true },
+    { hooks: HOOKS_DECLARATION },
     { ...readersFromFiles({ "hooks.json": VALID_HOOKS_JSON }), validators: noopValidators() },
   );
 });
@@ -113,13 +124,13 @@ test("hooks declaration requires a valid hooks.json", async () => {
 test("rules declaration requires a non-empty rule.md", async () => {
   await assert.rejects(
     assertDeclaredInstructionContributionFiles(
-      { rules: true },
+      { rules: RULES_DECLARATION },
       { ...readersFromFiles({ "rule.md": "  \n" }), validators: noopValidators() },
     ),
     /rule.md must not be empty/,
   );
   await assertDeclaredInstructionContributionFiles(
-    { rules: true },
+    { rules: RULES_DECLARATION },
     { ...readersFromFiles({ "rule.md": VALID_RULE_MD }), validators: noopValidators() },
   );
 });
@@ -127,7 +138,7 @@ test("rules declaration requires a non-empty rule.md", async () => {
 test("skills declaration requires at least one valid skills/<name>/SKILL.md", async () => {
   await assert.rejects(
     assertDeclaredInstructionContributionFiles(
-      { skills: true },
+      { skills: SKILLS_DECLARATION },
       {
         ...readersFromFiles({ "skills/demo/SKILL.md": "no frontmatter" }),
         validators: noopValidators(),
@@ -136,7 +147,7 @@ test("skills declaration requires at least one valid skills/<name>/SKILL.md", as
     /no valid skills\/\*\/SKILL.md/,
   );
   await assertDeclaredInstructionContributionFiles(
-    { skills: true },
+    { skills: SKILLS_DECLARATION },
     {
       ...readersFromFiles({ "skills/demo-skill/SKILL.md": VALID_SKILL_MD }),
       validators: noopValidators(),
@@ -147,7 +158,7 @@ test("skills declaration requires at least one valid skills/<name>/SKILL.md", as
 test("fieldPrefix customizes error messages for host call sites", async () => {
   await assert.rejects(
     assertDeclaredInstructionContributionFiles(
-      { skills: true },
+      { skills: SKILLS_DECLARATION },
       {
         ...readersFromFiles({}),
         validators: noopValidators(),

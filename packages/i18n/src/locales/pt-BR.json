@@ -682,6 +682,10 @@
     "addFromUrl": "Adicionar de URL",
     "tabAll": "Todos",
     "featured": "Em destaque",
+    "categories": {
+      "development": "Desenvolvimento",
+      "other": "Outros"
+    },
     "other": "Outros",
     "seeMoreNamed": "Ver {{names}}",
     "seeMoreWithCount": "Ver {{names}} e mais {{count}}",

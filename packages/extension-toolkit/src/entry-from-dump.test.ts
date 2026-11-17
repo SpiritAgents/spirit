@@ -4,6 +4,7 @@ import { test } from "vitest";
 
 import { buildMarketplaceEntryFromDump } from "./entry-from-dump.js";
 import { parseExtensionDumpText } from "./schema.js";
+import { localizedTestFields } from "./test-localization.js";
 
 function dump(overrides: Record<string, unknown> = {}) {
   return parseExtensionDumpText(
@@ -12,17 +13,23 @@ function dump(overrides: Record<string, unknown> = {}) {
       name: "demo-ext",
       version: "1.2.0",
       sourceId: "self-declared",
-      displayName: "Demo",
-      description: "Demo extension.",
+      ...localizedTestFields(),
       icon: "icon.svg",
       author: { name: "Alice", email: "alice@example.com" },
-      category: "developer-tools",
-      keywords: ["demo"],
+      category: "development",
       homepage: "https://example.com/demo-ext",
       manifest: {
         supportedHosts: ["cli"],
         requestedCapabilities: ["skills"],
-        contributes: { skills: true },
+        contributes: {
+          skills: [
+            {
+              name: "demo",
+              displayName: { message: "skills.demo.displayName" },
+              summary: { message: "skills.demo.summary" },
+            },
+          ],
+        },
       },
       ...overrides,
     })}\n`,
@@ -35,13 +42,13 @@ test("carries identity, display, and manifest; drops schemaVersion and sourceId"
   assert.equal(entry.name, "demo-ext");
   assert.equal(entry.version, "1.2.0");
   assert.equal(entry.source, "./extensions/demo-ext");
-  assert.equal(entry.displayName, "Demo");
-  assert.equal(entry.description, "Demo extension.");
+  assert.deepEqual(entry.displayName, { message: "metadata.displayName" });
+  assert.deepEqual(entry.description, { message: "metadata.description" });
   assert.deepEqual(entry.author, { name: "Alice", email: "alice@example.com" });
-  assert.equal(entry.category, "developer-tools");
-  assert.deepEqual(entry.keywords, ["demo"]);
+  assert.equal(entry.category, "development");
+  assert.deepEqual(entry.keywords, [{ message: "metadata.keyword" }]);
   assert.equal(entry.homepage, "https://example.com/demo-ext");
-  assert.deepEqual(entry.manifest.contributes, { skills: true });
+  assert.equal(entry.manifest.contributes?.skills?.[0]?.name, "demo");
   assert.equal(entry.reviewStatus, "unverified");
   assert.ok(!("schemaVersion" in entry));
   assert.ok(!("sourceId" in entry));
