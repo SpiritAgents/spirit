@@ -9,16 +9,155 @@
     }
   },
   "settings": {
-    "prOverviewRatio": { "title": "Пропорция обзора запросов на слияние" },
-    "prFilesWidth": { "title": "Ширина изменённых файлов" }
+    "prOverviewRatio": {
+      "title": "Пропорция обзора запросов на слияние"
+    },
+    "prFilesWidth": {
+      "title": "Ширина изменённых файлов"
+    }
   },
-  "authorization": { "oauth": { "displayName": "OAuth" } },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
   "automation": {
     "activity": {
       "name": "GitHub",
       "description": "Новые запросы на слияние или задачи в репозитории."
     }
   },
-  "views": { "authorize": { "title": "GitHub" } },
-  "tabs": { "pullRequests": { "name": "Запросы на слияние" } }
+  "views": {
+    "authorize": {
+      "title": "GitHub"
+    }
+  },
+  "tabs": {
+    "pullRequests": {
+      "name": "Запросы на слияние"
+    }
+  },
+  "workspace": {
+    "prTab": "Pull Request",
+    "prElectronOnly": "Pull Requests доступны только в десктопной версии Electron.",
+    "prGitHubAuthChecking": "Проверка подключения к GitHub…",
+    "prGitHubAuthorizationRequired": "<authorize>Авторизуйте GitHub</authorize>, чтобы использовать Pull Requests",
+    "prNoRepo": "Рабочее пространство не является Git-репозиторием.",
+    "prNoGitHubOrigin": "Для этого репозитория не найден удалённый репозиторий GitHub.",
+    "prNoOpenPullRequest": "Нет открытых pull request для ветки {{branch}}.",
+    "prListSearchPlaceholder": "Поиск pull requests",
+    "prListTabsAria": "Список pull request",
+    "prListTabOpen": "{{count}} Открытые",
+    "prListTabClosed": "{{count}} Закрытые",
+    "prListLoading": "Загрузка pull requests…",
+    "prListLoadingMore": "Загрузка дополнительных pull requests…",
+    "prListLoadMore": "Загрузить ещё pull requests",
+    "prListEmpty": "Нет pull requests в этом состоянии.",
+    "prListSearchEmpty": "Нет pull requests, соответствующих вашему запросу.",
+    "prListTasksCount_one": "{{count}} задача",
+    "prListTasksCount_other": "{{count}} задач",
+    "prListTasksPartial": "{{completed}} из {{total}} задач",
+    "prListTasksDone": "{{count}} задач выполнено",
+    "prListTasksProgressAria": "Выполнено {{completed}} из {{total}} задач",
+    "prListTasksDoneAria": "Все {{count}} задач выполнены",
+    "prListOpenDetailAria": "Открыть pull request #{{number}}: {{title}}",
+    "prLoading": "Загрузка pull request…",
+    "prLoadingDetail": "Загрузка подробностей…",
+    "prShowDetail": "Показать подробности",
+    "prOpenOnGitHub": "Открыть на GitHub",
+    "prLabels": "Метки: {{labels}}",
+    "prNoDescription": "Нет описания.",
+    "prDetailUnavailable": "Не удалось загрузить подробности pull request.",
+    "prDetailTabsAria": "Подробности pull request",
+    "prResizeOverviewTabs": "Изменить высоту обзора и вкладок",
+    "prTabConversations": "Обсуждения",
+    "prTabCommits": "Коммиты",
+    "prTabChecks": "Проверки",
+    "prTabChanges": "Изменения",
+    "prConversationEmpty": "Обсуждений пока нет.",
+    "prIssueCommentFallback": "Оставил(а) комментарий",
+    "prReviewApproved": "Одобрил(а) эти изменения",
+    "prReviewChangesRequested": "Запросил(а) изменения",
+    "prReviewCommented": "Оставил(а) рецензию",
+    "prReviewDismissed": "Отклонил(а) рецензию",
+    "prReviewThreadOnFile": "Комментарий к {{path}}",
+    "prReviewThreadFallback": "Оставил(а) комментарий к рецензии",
+    "prReviewThreadExpand": "Показать обсуждение",
+    "prReviewThreadCollapse": "Скрыть обсуждение",
+    "prConversationLoadMore": "Загрузить ещё",
+    "prConversationLoadingMore": "Загрузка…",
+    "prChangesLoading": "Загрузка изменённых файлов…",
+    "prChangesEmpty": "В этом pull request нет изменённых файлов.",
+    "prChangesFileExpand": "Показать diff",
+    "prChangesFileCollapse": "Скрыть diff",
+    "prChangesNoPatch": "Diff недоступен для этого файла (слишком большой или бинарный).",
+    "prChangesFileTreeAria": "Изменённые файлы",
+    "prChangesResizeTreeWidth": "Изменить ширину дерева изменённых файлов",
+    "prChangesHasMore": "Дополнительные изменения доступны на GitHub.",
+    "prCommitsLoading": "Загрузка коммитов…",
+    "prCommitsEmpty": "В этом pull request нет коммитов.",
+    "prCommitsHasMore": "Дополнительные коммиты доступны на GitHub.",
+    "prChecksLoading": "Загрузка проверок…",
+    "prChecksEmpty": "Для этого pull request нет проверок.",
+    "prChecksHasMore": "Дополнительные проверки доступны на GitHub.",
+    "prChecksLoadingMore": "Загрузка дополнительных проверок…",
+    "prChecksLoadMore": "Загрузить ещё проверки",
+    "prCheckStateSuccess": "Пройдено",
+    "prCheckStateFailure": "Не пройдено",
+    "prCheckStateInProgress": "Выполняется",
+    "prCheckStatePending": "Не запущено",
+    "prChangesViewOnGitHub": "Открыть на GitHub",
+    "prFileStatusAdded": "Добавлено",
+    "prFileStatusRemoved": "Удалено",
+    "prFileStatusModified": "Изменено",
+    "prFileStatusRenamed": "Переименовано",
+    "prFileStatusCopied": "Скопировано",
+    "prDescriptionHeading": "Описание",
+    "prDraft": "Черновик",
+    "prOpen": "Открыт",
+    "prClosed": "Закрыт",
+    "prMerged": "Слит",
+    "prMergedThisPullRequest": "слил этот pull request",
+    "prMergeable": "Можно слить",
+    "prConflicts": "Есть конфликты",
+    "prMergeStatusUnknown": "Статус слияния неизвестен",
+    "prMergeSquash": "Squash and merge",
+    "prMergeRebase": "Rebase and merge",
+    "prMerging": "Слияние…",
+    "prMergeFailed": "Не удалось выполнить слияние pull request",
+    "prMergeNotMergeable": "Этот pull request пока нельзя слить",
+    "prMergeConflicts": "Конфликты слияния",
+    "prMergeMoreActions": "Дополнительные параметры слияния",
+    "prMarkReadyForReview": "Готово к ревью",
+    "prMarkingReady": "Отмечаем готовность…",
+    "prMarkReadyFailed": "Не удалось отметить pull request как готовый к ревью",
+    "addSelectionToChat": "Добавить в чат"
+  },
+  "github": {
+    "connect": "Подключить GitHub",
+    "disconnect": "Отключить",
+    "connectedAs": "Подключено как @{{login}}",
+    "waiting": "Ожидание авторизации",
+    "openDevicePage": "Открыть страницу проверки GitHub",
+    "desktopOnly": "Интеграция с GitHub доступна только в десктопном приложении.",
+    "oauthUnavailable": "Авторизация GitHub будет доступна после настройки OAuth-приложения Spirit."
+  },
+  "common": {
+    "back": "Назад",
+    "cancel": "Отмена"
+  },
+  "app": {
+    "merge": "Слияние"
+  },
+  "automations": {
+    "trigger": {
+      "github": "GitHub",
+      "repository": "Репозиторий",
+      "repositorySearchPlaceholder": "Поиск репозиториев",
+      "repositoryEmpty": "Репозитории не найдены",
+      "repositoryLoadFailed": "Не удалось загрузить репозитории. Попробуйте снова.",
+      "pullRequestCreated": "Pull request создан",
+      "issueCreated": "Issue создан"
+    }
+  }
 }

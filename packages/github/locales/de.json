@@ -9,16 +9,155 @@
     }
   },
   "settings": {
-    "prOverviewRatio": { "title": "Verhältnis der Pull-Request-Übersicht" },
-    "prFilesWidth": { "title": "Breite geänderter Dateien" }
+    "prOverviewRatio": {
+      "title": "Verhältnis der Pull-Request-Übersicht"
+    },
+    "prFilesWidth": {
+      "title": "Breite geänderter Dateien"
+    }
   },
-  "authorization": { "oauth": { "displayName": "OAuth" } },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
   "automation": {
     "activity": {
       "name": "GitHub",
       "description": "Neue Pull Requests oder Issues in einem Repository."
     }
   },
-  "views": { "authorize": { "title": "GitHub" } },
-  "tabs": { "pullRequests": { "name": "Pull Requests" } }
+  "views": {
+    "authorize": {
+      "title": "GitHub"
+    }
+  },
+  "tabs": {
+    "pullRequests": {
+      "name": "Pull Requests"
+    }
+  },
+  "workspace": {
+    "prTab": "Pull Request",
+    "prElectronOnly": "Pull Requests sind nur in der Electron Desktop-Version verfügbar.",
+    "prGitHubAuthChecking": "GitHub-Verbindung wird überprüft…",
+    "prGitHubAuthorizationRequired": "<authorize>GitHub autorisieren</authorize>, um Pull Requests zu nutzen",
+    "prNoRepo": "Der Workspace ist kein Git-Repository.",
+    "prNoGitHubOrigin": "Für dieses Repository wurde kein GitHub-Origin-Remote gefunden.",
+    "prNoOpenPullRequest": "Kein offener Pull Request für Branch {{branch}}.",
+    "prListSearchPlaceholder": "Pull Requests durchsuchen",
+    "prListTabsAria": "Pull-Request-Liste",
+    "prListTabOpen": "{{count}} Offen",
+    "prListTabClosed": "{{count}} Geschlossen",
+    "prListLoading": "Pull Requests werden geladen…",
+    "prListLoadingMore": "Weitere Pull Requests werden geladen…",
+    "prListLoadMore": "Weitere Pull Requests laden",
+    "prListEmpty": "Keine Pull Requests in diesem Status.",
+    "prListSearchEmpty": "Keine Pull Requests entsprechen Ihrer Suche.",
+    "prListTasksCount_one": "{{count}} Aufgabe",
+    "prListTasksCount_other": "{{count}} Aufgaben",
+    "prListTasksPartial": "{{completed}} von {{total}} Aufgaben",
+    "prListTasksDone": "{{count}} Aufgaben erledigt",
+    "prListTasksProgressAria": "{{completed}} von {{total}} Aufgaben erledigt",
+    "prListTasksDoneAria": "Alle {{count}} Aufgaben erledigt",
+    "prListOpenDetailAria": "Pull Request #{{number}} öffnen: {{title}}",
+    "prLoading": "Pull Request wird geladen …",
+    "prLoadingDetail": "Details werden geladen …",
+    "prShowDetail": "Details anzeigen",
+    "prOpenOnGitHub": "Auf GitHub öffnen",
+    "prLabels": "Labels: {{labels}}",
+    "prNoDescription": "Keine Beschreibung.",
+    "prDetailUnavailable": "Pull-Request-Details konnten nicht geladen werden.",
+    "prDetailTabsAria": "Pull-Request-Detail",
+    "prResizeOverviewTabs": "Höhe von Übersicht und Tabs anpassen",
+    "prTabConversations": "Unterhaltungen",
+    "prTabCommits": "Commits",
+    "prTabChecks": "Prüfungen",
+    "prTabChanges": "Änderungen",
+    "prConversationEmpty": "Noch keine Unterhaltungsaktivität.",
+    "prIssueCommentFallback": "Hat einen Kommentar hinterlassen",
+    "prReviewApproved": "Hat diese Änderungen genehmigt",
+    "prReviewChangesRequested": "Hat Änderungen angefordert",
+    "prReviewCommented": "Hat eine Bewertung hinterlassen",
+    "prReviewDismissed": "Hat eine Bewertung verworfen",
+    "prReviewThreadOnFile": "Kommentar zu {{path}}",
+    "prReviewThreadFallback": "Hat einen Bewertungskommentar hinterlassen",
+    "prReviewThreadExpand": "Thread anzeigen",
+    "prReviewThreadCollapse": "Thread ausblenden",
+    "prConversationLoadMore": "Weitere Aktivitäten laden",
+    "prConversationLoadingMore": "Weitere Aktivitäten werden geladen …",
+    "prChangesLoading": "Geänderte Dateien werden geladen …",
+    "prChangesEmpty": "Keine geänderten Dateien in diesem Pull-Request.",
+    "prChangesFileExpand": "Dateidiff anzeigen",
+    "prChangesFileCollapse": "Dateidiff ausblenden",
+    "prChangesNoPatch": "Diff für diese Datei nicht verfügbar (zu groß oder binär).",
+    "prChangesFileTreeAria": "Geänderte Dateien",
+    "prChangesResizeTreeWidth": "Breite des Baums geänderter Dateien anpassen",
+    "prChangesHasMore": "Weitere geänderte Dateien sind auf GitHub verfügbar.",
+    "prCommitsLoading": "Commits werden geladen …",
+    "prCommitsEmpty": "Keine Commits in diesem Pull-Request.",
+    "prCommitsHasMore": "Weitere Commits sind auf GitHub verfügbar.",
+    "prChecksLoading": "Prüfungen werden geladen …",
+    "prChecksEmpty": "Keine Prüfungen für diesen Pull-Request gemeldet.",
+    "prChecksHasMore": "Weitere Prüfungen sind auf GitHub verfügbar.",
+    "prChecksLoadingMore": "Weitere Prüfungen werden geladen …",
+    "prChecksLoadMore": "Weitere Prüfungen laden",
+    "prCheckStateSuccess": "Bestanden",
+    "prCheckStateFailure": "Fehlgeschlagen",
+    "prCheckStateInProgress": "In Bearbeitung",
+    "prCheckStatePending": "Nicht gestartet",
+    "prChangesViewOnGitHub": "Auf GitHub ansehen",
+    "prFileStatusAdded": "Hinzugefügt",
+    "prFileStatusRemoved": "Entfernt",
+    "prFileStatusModified": "Geändert",
+    "prFileStatusRenamed": "Umbenannt",
+    "prFileStatusCopied": "Kopiert",
+    "prDescriptionHeading": "Beschreibung",
+    "prDraft": "Entwurf",
+    "prOpen": "Offen",
+    "prClosed": "Geschlossen",
+    "prMerged": "Gemerged",
+    "prMergedThisPullRequest": "hat diesen Pull-Request gemerged",
+    "prMergeable": "Zusammenführbar",
+    "prConflicts": "Hat Konflikte",
+    "prMergeStatusUnknown": "Zusammenführungsstatus unbekannt",
+    "prMergeSquash": "Squash und zusammenführen",
+    "prMergeRebase": "Rebase und zusammenführen",
+    "prMerging": "Führe zusammen…",
+    "prMergeFailed": "Zusammenführen des Pull Requests fehlgeschlagen",
+    "prMergeNotMergeable": "Dieser Pull Request kann noch nicht zusammengeführt werden",
+    "prMergeConflicts": "Zusammenführungskonflikte",
+    "prMergeMoreActions": "Weitere Zusammenführungsoptionen",
+    "prMarkReadyForReview": "Bereit zur Überprüfung",
+    "prMarkingReady": "Markiere als bereit…",
+    "prMarkReadyFailed": "Markieren des Pull Requests als bereit fehlgeschlagen",
+    "addSelectionToChat": "Zum Chat hinzufügen"
+  },
+  "github": {
+    "connect": "GitHub verbinden",
+    "disconnect": "Trennen",
+    "connectedAs": "Verbunden als @{{login}}",
+    "waiting": "Warte auf Autorisierung",
+    "openDevicePage": "GitHub-Verifizierungsseite öffnen",
+    "desktopOnly": "GitHub-Integration ist nur in der Desktop-App verfügbar.",
+    "oauthUnavailable": "Die GitHub-Autorisierung ist erst verfügbar, wenn die Spirit OAuth-App konfiguriert ist."
+  },
+  "common": {
+    "back": "Zurück",
+    "cancel": "Abbrechen"
+  },
+  "app": {
+    "merge": "Zusammenführen"
+  },
+  "automations": {
+    "trigger": {
+      "github": "GitHub",
+      "repository": "Repository",
+      "repositorySearchPlaceholder": "Repositories durchsuchen",
+      "repositoryEmpty": "Keine Repositories gefunden",
+      "repositoryLoadFailed": "Repositories konnten nicht geladen werden. Erneut versuchen.",
+      "pullRequestCreated": "Pull Request erstellt",
+      "issueCreated": "Issue erstellt"
+    }
+  }
 }

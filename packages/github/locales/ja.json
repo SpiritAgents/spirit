@@ -9,16 +9,155 @@
     }
   },
   "settings": {
-    "prOverviewRatio": { "title": "プルリクエスト概要の比率" },
-    "prFilesWidth": { "title": "変更ファイルの幅" }
+    "prOverviewRatio": {
+      "title": "プルリクエスト概要の比率"
+    },
+    "prFilesWidth": {
+      "title": "変更ファイルの幅"
+    }
   },
-  "authorization": { "oauth": { "displayName": "OAuth" } },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
   "automation": {
     "activity": {
       "name": "GitHub",
       "description": "リポジトリの新しいプルリクエストやイシューを受け取ります。"
     }
   },
-  "views": { "authorize": { "title": "GitHub" } },
-  "tabs": { "pullRequests": { "name": "プルリクエスト" } }
+  "views": {
+    "authorize": {
+      "title": "GitHub"
+    }
+  },
+  "tabs": {
+    "pullRequests": {
+      "name": "プルリクエスト"
+    }
+  },
+  "workspace": {
+    "prTab": "プルリクエスト",
+    "prElectronOnly": "プルリクエストは Electron デスクトップ版でのみ利用可能です。",
+    "prGitHubAuthChecking": "GitHub 接続を確認中…",
+    "prGitHubAuthorizationRequired": "Pull Request を使用するには、<authorize>GitHub を認可</authorize>してください",
+    "prNoRepo": "ワークスペースは Git リポジトリではありません。",
+    "prNoGitHubOrigin": "このリポジトリに GitHub の origin リモートが見つかりませんでした。",
+    "prNoOpenPullRequest": "ブランチ {{branch}} に開いているプルリクエストはありません。",
+    "prListSearchPlaceholder": "プルリクエストを検索",
+    "prListTabsAria": "プルリクエスト一覧",
+    "prListTabOpen": "{{count}} 件オープン",
+    "prListTabClosed": "{{count}} 件クローズ",
+    "prListLoading": "プルリクエストを読み込み中…",
+    "prListLoadingMore": "さらにプルリクエストを読み込み中…",
+    "prListLoadMore": "さらにプルリクエストを読み込む",
+    "prListEmpty": "この状態のプルリクエストはありません。",
+    "prListSearchEmpty": "検索条件に一致するプルリクエストはありません。",
+    "prListTasksCount_one": "{{count}} タスク",
+    "prListTasksCount_other": "{{count}} タスク",
+    "prListTasksPartial": "{{completed}} / {{total}} タスク",
+    "prListTasksDone": "{{count}} タスク完了",
+    "prListTasksProgressAria": "{{completed}} / {{total}} タスク完了",
+    "prListTasksDoneAria": "全 {{count}} タスク完了",
+    "prListOpenDetailAria": "プルリクエスト #{{number}} を開く: {{title}}",
+    "prLoading": "プルリクエストを読み込み中…",
+    "prLoadingDetail": "詳細を読み込み中…",
+    "prShowDetail": "詳細を表示",
+    "prOpenOnGitHub": "GitHub で開く",
+    "prLabels": "ラベル: {{labels}}",
+    "prNoDescription": "説明はありません。",
+    "prDetailUnavailable": "プルリクエストの詳細を読み込めませんでした。",
+    "prDetailTabsAria": "プルリクエストの詳細",
+    "prResizeOverviewTabs": "概要とタブの高さをリサイズ",
+    "prTabConversations": "会話",
+    "prTabCommits": "コミット",
+    "prTabChecks": "チェック",
+    "prTabChanges": "変更",
+    "prConversationEmpty": "まだ会話のアクティビティはありません。",
+    "prIssueCommentFallback": "コメントを残しました",
+    "prReviewApproved": "これらの変更を承認しました",
+    "prReviewChangesRequested": "変更を要求しました",
+    "prReviewCommented": "レビューを残しました",
+    "prReviewDismissed": "レビューを却下しました",
+    "prReviewThreadOnFile": "{{path}} にコメント",
+    "prReviewThreadFallback": "レビューコメントを残しました",
+    "prReviewThreadExpand": "スレッドを表示",
+    "prReviewThreadCollapse": "スレッドを隠す",
+    "prConversationLoadMore": "さらにアクティビティを読み込む",
+    "prConversationLoadingMore": "さらにアクティビティを読み込み中…",
+    "prChangesLoading": "変更されたファイルを読み込み中…",
+    "prChangesEmpty": "このプルリクエストに変更されたファイルはありません。",
+    "prChangesFileExpand": "ファイルの差分を表示",
+    "prChangesFileCollapse": "ファイルの差分を隠す",
+    "prChangesNoPatch": "このファイルの差分は利用できません（大きすぎるかバイナリファイルです）。",
+    "prChangesFileTreeAria": "変更されたファイル",
+    "prChangesResizeTreeWidth": "変更ファイルツリーの幅をリサイズ",
+    "prChangesHasMore": "さらに変更されたファイルは GitHub で確認できます。",
+    "prCommitsLoading": "コミットを読み込み中…",
+    "prCommitsEmpty": "このプルリクエストにコミットはありません。",
+    "prCommitsHasMore": "さらにコミットは GitHub で確認できます。",
+    "prChecksLoading": "チェックを読み込み中…",
+    "prChecksEmpty": "このプルリクエストにチェックは報告されていません。",
+    "prChecksHasMore": "さらにチェックは GitHub で確認できます。",
+    "prChecksLoadingMore": "さらにチェックを読み込み中…",
+    "prChecksLoadMore": "さらにチェックを読み込む",
+    "prCheckStateSuccess": "成功",
+    "prCheckStateFailure": "失敗",
+    "prCheckStateInProgress": "進行中",
+    "prCheckStatePending": "未開始",
+    "prChangesViewOnGitHub": "GitHub で表示",
+    "prFileStatusAdded": "追加",
+    "prFileStatusRemoved": "削除",
+    "prFileStatusModified": "変更",
+    "prFileStatusRenamed": "名称変更",
+    "prFileStatusCopied": "コピー",
+    "prDescriptionHeading": "説明",
+    "prDraft": "ドラフト",
+    "prOpen": "オープン",
+    "prClosed": "クローズ",
+    "prMerged": "マージ済み",
+    "prMergedThisPullRequest": "このプルリクエストをマージしました",
+    "prMergeable": "マージ可能",
+    "prConflicts": "コンフリクトあり",
+    "prMergeStatusUnknown": "マージ状態不明",
+    "prMergeSquash": "スカッシュマージ",
+    "prMergeRebase": "リベースマージ",
+    "prMerging": "マージ中…",
+    "prMergeFailed": "プルリクエストのマージに失敗しました",
+    "prMergeNotMergeable": "このプルリクエストはまだマージできません",
+    "prMergeConflicts": "マージコンフリクト",
+    "prMergeMoreActions": "その他のマージオプション",
+    "prMarkReadyForReview": "レビュー可能にする",
+    "prMarkingReady": "準備中…",
+    "prMarkReadyFailed": "プルリクエストをレビュー可能にできませんでした",
+    "addSelectionToChat": "チャットに追加"
+  },
+  "github": {
+    "connect": "GitHub に接続",
+    "disconnect": "切断",
+    "connectedAs": "@{{login}} として接続済み",
+    "waiting": "認証を待機中",
+    "openDevicePage": "GitHub 認証ページを開く",
+    "desktopOnly": "GitHub 連携はデスクトップアプリでのみ利用可能です。",
+    "oauthUnavailable": "Spirit の OAuth アプリが設定されるまで、GitHub 認証は利用できません。"
+  },
+  "common": {
+    "back": "戻る",
+    "cancel": "キャンセル"
+  },
+  "app": {
+    "merge": "マージ"
+  },
+  "automations": {
+    "trigger": {
+      "github": "GitHub",
+      "repository": "リポジトリ",
+      "repositorySearchPlaceholder": "リポジトリを検索",
+      "repositoryEmpty": "リポジトリが見つかりません",
+      "repositoryLoadFailed": "リポジトリの読み込みに失敗しました。もう一度お試しください。",
+      "pullRequestCreated": "プルリクエスト作成時",
+      "issueCreated": "Issue 作成時"
+    }
+  }
 }
