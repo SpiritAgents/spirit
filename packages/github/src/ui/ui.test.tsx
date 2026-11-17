@@ -109,7 +109,11 @@ test("native authorization exposes the user code and keeps loading cancellable",
     ),
   );
   expect(screen.getByText("TEST-CODE")).toBeTruthy();
+  expect(screen.getByText("TEST-CODE").getAttribute("data-spirit-selectable")).toBe("text");
   expect(screen.getByText("Waiting for authorization")).toBeTruthy();
+  expect(screen.getByText("Waiting for authorization").hasAttribute("data-spirit-selectable")).toBe(
+    false,
+  );
   expect(screen.getByRole("button", { name: "Open GitHub verification page" })).toBeTruthy();
 });
 
@@ -125,6 +129,7 @@ test("invalid authorization can be explicitly disconnected in the Native managem
     ),
   );
   expect(screen.getByRole("alert").textContent).toBe("Stored authorization is invalid.");
+  expect(screen.getByRole("alert").hasAttribute("data-spirit-selectable")).toBe(false);
   fireEvent.click(screen.getByRole("button", { name: "Disconnect" }));
   expect(close).toHaveBeenCalledWith({ disconnect: true });
 });

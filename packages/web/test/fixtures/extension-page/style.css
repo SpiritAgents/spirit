@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@spiritagent/ui/theme.css";
+@import "@spiritagent/ui/native-interactions.css";
 @source "../../../../ui/src";
 @custom-variant dark (&:is(.dark *));
 

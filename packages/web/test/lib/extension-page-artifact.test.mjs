@@ -23,6 +23,16 @@ test("native React/Radix/Spirit UI pages build as independent local assets", asy
     assert.match(html, /\.\/assets\/.+\.css/);
     assert.doesNotMatch(html, /importmap|srcdoc|node_modules|@spirit\/desktop-ui/);
     const assets = await readdir(path.join(outDir, "assets"));
+    const css = (
+      await Promise.all(
+        assets
+          .filter((file) => file.endsWith(".css"))
+          .map((file) => readFile(path.join(outDir, "assets", file), "utf8")),
+      )
+    ).join("\n");
+    assert.match(css, /html:not\(\.spirit-clickable-pointer\)/);
+    assert.match(css, /user-select:\s*none/);
+    assert.match(css, /data-spirit-selectable/);
     const js = await readFile(
       path.join(
         outDir,

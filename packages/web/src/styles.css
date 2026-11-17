@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "@spiritagent/ui/theme.css";
+@import "@spiritagent/ui/native-interactions.css";
 @source "../../../packages/ui/src";
 @source "../node_modules/streamdown/dist/*.js";
 @source "../node_modules/@streamdown/code/dist/*.js";
@@ -386,7 +387,7 @@ html.spirit-theme-switching *::after {
 }
 
 /*
- * Workbench chrome is unselectable by default on every host (VS Code model).
+ * Shared native-interactions.css makes chrome unselectable on every host.
  * user-select inherits, so Radix portals in #spirit-ui-scale-root are covered.
  * Existing select-none utilities (Button, menu items, diff gutter, chips must stay off
  * select-none) still win on the element that sets them.
@@ -395,29 +396,17 @@ html.spirit-theme-switching *::after {
  * field is already covered by [contenteditable="true"].
  * The pending-approval card is chrome (title, details, buttons): it is deliberately not in
  * this list — its shell command, diff code, and guidance textarea stay selectable through
- * their own selectors above.
+ * the explicit shared selectors.
  */
-html {
-  -webkit-user-select: none;
-  user-select: none;
-}
-
 html
   :is(
-    input,
-    textarea,
-    select,
-    [contenteditable="true"],
-    [data-spirit-selectable="text"],
     [data-spirit-surface="message-bubble"],
     [data-spirit-surface="turn-error-card"],
     [data-spirit-surface="pending-questions-card"],
-    [data-spirit-markdown-root],
     .monaco-editor,
     .workspace-terminal-xterm,
     .shell-tool-xterm,
-    .xterm,
-    .unified-diff-code
+    .xterm
   ) {
   -webkit-user-select: text;
   user-select: text;
@@ -539,24 +528,6 @@ html.spirit-reduce-motion.spirit-launch-splash-exiting
     @apply font-sans;
   }
 
-  /* Pointer cursor on clickable controls: only applies when "show pointer on hover" is enabled; disabled keeps not-allowed.
-     cmdk always writes data-disabled="true"|"false"; treat "false" as enabled, same as the data-disabled variant. */
-  html.spirit-clickable-pointer button:not(:disabled),
-  html.spirit-clickable-pointer [role="button"]:not([aria-disabled="true"]),
-  html.spirit-clickable-pointer [role="menuitem"]:not([data-disabled]:not([data-disabled="false"])),
-  html.spirit-clickable-pointer [role="option"]:not([data-disabled]:not([data-disabled="false"])),
-  html.spirit-clickable-pointer [role="tab"]:not([aria-disabled="true"]),
-  html.spirit-clickable-pointer [role="switch"]:not([aria-disabled="true"]),
-  html.spirit-clickable-pointer [role="checkbox"]:not([aria-disabled="true"]),
-  html.spirit-clickable-pointer [role="radio"]:not([aria-disabled="true"]),
-  html.spirit-clickable-pointer [role="combobox"]:not([aria-disabled="true"]),
-  html.spirit-clickable-pointer label[for],
-  html.spirit-clickable-pointer summary,
-  html.spirit-clickable-pointer a[href],
-  html.spirit-clickable-pointer [data-spirit-chip][data-chip-navigable] {
-    cursor: pointer;
-  }
-
   /* Chips are atomic, non-text objects embedded in the composer's cursor-text chrome: they must
      never show the inherited text cursor. A navigable chip is one clickable unit (icon + label):
      it upgrades to the pointer cursor only when the preference is enabled (rule above), and the
@@ -601,18 +572,6 @@ html.spirit-reduce-motion.spirit-launch-splash-exiting
     height: var(--spirit-collapsible-content-height) !important;
     opacity: 1 !important;
     animation: none !important;
-  }
-
-  button:disabled,
-  [role="button"][aria-disabled="true"],
-  [role="menuitem"][data-disabled]:not([data-disabled="false"]),
-  [role="option"][data-disabled]:not([data-disabled="false"]),
-  [role="tab"][aria-disabled="true"],
-  [role="switch"][aria-disabled="true"],
-  [role="checkbox"][aria-disabled="true"],
-  [role="radio"][aria-disabled="true"],
-  [role="combobox"][aria-disabled="true"] {
-    cursor: not-allowed;
   }
 }
 
@@ -960,19 +919,6 @@ html.spirit-clickable-pointer :is(.workspace-terminal-xterm, .shell-tool-xterm) 
 }
 :is(.workspace-terminal-xterm, .shell-tool-xterm) .xterm-viewport::-webkit-scrollbar-thumb:hover {
   background: color-mix(in oklab, var(--foreground) 24%, transparent);
-}
-
-/* When the pointer preference is off, override @layer utilities' cursor-pointer (including variants like enabled:cursor-pointer) */
-html:not(.spirit-clickable-pointer)
-  :is(.cursor-pointer, [class*="cursor-pointer"]):not(:disabled):not([aria-disabled="true"]):not(
-    [data-disabled]:not([data-disabled="false"])
-  ) {
-  cursor: default;
-}
-
-/* <a href> takes cursor:pointer from the UA stylesheet, not a utility class */
-html:not(.spirit-clickable-pointer) a[href] {
-  cursor: default;
 }
 
 /* Before the Composer suggestion menu open animation settles: temporary text cursor to avoid flashing the pointer when expanding under the cursor; the settings-page rules resume once settled */

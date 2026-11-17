@@ -8,19 +8,26 @@ const stylesCss = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), "../../src/styles.css"),
   "utf8",
 );
+const nativeCss = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), "../../../ui/src/native-interactions.css"),
+  "utf8",
+);
 
-const nativeBlock = stylesCss.match(/^html\s*\{([\s\S]*?)\}/m)?.[1];
-const allowBlock = stylesCss.match(/^html\s+:is\(([\s\S]*?)\)\s*\{([\s\S]*?)\}/m);
+const nativeBlock = nativeCss.match(/^html\s*\{([\s\S]*?)\}/m)?.[1];
+const allowBlocks = [
+  ...`${nativeCss}\n${stylesCss}`.matchAll(/^html\s+:is\(([\s\S]*?)\)\s*\{([\s\S]*?)\}/gm),
+];
 
 test("workbench chrome defaults to user-select: none on every host", () => {
   assert.ok(nativeBlock, "expected the shared html rule");
+  assert.match(stylesCss, /@import "@spiritagent\/ui\/native-interactions\.css"/);
   assert.match(nativeBlock, /user-select:\s*none/);
 });
 
 test("content canvases restore user-select: text on every host", () => {
-  assert.ok(allowBlock, "expected the shared html :is(...) allowlist");
-  const [selectors, declarations] = allowBlock.slice(1);
-  assert.match(declarations, /user-select:\s*text/);
+  const textBlocks = allowBlocks.filter((block) => /user-select:\s*text/.test(block[2]));
+  assert.ok(textBlocks.length > 0, "expected explicit selectable content rules");
+  const selectors = textBlocks.map((block) => block[1]).join("\n");
   for (const required of [
     "input",
     "textarea",

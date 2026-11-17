@@ -182,6 +182,29 @@ test("ready requests receive initial parameters, scope, visibility, and host the
   });
 });
 
+test("live pointer preference changes reach the existing Tab document", async () => {
+  const originalClass = document.documentElement.className;
+  const { container, unmount } = render(
+    <ExtensionTabHost tab={tab} contribution={contribution} active />,
+  );
+  const iframe = container.querySelector("iframe")!;
+  const postMessage = vi.spyOn(iframe.contentWindow!, "postMessage");
+  try {
+    for (const enabled of [true, false]) {
+      await act(async () => {
+        document.documentElement.classList.toggle("spirit-clickable-pointer", enabled);
+      });
+      const [context] = postMessage.mock.calls.at(-1)!;
+      expect(context.theme.htmlClassName.includes("spirit-clickable-pointer")).toBe(enabled);
+      expect(container.querySelector("iframe")).toBe(iframe);
+    }
+  } finally {
+    unmount();
+    document.documentElement.className = originalClass;
+    postMessage.mockRestore();
+  }
+});
+
 test("page requests are identity checked and answered on the same channel", async () => {
   const onRequest = vi.fn().mockResolvedValue({ answer: 42 });
   const onChrome = vi.fn().mockResolvedValue(undefined);

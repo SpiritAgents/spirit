@@ -11,6 +11,7 @@
   "files": [
     "dist",
     "src/theme.css",
+    "src/native-interactions.css",
     "src/rendering/*.css",
     "LICENSE",
     "README.md"
@@ -240,6 +241,7 @@
       "default": "./dist/filtered-overlay-menu.js"
     },
     "./theme.css": "./src/theme.css",
+    "./native-interactions.css": "./src/native-interactions.css",
     "./rendering": {
       "types": "./dist/rendering/index.d.ts",
       "default": "./dist/rendering/index.js"

@@ -8,6 +8,19 @@ Shared React primitives for Spirit desktop and the marketing site. Apps supply t
 - React 18+
 - Tailwind CSS v4 (scan `src` with `@source` and import `theme.css`)
 
+## Native Interaction Policy
+
+Workbench and Native extension pages import `@spiritagent/ui/native-interactions.css`
+alongside their own Tailwind stylesheet. This keeps chrome unselectable by default
+and makes clickable controls follow the Host's live `spirit-clickable-pointer`
+document class instead of utility or browser defaults. Disabled controls retain
+their disabled cursor; drag and resize cursors remain independent.
+
+Editable fields, Markdown, and diff code remain selectable. Other copyable content
+opts in with `data-spirit-selectable="text"`. Do not mark entire pages or UI panels
+selectable. The extension page bridge already synchronizes Host document classes;
+extensions must compile these shared rules into their own packaged CSS.
+
 ## Model Picker
 
 Hosts supply `ModelPickerLabelsProvider` and `ModelPickerRuntimeProvider` around their pickers. The shared tooltip host may sit above these providers; [`ModelPickerMenu`](src/model-picker/model-picker-menu.tsx) carries each picker's current labels and runtime into its registered inspector content so hover details retain the same context as the menu.

@@ -1,0 +1,70 @@
+/*
+ * Native workbench and packaged extension pages share this interaction policy.
+ * The Host mirrors spirit-clickable-pointer into each page document in real time.
+ */
+html {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html
+  :is(
+    input,
+    textarea,
+    select,
+    [contenteditable="true"],
+    [data-spirit-selectable="text"],
+    [data-spirit-markdown-root],
+    .unified-diff-code
+  ) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/*
+ * Base roles opt into the pointer preference without replacing intentional
+ * utility cursors, such as grab/grabbing and resize handles.
+ */
+@layer base {
+  html.spirit-clickable-pointer
+    :is(
+      button,
+      [role="button"],
+      [role="menuitem"],
+      [role="option"],
+      [role="tab"],
+      [role="switch"],
+      [role="checkbox"],
+      [role="radio"],
+      [role="combobox"],
+      label[for],
+      summary,
+      a[href],
+      [data-spirit-chip][data-chip-navigable]
+    ):not(:disabled):not([aria-disabled="true"]):not([data-disabled]:not([data-disabled="false"])) {
+    cursor: pointer;
+  }
+}
+
+/* Override pointer utilities and UA link cursors only while the preference is off. */
+html:not(.spirit-clickable-pointer)
+  :is(a[href], .cursor-pointer, [class*="cursor-pointer"]):not(:disabled):not(
+    [aria-disabled="true"]
+  ):not([data-disabled]:not([data-disabled="false"])) {
+  cursor: default;
+}
+
+html
+  :is(
+    button:disabled,
+    [role="button"][aria-disabled="true"],
+    [role="menuitem"][data-disabled]:not([data-disabled="false"]),
+    [role="option"][data-disabled]:not([data-disabled="false"]),
+    [role="tab"][aria-disabled="true"],
+    [role="switch"][aria-disabled="true"],
+    [role="checkbox"][aria-disabled="true"],
+    [role="radio"][aria-disabled="true"],
+    [role="combobox"][aria-disabled="true"]
+  ) {
+  cursor: not-allowed;
+}

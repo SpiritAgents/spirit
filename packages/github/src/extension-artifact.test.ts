@@ -39,5 +39,13 @@ test("both Native pages ship their own browser assets", async () => {
     assert.match(html, /\.\/assets\/.+\.js/);
     assert.match(html, /\.\/assets\/.+\.css/);
     assert.doesNotMatch(html, /importmap|srcdoc|node_modules/);
+    const styles = [...html.matchAll(/href="(\.\/assets\/[^"]+\.css)"/g)];
+    assert.ok(styles.length > 0);
+    const css = (
+      await Promise.all(styles.map((match) => readFile(path.join(root, match[1]!), "utf8")))
+    ).join("\n");
+    assert.match(css, /html:not\(\.spirit-clickable-pointer\)/);
+    assert.match(css, /user-select:\s*none/);
+    assert.match(css, /data-spirit-selectable/);
   }
 });

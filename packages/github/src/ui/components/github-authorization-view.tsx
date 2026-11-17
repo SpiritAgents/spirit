@@ -54,11 +54,7 @@ export function GitHubAuthorizationView({
         ) : null}
       </div>
       {state.phase === "error" || externalError ? (
-        <p
-          role="alert"
-          data-spirit-selectable="text"
-          className="text-center text-sm text-destructive"
-        >
+        <p role="alert" className="text-center text-sm text-destructive">
           {state.phase === "error"
             ? state.unavailable
               ? t("github.oauthUnavailable")

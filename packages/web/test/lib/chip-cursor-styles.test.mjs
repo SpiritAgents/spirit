@@ -8,11 +8,15 @@ const stylesCss = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), "../../src/styles.css"),
   "utf8",
 );
+const nativeCss = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), "../../../ui/src/native-interactions.css"),
+  "utf8",
+);
 
 const CHIP = String.raw`\[data-spirit-chip\]\[data-chip-navigable\]`;
 
 test("navigable chips show the pointer cursor only when the preference is enabled", () => {
-  const pointerBlock = stylesCss.match(
+  const pointerBlock = nativeCss.match(
     new RegExp(String.raw`html\.spirit-clickable-pointer[^{]*${CHIP}[^{]*\{([^}]*)\}`),
   );
   assert.ok(pointerBlock, "expected html.spirit-clickable-pointer chip rule");

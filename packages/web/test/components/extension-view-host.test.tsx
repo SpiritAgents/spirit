@@ -75,6 +75,25 @@ test("state updates preserve the iframe, identity and ready state", () => {
   expect(document.querySelector("iframe")).toBe(frame);
   expect(frame.dataset.extensionPageState).toBe("ready");
 });
+test("live pointer preference changes reach the existing View document", async () => {
+  const originalClass = document.documentElement.className;
+  const { frame } = open();
+  const postMessage = vi.spyOn(frame.contentWindow!, "postMessage");
+  try {
+    for (const enabled of [true, false]) {
+      await act(async () => {
+        document.documentElement.classList.toggle("spirit-clickable-pointer", enabled);
+      });
+      const [context] = postMessage.mock.calls.at(-1)!;
+      expect(context.theme.htmlClassName.includes("spirit-clickable-pointer")).toBe(enabled);
+      expect(document.querySelector("iframe")).toBe(frame);
+    }
+  } finally {
+    act(() => closeAllOpenExtensionViews());
+    document.documentElement.className = originalClass;
+    postMessage.mockRestore();
+  }
+});
 test("only matching frame identities can resize or close", async () => {
   const { frame, result } = open(undefined, 360);
   message(frame, EXTENSION_PAGE_READY);
