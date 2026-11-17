@@ -60,6 +60,41 @@ test("GitHub Automation uses a monochrome contribution glyph instead of the mark
   assert.ok(existsSync(join(resolveBuiltInRegistryRoot(), "extensions/github/icons/github.svg")));
 });
 
+test("GitHub is available for manual installation but is not installed by default", async () => {
+  const index = await readBuiltInMarketplaceIndex();
+  const github = index.extensions.find((entry) => entry.name === "github");
+  assert.ok(github);
+  assert.equal(github.defaultInstalled, false);
+
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-github-opt-in-"));
+  try {
+    const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
+    const seeded = await ensureBuiltInExtensions({ spiritDataDir, hostKind: "desktop", manager });
+    assert.equal(
+      seeded.some((item) => item.id === "built-in/github"),
+      false,
+    );
+    assert.equal(
+      (await manager.list()).some((item) => item.id === "built-in/github"),
+      false,
+    );
+
+    const catalog = await listMarketplaceCatalog({ spiritDataDir, hostKind: "desktop" });
+    assert.equal(catalog.find((item) => item.id === "built-in/github")?.installed, false);
+
+    const installed = await installBuiltInExtension({
+      spiritDataDir,
+      hostKind: "desktop",
+      extensionId: "built-in/github",
+    });
+    assert.equal(installed.id, "built-in/github");
+    const after = await listMarketplaceCatalog({ spiritDataDir, hostKind: "desktop" });
+    assert.equal(after.find((item) => item.id === "built-in/github")?.installed, true);
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+  }
+});
+
 interface FixtureRegistry {
   root: string;
   setVersion(version: string): Promise<void>;

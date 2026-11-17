@@ -24,7 +24,7 @@
       "category": "development",
       "keywords": ["pull requests", "repositories", "automations"],
       "reviewStatus": "verified",
-      "defaultInstalled": true,
+      "defaultInstalled": false,
       "manifest": {
         "supportedHosts": ["desktop"],
         "activationEvents": ["onStartup"],
