@@ -136,6 +136,10 @@
       "types": "./dist/toggle-group.d.ts",
       "default": "./dist/toggle-group.js"
     },
+    "./roving-focus-group": {
+      "types": "./dist/roving-focus-group.d.ts",
+      "default": "./dist/roving-focus-group.js"
+    },
     "./overlay-motion": {
       "types": "./dist/overlay-motion.d.ts",
       "default": "./dist/overlay-motion.js"

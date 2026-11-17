@@ -203,3 +203,10 @@ export {
   FilteredOverlayMenuList,
   FilteredOverlayMenuTrigger,
 } from "./filtered-overlay-menu.js";
+export {
+  RovingFocusAction,
+  RovingFocusGrid,
+  RovingFocusGroup,
+  RovingFocusItem,
+  useVirtualRovingFocus,
+} from "./roving-focus-group.js";
