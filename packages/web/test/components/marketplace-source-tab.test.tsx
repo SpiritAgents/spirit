@@ -32,7 +32,7 @@ describe("MarketplaceSourceTab", () => {
         onRemove={noop}
       />,
     );
-    expect(getByRole("button", { name: "Built-in" }).getAttribute("data-state")).toBe("on");
+    expect(getByRole("tab", { name: "Built-in" }).getAttribute("data-state")).toBe("on");
   });
 
   test("active custom source tab keeps data-state on inside its context menu", () => {
@@ -42,7 +42,7 @@ describe("MarketplaceSourceTab", () => {
     const { getByRole } = render(
       <MarketplaceSourceTab source={makeSource({})} active onSelect={noop} onRemove={noop} />,
     );
-    expect(getByRole("button", { name: "Loopback Market" }).getAttribute("data-state")).toBe("on");
+    expect(getByRole("tab", { name: "Loopback Market" }).getAttribute("data-state")).toBe("on");
   });
 
   test("inactive custom source tab renders data-state off", () => {
@@ -54,6 +54,6 @@ describe("MarketplaceSourceTab", () => {
         onRemove={noop}
       />,
     );
-    expect(getByRole("button", { name: "Loopback Market" }).getAttribute("data-state")).toBe("off");
+    expect(getByRole("tab", { name: "Loopback Market" }).getAttribute("data-state")).toBe("off");
   });
 });
