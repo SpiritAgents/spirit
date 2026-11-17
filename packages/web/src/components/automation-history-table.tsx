@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { RovingFocusGroup, RovingFocusItem } from "@/components/ui/roving-focus-group";
 import {
   DESKTOP_OUTLINE_BORDER,
   DESKTOP_OUTLINE_FILL_HOVER,
@@ -101,25 +102,41 @@ export function AutomationHistoryTable({ runs, onOpenSession }: AutomationHistor
             </TableRow>
           ))}
         </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.map((row) => (
-            <TableRow
-              key={row.id}
-              className={cn("cursor-pointer", DESKTOP_OUTLINE_FILL_HOVER, instantHoverMotionClass)}
-              onClick={() => onOpenSession(row.original.sessionPath)}
-              title={t("automations.openChat")}
-            >
-              {row.getVisibleCells().map((cell) => (
-                <TableCell
-                  key={cell.id}
-                  className={cn("text-foreground/80", cell.column.id === "status" && "text-right")}
+        <RovingFocusGroup asChild orientation="vertical">
+          <TableBody>
+            {table.getRowModel().rows.map((row) => (
+              <RovingFocusItem asChild key={row.id} tabStopId={row.id}>
+                <TableRow
+                  className={cn(
+                    "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50",
+                    DESKTOP_OUTLINE_FILL_HOVER,
+                    instantHoverMotionClass,
+                  )}
+                  onClick={() => onOpenSession(row.original.sessionPath)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onOpenSession(row.original.sessionPath);
+                    }
+                  }}
+                  title={t("automations.openChat")}
                 >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell
+                      key={cell.id}
+                      className={cn(
+                        "text-foreground/80",
+                        cell.column.id === "status" && "text-right",
+                      )}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </RovingFocusItem>
+            ))}
+          </TableBody>
+        </RovingFocusGroup>
       </Table>
     </div>
   );

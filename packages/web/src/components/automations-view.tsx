@@ -21,6 +21,7 @@ import {
   CONVERSATION_MESSAGE_LIST_MAX_W,
 } from "@/lib/conversation-layout-constants";
 import { Button } from "@/components/ui/button";
+import { RovingFocusGroup, RovingFocusItem } from "@/components/ui/roving-focus-group";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -160,22 +161,24 @@ export function AutomationsView({
             {items.length === 0 ? (
               <EmptyCard>{t("automations.empty")}</EmptyCard>
             ) : (
-              <div
-                className={cn(
-                  DESKTOP_ITEM_CARD_SURFACE,
-                  "divide-y divide-border/35 overflow-hidden",
-                  DESKTOP_ITEM_CARD_HOVER_BORDER,
-                )}
-              >
-                {items.map((item) => (
-                  <AutomationListRow
-                    key={item.id}
-                    item={item}
+              <RovingFocusGroup asChild orientation="vertical">
+                <div
+                  className={cn(
+                    DESKTOP_ITEM_CARD_SURFACE,
+                    "divide-y divide-border/35 overflow-hidden",
+                    DESKTOP_ITEM_CARD_HOVER_BORDER,
+                  )}
+                >
+                  {items.map((item) => (
+                    <AutomationListRow
+                      key={item.id}
+                      item={item}
 
-                    onOpen={() => onOpenAutomation(item.id)}
-                  />
-                ))}
-              </div>
+                      onOpen={() => onOpenAutomation(item.id)}
+                    />
+                  ))}
+                </div>
+              </RovingFocusGroup>
             )}
           </AutomationListNav>
         </div>
@@ -276,30 +279,32 @@ function AutomationListRow({
     : item.scheduleLabel;
 
   return (
-    <button
-      type="button"
-      data-automation-id={item.id}
-      onClick={onOpen}
-      className={cn(
-        "flex w-full flex-col gap-1 px-4 py-4 text-left",
-        DESKTOP_OUTLINE_FILL_HOVER,
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-      )}
-    >
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-normal text-foreground">{item.title}</span>
-        {!item.enabled ? (
-          <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-            {t("automations.disabled")}
-          </span>
+    <RovingFocusItem asChild tabStopId={item.id}>
+      <button
+        type="button"
+        data-automation-id={item.id}
+        onClick={onOpen}
+        className={cn(
+          "flex w-full flex-col gap-1 px-4 py-4 text-left",
+          DESKTOP_OUTLINE_FILL_HOVER,
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50",
+        )}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-normal text-foreground">{item.title}</span>
+          {!item.enabled ? (
+            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+              {t("automations.disabled")}
+            </span>
+          ) : null}
+        </div>
+        <p className="text-xs text-muted-foreground">{triggerLabel}</p>
+        {item.triggerError ? (
+          <p data-spirit-selectable="text" className="text-xs text-destructive">
+            {item.triggerError}
+          </p>
         ) : null}
-      </div>
-      <p className="text-xs text-muted-foreground">{triggerLabel}</p>
-      {item.triggerError ? (
-        <p data-spirit-selectable="text" className="text-xs text-destructive">
-          {item.triggerError}
-        </p>
-      ) : null}
-    </button>
+      </button>
+    </RovingFocusItem>
   );
 }

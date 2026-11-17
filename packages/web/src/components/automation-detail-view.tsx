@@ -16,6 +16,7 @@ import {
   CONVERSATION_MESSAGE_LIST_MAX_W,
 } from "@/lib/conversation-layout-constants";
 import { cn } from "@/lib/utils";
+import { RovingFocusGroup, RovingFocusItem } from "@/components/ui/roving-focus-group";
 
 type AutomationDetailViewProps = {
   automationId: string;
@@ -56,29 +57,32 @@ function AutomationDetailTabs({
 
   return (
     <div className="space-y-4">
-      <div
-        className="flex flex-wrap gap-1 pt-0.5"
-        role="tablist"
-        aria-label={t("automations.detailTabsAria")}
-      >
-        {AUTOMATION_DETAIL_TABS.map(({ id, labelKey }) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === id}
-            className={cn(
-              "rounded-md px-3 py-2 text-sm",
-              activeTab === id
-                ? "font-normal text-foreground underline decoration-foreground/80 underline-offset-[10px]"
-                : "text-muted-foreground hover:bg-canvas-hover hover:text-chrome-emphasis",
-            )}
-            onClick={() => onTabChange(id)}
-          >
-            {t(labelKey)}
-          </button>
-        ))}
-      </div>
+      <RovingFocusGroup asChild orientation="horizontal" loop defaultCurrentTabStopId={activeTab}>
+        <div
+          className="flex flex-wrap gap-1 pt-0.5"
+          role="tablist"
+          aria-label={t("automations.detailTabsAria")}
+        >
+          {AUTOMATION_DETAIL_TABS.map(({ id, labelKey }) => (
+            <RovingFocusItem asChild key={id} tabStopId={id} active={activeTab === id}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === id}
+                className={cn(
+                  "rounded-md px-3 py-2 text-sm",
+                  activeTab === id
+                    ? "font-normal text-foreground underline decoration-foreground/80 underline-offset-[10px]"
+                    : "text-muted-foreground hover:bg-canvas-hover hover:text-chrome-emphasis",
+                )}
+                onClick={() => onTabChange(id)}
+              >
+                {t(labelKey)}
+              </button>
+            </RovingFocusItem>
+          ))}
+        </div>
+      </RovingFocusGroup>
       {children}
     </div>
   );
