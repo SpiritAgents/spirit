@@ -38,7 +38,7 @@ function QueueActionButton({ disabled = false, icon, label, onClick }: QueueActi
         "flex w-full cursor-pointer select-none items-center gap-2 rounded-sm text-left outline-none",
         DESKTOP_OVERLAY_LIST_ITEM,
         "text-popover-foreground hover:bg-overlay-hover hover:text-accent-foreground",
-        "focus-visible:bg-overlay-hover focus-visible:text-accent-foreground",
+        "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50",
         "disabled:pointer-events-none disabled:opacity-50",
       )}
       onClick={onClick}

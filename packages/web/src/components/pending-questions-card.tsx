@@ -20,7 +20,7 @@ import type { PendingQuestionsSnapshot } from "@/types";
 const questionRowBleedClass = "-mx-2 box-border w-[calc(100%+1rem)] px-2";
 
 const questionOverlayHoverClass =
-  "hover:bg-overlay-hover focus-visible:bg-overlay-hover aria-expanded:bg-overlay-hover aria-expanded:hover:bg-overlay-hover";
+  "hover:bg-overlay-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50 aria-expanded:bg-overlay-hover aria-expanded:hover:bg-overlay-hover";
 
 const questionOptionSurfaceClass = cn(
   "rounded-lg border-0 bg-transparent py-1.5",

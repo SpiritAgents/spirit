@@ -10,6 +10,18 @@ const css = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), "../../../ui/src/native-interactions.css"),
   "utf8",
 );
+const themeCss = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), "../../../ui/src/theme.css"),
+  "utf8",
+);
+const desktopChrome = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), "../../../web/src/lib/desktop-chrome.ts"),
+  "utf8",
+);
+const sharedChrome = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), "../../../ui/src/chrome.ts"),
+  "utf8",
+);
 
 beforeEach(() => {
   document.documentElement.className = "";
@@ -69,4 +81,15 @@ test("chrome is unselectable while editable fields and explicit content remain s
   for (const content of [...document.body.children].slice(1)) {
     assert.equal(getComputedStyle(content).userSelect, "text");
   }
+});
+
+test("pointer hover utilities exclude keyboard focus", () => {
+  assert.match(themeCss, /@custom-variant hover \(&:not\(:focus-visible\):hover\);/);
+});
+
+test("composer and outline triggers use rings without focus background washes", () => {
+  assert.doesNotMatch(desktopChrome, /focus-visible:bg-canvas-hover/);
+  assert.doesNotMatch(desktopChrome, /focus-visible:bg-outline-fill/);
+  assert.doesNotMatch(sharedChrome, /focus-visible:bg-outline-fill/);
+  assert.doesNotMatch(desktopChrome, /data-\[pointer-hover\]:bg-canvas-hover/);
 });

@@ -31,7 +31,7 @@ export const instantHoverMotionClass = "!transition-[opacity,transform,box-shado
 
 /** Translucent hover underlay; background-color does not participate in transitions (text color changes excluded) */
 export const DESKTOP_INSTANT_HOVER_OVERLAY = cn(
-  "bg-transparent hover:!bg-canvas-hover focus-visible:!bg-canvas-hover",
+  "bg-transparent hover:!bg-canvas-hover",
   "aria-expanded:!bg-canvas-hover",
   instantHoverMotionClass,
 );
@@ -66,7 +66,7 @@ export const DESKTOP_GHOST_MENU_TRIGGER = cn(
 /** Composer chrome trigger (workspace / branch / location / approval): wash, rounded-lg (not pill) */
 export const DESKTOP_GHOST_INLINE_TRIGGER = cn(
   "inline-flex h-7 max-w-full min-w-0 items-center gap-1.5 rounded-lg border-0 bg-transparent px-2 text-left outline-none",
-  "hover:bg-canvas-hover focus-visible:bg-canvas-hover data-[pointer-hover]:bg-canvas-hover",
+  "hover:bg-canvas-hover",
   "aria-expanded:bg-canvas-hover",
   "focus-visible:ring-2 focus-visible:ring-ring/50",
   "disabled:pointer-events-none disabled:opacity-50",
@@ -119,7 +119,7 @@ export const DESKTOP_CHROME_ACTIVE_TEXT = "text-chrome-emphasis";
 export const DESKTOP_CHROME_TOGGLE_ICON_BTN = cn(
   "electron-no-drag size-7 shrink-0 bg-transparent",
   DESKTOP_CHROME_MUTED_TEXT,
-  "hover:bg-canvas-hover hover:text-chrome-emphasis focus-visible:bg-canvas-hover focus-visible:text-chrome-emphasis",
+  "hover:bg-canvas-hover hover:text-chrome-emphasis focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50",
   "aria-expanded:bg-transparent aria-expanded:text-chrome-label",
   "aria-expanded:hover:bg-canvas-hover aria-expanded:hover:text-chrome-emphasis",
   "[&_svg]:size-3.5",
@@ -234,7 +234,7 @@ export const DESKTOP_OUTLINE_HOVER = cn(DESKTOP_OUTLINE_BORDER_HOVER, DESKTOP_OU
 
 /** Keyboard focus: hover border/fill. Mouse click does not keep the wash. */
 export const DESKTOP_OUTLINE_FOCUSED =
-  "focus-visible:border-outline-border-hover focus-visible:bg-outline-fill";
+  "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50";
 
 /** Card hover wash when replacing `background-color` would punch through translucency */
 export const DESKTOP_OUTLINE_FILL_UNDERLAY =
