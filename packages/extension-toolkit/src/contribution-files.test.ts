@@ -179,3 +179,30 @@ test("isValidDeclaredSkillMarkdown enforces frontmatter name/description and dir
     false,
   );
 });
+
+test("presentation declarations exactly match MCP, hook, and skill package contents", async () => {
+  await assert.rejects(
+    assertDeclaredInstructionContributionFiles(
+      { mcp: [{ name: "demo", transport: "http" }] },
+      { ...readersFromFiles({ "mcp.json": VALID_MCP_JSON }), validators: noopValidators() },
+    ),
+    /presentation declarations must match package contents/,
+  );
+  await assert.rejects(
+    assertDeclaredInstructionContributionFiles(
+      { hooks: [{ event: "sessionEnd" }] },
+      { ...readersFromFiles({ "hooks.json": VALID_HOOKS_JSON }), validators: noopValidators() },
+    ),
+    /presentation declarations must match package contents/,
+  );
+  await assert.rejects(
+    assertDeclaredInstructionContributionFiles(
+      { skills: [{ name: "missing-skill" }] },
+      {
+        ...readersFromFiles({ "skills/demo-skill/SKILL.md": VALID_SKILL_MD }),
+        validators: noopValidators(),
+      },
+    ),
+    /presentation declarations must match package contents/,
+  );
+});

@@ -337,6 +337,36 @@ test("categories use the Spirit taxonomy instead of extension-authored labels", 
   assert.throws(() => parseMarketplaceIndex(doc), /category must be one of: development/);
 });
 
+test("manifest presentation fields reject literal copy before host parsing", () => {
+  const tabDoc = validIndex();
+  const tabEntry = (tabDoc["extensions"] as Record<string, unknown>[])[0]!;
+  tabEntry["manifest"] = {
+    supportedHosts: ["desktop"],
+    requestedCapabilities: ["desktop-ui"],
+    contributes: { desktop: { tabs: [{ id: "main", name: "Main" }] } },
+  };
+  assert.throws(() => parseMarketplaceIndex(tabDoc), /tabs\[0\]\.name must be a message reference/);
+
+  const toolDoc = validIndex();
+  const toolEntry = (toolDoc["extensions"] as Record<string, unknown>[])[0]!;
+  toolEntry["manifest"] = {
+    supportedHosts: ["desktop"],
+    requestedCapabilities: ["tool-definitions"],
+    contributes: {
+      tools: [{ name: "demo", description: "English model-facing copy.", inputSchema: {} }],
+    },
+  };
+  assert.throws(() => parseMarketplaceIndex(toolDoc), /presentation must be an object/);
+
+  const settingsDoc = validIndex();
+  const settingsEntry = (settingsDoc["extensions"] as Record<string, unknown>[])[0]!;
+  settingsEntry["manifest"] = {
+    ...(settingsEntry["manifest"] as Record<string, unknown>),
+    settingsSchema: [{ key: "demo", type: "string", title: "Literal title" }],
+  };
+  assert.throws(() => parseMarketplaceIndex(settingsDoc), /settingsSchema\[0\]\.title/);
+});
+
 test("parseExtensionDump validates the install-record schema", () => {
   const dump = parseExtensionDump({
     ...validEntry(),

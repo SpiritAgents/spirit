@@ -527,6 +527,7 @@ function parseCoreFields(
   }
   const homepage = optionalString(value.homepage, `${fieldName}.homepage`);
   const manifest = parseManifest(value.manifest, `${fieldName}.manifest`);
+  assertManifestPresentationFields(value.manifest, `${fieldName}.manifest`);
   assertExtensionMessageReferences(
     localization,
     { displayName, description, keywords, manifest },
@@ -546,6 +547,102 @@ function parseCoreFields(
     ...(homepage ? { homepage } : {}),
     manifest,
   };
+}
+
+function assertManifestPresentationFields(value: unknown, fieldName: string): void {
+  if (!isRecord(value)) {
+    return;
+  }
+  if (isRecord(value.contributes)) {
+    const contributes = value.contributes;
+    forEachRecord(
+      contributes.automationTriggers,
+      `${fieldName}.contributes.automationTriggers`,
+      (entry, field) => {
+        parseLocalizableText(entry.name, `${field}.name`);
+        parseLocalizableText(entry.description, `${field}.description`);
+      },
+    );
+    forEachRecord(
+      contributes.authorizations,
+      `${fieldName}.contributes.authorizations`,
+      (entry, field) => {
+        parseLocalizableText(entry.displayName, `${field}.displayName`);
+      },
+    );
+    forEachRecord(contributes.tools, `${fieldName}.contributes.tools`, (entry, field) => {
+      requiredString(entry.description, `${field}.description`);
+      if (!isRecord(entry.presentation)) {
+        throw new Error(`${field}.presentation must be an object.`);
+      }
+      parseLocalizableText(entry.presentation.displayName, `${field}.presentation.displayName`);
+      parseLocalizableText(entry.presentation.summary, `${field}.presentation.summary`);
+    });
+    if (isRecord(contributes.desktop)) {
+      const desktop = contributes.desktop;
+      forEachRecord(desktop.views, `${fieldName}.contributes.desktop.views`, (entry, field) => {
+        if (entry.title !== undefined) {
+          parseLocalizableText(entry.title, `${field}.title`);
+        }
+      });
+      forEachRecord(desktop.tabs, `${fieldName}.contributes.desktop.tabs`, (entry, field) => {
+        parseLocalizableText(entry.name, `${field}.name`);
+        if ("nameKey" in entry) {
+          throw new Error(
+            `${field}.nameKey is no longer supported; use a message reference in name.`,
+          );
+        }
+      });
+      if (isRecord(desktop.settingsPage) && desktop.settingsPage.title !== undefined) {
+        parseLocalizableText(
+          desktop.settingsPage.title,
+          `${fieldName}.contributes.desktop.settingsPage.title`,
+        );
+      }
+    }
+  }
+  if (Array.isArray(value.settingsSchema)) {
+    for (const [index, entry] of value.settingsSchema.entries()) {
+      const field = `${fieldName}.settingsSchema[${index}]`;
+      if (!isRecord(entry)) {
+        continue;
+      }
+      parseLocalizableText(entry.title, `${field}.title`);
+      if (entry.description !== undefined) {
+        parseLocalizableText(entry.description, `${field}.description`);
+      }
+      if (entry.placeholder !== undefined) {
+        parseLocalizableText(entry.placeholder, `${field}.placeholder`);
+      }
+      if (Array.isArray(entry.options)) {
+        for (const [optionIndex, option] of entry.options.entries()) {
+          if (!isRecord(option)) {
+            continue;
+          }
+          const optionField = `${field}.options[${optionIndex}]`;
+          parseLocalizableText(option.label, `${optionField}.label`);
+          if (option.description !== undefined) {
+            parseLocalizableText(option.description, `${optionField}.description`);
+          }
+        }
+      }
+    }
+  }
+}
+
+function forEachRecord(
+  value: unknown,
+  fieldName: string,
+  visit: (entry: Record<string, unknown>, fieldName: string) => void,
+): void {
+  if (!Array.isArray(value)) {
+    return;
+  }
+  for (const [index, entry] of value.entries()) {
+    if (isRecord(entry)) {
+      visit(entry, `${fieldName}[${index}]`);
+    }
+  }
 }
 
 function parseEntry(value: unknown, index: number): MarketplaceExtensionEntry {
