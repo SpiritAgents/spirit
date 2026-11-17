@@ -575,7 +575,7 @@ export function MarketplaceView({
           <>
             <MarketplaceInstalledExtensionActions
               item={item}
-              authorizationVariant="outline"
+              authorizationVariant="secondary"
               disabled={installBusyIds.has(item.id)}
               onToggleEnabled={() => handleToggleEnabled(item)}
               onRequestUninstall={() => openUninstallDialog(item)}
@@ -585,7 +585,7 @@ export function MarketplaceView({
         ) : isInstallUnsupported(item) ? (
           <Tooltip delayDuration={300} disableHoverableContent>
             <TooltipTrigger>
-              <Button type="button" variant="outline" disabled className="shrink-0 self-center">
+              <Button type="button" variant="secondary" disabled className="shrink-0 self-center">
                 {t("marketplace.install")}
               </Button>
             </TooltipTrigger>
@@ -594,7 +594,7 @@ export function MarketplaceView({
         ) : (
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             disabled={installBusyIds.has(item.id)}
             className="shrink-0 self-center"
             onClick={() => handleInstall(item)}

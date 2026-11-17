@@ -14,7 +14,7 @@ import type { DesktopExtensionAuthorization, DesktopMarketplaceCatalogEntry } fr
 
 type MarketplaceInstalledExtensionActionsProps = {
   item: DesktopMarketplaceCatalogEntry;
-  authorizationVariant: "default" | "outline";
+  authorizationVariant: "default" | "outline" | "secondary";
   disabled?: boolean;
   onToggleEnabled: () => void;
   onRequestUninstall: () => void;
