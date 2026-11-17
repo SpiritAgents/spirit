@@ -9,6 +9,7 @@ import { SettingsListItemHeading } from "@/components/settings/settings-list-ite
 import type { SettingsViewProps } from "@/components/settings/types";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
+import { RovingFocusGroup, RovingFocusItem } from "@/components/ui/roving-focus-group";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
   Dialog,
@@ -237,7 +238,10 @@ export function McpsSettingsPanel({
         </Button>
       </div>
 
-      <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}>
+      <RovingFocusGroup
+        orientation="vertical"
+        className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}
+      >
         {items.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
             {t("settings.noMcpsConfigured")}
@@ -287,21 +291,23 @@ export function McpsSettingsPanel({
                     <p className="text-xs text-muted-foreground">{failureMessage}</p>
                   ) : null}
                 </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="shrink-0 self-start sm:self-center"
-                  disabled={mcpsBusy}
-                  onClick={() => setDeleteTarget({ name: item.name, scope: item.scope })}
-                >
-                  {t("common.delete")}
-                </Button>
+                <RovingFocusItem asChild tabStopId={runtimeKey} focusable={!mcpsBusy}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="shrink-0 self-start sm:self-center"
+                    disabled={mcpsBusy}
+                    onClick={() => setDeleteTarget({ name: item.name, scope: item.scope })}
+                  >
+                    {t("common.delete")}
+                  </Button>
+                </RovingFocusItem>
               </div>
             );
           })
         )}
-      </div>
+      </RovingFocusGroup>
 
       <AlertDialog
         open={deleteTarget !== null}
@@ -345,61 +351,89 @@ export function McpsSettingsPanel({
           <div className="grid gap-3 py-1">
             <div className="grid gap-2">
               <Label>{t("settings.saveLocation")}</Label>
-              <div
-                role="tablist"
-                aria-label={t("settings.saveLocation")}
-                className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
+              <RovingFocusGroup
+                asChild
+                orientation="horizontal"
+                loop
+                defaultCurrentTabStopId={createScope}
               >
-                {localizedMcpCreateScopeOptions.map((opt) => (
-                  <button
-                    key={opt.scope}
-                    type="button"
-                    role="tab"
-                    aria-selected={createScope === opt.scope}
-                    className={cn(
-                      DESKTOP_EDITOR_TAB_CLASS,
-                      createScope === opt.scope
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-chrome-emphasis",
-                    )}
-                    disabled={mcpsBusy}
-                    title={opt.hint}
-                    onClick={() => setCreateScope(opt.scope)}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+                <div
+                  role="tablist"
+                  aria-label={t("settings.saveLocation")}
+                  className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
+                >
+                  {localizedMcpCreateScopeOptions.map((opt) => (
+                    <RovingFocusItem
+                      asChild
+                      key={opt.scope}
+                      tabStopId={opt.scope}
+                      active={createScope === opt.scope}
+                      focusable={!mcpsBusy}
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={createScope === opt.scope}
+                        className={cn(
+                          DESKTOP_EDITOR_TAB_CLASS,
+                          createScope === opt.scope
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-chrome-emphasis",
+                        )}
+                        disabled={mcpsBusy}
+                        title={opt.hint}
+                        onClick={() => setCreateScope(opt.scope)}
+                      >
+                        {opt.label}
+                      </button>
+                    </RovingFocusItem>
+                  ))}
+                </div>
+              </RovingFocusGroup>
               <p className="text-xs text-muted-foreground">
                 {localizedMcpCreateScopeOptions.find((o) => o.scope === createScope)?.hint}
               </p>
             </div>
             <div className="grid gap-2">
               <Label>{t("settings.transportType")}</Label>
-              <div
-                role="tablist"
-                aria-label={t("settings.transportType")}
-                className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
+              <RovingFocusGroup
+                asChild
+                orientation="horizontal"
+                loop
+                defaultCurrentTabStopId={transportType}
               >
-                {(["stdio", "http"] as const).map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    role="tab"
-                    aria-selected={transportType === value}
-                    className={cn(
-                      DESKTOP_EDITOR_TAB_CLASS,
-                      transportType === value
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-chrome-emphasis",
-                    )}
-                    disabled={mcpsBusy}
-                    onClick={() => setTransportType(value)}
-                  >
-                    {mcpTransportTypeLabel(value)}
-                  </button>
-                ))}
-              </div>
+                <div
+                  role="tablist"
+                  aria-label={t("settings.transportType")}
+                  className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
+                >
+                  {(["stdio", "http"] as const).map((value) => (
+                    <RovingFocusItem
+                      asChild
+                      key={value}
+                      tabStopId={value}
+                      active={transportType === value}
+                      focusable={!mcpsBusy}
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={transportType === value}
+                        className={cn(
+                          DESKTOP_EDITOR_TAB_CLASS,
+                          transportType === value
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-chrome-emphasis",
+                        )}
+                        disabled={mcpsBusy}
+                        onClick={() => setTransportType(value)}
+                      >
+                        {mcpTransportTypeLabel(value)}
+                      </button>
+                    </RovingFocusItem>
+                  ))}
+                </div>
+              </RovingFocusGroup>
             </div>
 
             <div className="grid gap-2">

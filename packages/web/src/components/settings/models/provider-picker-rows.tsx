@@ -6,6 +6,7 @@ import {
   providerLabelMetadata,
   type ProviderPickerPresetRow,
 } from "@spiritagent/ui/model-picker";
+import { RovingFocusItem } from "@/components/ui/roving-focus-group";
 
 /** Minimal signature compatible with react-i18next `t`, avoiding a direct dependency on the TFunction generic. */
 export type ProviderLabelTranslate = (key: string, options?: { defaultValue?: string }) => string;
@@ -62,13 +63,19 @@ export function ProviderPickerRowButton({
   onSelect: (id: string) => void;
 }) {
   return (
-    <button
-      type="button"
-      className="flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm hover:bg-overlay-hover focus-visible:bg-overlay-hover focus-visible:outline-none"
-      onClick={() => onSelect(row.id)}
-    >
-      <Sparkles aria-hidden className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
-      <span className="min-w-0 flex-1 truncate">{row.label}</span>
-    </button>
+    <RovingFocusItem asChild tabStopId={row.id}>
+      <button
+        type="button"
+        className="flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm outline-none hover:bg-overlay-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50"
+        onClick={() => onSelect(row.id)}
+      >
+        <Sparkles
+          aria-hidden
+          className="size-4 shrink-0 text-muted-foreground"
+          strokeWidth={1.75}
+        />
+        <span className="min-w-0 flex-1 truncate">{row.label}</span>
+      </button>
+    </RovingFocusItem>
   );
 }

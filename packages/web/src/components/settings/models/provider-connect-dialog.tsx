@@ -18,6 +18,7 @@ import { providerPickerLabel } from "@/components/settings/models/provider-picke
 import { providerLabelKey } from "@spiritagent/ui/model-picker";
 import { joinWithCjkSpacing } from "@/lib/cjk";
 import { Button } from "@/components/ui/button";
+import { RovingFocusGroup, RovingFocusItem } from "@/components/ui/roving-focus-group";
 import {
   Dialog,
   DialogContent,
@@ -713,30 +714,44 @@ export function ProviderConnectDialog({
           {provider === "custom" ? (
             <div className="grid gap-2">
               <Label>{t("settings.modelAddMode")}</Label>
-              <div
-                role="tablist"
-                aria-label={t("settings.modelAddMode")}
-                className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
+              <RovingFocusGroup
+                asChild
+                orientation="horizontal"
+                loop
+                defaultCurrentTabStopId={customConnectMode}
               >
-                {(["single", "bulk"] as const).map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    role="tab"
-                    aria-selected={customConnectMode === value}
-                    className={cn(
-                      DESKTOP_EDITOR_TAB_CLASS,
-                      customConnectMode === value
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-chrome-emphasis",
-                    )}
-                    disabled={busy || previewBusy}
-                    onClick={() => setCustomConnectMode(value)}
-                  >
-                    {value === "single" ? t("settings.addSingle") : t("settings.addAll")}
-                  </button>
-                ))}
-              </div>
+                <div
+                  role="tablist"
+                  aria-label={t("settings.modelAddMode")}
+                  className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
+                >
+                  {(["single", "bulk"] as const).map((value) => (
+                    <RovingFocusItem
+                      asChild
+                      key={value}
+                      tabStopId={value}
+                      active={customConnectMode === value}
+                      focusable={!busy && !previewBusy}
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={customConnectMode === value}
+                        className={cn(
+                          DESKTOP_EDITOR_TAB_CLASS,
+                          customConnectMode === value
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-chrome-emphasis",
+                        )}
+                        disabled={busy || previewBusy}
+                        onClick={() => setCustomConnectMode(value)}
+                      >
+                        {value === "single" ? t("settings.addSingle") : t("settings.addAll")}
+                      </button>
+                    </RovingFocusItem>
+                  ))}
+                </div>
+              </RovingFocusGroup>
             </div>
           ) : null}
           {provider === "custom" && customConnectMode === "single" ? (
@@ -804,32 +819,46 @@ export function ProviderConnectDialog({
           {connectCredentialKind === "bedrock" ? (
             <div className="grid gap-2">
               <Label>{t("settings.bedrockAuthMode")}</Label>
-              <div
-                role="tablist"
-                aria-label={t("settings.bedrockAuthMode")}
-                className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
+              <RovingFocusGroup
+                asChild
+                orientation="horizontal"
+                loop
+                defaultCurrentTabStopId={bedrockConnectMode}
               >
-                {(["bearer", "iam"] as const).map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    role="tab"
-                    aria-selected={bedrockConnectMode === value}
-                    className={cn(
-                      DESKTOP_EDITOR_TAB_CLASS,
-                      bedrockConnectMode === value
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-chrome-emphasis",
-                    )}
-                    disabled={busy || previewBusy}
-                    onClick={() => setBedrockConnectMode(value)}
-                  >
-                    {value === "bearer"
-                      ? t("settings.bedrockAuthBearer")
-                      : t("settings.bedrockAuthIam")}
-                  </button>
-                ))}
-              </div>
+                <div
+                  role="tablist"
+                  aria-label={t("settings.bedrockAuthMode")}
+                  className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
+                >
+                  {(["bearer", "iam"] as const).map((value) => (
+                    <RovingFocusItem
+                      asChild
+                      key={value}
+                      tabStopId={value}
+                      active={bedrockConnectMode === value}
+                      focusable={!busy && !previewBusy}
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={bedrockConnectMode === value}
+                        className={cn(
+                          DESKTOP_EDITOR_TAB_CLASS,
+                          bedrockConnectMode === value
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-chrome-emphasis",
+                        )}
+                        disabled={busy || previewBusy}
+                        onClick={() => setBedrockConnectMode(value)}
+                      >
+                        {value === "bearer"
+                          ? t("settings.bedrockAuthBearer")
+                          : t("settings.bedrockAuthIam")}
+                      </button>
+                    </RovingFocusItem>
+                  ))}
+                </div>
+              </RovingFocusGroup>
             </div>
           ) : null}
           {connectCredentialKind === "bedrock" && bedrockConnectMode === "bearer" ? (
@@ -1036,34 +1065,48 @@ export function ProviderConnectDialog({
           {connectCredentialKind === "vertex" ? (
             <div className="grid gap-2">
               <Label>{t("settings.vertexAuthMode")}</Label>
-              <div
-                role="tablist"
-                aria-label={t("settings.vertexAuthMode")}
-                className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
+              <RovingFocusGroup
+                asChild
+                orientation="horizontal"
+                loop
+                defaultCurrentTabStopId={vertexConnectMode}
               >
-                {(["adc", "service-account", "express"] as const).map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    role="tab"
-                    aria-selected={vertexConnectMode === value}
-                    className={cn(
-                      DESKTOP_EDITOR_TAB_CLASS,
-                      vertexConnectMode === value
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-chrome-emphasis",
-                    )}
-                    disabled={busy || previewBusy}
-                    onClick={() => setVertexConnectMode(value)}
-                  >
-                    {value === "adc"
-                      ? t("settings.vertexAuthAdc")
-                      : value === "service-account"
-                        ? t("settings.vertexAuthServiceAccount")
-                        : t("settings.vertexAuthExpress")}
-                  </button>
-                ))}
-              </div>
+                <div
+                  role="tablist"
+                  aria-label={t("settings.vertexAuthMode")}
+                  className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
+                >
+                  {(["adc", "service-account", "express"] as const).map((value) => (
+                    <RovingFocusItem
+                      asChild
+                      key={value}
+                      tabStopId={value}
+                      active={vertexConnectMode === value}
+                      focusable={!busy && !previewBusy}
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={vertexConnectMode === value}
+                        className={cn(
+                          DESKTOP_EDITOR_TAB_CLASS,
+                          vertexConnectMode === value
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-chrome-emphasis",
+                        )}
+                        disabled={busy || previewBusy}
+                        onClick={() => setVertexConnectMode(value)}
+                      >
+                        {value === "adc"
+                          ? t("settings.vertexAuthAdc")
+                          : value === "service-account"
+                            ? t("settings.vertexAuthServiceAccount")
+                            : t("settings.vertexAuthExpress")}
+                      </button>
+                    </RovingFocusItem>
+                  ))}
+                </div>
+              </RovingFocusGroup>
             </div>
           ) : null}
           {connectCredentialKind === "vertex" && vertexConnectMode === "express" ? (

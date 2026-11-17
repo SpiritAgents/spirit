@@ -2,10 +2,12 @@ import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
 import { TooltipItem, useTooltipTriggerProps } from "@/components/ui/tooltip";
+import { RovingFocusItem } from "@/components/ui/roving-focus-group";
 import { modelSettingsRowAriaLabel } from "@spiritagent/ui/model-picker";
 import { modelCapabilityLabel } from "@/lib/model-capability-label";
 import { cn } from "@/lib/utils";
 import type { SettingsModelProfile } from "./model-defaults";
+import { modelRefKey, settingsModelRef } from "./model-defaults";
 import { DESKTOP_LIST_ITEM_PRIMARY_CLASS } from "@/lib/desktop-typography";
 
 export function ModelSettingsRowButton({
@@ -38,44 +40,46 @@ export function ModelSettingsRowButton({
   const rowAriaLabel = modelSettingsRowAriaLabel(defaultActionLabel, model.name, displayTitle);
 
   return (
-    <button
-      type="button"
-      className={cn(
-        "flex w-full appearance-none flex-col gap-3 bg-transparent px-4 py-3 text-left outline-none enabled:cursor-pointer enabled:hover:bg-canvas-hover focus-visible:ring-2 focus-visible:ring-ring/50 sm:flex-row sm:items-center sm:justify-between sm:gap-4",
-        isHighlighted && "bg-muted/30",
-      )}
-      disabled={disabled}
-      title={showNativeTitle ? rowAriaLabel : undefined}
-      aria-label={rowAriaLabel}
-      onPointerEnter={onPointerEnter}
-      onClick={onDefaultAction}
-    >
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}>{displayTitle}</span>
-          {isActive ? (
-            <Badge variant="secondary" className="text-muted-foreground">
-              {t("settings.currentLanguageModel")}
-            </Badge>
-          ) : null}
-          {isImageDefault ? (
-            <Badge variant="secondary" className="text-muted-foreground">
-              {t("settings.currentImageGen")}
-            </Badge>
-          ) : null}
-          {isSecondaryDefault ? (
-            <Badge variant="secondary" className="text-muted-foreground">
-              {t("settings.currentSecondaryLanguageModel")}
-            </Badge>
-          ) : null}
-          {model.capabilities?.map((capability) => (
-            <Badge key={capability} variant="outline" className="text-muted-foreground">
-              {modelCapabilityLabel(capability)}
-            </Badge>
-          ))}
+    <RovingFocusItem asChild tabStopId={modelRefKey(settingsModelRef(model))} focusable={!disabled}>
+      <button
+        type="button"
+        className={cn(
+          "flex w-full appearance-none flex-col gap-3 bg-transparent px-4 py-3 text-left outline-none enabled:cursor-pointer enabled:hover:bg-canvas-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50 sm:flex-row sm:items-center sm:justify-between sm:gap-4",
+          isHighlighted && "bg-muted/30",
+        )}
+        disabled={disabled}
+        title={showNativeTitle ? rowAriaLabel : undefined}
+        aria-label={rowAriaLabel}
+        onPointerEnter={onPointerEnter}
+        onClick={onDefaultAction}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}>{displayTitle}</span>
+            {isActive ? (
+              <Badge variant="secondary" className="text-muted-foreground">
+                {t("settings.currentLanguageModel")}
+              </Badge>
+            ) : null}
+            {isImageDefault ? (
+              <Badge variant="secondary" className="text-muted-foreground">
+                {t("settings.currentImageGen")}
+              </Badge>
+            ) : null}
+            {isSecondaryDefault ? (
+              <Badge variant="secondary" className="text-muted-foreground">
+                {t("settings.currentSecondaryLanguageModel")}
+              </Badge>
+            ) : null}
+            {model.capabilities?.map((capability) => (
+              <Badge key={capability} variant="outline" className="text-muted-foreground">
+                {modelCapabilityLabel(capability)}
+              </Badge>
+            ))}
+          </div>
         </div>
-      </div>
-    </button>
+      </button>
+    </RovingFocusItem>
   );
 }
 

@@ -6,6 +6,7 @@ import { product } from "@spiritagent/product";
 
 import { SettingsListItemHeading } from "@/components/settings/settings-list-item-heading";
 import { Button } from "@/components/ui/button";
+import { RovingFocusGroup, RovingFocusItem } from "@/components/ui/roving-focus-group";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
   Dialog,
@@ -189,7 +190,10 @@ export function HooksSettingsPanel({
         </div>
       </div>
 
-      <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}>
+      <RovingFocusGroup
+        orientation="vertical"
+        className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}
+      >
         {items.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
             {t("settings.hooksEmpty")}
@@ -213,20 +217,22 @@ export function HooksSettingsPanel({
                   {item.command}
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="shrink-0 self-start sm:self-center"
-                disabled={hooksBusy}
-                onClick={() => setDeleteTarget(item)}
-              >
-                {t("common.delete")}
-              </Button>
+              <RovingFocusItem asChild tabStopId={item.id} focusable={!hooksBusy}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="shrink-0 self-start sm:self-center"
+                  disabled={hooksBusy}
+                  onClick={() => setDeleteTarget(item)}
+                >
+                  {t("common.delete")}
+                </Button>
+              </RovingFocusItem>
             </div>
           ))
         )}
-      </div>
+      </RovingFocusGroup>
 
       <AlertDialog
         open={deleteTarget !== null}
@@ -285,31 +291,45 @@ export function HooksSettingsPanel({
           <div className="grid gap-3 py-1">
             <div className="grid gap-2">
               <Label>{t("settings.saveLocation")}</Label>
-              <div
-                role="tablist"
-                aria-label={t("settings.saveLocation")}
-                className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
+              <RovingFocusGroup
+                asChild
+                orientation="horizontal"
+                loop
+                defaultCurrentTabStopId={createScope}
               >
-                {localizedHookCreateScopeOptions.map((opt) => (
-                  <button
-                    key={opt.scope}
-                    type="button"
-                    role="tab"
-                    aria-selected={createScope === opt.scope}
-                    className={cn(
-                      DESKTOP_EDITOR_TAB_CLASS,
-                      createScope === opt.scope
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-chrome-emphasis",
-                    )}
-                    disabled={hooksBusy}
-                    title={opt.hint}
-                    onClick={() => setCreateScope(opt.scope)}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+                <div
+                  role="tablist"
+                  aria-label={t("settings.saveLocation")}
+                  className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
+                >
+                  {localizedHookCreateScopeOptions.map((opt) => (
+                    <RovingFocusItem
+                      asChild
+                      key={opt.scope}
+                      tabStopId={opt.scope}
+                      active={createScope === opt.scope}
+                      focusable={!hooksBusy}
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={createScope === opt.scope}
+                        className={cn(
+                          DESKTOP_EDITOR_TAB_CLASS,
+                          createScope === opt.scope
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-chrome-emphasis",
+                        )}
+                        disabled={hooksBusy}
+                        title={opt.hint}
+                        onClick={() => setCreateScope(opt.scope)}
+                      >
+                        {opt.label}
+                      </button>
+                    </RovingFocusItem>
+                  ))}
+                </div>
+              </RovingFocusGroup>
               <p className="text-xs text-muted-foreground">
                 {
                   localizedHookCreateScopeOptions.find((option) => option.scope === createScope)

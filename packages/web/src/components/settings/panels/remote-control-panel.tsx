@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { SettingsRow } from "@/components/settings/settings-row";
 import type { SettingsViewProps } from "@/components/settings/types";
 import { Button } from "@/components/ui/button";
+import { RovingFocusGroup, RovingFocusItem } from "@/components/ui/roving-focus-group";
 import { DesktopFormInput } from "@/components/ui/desktop-form-field";
 import { Switch } from "@/components/ui/switch";
 import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
@@ -174,7 +175,10 @@ export function RemoteControlPanel({
         <p id="remote-control-devices-title" className="text-xs text-muted-foreground">
           {t("settings.devices")}
         </p>
-        <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}>
+        <RovingFocusGroup
+          orientation="vertical"
+          className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}
+        >
           {devices.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">
               {t("settings.noDevices")}
@@ -206,27 +210,33 @@ export function RemoteControlPanel({
                       <p className="text-xs text-muted-foreground">{lastUsed}</p>
                     </div>
                   </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="shrink-0"
-                    disabled={revokingId === device.id || !onRevokeRemoteControlDevice}
-                    onClick={() => {
-                      if (!onRevokeRemoteControlDevice) return;
-                      setRevokingId(device.id);
-                      void onRevokeRemoteControlDevice(device.id).finally(() =>
-                        setRevokingId(undefined),
-                      );
-                    }}
+                  <RovingFocusItem
+                    asChild
+                    tabStopId={device.id}
+                    focusable={revokingId !== device.id && Boolean(onRevokeRemoteControlDevice)}
                   >
-                    {t("settings.revokeAccess")}
-                  </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="shrink-0"
+                      disabled={revokingId === device.id || !onRevokeRemoteControlDevice}
+                      onClick={() => {
+                        if (!onRevokeRemoteControlDevice) return;
+                        setRevokingId(device.id);
+                        void onRevokeRemoteControlDevice(device.id).finally(() =>
+                          setRevokingId(undefined),
+                        );
+                      }}
+                    >
+                      {t("settings.revokeAccess")}
+                    </Button>
+                  </RovingFocusItem>
                 </div>
               );
             })
           )}
-        </div>
+        </RovingFocusGroup>
       </section>
       <RemoteControlPairingDialogs
         stage={pairingStage}

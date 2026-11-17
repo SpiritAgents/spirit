@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { themeSelectOptions } from "@/components/settings/constants";
 import type { ThemePreference } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+import { RovingFocusGroup, RovingFocusItem } from "@/components/ui/roving-focus-group";
 
 /** Compact Settings picker is a uniform 0.625 scale of the OOBE default (112×76, gap-4=16px, gap-2=8px). */
 const THEME_PREVIEW_SIZE = {
@@ -41,22 +42,24 @@ export function ThemePreviewPicker({
   const sizeClasses = THEME_PREVIEW_SIZE[size];
 
   return (
-    <div
-      role="radiogroup"
-      aria-label={ariaLabel ?? t("settings.theme")}
-      className={cn("flex", sizeClasses.group, className)}
-    >
-      {themeSelectOptions.map((option) => (
-        <ThemePreviewCard
-          key={option.value}
-          value={option.value}
-          label={t(option.labelKey)}
-          selected={value === option.value}
-          size={size}
-          onSelect={() => onValueChange(option.value)}
-        />
-      ))}
-    </div>
+    <RovingFocusGroup asChild orientation="horizontal" loop defaultCurrentTabStopId={value}>
+      <div
+        role="radiogroup"
+        aria-label={ariaLabel ?? t("settings.theme")}
+        className={cn("flex", sizeClasses.group, className)}
+      >
+        {themeSelectOptions.map((option) => (
+          <ThemePreviewCard
+            key={option.value}
+            value={option.value}
+            label={t(option.labelKey)}
+            selected={value === option.value}
+            size={size}
+            onSelect={() => onValueChange(option.value)}
+          />
+        ))}
+      </div>
+    </RovingFocusGroup>
   );
 }
 
@@ -76,61 +79,63 @@ function ThemePreviewCard({
   const sizeClasses = THEME_PREVIEW_SIZE[size];
 
   return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      onClick={onSelect}
-      className={cn(
-        "group/theme-card flex cursor-pointer flex-col items-center outline-none",
-        sizeClasses.stack,
-      )}
-    >
-      <div
+    <RovingFocusItem asChild tabStopId={value} active={selected}>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={selected}
+        onClick={onSelect}
         className={cn(
-          "relative overflow-hidden border transition-[border-color,box-shadow] duration-150",
-          sizeClasses.card,
-          selected
-            ? "border-primary"
-            : "border-border/60 group-hover/theme-card:border-border group-focus-visible/theme-card:ring-2 group-focus-visible/theme-card:ring-ring/50",
+          "group/theme-card flex cursor-pointer flex-col items-center outline-none",
+          sizeClasses.stack,
         )}
       >
         <div
-          className={
-            size === "compact"
-              ? "absolute left-0 top-0 h-[76px] w-28 origin-top-left scale-[0.625]"
-              : "contents"
-          }
-        >
-          {value === "system" ? (
-            <>
-              {/* Vertical split: each side clips a half-width full preview, avoiding the whole card's light layer showing through at the rounded-corner edges */}
-              <div className="absolute inset-y-0 left-0 w-1/2 overflow-hidden">
-                <div className="absolute inset-y-0 left-0 w-[200%]">
-                  <MiniAppPreview dark={false} />
-                </div>
-              </div>
-              <div className="absolute inset-y-0 right-0 w-1/2 overflow-hidden">
-                <div className="absolute inset-y-0 right-0 w-[200%]">
-                  <MiniAppPreview dark />
-                </div>
-              </div>
-            </>
-          ) : (
-            <MiniAppPreview dark={value === "dark"} />
+          className={cn(
+            "relative overflow-hidden border transition-[border-color,box-shadow] duration-150",
+            sizeClasses.card,
+            selected
+              ? "border-primary"
+              : "border-border/60 group-hover/theme-card:border-border group-focus-visible/theme-card:ring-2 group-focus-visible/theme-card:ring-ring/50",
           )}
+        >
+          <div
+            className={
+              size === "compact"
+                ? "absolute left-0 top-0 h-[76px] w-28 origin-top-left scale-[0.625]"
+                : "contents"
+            }
+          >
+            {value === "system" ? (
+              <>
+                {/* Vertical split: each side clips a half-width full preview, avoiding the whole card's light layer showing through at the rounded-corner edges */}
+                <div className="absolute inset-y-0 left-0 w-1/2 overflow-hidden">
+                  <div className="absolute inset-y-0 left-0 w-[200%]">
+                    <MiniAppPreview dark={false} />
+                  </div>
+                </div>
+                <div className="absolute inset-y-0 right-0 w-1/2 overflow-hidden">
+                  <div className="absolute inset-y-0 right-0 w-[200%]">
+                    <MiniAppPreview dark />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <MiniAppPreview dark={value === "dark"} />
+            )}
+          </div>
         </div>
-      </div>
-      <span
-        className={cn(
-          "text-center transition-colors",
-          sizeClasses.label,
-          selected ? "text-foreground" : "text-muted-foreground",
-        )}
-      >
-        {label}
-      </span>
-    </button>
+        <span
+          className={cn(
+            "text-center transition-colors",
+            sizeClasses.label,
+            selected ? "text-foreground" : "text-muted-foreground",
+          )}
+        >
+          {label}
+        </span>
+      </button>
+    </RovingFocusItem>
   );
 }
 

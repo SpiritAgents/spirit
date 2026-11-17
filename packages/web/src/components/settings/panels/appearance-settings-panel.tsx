@@ -7,6 +7,7 @@ import type { SettingsViewProps } from "@/components/settings/types";
 import { ThemePreviewPicker } from "@/components/theme-preview-picker";
 import { Switch } from "@/components/ui/switch";
 import { Toggle } from "@/components/ui/toggle";
+import { RovingFocusGroup, RovingFocusItem } from "@/components/ui/roving-focus-group";
 import { useReduceMotion } from "@/hooks/useReduceMotion";
 import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { isMacDesktopPlatform, isNativeTranslucencySupported } from "@/lib/desktop-shell";
@@ -103,30 +104,46 @@ export function AppearanceSettingsPanel({
             label={t("settings.reduceMotion")}
             description={t("settings.reduceMotionDescription")}
           >
-            <div
-              className="flex justify-end gap-1"
-              role="radiogroup"
-              aria-label={t("settings.reduceMotion")}
+            <RovingFocusGroup
+              asChild
+              orientation="horizontal"
+              loop
+              defaultCurrentTabStopId={reduceMotion}
             >
-              {REDUCE_MOTION_OPTIONS.map(([value, labelKey]) => {
-                const label = t(labelKey);
-                return (
-                  <Toggle
-                    key={value}
-                    variant="default"
-                    pressed={reduceMotion === value}
-                    onPressedChange={(pressed) => {
-                      if (pressed) {
-                        setReduceMotion(value);
-                      }
-                    }}
-                    aria-label={label}
-                  >
-                    {label}
-                  </Toggle>
-                );
-              })}
-            </div>
+              <div
+                className="flex justify-end gap-1"
+                role="radiogroup"
+                aria-label={t("settings.reduceMotion")}
+              >
+                {REDUCE_MOTION_OPTIONS.map(([value, labelKey]) => {
+                  const label = t(labelKey);
+                  return (
+                    <RovingFocusItem
+                      asChild
+                      key={value}
+                      tabStopId={value}
+                      active={reduceMotion === value}
+                    >
+                      <Toggle
+                        variant="default"
+                        pressed={reduceMotion === value}
+                        onPressedChange={(pressed) => {
+                          if (pressed) {
+                            setReduceMotion(value);
+                          }
+                        }}
+                        role="radio"
+                        aria-checked={reduceMotion === value}
+                        aria-pressed={undefined}
+                        aria-label={label}
+                      >
+                        {label}
+                      </Toggle>
+                    </RovingFocusItem>
+                  );
+                })}
+              </div>
+            </RovingFocusGroup>
           </SettingsRow>
         </div>
       </div>
