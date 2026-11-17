@@ -13,7 +13,9 @@ describe("MarketplaceContributionGroups", () => {
       <MarketplaceContributionGroups
         item={{
           instructionContributions: {
-            skills: [{ name: "hello-loopback", description: "Demo skill." }],
+            skills: [
+              { name: "hello-loopback", displayName: "Hello Loopback", summary: "Demo skill." },
+            ],
           },
         }}
       />,
@@ -41,7 +43,9 @@ describe("MarketplaceContributionGroups", () => {
         item={{
           requestedCapabilities: ["skills"],
           instructionContributions: {
-            skills: [{ name: "hello-loopback", description: "Demo skill." }],
+            skills: [
+              { name: "hello-loopback", displayName: "Hello Loopback", summary: "Demo skill." },
+            ],
           },
         }}
       />,
@@ -53,7 +57,11 @@ describe("MarketplaceContributionGroups", () => {
   test("contributed tools render from the inline manifest declaration", () => {
     const { getByText } = render(
       <MarketplaceContributionGroups
-        item={{ contributedTools: [{ name: "read-file", description: "Read a file." }] }}
+        item={{
+          contributedTools: [
+            { name: "read-file", displayName: "Read File", summary: "Read a file." },
+          ],
+        }}
       />,
     );
     expect(getByText("Tools")).toBeTruthy();
@@ -118,7 +126,9 @@ describe("MarketplaceContributionGroups", () => {
       <MarketplaceContributionGroups
         item={{
           instructionContributions: {
-            skills: [{ name: "hello-loopback", description: "Demo skill." }],
+            skills: [
+              { name: "hello-loopback", displayName: "Hello Loopback", summary: "Demo skill." },
+            ],
           },
         }}
       />,
@@ -129,11 +139,13 @@ describe("MarketplaceContributionGroups", () => {
   });
 });
 
-test("authorizations render static ids without runtime configuration state", () => {
+test("authorizations render explicit names without runtime configuration state", () => {
   const { getByText, queryByText } = render(
     <MarketplaceContributionGroups
       item={{
-        authorizations: [{ id: "oauth", action: "authorize", configured: true }],
+        authorizations: [
+          { id: "oauth", displayName: "OAuth", action: "authorize", configured: true },
+        ],
       }}
     />,
   );

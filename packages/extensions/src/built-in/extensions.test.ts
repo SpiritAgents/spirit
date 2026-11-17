@@ -6,7 +6,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "vitest";
 
-import { parseMarketplaceIndexText } from "@spiritagent/extension-toolkit";
+import { parseMarketplaceIndexText, readExtensionMessage } from "@spiritagent/extension-toolkit";
+import { VALID_LANGUAGES } from "@spiritagent/i18n";
+import { localizedTestFields } from "@spiritagent/extension-toolkit/test-localization";
 
 import { createHostExtensionManager, installPreparedExtensionDirectory } from "../extensions.js";
 import { loadBuiltInState } from "./state.js";
@@ -44,11 +46,45 @@ test("the shipped built-in registry is a valid marketplace.json (dogfood)", asyn
   }
 });
 
+test("every built-in extension ships complete Spirit locale catalogs", async () => {
+  const index = await readBuiltInMarketplaceIndex();
+  for (const entry of index.extensions) {
+    assert.deepEqual(Object.keys(entry.messages).sort(), [...VALID_LANGUAGES].sort(), entry.name);
+    for (const locale of VALID_LANGUAGES) {
+      assert.ok(
+        readExtensionMessage(entry, entry.displayName, locale).trim(),
+        `${entry.name}/${locale}`,
+      );
+      assert.ok(
+        readExtensionMessage(entry, entry.description, locale).trim(),
+        `${entry.name}/${locale}`,
+      );
+    }
+  }
+});
+
+test("the built-in GitHub metadata localizes its description and contributions", async () => {
+  const index = await readBuiltInMarketplaceIndex();
+  const github = index.extensions.find((entry) => entry.name === "github");
+  assert.ok(github);
+  assert.equal(
+    readExtensionMessage(github, github.description, "zh-CN"),
+    "在 Spirit 中处理拉取请求和自动化。",
+  );
+  const triggers = github.manifest.contributes?.automationTriggers;
+  assert.ok(Array.isArray(triggers));
+  const trigger = triggers[0] as { description: { message: string } };
+  assert.equal(
+    readExtensionMessage(github, trigger.description, "zh-CN"),
+    "接收仓库中新拉取请求或问题。",
+  );
+});
+
 test("GitHub Automation uses a monochrome contribution glyph instead of the marketplace logo", async () => {
   const index = await readBuiltInMarketplaceIndex();
   const github = index.extensions.find((entry) => entry.name === "github");
   assert.ok(github);
-  assert.equal(github.description, "Pull requests and automations, right in Spirit.");
+  assert.deepEqual(github.description, { message: "metadata.description" });
   assert.equal(github.icon, "extensions/github/icon.svg");
   const triggers = github.manifest.contributes?.automationTriggers;
   assert.ok(Array.isArray(triggers));
@@ -95,6 +131,38 @@ test("GitHub is available for manual installation but is not installed by defaul
   }
 });
 
+test("installed GitHub manifests follow the manager's current locale", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-github-locale-switch-"));
+  try {
+    let locale = "en";
+    const manager = createHostExtensionManager({
+      spiritDataDir,
+      hostKind: "desktop",
+      locale: () => locale,
+    });
+    await installBuiltInExtension({
+      spiritDataDir,
+      hostKind: "desktop",
+      extensionId: "built-in/github",
+    });
+
+    const english = (await manager.list()).find((item) => item.id === "built-in/github");
+    assert.equal(english?.manifest.contributes?.desktop?.tabs?.[0]?.name, "Pull Requests");
+    assert.equal(english?.manifest.settingsSchema?.[0]?.title, "Pull Request Overview Ratio");
+
+    locale = "ja";
+    const japanese = (await manager.list()).find((item) => item.id === "built-in/github");
+    assert.equal(japanese?.manifest.contributes?.desktop?.tabs?.[0]?.name, "プルリクエスト");
+    assert.equal(japanese?.manifest.settingsSchema?.[0]?.title, "プルリクエスト概要の比率");
+    assert.equal(
+      japanese?.manifest.contributes?.automationTriggers?.[0]?.description,
+      "リポジトリの新しいプルリクエストやイシューを受け取ります。",
+    );
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+  }
+});
+
 interface FixtureRegistry {
   root: string;
   setVersion(version: string): Promise<void>;
@@ -111,8 +179,7 @@ async function writeFixtureRegistry(root: string, version: string): Promise<void
         name: "extension-fixture",
         version,
         source: "./extensions/extension-fixture",
-        displayName: "Fixture",
-        description: "Built-in fixture extension.",
+        ...localizedTestFields("Fixture", "Built-in fixture extension."),
         defaultInstalled: true,
         manifest: { supportedHosts: ["desktop"] },
       },
@@ -120,8 +187,7 @@ async function writeFixtureRegistry(root: string, version: string): Promise<void
         name: "extension-opt-in",
         version,
         source: "./extensions/extension-opt-in",
-        displayName: "Opt-in",
-        description: "Opt-in fixture extension.",
+        ...localizedTestFields("Opt-in", "Opt-in fixture extension."),
         defaultInstalled: false,
         manifest: { supportedHosts: ["desktop"] },
       },
@@ -129,8 +195,7 @@ async function writeFixtureRegistry(root: string, version: string): Promise<void
         name: "extension-cli-only",
         version,
         source: "./extensions/extension-cli-only",
-        displayName: "CLI only",
-        description: "CLI-only fixture extension.",
+        ...localizedTestFields("CLI only", "CLI-only fixture extension."),
         defaultInstalled: true,
         manifest: { supportedHosts: ["cli"] },
       },
@@ -318,8 +383,7 @@ test("marketplace catalog keeps installed personal extensions and drops them aft
           name: "extension-catalog-zip-demo",
           version: "0.0.1",
           sourceId: "personal",
-          displayName: "Catalog zip demo",
-          description: "archive catalog fixture",
+          ...localizedTestFields("Catalog zip demo", "archive catalog fixture"),
           manifest: { supportedHosts: ["desktop"] },
         },
         null,

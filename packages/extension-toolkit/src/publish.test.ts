@@ -8,6 +8,7 @@ import { afterEach, test } from "vitest";
 
 import { publishExtension } from "./publish.js";
 import { parseMarketplaceIndexText } from "./schema.js";
+import { localizedTestFields } from "./test-localization.js";
 
 const fixtureDirs: string[] = [];
 
@@ -36,16 +37,22 @@ function dumpJson(overrides: Record<string, unknown> = {}): string {
       name: "demo-ext",
       version: "1.2.0",
       sourceId: "self-declared",
-      displayName: "Demo",
-      description: "Demo extension.",
+      ...localizedTestFields(),
       icon: "icon.svg",
       author: { name: "Alice", email: "alice@example.com" },
-      keywords: ["demo"],
       homepage: "https://example.com/demo-ext",
       manifest: {
         supportedHosts: ["cli"],
         requestedCapabilities: ["skills"],
-        contributes: { skills: true },
+        contributes: {
+          skills: [
+            {
+              name: "demo",
+              displayName: { message: "skills.demo.displayName" },
+              summary: { message: "skills.demo.summary" },
+            },
+          ],
+        },
       },
       ...overrides,
     },
@@ -67,8 +74,7 @@ const OTHER_ENTRY = {
   name: "other-ext",
   version: "0.3.0",
   source: "./extensions/other-ext",
-  displayName: "Other",
-  description: "Another extension.",
+  ...localizedTestFields("Other", "Another extension."),
   reviewStatus: "verified",
   manifest: { supportedHosts: ["cli"] },
 };
@@ -79,14 +85,21 @@ function existingDemoEntry(overrides: Record<string, unknown> = {}): Record<stri
     version: "1.2.0",
     source: "./extensions/demo-ext",
     icon: "extensions/demo-ext/icon.svg",
-    displayName: "Old Demo",
-    description: "Old description.",
+    ...localizedTestFields("Old Demo", "Old description."),
     reviewStatus: "verified",
     featured: true,
     manifest: {
       supportedHosts: ["cli"],
       requestedCapabilities: ["skills"],
-      contributes: { skills: true },
+      contributes: {
+        skills: [
+          {
+            name: "demo",
+            displayName: { message: "skills.demo.displayName" },
+            summary: { message: "skills.demo.summary" },
+          },
+        ],
+      },
     },
     ...overrides,
   };
@@ -177,7 +190,7 @@ test("publish replaces a same-version entry in place, preserving reviewStatus an
   assert.equal(index.extensions.length, 2);
   const entry = index.extensions[0]!;
   assert.equal(entry.name, "demo-ext");
-  assert.equal(entry.displayName, "Demo");
+  assert.deepEqual(entry.displayName, { message: "metadata.displayName" });
   assert.equal(entry.reviewStatus, "verified");
   assert.equal(entry.featured, true);
   assert.equal(index.extensions[1]!.name, "other-ext");

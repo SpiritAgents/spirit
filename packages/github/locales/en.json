@@ -1,0 +1,163 @@
+{
+  "metadata": {
+    "displayName": "GitHub",
+    "description": "Pull requests and automations, right in Spirit.",
+    "keywords": {
+      "pullRequests": "pull requests",
+      "repositories": "repositories",
+      "automations": "automations"
+    }
+  },
+  "settings": {
+    "prOverviewRatio": {
+      "title": "Pull Request Overview Ratio"
+    },
+    "prFilesWidth": {
+      "title": "Changed Files Width"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "automation": {
+    "activity": {
+      "name": "GitHub",
+      "description": "New pull requests or issues in a repository."
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "GitHub"
+    }
+  },
+  "tabs": {
+    "pullRequests": {
+      "name": "Pull Requests"
+    }
+  },
+  "workspace": {
+    "prTab": "Pull Request",
+    "prElectronOnly": "Pull Requests are only available in the Electron desktop version.",
+    "prGitHubAuthChecking": "Checking GitHub connection…",
+    "prGitHubAuthorizationRequired": "<authorize>Authorize GitHub</authorize> to use Pull Requests",
+    "prNoRepo": "The workspace is not a Git repository.",
+    "prNoGitHubOrigin": "No GitHub origin remote was found for this repository.",
+    "prNoOpenPullRequest": "No open pull request for branch {{branch}}.",
+    "prListSearchPlaceholder": "Search pull requests",
+    "prListTabsAria": "Pull request list",
+    "prListTabOpen": "{{count}} Open",
+    "prListTabClosed": "{{count}} Closed",
+    "prListLoading": "Loading pull requests…",
+    "prListLoadingMore": "Loading more pull requests…",
+    "prListLoadMore": "Load more pull requests",
+    "prListEmpty": "No pull requests in this state.",
+    "prListSearchEmpty": "No pull requests match your search.",
+    "prListTasksCount_one": "{{count}} task",
+    "prListTasksCount_other": "{{count}} tasks",
+    "prListTasksPartial": "{{completed}} of {{total}} tasks",
+    "prListTasksDone": "{{count}} tasks done",
+    "prListTasksProgressAria": "{{completed}} of {{total}} tasks completed",
+    "prListTasksDoneAria": "All {{count}} tasks completed",
+    "prListOpenDetailAria": "Open pull request #{{number}}: {{title}}",
+    "prLoading": "Loading pull request…",
+    "prLoadingDetail": "Loading details…",
+    "prShowDetail": "Show details",
+    "prOpenOnGitHub": "Open on GitHub",
+    "prLabels": "Labels: {{labels}}",
+    "prNoDescription": "No description.",
+    "prDetailUnavailable": "Pull request details could not be loaded.",
+    "prDetailTabsAria": "Pull request detail",
+    "prResizeOverviewTabs": "Resize overview and tabs height",
+    "prTabConversations": "Conversations",
+    "prTabCommits": "Commits",
+    "prTabChecks": "Checks",
+    "prTabChanges": "Changes",
+    "prConversationEmpty": "No conversation activity yet.",
+    "prIssueCommentFallback": "Left a comment",
+    "prReviewApproved": "Approved these changes",
+    "prReviewChangesRequested": "Requested changes",
+    "prReviewCommented": "Left a review",
+    "prReviewDismissed": "Dismissed a review",
+    "prReviewThreadOnFile": "Comment on {{path}}",
+    "prReviewThreadFallback": "Left a review comment",
+    "prReviewThreadExpand": "Show thread",
+    "prReviewThreadCollapse": "Hide thread",
+    "prConversationLoadMore": "Load more activity",
+    "prConversationLoadingMore": "Loading more activity…",
+    "prChangesLoading": "Loading changed files…",
+    "prChangesEmpty": "No changed files in this pull request.",
+    "prChangesFileExpand": "Show file diff",
+    "prChangesFileCollapse": "Hide file diff",
+    "prChangesNoPatch": "Diff unavailable for this file (too large or binary).",
+    "prChangesFileTreeAria": "Changed files",
+    "prChangesResizeTreeWidth": "Resize changed files tree width",
+    "prChangesHasMore": "More changed files are available on GitHub.",
+    "prCommitsLoading": "Loading commits…",
+    "prCommitsEmpty": "No commits in this pull request.",
+    "prCommitsHasMore": "More commits are available on GitHub.",
+    "prChecksLoading": "Loading checks…",
+    "prChecksEmpty": "No checks reported for this pull request.",
+    "prChecksHasMore": "More checks are available on GitHub.",
+    "prChecksLoadingMore": "Loading more checks…",
+    "prChecksLoadMore": "Load more checks",
+    "prCheckStateSuccess": "Passed",
+    "prCheckStateFailure": "Failed",
+    "prCheckStateInProgress": "In progress",
+    "prCheckStatePending": "Not started",
+    "prChangesViewOnGitHub": "View on GitHub",
+    "prFileStatusAdded": "Added",
+    "prFileStatusRemoved": "Removed",
+    "prFileStatusModified": "Modified",
+    "prFileStatusRenamed": "Renamed",
+    "prFileStatusCopied": "Copied",
+    "prDescriptionHeading": "Description",
+    "prDraft": "Draft",
+    "prOpen": "Open",
+    "prClosed": "Closed",
+    "prMerged": "Merged",
+    "prMergedThisPullRequest": "merged this pull request",
+    "prMergeable": "Mergeable",
+    "prConflicts": "Has conflicts",
+    "prMergeStatusUnknown": "Merge status unknown",
+    "prMergeSquash": "Squash and merge",
+    "prMergeRebase": "Rebase and merge",
+    "prMerging": "Merging…",
+    "prMergeFailed": "Failed to merge pull request",
+    "prMergeNotMergeable": "This pull request cannot be merged yet",
+    "prMergeConflicts": "Merge conflicts",
+    "prMergeMoreActions": "More merge options",
+    "prMarkReadyForReview": "Ready for review",
+    "prMarkingReady": "Marking ready…",
+    "prMarkReadyFailed": "Failed to mark pull request ready for review",
+    "addSelectionToChat": "Add to Chat"
+  },
+  "github": {
+    "connect": "Connect GitHub",
+    "disconnect": "Disconnect",
+    "connectedAs": "Connected as @{{login}}",
+    "waiting": "Waiting for authorization",
+    "openDevicePage": "Open GitHub verification page",
+    "desktopOnly": "GitHub integration is only available in the Desktop app.",
+    "oauthUnavailable": "GitHub authorization is unavailable until the Spirit OAuth App is configured."
+  },
+  "common": {
+    "back": "Back",
+    "cancel": "Cancel"
+  },
+  "app": {
+    "merge": "Merge"
+  },
+  "automations": {
+    "trigger": {
+      "github": "GitHub",
+      "repository": "Repository",
+      "repositorySearchPlaceholder": "Search repositories",
+      "repositoryEmpty": "No repositories found",
+      "repositoryLoadFailed": "Failed to load repositories. Try again.",
+      "pullRequestCreated": "Pull request created",
+      "issueCreated": "Issue created"
+    }
+  }
+}

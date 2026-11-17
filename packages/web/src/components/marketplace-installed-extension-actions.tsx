@@ -2,9 +2,6 @@ import { Ellipsis } from "@spiritagent/icons/ellipsis";
 import { ShieldCheck, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
-import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
-
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -76,9 +73,7 @@ export function MarketplaceInstalledExtensionActions({
         <DropdownMenuContent align="end" className="min-w-40 p-0">
           <div className="p-1">
             {configuredAuthorizations.map((authorization) => {
-              const authorizationName = formatTitleFromId(authorization.id, {
-                casingOverrides: WELL_KNOWN_CASING_OVERRIDES,
-              });
+              const authorizationName = authorization.displayName;
               return (
                 <DropdownMenuItem
                   key={authorization.id}

@@ -88,60 +88,45 @@ export async function collectEnabledExtensionInstructionContributions(
 
 export interface HostExtensionMcpContributionSummary {
   name: string;
-  displayName?: string;
+  displayName: string;
   transport: "stdio" | "http";
+}
+
+export interface HostExtensionHookContributionSummary {
+  event: string;
+  displayName: string;
 }
 
 export interface HostExtensionSkillContributionSummary {
   name: string;
-  description: string;
+  displayName: string;
+  summary: string;
 }
 
 export interface HostExtensionRuleContributionSummary {
-  content: string;
+  displayName: string;
+  summary: string;
 }
 
 export interface HostExtensionInstructionContributionSummary {
   mcp?: HostExtensionMcpContributionSummary[];
-  hooks?: HookEventName[];
+  hooks?: HostExtensionHookContributionSummary[];
   skills?: HostExtensionSkillContributionSummary[];
   rules?: HostExtensionRuleContributionSummary;
 }
 
 /** Per-extension contribution-point summary for the extension surface (告知权). Disabled packages still summarize. */
-export async function summarizeDeclaredExtensionContributionPoints(
+export function summarizeDeclaredExtensionContributionPoints(
   extension: HostInstalledExtension,
-  log?: (message: string) => void,
-): Promise<HostExtensionInstructionContributionSummary | undefined> {
+): HostExtensionInstructionContributionSummary | undefined {
   const summary: HostExtensionInstructionContributionSummary = {};
-
-  if (isDeclaredInstructionContribution(extension, "mcp")) {
-    const mcp: McpConfigFile = { servers: {} };
-    await collectExtensionMcpContribution(extension, mcp, {}, log);
-    summary.mcp = Object.entries(mcp.servers).map(([name, server]) => ({
-      name,
-      ...(server.displayName?.trim() ? { displayName: server.displayName.trim() } : {}),
-      transport: server.transport.type,
-    }));
+  const contributes = extension.manifest.contributes;
+  if (contributes?.mcp?.length) summary.mcp = contributes.mcp.map((entry) => ({ ...entry }));
+  if (contributes?.hooks?.length) summary.hooks = contributes.hooks.map((entry) => ({ ...entry }));
+  if (contributes?.skills?.length) {
+    summary.skills = contributes.skills.map((entry) => ({ ...entry }));
   }
-  if (isDeclaredInstructionContribution(extension, "hooks")) {
-    const hooks: HostExtensionContributedHook[] = [];
-    await collectExtensionHooksContribution(extension, hooks, log);
-    summary.hooks = HOOK_EVENT_NAMES.filter((event) => hooks.some((hook) => hook.event === event));
-  }
-  if (isDeclaredInstructionContribution(extension, "skills")) {
-    const skills: HostExtensionContributedSkill[] = [];
-    await collectExtensionSkillsContribution(extension, skills, new Set(), log);
-    summary.skills = skills.map((skill) => ({ name: skill.name, description: skill.description }));
-  }
-  if (isDeclaredInstructionContribution(extension, "rules")) {
-    const rules: HostExtensionContributedRule[] = [];
-    await collectExtensionRulesContribution(extension, rules, log);
-    const rule = rules[0];
-    if (rule) {
-      summary.rules = { content: rule.content };
-    }
-  }
+  if (contributes?.rules) summary.rules = { ...contributes.rules };
 
   return Object.keys(summary).length > 0 ? summary : undefined;
 }
@@ -151,7 +136,7 @@ function isDeclaredInstructionContribution(
   key: "mcp" | "hooks" | "skills" | "rules",
 ): boolean {
   return (
-    extension.manifest.contributes?.[key] === true &&
+    extension.manifest.contributes?.[key] !== undefined &&
     extension.manifest.requestedCapabilities?.includes(key) === true
   );
 }

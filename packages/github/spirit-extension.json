@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "sourceId": "built-in",
+  "name": "github",
+  "version": "1.0.0",
+  "defaultLocale": "en",
+  "displayName": { "message": "metadata.displayName" },
+  "description": { "message": "metadata.description" },
+  "icon": ".spirit/icon.svg",
+  "author": {
+    "name": "Spirit",
+    "email": "hi@spirit.dev",
+    "url": "https://spirit.dev"
+  },
+  "homepage": "https://spirit.dev",
+  "category": "development",
+  "keywords": [
+    { "message": "metadata.keywords.pullRequests" },
+    { "message": "metadata.keywords.repositories" },
+    { "message": "metadata.keywords.automations" }
+  ],
+  "manifest": {
+    "supportedHosts": ["desktop"],
+    "activationEvents": ["onStartup"],
+    "requestedCapabilities": [
+      "settings",
+      "secret-storage",
+      "automation-triggers",
+      "desktop-ui",
+      "desktop-composer-attachments"
+    ],
+    "secretSlots": ["oauthCredentials"],
+    "settingsSchema": [
+      {
+        "key": "pr-overview-ratio",
+        "type": "number",
+        "title": { "message": "settings.prOverviewRatio.title" },
+        "defaultValue": 0.38
+      },
+      {
+        "key": "pr-files-width",
+        "type": "number",
+        "title": { "message": "settings.prFilesWidth.title" },
+        "defaultValue": 208
+      }
+    ],
+    "contributes": {
+      "authorizations": [
+        {
+          "id": "oauth",
+          "displayName": { "message": "authorization.oauth.displayName" },
+          "action": "authorize",
+          "secretSlots": ["oauthCredentials"]
+        }
+      ],
+      "automationTriggers": [
+        {
+          "id": "activity",
+          "name": { "message": "automation.activity.name" },
+          "description": { "message": "automation.activity.description" },
+          "icon": {
+            "type": "file",
+            "path": "icons/github.svg",
+            "monochrome": true
+          },
+          "configuration": "menu",
+          "authorization": "oauth",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "owner": { "type": "string" },
+              "repo": { "type": "string" },
+              "event": {
+                "type": "string",
+                "enum": ["pull_request_created", "issue_created"]
+              }
+            },
+            "required": ["owner", "repo", "event"],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "desktop": {
+        "views": [
+          {
+            "id": "authorize",
+            "path": "ui/authorize.html",
+            "title": { "message": "views.authorize.title" },
+            "width": 448,
+            "chrome": "none"
+          }
+        ],
+        "tabs": [
+          {
+            "id": "pull-requests",
+            "name": { "message": "tabs.pullRequests.name" },
+            "path": "ui/pull-requests.html",
+            "icon": {
+              "type": "file",
+              "path": "icons/pull-request.svg",
+              "monochrome": true
+            },
+            "defaultScope": "window-shared",
+            "authorization": "oauth"
+          }
+        ],
+        "linkHandlers": [
+          {
+            "id": "pull-request",
+            "origins": ["https://github.com"],
+            "tab": "pull-requests"
+          }
+        ]
+      }
+    }
+  }
+}

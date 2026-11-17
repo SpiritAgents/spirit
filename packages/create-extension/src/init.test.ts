@@ -49,7 +49,19 @@ test("skills + rules scaffold valid files and a consistent dump", async () => {
   assert.equal(dump.name, "my-ext");
   assert.equal(dump.sourceId, "self-declared");
   assert.deepEqual(dump.manifest.requestedCapabilities, ["skills", "rules"]);
-  assert.deepEqual(dump.manifest.contributes, { skills: true, rules: true });
+  assert.deepEqual(dump.manifest.contributes, {
+    skills: [
+      {
+        name: "my-ext",
+        displayName: { message: "skills.example.displayName" },
+        summary: { message: "skills.example.summary" },
+      },
+    ],
+    rules: {
+      displayName: { message: "rules.displayName" },
+      summary: { message: "rules.summary" },
+    },
+  });
 });
 
 test("tools scaffold a main module with a handler and matching declaration", async () => {
@@ -73,7 +85,10 @@ test("desktop css and settings page merge into one desktop contribution", async 
   const dump = parseExtensionDumpText(files[".spirit/extension.json"] ?? "");
   assert.deepEqual(dump.manifest.requestedCapabilities, ["desktop-ui"]);
   assert.deepEqual(dump.manifest.contributes, {
-    desktop: { css: [{ path: "styles.css" }], settingsPage: { title: "My Ext" } },
+    desktop: {
+      css: [{ path: "styles.css" }],
+      settingsPage: { title: { message: "desktop.settingsPage.title" } },
+    },
   });
   assert.ok(files["styles.css"]?.includes("My Ext"));
 });
@@ -84,7 +99,9 @@ test("desktop views scaffold a single-file default export", async () => {
   const dump = parseExtensionDumpText(files[".spirit/extension.json"] ?? "");
   assert.deepEqual(dump.manifest.requestedCapabilities, ["desktop-ui"]);
   assert.deepEqual(dump.manifest.contributes, {
-    desktop: { views: [{ id: "main", path: "ui/view.html", title: "View" }] },
+    desktop: {
+      views: [{ id: "main", path: "ui/view.html", title: { message: "desktop.views.main.title" } }],
+    },
   });
   assert.ok(files["ui/view.js"]?.includes("window.spirit.view"));
   assert.ok(files["ui/view.js"]?.includes("view.mounted()"));
@@ -100,7 +117,7 @@ test("desktop tabs scaffold a plain page and its backend channel", async () => {
       tabs: [
         {
           id: "main",
-          name: "My Ext",
+          name: { message: "desktop.tabs.main.name" },
           path: "ui/tab.html",
           icon: { type: "spirit", name: "compose" },
           defaultScope: "window-shared",
@@ -169,11 +186,11 @@ test("a non-empty target directory is rejected", async () => {
 test("defaults: title-cased display name, TODO description, minimal package", async () => {
   const { files } = await scaffold();
   const dump = parseExtensionDumpText(files[".spirit/extension.json"] ?? "");
-  assert.equal(dump.displayName, "My Ext");
-  assert.match(dump.description, /^TODO:/);
+  assert.deepEqual(dump.displayName, { message: "metadata.displayName" });
+  assert.deepEqual(dump.description, { message: "metadata.description" });
   // The scaffold carries example author/keywords/homepage so the fields are discoverable.
   assert.deepEqual(dump.author, { name: "Your Name", email: "you@example.com" });
-  assert.deepEqual(dump.keywords, ["spirit-extension"]);
+  assert.deepEqual(dump.keywords, [{ message: "metadata.keywords.spiritExtension" }]);
   assert.equal(dump.homepage, "https://example.com/my-ext");
   assert.equal(dump.manifest.contributes, undefined);
   assert.equal(files["index.mjs"], undefined);
@@ -192,7 +209,7 @@ test("the registry entry snippet mirrors the dump identity", async () => {
   assert.equal(entry.source, "./extensions/my-ext");
   assert.equal(entry.reviewStatus, "unverified");
   assert.deepEqual(entry.author, { name: "Your Name", email: "you@example.com" });
-  assert.deepEqual(entry.keywords, ["spirit-extension"]);
+  assert.deepEqual(entry.keywords, [{ message: "metadata.keywords.spiritExtension" }]);
   assert.equal(entry.homepage, "https://example.com/my-ext");
   const manifest = entry.manifest as { requestedCapabilities?: string[] };
   assert.deepEqual(manifest.requestedCapabilities, ["skills"]);
@@ -209,7 +226,12 @@ test("authorization scaffolds private secrets, an action, and a view session", a
   assert.deepEqual(dump.manifest.secretSlots, ["oauthAccessToken"]);
   assert.deepEqual(dump.manifest.requestedCapabilities, ["secret-storage", "desktop-ui"]);
   assert.deepEqual(dump.manifest.contributes?.authorizations, [
-    { id: "oauth", action: "authorize", secretSlots: ["oauthAccessToken"] },
+    {
+      id: "oauth",
+      displayName: { message: "authorization.oauth.displayName" },
+      action: "authorize",
+      secretSlots: ["oauthAccessToken"],
+    },
   ]);
   assert.ok(files["ui/authorize.js"]?.includes("close({ authorize"));
   assert.ok(files["ui/authorize.js"]?.includes("close({ disconnect: true })"));

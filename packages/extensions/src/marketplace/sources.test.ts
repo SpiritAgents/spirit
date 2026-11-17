@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import { test } from "vitest";
 
 import type { MarketplaceIndexFetch } from "./http-index-source.js";
+import { readExtensionMessage } from "@spiritagent/extension-toolkit";
 import {
   addMarketplaceSource,
   listMarketplaceSources,
@@ -14,6 +15,7 @@ import {
   removeMarketplaceSource,
   type MarketplaceSourceManagerContext,
 } from "./sources.js";
+import { localizedTestFields } from "@spiritagent/extension-toolkit/test-localization";
 
 const execFileAsync = promisify(execFile);
 
@@ -26,9 +28,20 @@ const FIXTURE_INDEX = {
       name: "i-am-a-extension",
       version: "1.0.0",
       source: "./extensions/i-am-a-extension",
-      displayName: "Fixture",
-      description: "Fixture extension.",
-      manifest: { supportedHosts: ["cli"] },
+      ...localizedTestFields("Fixture", "Fixture extension."),
+      manifest: {
+        supportedHosts: ["cli"],
+        requestedCapabilities: ["skills"],
+        contributes: {
+          skills: [
+            {
+              name: "demo",
+              displayName: { message: "skills.demo.displayName" },
+              summary: { message: "skills.demo.summary" },
+            },
+          ],
+        },
+      },
     },
   ],
 };
@@ -69,6 +82,13 @@ test("local source: add, list, read, remove", async () => {
 
     const read = await readMarketplaceSourceIndex(context, record);
     assert.equal(read.index.name, "fixture-registry");
+    assert.equal(read.index.extensions[0]?.manifest.contributes?.skills?.[0]?.name, "demo");
+    const entry = read.index.extensions[0];
+    assert.ok(entry);
+    assert.equal(
+      readExtensionMessage(entry, { message: "skills.demo.summary" }, "en"),
+      "Demo skill summary.",
+    );
     assert.deepEqual(read.registryRoot, { kind: "path", path: path.resolve(registryDir) });
     assert.equal(read.warning, undefined);
 

@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { beforeEach, afterEach, expect, test, vi } from "vitest";
 import i18next from "i18next";
 import { I18nextProvider } from "react-i18next";
-import { resources } from "@spiritagent/i18n";
+import { resources } from "../locales.js";
 import type { ReactNode } from "react";
 import type { SpiritDesktopTabPageContext } from "@spiritagent/extension-toolkit/desktop-ui";
 import { GitHubAuthorizationView } from "./components/github-authorization-view.js";
@@ -210,7 +210,7 @@ test("the PR authorization hint follows live language changes without changing n
     await localized.changeLanguage("zh-CN");
   });
   const link = screen.getByRole("button", { name: "授权 GitHub" });
-  expect(link.parentElement?.textContent).toBe("授权 GitHub 以使用 Pull Request");
+  expect(link.parentElement?.textContent).toBe("授权 GitHub 以使用拉取请求");
   expect(link.classList.contains("underline")).toBe(true);
   fireEvent.click(link);
   expect(onSignIn).toHaveBeenCalledOnce();

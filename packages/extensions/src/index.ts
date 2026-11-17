@@ -1,4 +1,5 @@
 export * from "./extensions.js";
+export * from "./localization.js";
 export * from "./extension-contributions.js";
 export * from "./marketplace/index.js";
 export * from "./built-in/skills.js";
@@ -7,3 +8,4 @@ export * from "./built-in/extensions.js";
 export * from "./storage.js";
 export * from "./extension-tab-values.js";
 export * from "./automation-triggers.js";
+export type { MarketplaceExtensionEntry } from "@spiritagent/extension-toolkit";

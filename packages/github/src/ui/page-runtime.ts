@@ -1,5 +1,6 @@
 import i18next from "i18next";
-import { resources, FALLBACK_LANGUAGE } from "@spiritagent/i18n";
+import { FALLBACK_LANGUAGE } from "@spiritagent/i18n";
+import { resources } from "../locales.js";
 import type {
   SpiritDesktopTabPageApi,
   SpiritDesktopViewPageApi,

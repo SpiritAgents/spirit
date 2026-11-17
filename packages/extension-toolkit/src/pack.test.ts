@@ -7,6 +7,7 @@ import { afterEach, test } from "vitest";
 
 import { packExtension } from "./pack.js";
 import { parseExtensionDumpText } from "./schema.js";
+import { localizedTestFields } from "./test-localization.js";
 
 const fixtureDirs: string[] = [];
 
@@ -39,12 +40,19 @@ const VALID_DUMP = `${JSON.stringify(
     name: "demo-ext",
     version: "1.2.0",
     sourceId: "self-declared",
-    displayName: "Demo",
-    description: "Demo extension.",
+    ...localizedTestFields(),
     manifest: {
       supportedHosts: ["cli"],
       requestedCapabilities: ["skills"],
-      contributes: { skills: true },
+      contributes: {
+        skills: [
+          {
+            name: "demo",
+            displayName: { message: "skills.demo.displayName" },
+            summary: { message: "skills.demo.summary" },
+          },
+        ],
+      },
     },
   },
   null,

@@ -10,6 +10,7 @@ import {
 } from "./extension-contributions.js";
 import { overlayExtensionRulesAndSkills } from "@spiritagent/instructions/contributions";
 import { createHostExtensionManager, installPreparedExtensionDirectory } from "./extensions.js";
+import { localizedTestPackage } from "@spiritagent/extension-toolkit/test-localization";
 
 const VALID_MCP_JSON = `${JSON.stringify(
   {
@@ -49,6 +50,24 @@ description: A bundled demo skill.
 Do the demo skill.
 `;
 
+const mcpDeclaration = (name: string) => [
+  { name, displayName: { message: "mcp.example.displayName" }, transport: "stdio" },
+];
+const skillsDeclaration = (name: string) => [
+  {
+    name,
+    displayName: { message: "skills.demo-skill.displayName" },
+    summary: { message: "skills.demo-skill.summary" },
+  },
+];
+const HOOKS_DECLARATION = [
+  { event: "sessionStart", displayName: { message: "hooks.sessionStart.displayName" } },
+];
+const RULES_DECLARATION = {
+  displayName: { message: "rules.displayName" },
+  summary: { message: "rules.summary" },
+};
+
 async function writeExtensionPackage(
   packageDir: string,
   options: {
@@ -69,15 +88,13 @@ async function writeExtensionPackage(
     name: options.name,
     version: "0.0.1",
     sourceId: "personal",
-    displayName: options.name,
-    description: `${options.name} extension.`,
-    manifest: {
+    ...localizedTestPackage(options.name, `${options.name} extension.`, {
       supportedHosts: ["desktop"],
       ...(options.requestedCapabilities
         ? { requestedCapabilities: options.requestedCapabilities }
         : {}),
       ...(options.contributes ? { contributes: options.contributes } : {}),
-    },
+    }),
   };
   await mkdir(join(packageDir, ".spirit"), { recursive: true });
   await writeFile(
@@ -100,7 +117,12 @@ test("collector loads declared instruction contributions from enabled extensions
     await writeExtensionPackage(declaredDir, {
       name: "collect-declared",
       requestedCapabilities: ["mcp", "hooks", "skills", "rules"],
-      contributes: { mcp: true, hooks: true, skills: true, rules: true },
+      contributes: {
+        mcp: mcpDeclaration("bundled"),
+        hooks: HOOKS_DECLARATION,
+        skills: skillsDeclaration("demo-skill"),
+        rules: RULES_DECLARATION,
+      },
       files: {
         "mcp.json": VALID_MCP_JSON,
         "hooks.json": VALID_HOOKS_JSON,
@@ -182,13 +204,20 @@ Ignored.
     assert.ok(disabledDeclared);
     const summary = await summarizeDeclaredExtensionContributionPoints(disabledDeclared);
     assert.deepEqual(summary?.mcp, [
-      { name: "bundled", displayName: "Bundled Docs", transport: "stdio" },
+      { name: "bundled", displayName: "Example MCP", transport: "stdio" },
     ]);
-    assert.deepEqual(summary?.hooks, ["sessionStart"]);
+    assert.deepEqual(summary?.hooks, [{ event: "sessionStart", displayName: "Session Start" }]);
     assert.deepEqual(summary?.skills, [
-      { name: "demo-skill", description: "A bundled demo skill." },
+      {
+        name: "demo-skill",
+        displayName: "Demo Skill",
+        summary: "Demo skill summary.",
+      },
     ]);
-    assert.deepEqual(summary?.rules, { content: VALID_RULE_MD });
+    assert.deepEqual(summary?.rules, {
+      displayName: "Demo Rules",
+      summary: "Demo rules summary.",
+    });
   } finally {
     await rm(spiritDataDir, { recursive: true, force: true });
     await rm(preparedRoot, { recursive: true, force: true });
@@ -203,7 +232,7 @@ test("collector rewrites relative stdio entry scripts to absolute paths", async 
     await writeExtensionPackage(declaredDir, {
       name: "collect-stdio",
       requestedCapabilities: ["mcp"],
-      contributes: { mcp: true },
+      contributes: { mcp: mcpDeclaration("bundled") },
       files: {
         "mcp.json": `${JSON.stringify({
           servers: {
@@ -249,7 +278,7 @@ test("collector keeps the first extension on mcp and skill name collisions", asy
     await writeExtensionPackage(firstDir, {
       name: "collect-aaa",
       requestedCapabilities: ["mcp", "skills"],
-      contributes: { mcp: true, skills: true },
+      contributes: { mcp: mcpDeclaration("shared"), skills: skillsDeclaration("shared-skill") },
       files: {
         "mcp.json": `${JSON.stringify({
           servers: { shared: { transport: { type: "stdio", command: "first-cmd" } } },
@@ -267,7 +296,7 @@ First.
     await writeExtensionPackage(secondDir, {
       name: "collect-bbb",
       requestedCapabilities: ["mcp", "skills"],
-      contributes: { mcp: true, skills: true },
+      contributes: { mcp: mcpDeclaration("shared"), skills: skillsDeclaration("shared-skill") },
       files: {
         "mcp.json": `${JSON.stringify({
           servers: { shared: { transport: { type: "stdio", command: "second-cmd" } } },

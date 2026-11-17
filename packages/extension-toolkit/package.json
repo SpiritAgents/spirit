@@ -26,6 +26,10 @@
     "./desktop-ui": {
       "types": "./dist/desktop-ui.d.ts",
       "default": "./dist/desktop-ui.js"
+    },
+    "./test-localization": {
+      "types": "./dist/test-localization.d.ts",
+      "default": "./dist/test-localization.js"
     }
   },
   "publishConfig": {

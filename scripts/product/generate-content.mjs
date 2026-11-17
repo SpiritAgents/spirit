@@ -114,8 +114,8 @@ export async function generateProductContent({
     const outputRoot = path.join(root, "packages/extensions/dist/resources/built-in");
     await addTree(path.join(sourceRoot, "skills"), path.join(outputRoot, "skills"));
     entries.push({
-      source: path.join(sourceRoot, "marketplace.json"),
-      output: path.join(outputRoot, products.current.workspaceDataFolderName, "marketplace.json"),
+      source: path.join(sourceRoot, "marketplace.template.json"),
+      output: path.join(outputRoot, "marketplace.template.json"),
     });
     generatedRoots.push(outputRoot);
   }

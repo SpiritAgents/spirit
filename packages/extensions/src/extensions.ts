@@ -30,8 +30,10 @@ import {
   assertDeclaredInstructionContributionFiles as assertToolkitDeclaredInstructionContributionFiles,
   EXTENSION_DUMP_FILE_NAME,
   parseExtensionDumpText,
+  parseLocalizableText,
   type MarketplaceExtensionDump,
 } from "@spiritagent/extension-toolkit";
+import { localizeExtensionText, resolveExtensionContextLocale } from "./localization.js";
 
 import type {
   AutomationTriggerContributionDefinition,
@@ -151,6 +153,10 @@ export interface HostExtensionEvent {
 export interface HostExtensionContributedToolDefinition {
   name: string;
   description: string;
+  presentation?: {
+    displayName: string;
+    summary: string;
+  };
   inputSchema: HostExtensionJsonSchema;
   outputSchema?: HostExtensionJsonSchema;
   approvalMode?: HostExtensionToolApprovalMode;
@@ -159,6 +165,7 @@ export interface HostExtensionContributedToolDefinition {
 
 export interface HostExtensionAuthorizationDefinition {
   id: string;
+  displayName: string;
   /** Handles initial authorization and subsequent credential management for this contribution. */
   action: string;
   secretSlots: string[];
@@ -175,13 +182,13 @@ export interface HostExtensionContributionSet {
   desktop?: HostExtensionDesktopContributionSet;
   cli?: HostExtensionCliContributionSet;
   /** Declared agent MCP contribution; files live at the package-root mcp.json. */
-  mcp?: true;
+  mcp?: Array<{ name: string; displayName: string; transport: "stdio" | "http" }>;
   /** Declared agent hooks contribution; files live at the package-root hooks.json. */
-  hooks?: true;
+  hooks?: Array<{ event: string; displayName: string }>;
   /** Declared skills contribution; files live under package-root skills/<name>/SKILL.md. */
-  skills?: true;
+  skills?: Array<{ name: string; displayName: string; summary: string }>;
   /** Declared rules contribution; files live at the package-root rule.md. */
-  rules?: true;
+  rules?: { displayName: string; summary: string };
 }
 
 export interface HostExtensionDesktopCssDefinition {
@@ -241,7 +248,6 @@ export interface HostExtensionDesktopTabDefinition {
   icon: HostExtensionDesktopTabIcon;
   defaultScope?: HostExtensionDesktopTabScope;
   authorization?: string;
-  nameKey?: string;
 }
 
 export interface HostExtensionDesktopContributionSet {
@@ -311,9 +317,12 @@ export interface HostExtensionCliContributionSet {
 }
 
 interface HostExtensionManifestParseOptions {
+  locale?: string;
   readRelativeTextFile?: (relativePath: string, fieldName: string) => Promise<string>;
   listRelativeChildDirectories?: (relativePath: string) => Promise<string[]>;
 }
+
+type ExtensionLocalizedField = (value: unknown, fieldName: string) => string;
 
 export interface HostExtensionSettingOption {
   value: string;
@@ -884,7 +893,11 @@ export async function listInstalledExtensions(
       }
 
       try {
-        const manifest = await readInstalledExtensionDump(dumpPath, directoryPath);
+        const manifest = await readInstalledExtensionDump(
+          dumpPath,
+          directoryPath,
+          resolveExtensionContextLocale(context.locale),
+        );
         const registryEntry = registryEntries.get(manifest.id);
         const installedAtUnixMs =
           registryEntry?.installedAtUnixMs ?? Math.trunc((await stat(directoryPath)).mtimeMs);
@@ -910,7 +923,10 @@ export async function listInstalledExtensions(
   }
 
   installed.sort((left, right) => {
-    const byName = left.manifest.displayName.localeCompare(right.manifest.displayName, "en");
+    const byName = left.manifest.displayName.localeCompare(
+      right.manifest.displayName,
+      resolveExtensionContextLocale(context.locale) ?? "en",
+    );
     if (byName !== 0) {
       return byName;
     }
@@ -1037,12 +1053,11 @@ export async function installPreparedExtensionDirectory(
   if (!replaceExisting && (existsSync(targetDirectory) || registryEntries.has(manifest.id))) {
     throw new Error(`The extension already exists; remove it before importing: ${manifest.id}`);
   }
-  const previousManifest =
+  const previousSecretState =
     replaceExisting &&
     existsSync(path.join(targetDirectory, SPIRIT_DIR_NAME, EXTENSION_DUMP_FILE_NAME))
-      ? await readInstalledExtensionDump(
+      ? await readInstalledExtensionSecretState(
           path.join(targetDirectory, SPIRIT_DIR_NAME, EXTENSION_DUMP_FILE_NAME),
-          targetDirectory,
         )
       : undefined;
 
@@ -1087,13 +1102,13 @@ export async function installPreparedExtensionDirectory(
     await rename(stagedDirectory, targetDirectory);
     movedIntoPlace = true;
 
-    if (previousManifest) {
-      const removedSlots = (previousManifest.secretSlots ?? []).filter(
+    if (previousSecretState) {
+      const removedSlots = previousSecretState.secretSlots.filter(
         (key) => !(manifest.secretSlots ?? []).includes(key),
       );
       // Keep the old package restorable until cleanup finishes so a failed
       // keyring operation can be retried from the old manifest.
-      await deleteExtensionSecretSlots(context, previousManifest.id, removedSlots);
+      await deleteExtensionSecretSlots(context, previousSecretState.id, removedSlots);
     }
     updateApplied = true;
   } catch (error) {
@@ -1143,6 +1158,24 @@ export async function installPreparedExtensionDirectory(
     enabled: toggleState.enabledOverrides?.[manifest.id] ?? true,
     ...(request.fileName?.trim() ? { archiveFileName: request.fileName.trim() } : {}),
     installSource: installSourceForSourceId(manifest.sourceId),
+  };
+}
+
+async function readInstalledExtensionSecretState(
+  dumpPath: string,
+): Promise<{ id: string; secretSlots: string[] }> {
+  const parsed: unknown = JSON.parse(await readFile(dumpPath, "utf8"));
+  if (!isRecord(parsed)) {
+    throw new Error(`The installed extension dump must be an object: ${dumpPath}`);
+  }
+  const sourceId = stringField(parsed.sourceId, "extension.json.sourceId");
+  const name = stringField(parsed.name, "extension.json.name");
+  return {
+    id: composeExtensionId(sourceId, name),
+    secretSlots: optionalSecretSlotsField(
+      isRecord(parsed.manifest) ? parsed.manifest.secretSlots : undefined,
+      "extension.json.manifest.secretSlots",
+    ),
   };
 }
 
@@ -2219,10 +2252,11 @@ async function ensureExtensionDirectories(paths: ExtensionPaths): Promise<void> 
 async function readInstalledExtensionDump(
   dumpPath: string,
   directoryPath: string,
+  locale?: string,
 ): Promise<HostExtensionManifest> {
   const raw = await readFile(dumpPath, "utf8");
   const dump = parseExtensionDumpText(raw);
-  return buildHostExtensionManifestFromDump(dump, directoryPath);
+  return buildHostExtensionManifestFromDump(dump, directoryPath, { locale });
 }
 
 /**
@@ -2234,9 +2268,11 @@ async function readInstalledExtensionDump(
 export async function buildHostExtensionManifestFromDump(
   dump: MarketplaceExtensionDump,
   directoryPath?: string,
+  options: { locale?: string | undefined } = {},
 ): Promise<HostExtensionManifest> {
   const manifest = await parseExtensionManifestFields(
     dump,
+    options.locale,
     directoryPath
       ? {
           readRelativeTextFile: async (relativePath, fieldName) => {
@@ -2301,8 +2337,11 @@ async function readPackageJsonMain(packageJsonPath: string): Promise<string | un
 /** Deep-parse the declaration fields of a validated extension dump. */
 async function parseExtensionManifestFields(
   dump: MarketplaceExtensionDump,
+  locale: string | undefined,
   options: HostExtensionManifestParseOptions = {},
 ): Promise<HostExtensionManifest> {
+  const text = (value: unknown, fieldName: string): string =>
+    localizeExtensionText(dump, parseLocalizableText(value, fieldName), locale);
   const activationEvents = optionalActivationEventsField(
     dump.manifest.activationEvents,
     "manifest.activationEvents",
@@ -2315,10 +2354,12 @@ async function parseExtensionManifestFields(
     dump.manifest.contributes,
     options,
     "manifest.contributes",
+    text,
   );
   const settingsSchema = optionalSettingsSchemaField(
     dump.manifest.settingsSchema,
     "manifest.settingsSchema",
+    text,
   );
   const secretSlots = optionalSecretSlotsField(dump.manifest.secretSlots, "manifest.secretSlots");
   const supportedHosts = requiredSupportedHostsField(
@@ -2377,13 +2418,19 @@ async function parseExtensionManifestFields(
     id: composeExtensionId(dump.sourceId, dump.name),
     sourceId: dump.sourceId,
     name: dump.name,
-    displayName: dump.displayName,
+    displayName: text(dump.displayName, "extension.json.displayName"),
     ...(dump.icon ? { icon: dump.icon } : {}),
     version: dump.version,
-    ...(dump.description ? { description: dump.description } : {}),
+    description: text(dump.description, "extension.json.description"),
     ...(dump.author ? { author: dump.author } : {}),
     ...(dump.category ? { category: dump.category } : {}),
-    ...(dump.keywords?.length ? { keywords: [...dump.keywords] } : {}),
+    ...(dump.keywords?.length
+      ? {
+          keywords: dump.keywords.map((entry, index) =>
+            text(entry, `extension.json.keywords[${index}]`),
+          ),
+        }
+      : {}),
     ...(dump.homepage ? { homepage: dump.homepage } : {}),
     supportedHosts,
     ...(activationEvents.length > 0 ? { activationEvents } : {}),
@@ -2832,35 +2879,42 @@ async function optionalContributionSetField(
   value: unknown,
   options: HostExtensionManifestParseOptions,
   fieldPrefix: string,
+  text: ExtensionLocalizedField,
 ): Promise<HostExtensionContributionSet | undefined> {
   if (!isRecord(value)) {
     return undefined;
   }
 
-  const tools = optionalContributedToolsField(value.tools, `${fieldPrefix}.tools`);
+  const tools = optionalContributedToolsField(value.tools, `${fieldPrefix}.tools`, text);
   const authorizations = optionalAuthorizationsField(
     value.authorizations,
     `${fieldPrefix}.authorizations`,
+    text,
   );
   const automationTriggers = optionalAutomationTriggersField(
     value.automationTriggers,
     `${fieldPrefix}.automationTriggers`,
+    text,
   );
-  const desktop = optionalDesktopContributionSetField(value.desktop, `${fieldPrefix}.desktop`);
+  const desktop = optionalDesktopContributionSetField(
+    value.desktop,
+    `${fieldPrefix}.desktop`,
+    text,
+  );
   const cli = await optionalCliContributionSetField(value.cli, options, `${fieldPrefix}.cli`);
-  const mcp = optionalDeclaredContributionFlag(value.mcp, `${fieldPrefix}.mcp`);
-  const hooks = optionalDeclaredContributionFlag(value.hooks, `${fieldPrefix}.hooks`);
-  const skills = optionalDeclaredContributionFlag(value.skills, `${fieldPrefix}.skills`);
-  const rules = optionalDeclaredContributionFlag(value.rules, `${fieldPrefix}.rules`);
+  const mcp = optionalMcpPresentationField(value.mcp, `${fieldPrefix}.mcp`, text);
+  const hooks = optionalHookPresentationField(value.hooks, `${fieldPrefix}.hooks`, text);
+  const skills = optionalSkillPresentationField(value.skills, `${fieldPrefix}.skills`, text);
+  const rules = optionalRulePresentationField(value.rules, `${fieldPrefix}.rules`, text);
   if (
     tools.length === 0 &&
     authorizations.length === 0 &&
     automationTriggers.length === 0 &&
     !desktop &&
     !cli &&
-    !mcp &&
-    !hooks &&
-    !skills &&
+    mcp.length === 0 &&
+    hooks.length === 0 &&
+    skills.length === 0 &&
     !rules
   ) {
     return undefined;
@@ -2872,16 +2926,17 @@ async function optionalContributionSetField(
     ...(automationTriggers.length > 0 ? { automationTriggers } : {}),
     ...(desktop ? { desktop } : {}),
     ...(cli ? { cli } : {}),
-    ...(mcp ? { mcp: true } : {}),
-    ...(hooks ? { hooks: true } : {}),
-    ...(skills ? { skills: true } : {}),
-    ...(rules ? { rules: true } : {}),
+    ...(mcp.length > 0 ? { mcp } : {}),
+    ...(hooks.length > 0 ? { hooks } : {}),
+    ...(skills.length > 0 ? { skills } : {}),
+    ...(rules ? { rules } : {}),
   };
 }
 
 function optionalAutomationTriggersField(
   value: unknown,
   fieldPrefix: string,
+  text: ExtensionLocalizedField,
 ): HostExtensionAutomationTriggerDefinition[] {
   if (!Array.isArray(value)) {
     return [];
@@ -2906,8 +2961,8 @@ function optionalAutomationTriggersField(
     assertNoSchemaReferences(inputSchema, `${field}.inputSchema`);
     return {
       id,
-      name: stringField(entry.name, `${field}.name`),
-      description: stringField(entry.description, `${field}.description`),
+      name: text(entry.name, `${field}.name`),
+      description: text(entry.description, `${field}.description`),
       icon: parseDesktopTabIcon(entry.icon, `${field}.icon`),
       ...(configuration === "menu" ? { configuration: "menu" as const } : {}),
       inputSchema,
@@ -2943,6 +2998,7 @@ function assertNoSchemaReferences(value: unknown, fieldName: string): void {
 function optionalAuthorizationsField(
   value: unknown,
   fieldPrefix: string,
+  text: ExtensionLocalizedField,
 ): HostExtensionAuthorizationDefinition[] {
   if (!Array.isArray(value)) {
     return [];
@@ -2961,7 +3017,12 @@ function optionalAuthorizationsField(
     if (secretSlots.length === 0) {
       throw new Error(`Extension field ${field}.secretSlots must not be empty.`);
     }
-    return { id, action, secretSlots };
+    return {
+      id,
+      displayName: text(entry.displayName, `${field}.displayName`),
+      action,
+      secretSlots,
+    };
   });
   if (new Set(authorizations.map((entry) => entry.id)).size !== authorizations.length) {
     throw new Error(`Extension field ${fieldPrefix} must not contain duplicate ids.`);
@@ -2969,33 +3030,88 @@ function optionalAuthorizationsField(
   return authorizations;
 }
 
-function optionalDeclaredContributionFlag(value: unknown, fieldName: string): boolean {
-  if (value === undefined || value === null || value === false) {
-    return false;
-  }
-  if (value === true) {
-    return true;
-  }
-  if (isRecord(value) && Object.keys(value).length === 0) {
-    return true;
-  }
-  throw new Error(`Extension field ${fieldName} must be true or {}.`);
+function optionalMcpPresentationField(
+  value: unknown,
+  fieldPrefix: string,
+  text: ExtensionLocalizedField,
+): NonNullable<HostExtensionContributionSet["mcp"]> {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry, index) => {
+    const field = `${fieldPrefix}[${index}]`;
+    if (!isRecord(entry)) throw new Error(`Extension field ${field} must be an object.`);
+    const transport = enumField(entry.transport, `${field}.transport`, ["stdio", "http"] as const);
+    return {
+      name: stringField(entry.name, `${field}.name`),
+      displayName: text(entry.displayName, `${field}.displayName`),
+      transport,
+    };
+  });
+}
+
+function optionalHookPresentationField(
+  value: unknown,
+  fieldPrefix: string,
+  text: ExtensionLocalizedField,
+): NonNullable<HostExtensionContributionSet["hooks"]> {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry, index) => {
+    const field = `${fieldPrefix}[${index}]`;
+    if (!isRecord(entry)) throw new Error(`Extension field ${field} must be an object.`);
+    return {
+      event: stringField(entry.event, `${field}.event`),
+      displayName: text(entry.displayName, `${field}.displayName`),
+    };
+  });
+}
+
+function optionalSkillPresentationField(
+  value: unknown,
+  fieldPrefix: string,
+  text: ExtensionLocalizedField,
+): NonNullable<HostExtensionContributionSet["skills"]> {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry, index) => {
+    const field = `${fieldPrefix}[${index}]`;
+    if (!isRecord(entry)) throw new Error(`Extension field ${field} must be an object.`);
+    return {
+      name: stringField(entry.name, `${field}.name`),
+      displayName: text(entry.displayName, `${field}.displayName`),
+      summary: text(entry.summary, `${field}.summary`),
+    };
+  });
+}
+
+function optionalRulePresentationField(
+  value: unknown,
+  fieldPrefix: string,
+  text: ExtensionLocalizedField,
+): HostExtensionContributionSet["rules"] {
+  if (value === undefined) return undefined;
+  if (!isRecord(value)) throw new Error(`Extension field ${fieldPrefix} must be an object.`);
+  return {
+    displayName: text(value.displayName, `${fieldPrefix}.displayName`),
+    summary: text(value.summary, `${fieldPrefix}.summary`),
+  };
 }
 
 function optionalContributedToolsField(
   value: unknown,
   fieldPrefix: string,
+  text: ExtensionLocalizedField,
 ): HostExtensionContributedToolDefinition[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  return value.map((entry, index) => parseContributedToolDefinition(entry, index, fieldPrefix));
+  return value.map((entry, index) =>
+    parseContributedToolDefinition(entry, index, fieldPrefix, text),
+  );
 }
 
 function optionalDesktopContributionSetField(
   value: unknown,
   fieldPrefix: string,
+  text: ExtensionLocalizedField,
 ): HostExtensionDesktopContributionSet | undefined {
   if (!isRecord(value)) {
     return undefined;
@@ -3005,9 +3121,10 @@ function optionalDesktopContributionSetField(
   const settingsPage = optionalDesktopSettingsPageDefinitionField(
     value.settingsPage,
     `${fieldPrefix}.settingsPage`,
+    text,
   );
-  const views = optionalDesktopViewDefinitionsField(value.views, `${fieldPrefix}.views`);
-  const tabs = optionalDesktopTabDefinitionsField(value.tabs, `${fieldPrefix}.tabs`);
+  const views = optionalDesktopViewDefinitionsField(value.views, `${fieldPrefix}.views`, text);
+  const tabs = optionalDesktopTabDefinitionsField(value.tabs, `${fieldPrefix}.tabs`, text);
   const linkHandlers: HostExtensionDesktopLinkHandlerDefinition[] = Array.isArray(
     value.linkHandlers,
   )
@@ -3064,12 +3181,15 @@ function optionalDesktopCssDefinitionsField(
 function optionalDesktopViewDefinitionsField(
   value: unknown,
   fieldPrefix: string,
+  text: ExtensionLocalizedField,
 ): HostExtensionDesktopViewDefinition[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  const views = value.map((entry, index) => parseDesktopViewDefinition(entry, index, fieldPrefix));
+  const views = value.map((entry, index) =>
+    parseDesktopViewDefinition(entry, index, fieldPrefix, text),
+  );
   const seen = new Set<string>();
   for (const view of views) {
     if (seen.has(view.id)) {
@@ -3219,12 +3339,15 @@ function optionalCliUiHookTokensField(
 function optionalDesktopTabDefinitionsField(
   value: unknown,
   fieldPrefix: string,
+  text: ExtensionLocalizedField,
 ): HostExtensionDesktopTabDefinition[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  const tabs = value.map((entry, index) => parseDesktopTabDefinition(entry, index, fieldPrefix));
+  const tabs = value.map((entry, index) =>
+    parseDesktopTabDefinition(entry, index, fieldPrefix, text),
+  );
   const seen = new Set<string>();
   for (const tab of tabs) {
     if (seen.has(tab.id)) {
@@ -3239,6 +3362,7 @@ function parseDesktopTabDefinition(
   value: unknown,
   index: number,
   fieldPrefix: string,
+  text: ExtensionLocalizedField,
 ): HostExtensionDesktopTabDefinition {
   if (!isRecord(value)) {
     throw new Error(`Extension field ${fieldPrefix}[${index}] must be an object.`);
@@ -3248,9 +3372,8 @@ function parseDesktopTabDefinition(
   if (!EXTENSION_FIELD_KEY_PATTERN.test(id)) {
     throw new Error(`Invalid extension tab id: ${id}`);
   }
-  const name = stringField(value.name, `${fieldPrefix}[${index}].name`);
+  const name = text(value.name, `${fieldPrefix}[${index}].name`);
   const authorization = optionalStringField(value.authorization);
-  const nameKey = optionalStringField(value.nameKey);
   const tabPath = stringField(value.path, `${fieldPrefix}[${index}].path`);
   assertSafeRelativePath(tabPath, `${fieldPrefix}[${index}].path`);
   if (!tabPath.toLowerCase().endsWith(".html")) {
@@ -3270,7 +3393,6 @@ function parseDesktopTabDefinition(
     icon,
     ...(defaultScope ? { defaultScope } : {}),
     ...(authorization ? { authorization } : {}),
-    ...(nameKey ? { nameKey } : {}),
   };
 }
 
@@ -3327,6 +3449,7 @@ function parseDesktopViewDefinition(
   value: unknown,
   index: number,
   fieldPrefix: string,
+  text: ExtensionLocalizedField,
 ): HostExtensionDesktopViewDefinition {
   if (!isRecord(value)) {
     throw new Error(`Extension field ${fieldPrefix}[${index}] must be an object.`);
@@ -3343,7 +3466,8 @@ function parseDesktopViewDefinition(
     throw new Error(`Extension field ${fieldPrefix}[${index}].path must be an .html page.`);
   }
 
-  const title = optionalStringField(value.title);
+  const title =
+    value.title === undefined ? undefined : text(value.title, `${fieldPrefix}[${index}].title`);
   const width = optionalPositiveNumberField(value.width, `${fieldPrefix}[${index}].width`);
   const height = optionalPositiveNumberField(value.height, `${fieldPrefix}[${index}].height`);
   const chrome = optionalEnumField(
@@ -3375,6 +3499,7 @@ function optionalPositiveNumberField(value: unknown, fieldName: string): number 
 function optionalDesktopSettingsPageDefinitionField(
   value: unknown,
   fieldPrefix: string,
+  text: ExtensionLocalizedField,
 ): HostExtensionDesktopSettingsPageDefinition | undefined {
   if (value === undefined || value === null || value === false) {
     return undefined;
@@ -3386,7 +3511,7 @@ function optionalDesktopSettingsPageDefinitionField(
     throw new Error(`Extension field ${fieldPrefix} must be a boolean or an object.`);
   }
 
-  const title = optionalStringField(value.title);
+  const title = value.title === undefined ? undefined : text(value.title, `${fieldPrefix}.title`);
   return title ? { title } : {};
 }
 
@@ -3413,6 +3538,7 @@ function parseContributedToolDefinition(
   value: unknown,
   index: number,
   fieldPrefix: string,
+  text: ExtensionLocalizedField,
 ): HostExtensionContributedToolDefinition {
   if (!isRecord(value)) {
     throw new Error(`Extension field ${fieldPrefix}[${index}] must be an object.`);
@@ -3424,6 +3550,16 @@ function parseContributedToolDefinition(
   }
 
   const description = stringField(value.description, `${fieldPrefix}[${index}].description`);
+  if (!isRecord(value.presentation)) {
+    throw new Error(`Extension field ${fieldPrefix}[${index}].presentation must be an object.`);
+  }
+  const presentation = {
+    displayName: text(
+      value.presentation.displayName,
+      `${fieldPrefix}[${index}].presentation.displayName`,
+    ),
+    summary: text(value.presentation.summary, `${fieldPrefix}[${index}].presentation.summary`),
+  };
   const inputSchema = schemaField(value.inputSchema, `${fieldPrefix}[${index}].inputSchema`);
   const outputSchema = optionalSchemaField(
     value.outputSchema,
@@ -3443,6 +3579,7 @@ function parseContributedToolDefinition(
   return {
     name,
     description,
+    presentation,
     inputSchema,
     ...(outputSchema ? { outputSchema } : {}),
     ...(approvalMode ? { approvalMode } : {}),
@@ -3453,18 +3590,20 @@ function parseContributedToolDefinition(
 function optionalSettingsSchemaField(
   value: unknown,
   fieldPrefix: string,
+  text: ExtensionLocalizedField,
 ): HostExtensionSettingDefinition[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  return value.map((entry, index) => parseSettingDefinition(entry, index, fieldPrefix));
+  return value.map((entry, index) => parseSettingDefinition(entry, index, fieldPrefix, text));
 }
 
 function parseSettingDefinition(
   value: unknown,
   index: number,
   fieldPrefix: string,
+  text: ExtensionLocalizedField,
 ): HostExtensionSettingDefinition {
   if (!isRecord(value)) {
     throw new Error(`Extension field ${fieldPrefix}[${index}] must be an object.`);
@@ -3480,9 +3619,15 @@ function parseSettingDefinition(
     `${fieldPrefix}[${index}].type`,
     SUPPORTED_HOST_EXTENSION_SETTING_TYPES,
   );
-  const title = stringField(value.title, `${fieldPrefix}[${index}].title`);
-  const description = optionalStringField(value.description);
-  const placeholder = optionalStringField(value.placeholder);
+  const title = text(value.title, `${fieldPrefix}[${index}].title`);
+  const description =
+    value.description === undefined
+      ? undefined
+      : text(value.description, `${fieldPrefix}[${index}].description`);
+  const placeholder =
+    value.placeholder === undefined
+      ? undefined
+      : text(value.placeholder, `${fieldPrefix}[${index}].placeholder`);
   const required = optionalBooleanField(value.required);
   const defaultValue = optionalSettingDefaultValueField(
     value.defaultValue,
@@ -3494,6 +3639,7 @@ function parseSettingDefinition(
     index,
     type,
     `${fieldPrefix}[${index}].options`,
+    text,
   );
 
   return {
@@ -3513,6 +3659,7 @@ function optionalSettingOptionsField(
   settingIndex: number,
   type: HostExtensionSettingType,
   fieldName: string,
+  text: ExtensionLocalizedField,
 ): HostExtensionSettingOption[] {
   if (value === undefined || value === null) {
     return [];
@@ -3531,8 +3678,11 @@ function optionalSettingOptionsField(
       throw new Error(`Extension field ${fieldName}[${optionIndex}] must be an object.`);
     }
     const optionValue = stringField(entry.value, `${fieldName}[${optionIndex}].value`);
-    const label = stringField(entry.label, `${fieldName}[${optionIndex}].label`);
-    const description = optionalStringField(entry.description);
+    const label = text(entry.label, `${fieldName}[${optionIndex}].label`);
+    const description =
+      entry.description === undefined
+        ? undefined
+        : text(entry.description, `${fieldName}[${optionIndex}].description`);
     return {
       value: optionValue,
       label,

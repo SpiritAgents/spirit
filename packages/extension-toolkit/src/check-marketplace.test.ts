@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, test } from "vitest";
 
 import { checkMarketplaceRegistry } from "./check-marketplace.js";
+import { localizedTestFields } from "./test-localization.js";
 
 const fixtureDirs: string[] = [];
 
@@ -45,13 +46,20 @@ const LOCAL_ENTRY = {
   version: "1.0.0",
   source: "./extensions/demo-ext",
   icon: "extensions/demo-ext/icon.svg",
-  displayName: "Demo",
-  description: "Demo extension.",
+  ...localizedTestFields(),
   reviewStatus: "verified",
   manifest: {
     supportedHosts: ["cli"],
     requestedCapabilities: ["skills"],
-    contributes: { skills: true },
+    contributes: {
+      skills: [
+        {
+          name: "demo",
+          displayName: { message: "skills.demo.displayName" },
+          summary: { message: "skills.demo.summary" },
+        },
+      ],
+    },
   },
 };
 
@@ -113,8 +121,7 @@ test("npm-sourced entries skip content checks", async () => {
       name: "npm-ext",
       version: "1.0.0",
       source: { source: "npm", package: "demo-ext@1.0.0" },
-      displayName: "Npm Demo",
-      description: "Registry entry backed by an npm artifact.",
+      ...localizedTestFields("Npm Demo", "Registry entry backed by an npm artifact."),
       reviewStatus: "unverified",
       manifest: { supportedHosts: ["cli"] },
     }),

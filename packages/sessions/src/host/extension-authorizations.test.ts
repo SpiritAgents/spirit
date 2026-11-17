@@ -24,7 +24,14 @@ test("desktop authorization projection exposes configuration without secret decl
       supportedHosts: ["desktop"],
       secretSlots: ["oauthAccessToken"],
       contributes: {
-        authorizations: [{ id: "oauth", action: "authorize", secretSlots: ["oauthAccessToken"] }],
+        authorizations: [
+          {
+            id: "oauth",
+            displayName: "OAuth",
+            action: "authorize",
+            secretSlots: ["oauthAccessToken"],
+          },
+        ],
       },
     },
   };
@@ -36,6 +43,8 @@ test("desktop authorization projection exposes configuration without secret decl
   } as unknown as HostExtensionManager;
 
   const [item] = await buildDesktopExtensionListItems(manager, [extension]);
-  assert.deepEqual(item?.authorizations, [{ id: "oauth", action: "authorize", configured: true }]);
+  assert.deepEqual(item?.authorizations, [
+    { id: "oauth", displayName: "OAuth", action: "authorize", configured: true },
+  ]);
   assert.equal(JSON.stringify(item).includes("oauthAccessToken"), false);
 });

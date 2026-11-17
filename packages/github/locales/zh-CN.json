@@ -1,0 +1,163 @@
+{
+  "metadata": {
+    "displayName": "GitHub",
+    "description": "在 Spirit 中处理拉取请求和自动化。",
+    "keywords": {
+      "pullRequests": "拉取请求",
+      "repositories": "仓库",
+      "automations": "自动化"
+    }
+  },
+  "settings": {
+    "prOverviewRatio": {
+      "title": "拉取请求概览比例"
+    },
+    "prFilesWidth": {
+      "title": "变更文件宽度"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "automation": {
+    "activity": {
+      "name": "GitHub",
+      "description": "接收仓库中新拉取请求或问题。"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "GitHub"
+    }
+  },
+  "tabs": {
+    "pullRequests": {
+      "name": "拉取请求"
+    }
+  },
+  "workspace": {
+    "prTab": "拉取请求",
+    "prElectronOnly": "Pull Request 仅在 Electron 桌面版可用。",
+    "prGitHubAuthChecking": "正在检查 GitHub 连接…",
+    "prGitHubAuthorizationRequired": "<authorize>授权 GitHub</authorize> 以使用拉取请求",
+    "prNoRepo": "当前工作区不是 Git 仓库。",
+    "prNoGitHubOrigin": "未找到指向 GitHub 的 origin 远程。",
+    "prNoOpenPullRequest": "分支 {{branch}} 没有 open 状态的 Pull Request。",
+    "prListSearchPlaceholder": "搜索 Pull Request",
+    "prListTabsAria": "Pull Request 列表",
+    "prListTabOpen": "{{count}} Open",
+    "prListTabClosed": "{{count}} Closed",
+    "prListLoading": "正在加载 Pull Request 列表…",
+    "prListLoadingMore": "正在加载更多 Pull Request…",
+    "prListLoadMore": "加载更多 Pull Request",
+    "prListEmpty": "此状态下暂无 Pull Request。",
+    "prListSearchEmpty": "没有匹配的 Pull Request。",
+    "prListTasksCount_one": "{{count}} 项任务",
+    "prListTasksCount_other": "{{count}} 项任务",
+    "prListTasksPartial": "已完成 {{completed}}/{{total}} 项任务",
+    "prListTasksDone": "已完成 {{count}} 项任务",
+    "prListTasksProgressAria": "已完成 {{completed}}/{{total}} 项任务",
+    "prListTasksDoneAria": "全部 {{count}} 项任务已完成",
+    "prListOpenDetailAria": "打开 Pull Request #{{number}}：{{title}}",
+    "prLoading": "正在加载 Pull Request…",
+    "prLoadingDetail": "正在加载详情…",
+    "prShowDetail": "查看详情",
+    "prOpenOnGitHub": "在 GitHub 打开",
+    "prLabels": "标签：{{labels}}",
+    "prNoDescription": "暂无描述。",
+    "prDetailUnavailable": "无法加载 Pull Request 详情。",
+    "prDetailTabsAria": "Pull Request 详情",
+    "prResizeOverviewTabs": "调整概述与标签页区域高度",
+    "prTabConversations": "讨论",
+    "prTabCommits": "提交",
+    "prTabChecks": "检查",
+    "prTabChanges": "变更",
+    "prConversationEmpty": "暂无对话记录。",
+    "prIssueCommentFallback": "发表了评论",
+    "prReviewApproved": "批准了这些更改",
+    "prReviewChangesRequested": "请求更改",
+    "prReviewCommented": "留下了 review",
+    "prReviewDismissed": "驳回了 review",
+    "prReviewThreadOnFile": "评论于 {{path}}",
+    "prReviewThreadFallback": "留下了 review 评论",
+    "prReviewThreadExpand": "展开讨论",
+    "prReviewThreadCollapse": "收起讨论",
+    "prConversationLoadMore": "加载更多活动",
+    "prConversationLoadingMore": "正在加载更多活动…",
+    "prChangesLoading": "正在加载变更文件…",
+    "prChangesEmpty": "此 Pull Request 没有变更文件。",
+    "prChangesFileExpand": "展开文件 diff",
+    "prChangesFileCollapse": "收起文件 diff",
+    "prChangesNoPatch": "无法显示此文件的 diff（过大或为二进制）。",
+    "prChangesFileTreeAria": "变更文件",
+    "prChangesResizeTreeWidth": "调整变更文件树宽度",
+    "prChangesHasMore": "更多变更文件请在 GitHub 查看。",
+    "prCommitsLoading": "正在加载提交…",
+    "prCommitsEmpty": "此 Pull Request 暂无提交。",
+    "prCommitsHasMore": "更多提交请在 GitHub 查看。",
+    "prChecksLoading": "正在加载检查…",
+    "prChecksEmpty": "此 Pull Request 暂无检查项。",
+    "prChecksHasMore": "更多检查项请在 GitHub 查看。",
+    "prChecksLoadingMore": "正在加载更多检查…",
+    "prChecksLoadMore": "加载更多检查",
+    "prCheckStateSuccess": "通过",
+    "prCheckStateFailure": "失败",
+    "prCheckStateInProgress": "进行中",
+    "prCheckStatePending": "未开始",
+    "prChangesViewOnGitHub": "在 GitHub 查看",
+    "prFileStatusAdded": "新增",
+    "prFileStatusRemoved": "删除",
+    "prFileStatusModified": "修改",
+    "prFileStatusRenamed": "重命名",
+    "prFileStatusCopied": "复制",
+    "prDescriptionHeading": "描述",
+    "prDraft": "草稿",
+    "prOpen": "进行中",
+    "prClosed": "已关闭",
+    "prMerged": "已合并",
+    "prMergedThisPullRequest": "合并了此 Pull Request",
+    "prMergeable": "可合并",
+    "prConflicts": "存在冲突",
+    "prMergeStatusUnknown": "合并状态未知",
+    "prMergeSquash": "压缩合并",
+    "prMergeRebase": "变基合并",
+    "prMerging": "正在合并…",
+    "prMergeFailed": "合并 Pull Request 失败",
+    "prMergeNotMergeable": "此 Pull Request 暂不可合并",
+    "prMergeConflicts": "合并冲突",
+    "prMergeMoreActions": "更多合并选项",
+    "prMarkReadyForReview": "标记为可审查",
+    "prMarkingReady": "正在标记…",
+    "prMarkReadyFailed": "标记 Pull Request 为可审查失败",
+    "addSelectionToChat": "添加到对话"
+  },
+  "github": {
+    "connect": "连接 GitHub",
+    "disconnect": "断开连接",
+    "connectedAs": "已连接 @{{login}}",
+    "waiting": "等待授权",
+    "openDevicePage": "打开 GitHub 验证页",
+    "desktopOnly": "GitHub 集成仅在 Desktop 应用中可用。",
+    "oauthUnavailable": "Spirit 的 OAuth 应用配置完成前，GitHub 授权暂不可用。"
+  },
+  "common": {
+    "back": "返回",
+    "cancel": "取消"
+  },
+  "app": {
+    "merge": "合并"
+  },
+  "automations": {
+    "trigger": {
+      "github": "GitHub",
+      "repository": "仓库",
+      "repositorySearchPlaceholder": "搜索仓库",
+      "repositoryEmpty": "未找到仓库",
+      "repositoryLoadFailed": "加载仓库失败，请稍后重试",
+      "pullRequestCreated": "Pull Request 创建",
+      "issueCreated": "Issue 创建"
+    }
+  }
+}

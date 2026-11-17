@@ -25,6 +25,7 @@ import {
 export interface MarketplaceHostContext {
   spiritDataDir: string;
   hostKind: ExtensionHostKind;
+  locale?: string | (() => string);
   fetchImpl?: MarketplaceIndexFetch;
   gitRunner?: MarketplaceGitRunner;
 }

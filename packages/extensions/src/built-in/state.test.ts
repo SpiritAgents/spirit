@@ -12,6 +12,7 @@ import {
   noteBuiltInExtensionRemoved,
   noteBuiltInSkillRemoved,
 } from "../index.js";
+import { localizedTestFields } from "@spiritagent/extension-toolkit/test-localization";
 
 test("ensureBuiltInSkills does not reseed after noteBuiltInSkillRemoved", async () => {
   const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-built-in-skill-removed-"));
@@ -59,8 +60,7 @@ test("installPreparedDirectory derives installSource from the dump sourceId and 
           name: "extension-built-in-source-demo",
           version: "0.0.1",
           sourceId: "built-in",
-          displayName: "Built-in source demo",
-          description: "installSource persistence fixture",
+          ...localizedTestFields("Built-in source demo", "installSource persistence fixture"),
           manifest: {
             supportedHosts: ["desktop"],
             activationEvents: ["onStartup"],

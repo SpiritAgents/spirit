@@ -3,7 +3,8 @@ import type {
   AutomationTriggerProvider,
   AutomationTriggerMenuItem,
 } from "@spiritagent/automations/trigger-provider";
-import { resources, matchLocaleTag } from "@spiritagent/i18n";
+import { matchLocaleTag } from "@spiritagent/i18n";
+import { resources } from "./locales.js";
 import { getRepositoryPermissions } from "./repository-permissions.js";
 import { pollGitHubAutomationTriggerProvider } from "./extension-poller.js";
 import type { GitHubService, GitHubCredentialReader } from "./service.js";

@@ -654,6 +654,14 @@ async function loadDesktopPlanSnapshot(
 export class DesktopHostService {
   constructor() {
     configureServerConnector(connectOrSpawnServer);
+    i18n.on("languageChanged", () => {
+      if (!this.state) return;
+      void this.runSerialized(() => this.refreshExtensionsList())
+        .then(() => this.emitLiveSnapshotUpdate())
+        .catch((error) => {
+          console.error("[extensions] failed to localize extension projections", error);
+        });
+    });
   }
 
   private readonly invokeDispatch = createHostInvokeDispatch(this);
@@ -676,6 +684,7 @@ export class DesktopHostService {
     spiritDataDir: spiritDataDir(),
     hostKind: "desktop",
     stateStore: this.extensionStateStore,
+    locale: () => i18n.language,
   });
   private readonly extensionWarmup = new ExtensionWarmupCoordinator();
   private readonly extensionWebViewEventListeners = new Set<
@@ -5362,7 +5371,11 @@ export class DesktopHostService {
     await this.workspaceToolTabs.reconcileExtensions(state.extensionsList);
 
     // Multi-source marketplace: refresh every source, then read its catalog.
-    const marketplaceContext = { spiritDataDir: spiritDataDir(), hostKind: "desktop" as const };
+    const marketplaceContext = {
+      spiritDataDir: spiritDataDir(),
+      hostKind: "desktop" as const,
+      locale: () => i18n.language,
+    };
     const sources = await listAllMarketplaceSources(marketplaceContext);
     state.marketplaceSources = sources.map((source) => ({
       id: source.id,
@@ -5381,6 +5394,7 @@ export class DesktopHostService {
         catalogs[source.id] = await buildDesktopMarketplaceCatalogEntries(
           read.items,
           state.extensionsList,
+          { locale: i18n.language },
         );
         if (read.warning) {
           warnings.push(read.warning);
@@ -5397,7 +5411,7 @@ export class DesktopHostService {
     // with the backend's comparator, so the renderer never re-sorts.
     state.marketplaceCatalogAll = Object.values(catalogs)
       .flat()
-      .sort(compareMarketplaceDisplayOrder);
+      .sort((left, right) => compareMarketplaceDisplayOrder(left, right, i18n.language));
     state.marketplaceWarnings = warnings;
 
     state.extensionCss = await collectDesktopExtensionCssLayers(extensions);

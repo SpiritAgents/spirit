@@ -1,0 +1,163 @@
+{
+  "metadata": {
+    "displayName": "GitHub",
+    "description": "Pull requests e automações, direto no Spirit.",
+    "keywords": {
+      "pullRequests": "pull requests",
+      "repositories": "repositórios",
+      "automations": "automações"
+    }
+  },
+  "settings": {
+    "prOverviewRatio": {
+      "title": "Proporção da visão geral de pull requests"
+    },
+    "prFilesWidth": {
+      "title": "Largura dos arquivos alterados"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "automation": {
+    "activity": {
+      "name": "GitHub",
+      "description": "Novos pull requests ou issues em um repositório."
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "GitHub"
+    }
+  },
+  "tabs": {
+    "pullRequests": {
+      "name": "Pull Requests"
+    }
+  },
+  "workspace": {
+    "prTab": "Pull Request",
+    "prElectronOnly": "Pull Requests estão disponíveis apenas na versão desktop Electron.",
+    "prGitHubAuthChecking": "Verificando conexão com GitHub…",
+    "prGitHubAuthorizationRequired": "<authorize>Autorize o GitHub</authorize> para usar Pull Requests",
+    "prNoRepo": "O workspace não é um repositório Git.",
+    "prNoGitHubOrigin": "Nenhum remote origin do GitHub encontrado para este repositório.",
+    "prNoOpenPullRequest": "Nenhum pull request aberto para o branch {{branch}}.",
+    "prListSearchPlaceholder": "Pesquisar pull requests",
+    "prListTabsAria": "Lista de pull requests",
+    "prListTabOpen": "{{count}} Abertos",
+    "prListTabClosed": "{{count}} Fechados",
+    "prListLoading": "Carregando pull requests…",
+    "prListLoadingMore": "Carregando mais pull requests…",
+    "prListLoadMore": "Carregar mais pull requests",
+    "prListEmpty": "Nenhum pull request neste estado.",
+    "prListSearchEmpty": "Nenhum pull request corresponde à sua pesquisa.",
+    "prListTasksCount_one": "{{count}} tarefa",
+    "prListTasksCount_other": "{{count}} tarefas",
+    "prListTasksPartial": "{{completed}} de {{total}} tarefas",
+    "prListTasksDone": "{{count}} tarefas concluídas",
+    "prListTasksProgressAria": "{{completed}} de {{total}} tarefas concluídas",
+    "prListTasksDoneAria": "Todas as {{count}} tarefas concluídas",
+    "prListOpenDetailAria": "Abrir pull request #{{number}}: {{title}}",
+    "prLoading": "Carregando pull request…",
+    "prLoadingDetail": "Carregando detalhes…",
+    "prShowDetail": "Mostrar detalhes",
+    "prOpenOnGitHub": "Abrir no GitHub",
+    "prLabels": "Labels: {{labels}}",
+    "prNoDescription": "Sem descrição.",
+    "prDetailUnavailable": "Detalhes do pull request não puderam ser carregados.",
+    "prDetailTabsAria": "Detalhe do pull request",
+    "prResizeOverviewTabs": "Redimensionar altura da visão geral e abas",
+    "prTabConversations": "Conversas",
+    "prTabCommits": "Commits",
+    "prTabChecks": "Checagens",
+    "prTabChanges": "Alterações",
+    "prConversationEmpty": "Nenhuma atividade de conversa ainda.",
+    "prIssueCommentFallback": "Deixou um comentário",
+    "prReviewApproved": "Aprovou estas alterações",
+    "prReviewChangesRequested": "Solicitou alterações",
+    "prReviewCommented": "Deixou uma revisão",
+    "prReviewDismissed": "Descartou uma revisão",
+    "prReviewThreadOnFile": "Comentário em {{path}}",
+    "prReviewThreadFallback": "Deixou um comentário de revisão",
+    "prReviewThreadExpand": "Mostrar discussão",
+    "prReviewThreadCollapse": "Ocultar discussão",
+    "prConversationLoadMore": "Carregar mais atividades",
+    "prConversationLoadingMore": "Carregando mais atividades…",
+    "prChangesLoading": "Carregando arquivos alterados…",
+    "prChangesEmpty": "Nenhum arquivo alterado neste pull request.",
+    "prChangesFileExpand": "Mostrar diff do arquivo",
+    "prChangesFileCollapse": "Ocultar diff do arquivo",
+    "prChangesNoPatch": "Diff indisponível para este arquivo (muito grande ou binário).",
+    "prChangesFileTreeAria": "Arquivos alterados",
+    "prChangesResizeTreeWidth": "Redimensionar largura da árvore de arquivos alterados",
+    "prChangesHasMore": "Mais arquivos alterados disponíveis no GitHub.",
+    "prCommitsLoading": "Carregando commits…",
+    "prCommitsEmpty": "Nenhum commit neste pull request.",
+    "prCommitsHasMore": "Mais commits disponíveis no GitHub.",
+    "prChecksLoading": "Carregando checagens…",
+    "prChecksEmpty": "Nenhuma checagem reportada para este pull request.",
+    "prChecksHasMore": "Mais checagens disponíveis no GitHub.",
+    "prChecksLoadingMore": "Carregando mais checagens…",
+    "prChecksLoadMore": "Carregar mais verificações",
+    "prCheckStateSuccess": "Aprovado",
+    "prCheckStateFailure": "Reprovado",
+    "prCheckStateInProgress": "Em andamento",
+    "prCheckStatePending": "Não iniciado",
+    "prChangesViewOnGitHub": "Ver no GitHub",
+    "prFileStatusAdded": "Adicionado",
+    "prFileStatusRemoved": "Removido",
+    "prFileStatusModified": "Modificado",
+    "prFileStatusRenamed": "Renomeado",
+    "prFileStatusCopied": "Copiado",
+    "prDescriptionHeading": "Descrição",
+    "prDraft": "Rascunho",
+    "prOpen": "Aberta",
+    "prClosed": "Fechada",
+    "prMerged": "Mesclada",
+    "prMergedThisPullRequest": "mesclou este pull request",
+    "prMergeable": "Mesclável",
+    "prConflicts": "Tem conflitos",
+    "prMergeStatusUnknown": "Status de mesclagem desconhecido",
+    "prMergeSquash": "Squash e mesclar",
+    "prMergeRebase": "Rebase e mesclar",
+    "prMerging": "Mesclando…",
+    "prMergeFailed": "Falha ao mesclar pull request",
+    "prMergeNotMergeable": "Este pull request ainda não pode ser mesclado",
+    "prMergeConflicts": "Conflitos de mesclagem",
+    "prMergeMoreActions": "Mais opções de mesclagem",
+    "prMarkReadyForReview": "Pronto para revisão",
+    "prMarkingReady": "Marcando como pronto…",
+    "prMarkReadyFailed": "Falha ao marcar pull request como pronto para revisão",
+    "addSelectionToChat": "Adicionar ao Chat"
+  },
+  "github": {
+    "connect": "Conectar GitHub",
+    "disconnect": "Desconectar",
+    "connectedAs": "Conectado como @{{login}}",
+    "waiting": "Aguardando autorização",
+    "openDevicePage": "Abrir página de verificação do GitHub",
+    "desktopOnly": "Integração com GitHub disponível apenas no aplicativo Desktop.",
+    "oauthUnavailable": "A autorização do GitHub estará disponível quando o aplicativo OAuth do Spirit estiver configurado."
+  },
+  "common": {
+    "back": "Voltar",
+    "cancel": "Cancelar"
+  },
+  "app": {
+    "merge": "Mesclar"
+  },
+  "automations": {
+    "trigger": {
+      "github": "GitHub",
+      "repository": "Repositório",
+      "repositorySearchPlaceholder": "Pesquisar repositórios",
+      "repositoryEmpty": "Nenhum repositório encontrado",
+      "repositoryLoadFailed": "Falha ao carregar repositórios. Tente novamente.",
+      "pullRequestCreated": "Pull request criado",
+      "issueCreated": "Issue criada"
+    }
+  }
+}

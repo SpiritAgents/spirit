@@ -636,7 +636,8 @@ export type DesktopExtensionToolExecutionMode = "foreground" | "background";
 
 export interface DesktopExtensionContributedTool {
   name: string;
-  description: string;
+  displayName: string;
+  summary: string;
   approvalMode?: DesktopExtensionToolApprovalMode;
   executionMode?: DesktopExtensionToolExecutionMode;
 }
@@ -686,7 +687,6 @@ export interface DesktopExtensionDesktopTab {
   icon: DesktopExtensionDesktopTabIcon;
   defaultScope: DesktopExtensionDesktopTabScope;
   authorization?: string;
-  nameKey?: string;
 }
 
 export type DesktopWorkspaceBuiltInToolTabKind = "files" | "terminal" | "git" | "browser" | "task";
@@ -856,10 +856,10 @@ export interface DesktopExtensionSettingDefinition {
 export type DesktopExtensionHostKind = "cli" | "desktop";
 
 export interface DesktopExtensionInstructionContributionSummary {
-  mcp?: Array<{ name: string; displayName?: string; transport: "stdio" | "http" }>;
-  hooks?: string[];
-  skills?: Array<{ name: string; description: string }>;
-  rules?: { content: string };
+  mcp?: Array<{ name: string; displayName: string; transport: "stdio" | "http" }>;
+  hooks?: Array<{ event: string; displayName: string }>;
+  skills?: Array<{ name: string; displayName: string; summary: string }>;
+  rules?: { displayName: string; summary: string };
 }
 
 export interface DesktopExtensionAuthor {
@@ -882,6 +882,7 @@ export interface DesktopExtensionAutomationTrigger {
 
 export interface DesktopExtensionAuthorization {
   id: string;
+  displayName: string;
   action: string;
   configured?: boolean;
 }

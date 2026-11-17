@@ -10,6 +10,7 @@ import { createHostExtensionManager, listInstalledExtensions } from "../extensio
 import { importPreparedDirectoryToPersonal } from "./import-zip.js";
 import { readPersonalMarketplaceIndex, removePersonalRegistryEntry } from "./personal.js";
 import { checkExtensionUpdate, type MarketplaceHostContext } from "./resolve.js";
+import { localizedTestFields } from "@spiritagent/extension-toolkit/test-localization";
 
 const ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"></svg>\n';
 
@@ -29,8 +30,7 @@ function zipDump(version: string): Record<string, unknown> {
     name: "extension-zipped",
     version,
     sourceId: "self-declared",
-    displayName: "Zipped demo",
-    description: "ZIP import fixture.",
+    ...localizedTestFields("Zipped demo", "ZIP import fixture."),
     icon: "icon.svg",
     author: { name: "Tester" },
     manifest: { supportedHosts: ["desktop"] },

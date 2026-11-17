@@ -11,6 +11,14 @@ import { assertMarketplaceIconPath } from "./icon.js";
 import { product } from "@spiritagent/product";
 import { assertRegistryRelativePath } from "./paths.js";
 import { isMarketplaceVersionString, parseMarketplaceVersion } from "./semver.js";
+import {
+  assertExtensionMessageReferences,
+  parseExtensionLocalization,
+  parseLocalizableText,
+  type ExtensionLocalization,
+  type ExtensionMessageCatalog,
+  type LocalizableText,
+} from "./localization.js";
 
 export const MARKETPLACE_SCHEMA_VERSION = 1;
 export const MARKETPLACE_INDEX_FILE_NAME = "marketplace.json";
@@ -25,6 +33,9 @@ export type MarketplaceReviewStatus = (typeof MARKETPLACE_REVIEW_STATUSES)[numbe
 
 export const MARKETPLACE_HOST_KINDS = ["cli", "desktop"] as const;
 export type MarketplaceHostKind = (typeof MARKETPLACE_HOST_KINDS)[number];
+
+export const MARKETPLACE_CATEGORIES = ["development"] as const;
+export type MarketplaceCategory = (typeof MARKETPLACE_CATEGORIES)[number];
 
 /** Instruction contributions whose declared files must exist in the package. */
 export const MARKETPLACE_INSTRUCTION_CONTRIBUTION_KEYS = [
@@ -69,15 +80,37 @@ export interface MarketplaceExtensionManifest {
 }
 
 export interface MarketplaceManifestContributes {
-  mcp?: true;
-  hooks?: true;
-  skills?: true;
-  rules?: true;
+  mcp?: MarketplaceMcpContributionPresentation[];
+  hooks?: MarketplaceHookContributionPresentation[];
+  skills?: MarketplaceSkillContributionPresentation[];
+  rules?: MarketplaceRuleContributionPresentation;
   /** Deeper contribution shapes (tools / desktop / cli) validated at install. */
   [key: string]: unknown;
 }
 
-export interface MarketplaceExtensionEntry {
+export interface MarketplaceMcpContributionPresentation {
+  name: string;
+  displayName: LocalizableText;
+  transport: "stdio" | "http";
+}
+
+export interface MarketplaceHookContributionPresentation {
+  event: string;
+  displayName: LocalizableText;
+}
+
+export interface MarketplaceSkillContributionPresentation {
+  name: string;
+  displayName: LocalizableText;
+  summary: LocalizableText;
+}
+
+export interface MarketplaceRuleContributionPresentation {
+  displayName: LocalizableText;
+  summary: LocalizableText;
+}
+
+export interface MarketplaceExtensionEntry extends ExtensionLocalization {
   /** Spirit-owned extension id inside this registry (kebab-case). */
   name: string;
   /** Spirit-owned version (strict semver, no pre-release). */
@@ -85,11 +118,11 @@ export interface MarketplaceExtensionEntry {
   source: MarketplaceExtensionSource;
   /** Registry-root-relative SVG path. */
   icon?: string;
-  displayName: string;
-  description: string;
+  displayName: LocalizableText;
+  description: LocalizableText;
   author?: MarketplaceExtensionAuthor;
-  category?: string;
-  keywords?: string[];
+  category?: MarketplaceCategory;
+  keywords?: LocalizableText[];
   /** Project URL (npm package.json homepage convention), shown as the Website row. */
   homepage?: string;
   featured?: boolean;
@@ -283,13 +316,33 @@ function parseManifest(value: unknown, fieldName: string): MarketplaceExtensionM
     if (!isRecord(value.contributes)) {
       throw new Error(`${fieldName}.contributes must be an object.`);
     }
-    contributes = value.contributes as MarketplaceManifestContributes;
-    for (const key of MARKETPLACE_INSTRUCTION_CONTRIBUTION_KEYS) {
-      const declared = value.contributes[key];
-      if (declared !== undefined && declared !== true) {
-        throw new Error(`${fieldName}.contributes.${key} must be true when present.`);
-      }
-    }
+    contributes = {
+      ...value.contributes,
+      ...(value.contributes.mcp === undefined
+        ? {}
+        : { mcp: parseMcpPresentations(value.contributes.mcp, `${fieldName}.contributes.mcp`) }),
+      ...(value.contributes.hooks === undefined
+        ? {}
+        : {
+            hooks: parseHookPresentations(
+              value.contributes.hooks,
+              `${fieldName}.contributes.hooks`,
+            ),
+          }),
+      ...(value.contributes.skills === undefined
+        ? {}
+        : {
+            skills: parseSkillPresentations(
+              value.contributes.skills,
+              `${fieldName}.contributes.skills`,
+            ),
+          }),
+      ...(value.contributes.rules === undefined
+        ? {}
+        : {
+            rules: parseRulePresentation(value.contributes.rules, `${fieldName}.contributes.rules`),
+          }),
+    };
   }
 
   if (value.settingsSchema !== undefined && !Array.isArray(value.settingsSchema)) {
@@ -323,7 +376,7 @@ function assertDeclarationConsistency(
 ): void {
   const capabilities = new Set(requestedCapabilities ?? []);
   for (const key of MARKETPLACE_INSTRUCTION_CONTRIBUTION_KEYS) {
-    const hasContribution = contributes?.[key] === true;
+    const hasContribution = contributes?.[key] !== undefined;
     const hasCapability = capabilities.has(key);
     if (hasContribution === hasCapability) {
       continue;
@@ -352,16 +405,92 @@ function assertDeclarationConsistency(
   }
 }
 
+function parseMcpPresentations(
+  value: unknown,
+  fieldName: string,
+): MarketplaceMcpContributionPresentation[] {
+  if (!Array.isArray(value)) {
+    throw new Error(`${fieldName} must be an array.`);
+  }
+  return value.map((entry, index) => {
+    const field = `${fieldName}[${index}]`;
+    if (!isRecord(entry)) {
+      throw new Error(`${field} must be an object.`);
+    }
+    const transport = requiredString(entry.transport, `${field}.transport`);
+    if (transport !== "stdio" && transport !== "http") {
+      throw new Error(`${field}.transport must be "stdio" or "http".`);
+    }
+    return {
+      name: requiredString(entry.name, `${field}.name`),
+      displayName: parseLocalizableText(entry.displayName, `${field}.displayName`),
+      transport,
+    };
+  });
+}
+
+function parseHookPresentations(
+  value: unknown,
+  fieldName: string,
+): MarketplaceHookContributionPresentation[] {
+  if (!Array.isArray(value)) {
+    throw new Error(`${fieldName} must be an array.`);
+  }
+  return value.map((entry, index) => {
+    const field = `${fieldName}[${index}]`;
+    if (!isRecord(entry)) {
+      throw new Error(`${field} must be an object.`);
+    }
+    return {
+      event: requiredString(entry.event, `${field}.event`),
+      displayName: parseLocalizableText(entry.displayName, `${field}.displayName`),
+    };
+  });
+}
+
+function parseSkillPresentations(
+  value: unknown,
+  fieldName: string,
+): MarketplaceSkillContributionPresentation[] {
+  if (!Array.isArray(value)) {
+    throw new Error(`${fieldName} must be an array.`);
+  }
+  return value.map((entry, index) => {
+    const field = `${fieldName}[${index}]`;
+    if (!isRecord(entry)) {
+      throw new Error(`${field} must be an object.`);
+    }
+    return {
+      name: requiredString(entry.name, `${field}.name`),
+      displayName: parseLocalizableText(entry.displayName, `${field}.displayName`),
+      summary: parseLocalizableText(entry.summary, `${field}.summary`),
+    };
+  });
+}
+
+function parseRulePresentation(
+  value: unknown,
+  fieldName: string,
+): MarketplaceRuleContributionPresentation {
+  if (!isRecord(value)) {
+    throw new Error(`${fieldName} must be an object.`);
+  }
+  return {
+    displayName: parseLocalizableText(value.displayName, `${fieldName}.displayName`),
+    summary: parseLocalizableText(value.summary, `${fieldName}.summary`),
+  };
+}
+
 /** Shared identity + display + declaration fields (marketplace entry and install dump). */
-interface MarketplaceExtensionCoreFields {
+interface MarketplaceExtensionCoreFields extends ExtensionLocalization {
   name: string;
   version: string;
   icon?: string;
-  displayName: string;
-  description: string;
+  displayName: LocalizableText;
+  description: LocalizableText;
   author?: MarketplaceExtensionAuthor;
-  category?: string;
-  keywords?: string[];
+  category?: MarketplaceCategory;
+  keywords?: LocalizableText[];
   homepage?: string;
   manifest: MarketplaceExtensionManifest;
 }
@@ -379,27 +508,141 @@ function parseCoreFields(
     value.icon === undefined
       ? undefined
       : assertMarketplaceIconPath(value.icon, `${fieldName}.icon`);
-  const displayName = requiredString(value.displayName, `${fieldName}.displayName`);
-  const description = requiredString(value.description, `${fieldName}.description`);
+  const localization = parseExtensionLocalization(value, fieldName);
+  const displayName = parseLocalizableText(value.displayName, `${fieldName}.displayName`);
+  const description = parseLocalizableText(value.description, `${fieldName}.description`);
   const author =
     value.author === undefined ? undefined : parseOwner(value.author, `${fieldName}.author`);
   const category = optionalString(value.category, `${fieldName}.category`);
-  const keywords = optionalStringArray(value.keywords, `${fieldName}.keywords`);
+  if (category && !(MARKETPLACE_CATEGORIES as readonly string[]).includes(category)) {
+    throw new Error(`${fieldName}.category must be one of: ${MARKETPLACE_CATEGORIES.join(", ")}.`);
+  }
+  const keywords = Array.isArray(value.keywords)
+    ? value.keywords.map((entry, index) =>
+        parseLocalizableText(entry, `${fieldName}.keywords[${index}]`),
+      )
+    : undefined;
+  if (value.keywords !== undefined && !Array.isArray(value.keywords)) {
+    throw new Error(`${fieldName}.keywords must be an array of message references.`);
+  }
   const homepage = optionalString(value.homepage, `${fieldName}.homepage`);
   const manifest = parseManifest(value.manifest, `${fieldName}.manifest`);
+  assertManifestPresentationFields(value.manifest, `${fieldName}.manifest`);
+  assertExtensionMessageReferences(
+    localization,
+    { displayName, description, keywords, manifest },
+    fieldName,
+  );
 
   return {
+    ...localization,
     name,
     version,
     ...(icon ? { icon } : {}),
     displayName,
     description,
     ...(author ? { author } : {}),
-    ...(category ? { category } : {}),
+    ...(category ? { category: category as MarketplaceCategory } : {}),
     ...(keywords ? { keywords } : {}),
     ...(homepage ? { homepage } : {}),
     manifest,
   };
+}
+
+function assertManifestPresentationFields(value: unknown, fieldName: string): void {
+  if (!isRecord(value)) {
+    return;
+  }
+  if (isRecord(value.contributes)) {
+    const contributes = value.contributes;
+    forEachRecord(
+      contributes.automationTriggers,
+      `${fieldName}.contributes.automationTriggers`,
+      (entry, field) => {
+        parseLocalizableText(entry.name, `${field}.name`);
+        parseLocalizableText(entry.description, `${field}.description`);
+      },
+    );
+    forEachRecord(
+      contributes.authorizations,
+      `${fieldName}.contributes.authorizations`,
+      (entry, field) => {
+        parseLocalizableText(entry.displayName, `${field}.displayName`);
+      },
+    );
+    forEachRecord(contributes.tools, `${fieldName}.contributes.tools`, (entry, field) => {
+      requiredString(entry.description, `${field}.description`);
+      if (!isRecord(entry.presentation)) {
+        throw new Error(`${field}.presentation must be an object.`);
+      }
+      parseLocalizableText(entry.presentation.displayName, `${field}.presentation.displayName`);
+      parseLocalizableText(entry.presentation.summary, `${field}.presentation.summary`);
+    });
+    if (isRecord(contributes.desktop)) {
+      const desktop = contributes.desktop;
+      forEachRecord(desktop.views, `${fieldName}.contributes.desktop.views`, (entry, field) => {
+        if (entry.title !== undefined) {
+          parseLocalizableText(entry.title, `${field}.title`);
+        }
+      });
+      forEachRecord(desktop.tabs, `${fieldName}.contributes.desktop.tabs`, (entry, field) => {
+        parseLocalizableText(entry.name, `${field}.name`);
+        if ("nameKey" in entry) {
+          throw new Error(
+            `${field}.nameKey is no longer supported; use a message reference in name.`,
+          );
+        }
+      });
+      if (isRecord(desktop.settingsPage) && desktop.settingsPage.title !== undefined) {
+        parseLocalizableText(
+          desktop.settingsPage.title,
+          `${fieldName}.contributes.desktop.settingsPage.title`,
+        );
+      }
+    }
+  }
+  if (Array.isArray(value.settingsSchema)) {
+    for (const [index, entry] of value.settingsSchema.entries()) {
+      const field = `${fieldName}.settingsSchema[${index}]`;
+      if (!isRecord(entry)) {
+        continue;
+      }
+      parseLocalizableText(entry.title, `${field}.title`);
+      if (entry.description !== undefined) {
+        parseLocalizableText(entry.description, `${field}.description`);
+      }
+      if (entry.placeholder !== undefined) {
+        parseLocalizableText(entry.placeholder, `${field}.placeholder`);
+      }
+      if (Array.isArray(entry.options)) {
+        for (const [optionIndex, option] of entry.options.entries()) {
+          if (!isRecord(option)) {
+            continue;
+          }
+          const optionField = `${field}.options[${optionIndex}]`;
+          parseLocalizableText(option.label, `${optionField}.label`);
+          if (option.description !== undefined) {
+            parseLocalizableText(option.description, `${optionField}.description`);
+          }
+        }
+      }
+    }
+  }
+}
+
+function forEachRecord(
+  value: unknown,
+  fieldName: string,
+  visit: (entry: Record<string, unknown>, fieldName: string) => void,
+): void {
+  if (!Array.isArray(value)) {
+    return;
+  }
+  for (const [index, entry] of value.entries()) {
+    if (isRecord(entry)) {
+      visit(entry, `${fieldName}[${index}]`);
+    }
+  }
 }
 
 function parseEntry(value: unknown, index: number): MarketplaceExtensionEntry {
@@ -502,12 +745,14 @@ export interface MarketplaceExtensionDump {
   version: string;
   /** Owning marketplace source id. */
   sourceId: string;
-  displayName: string;
-  description: string;
+  defaultLocale: string;
+  messages: Record<string, ExtensionMessageCatalog>;
+  displayName: LocalizableText;
+  description: LocalizableText;
   icon?: string;
   author?: MarketplaceExtensionAuthor;
-  category?: string;
-  keywords?: string[];
+  category?: MarketplaceCategory;
+  keywords?: LocalizableText[];
   homepage?: string;
   manifest: MarketplaceExtensionManifest;
 }

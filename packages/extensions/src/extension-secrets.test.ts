@@ -7,6 +7,7 @@ import { test } from "vitest";
 import type { HostExtensionSecretsAccessor } from "./extensions.js";
 import { createHostExtensionManager, installPreparedExtensionDirectory } from "./index.js";
 import type { ExtensionStateStore } from "./storage.js";
+import { localizedTestPackage } from "@spiritagent/extension-toolkit/test-localization";
 
 const SECRETS_GLOBAL = "__spiritExtensionPrivateSecretsTest";
 
@@ -34,13 +35,11 @@ async function writePackage(
         name: "secret-demo",
         version: input.version ?? "1.0.0",
         sourceId: "personal",
-        displayName: "Secret Demo",
-        description: "Secret Demo extension.",
-        manifest: {
+        ...localizedTestPackage("Secret Demo", "Secret Demo extension.", {
           supportedHosts: ["desktop"],
           requestedCapabilities: ["secret-storage"],
           secretSlots: input.secretSlots,
-        },
+        }),
       },
       null,
       2,

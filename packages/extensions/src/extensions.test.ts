@@ -9,6 +9,7 @@ import {
   createHostExtensionManager,
   installPreparedExtensionDirectory,
 } from "./index.js";
+import { localizedTestPackage } from "@spiritagent/extension-toolkit/test-localization";
 
 const TOGGLE_EVENTS_GLOBAL = "__spiritExtensionToggleDemoEvents";
 
@@ -50,9 +51,11 @@ async function writeExtensionDumpPackage(
     name: options.name,
     version: options.version ?? "0.0.1",
     sourceId: options.sourceId ?? "personal",
-    displayName: options.displayName,
-    description: `${options.displayName} extension.`,
-    manifest: options.manifest,
+    ...localizedTestPackage(
+      options.displayName,
+      `${options.displayName} extension.`,
+      options.manifest,
+    ),
   };
   await mkdir(join(packageDir, ".spirit"), { recursive: true });
   await writeFile(
@@ -84,6 +87,10 @@ async function installToggleDemoFixture(): Promise<ToggleDemoFixture> {
           {
             name: "demo_tool",
             description: "Demo tool",
+            presentation: {
+              displayName: { message: "tools.hello.displayName" },
+              summary: { message: "tools.hello.summary" },
+            },
             inputSchema: { type: "object" },
           },
         ],
@@ -243,6 +250,28 @@ description: A bundled demo skill.
 Do the demo skill.
 `;
 
+const MCP_DECLARATION = [
+  {
+    name: "docs",
+    displayName: { message: "mcp.example.displayName" },
+    transport: "stdio",
+  },
+];
+const HOOKS_DECLARATION = [
+  { event: "sessionStart", displayName: { message: "hooks.sessionStart.displayName" } },
+];
+const SKILLS_DECLARATION = [
+  {
+    name: "demo-skill",
+    displayName: { message: "skills.demo-skill.displayName" },
+    summary: { message: "skills.demo-skill.summary" },
+  },
+];
+const RULES_DECLARATION = {
+  displayName: { message: "rules.displayName" },
+  summary: { message: "rules.summary" },
+};
+
 async function writeMinimalExtensionPackage(
   packageDir: string,
   manifest: Record<string, unknown>,
@@ -268,7 +297,7 @@ test("instruction contributions require matching capabilities and conventional f
   try {
     const missingCapabilityDir = join(preparedRoot, "missing-capability");
     await writeMinimalExtensionPackage(missingCapabilityDir, {
-      contributes: { mcp: true },
+      contributes: { mcp: MCP_DECLARATION },
     });
     await assert.rejects(
       () =>
@@ -295,7 +324,7 @@ test("instruction contributions require matching capabilities and conventional f
     const missingFileDir = join(preparedRoot, "missing-file");
     await writeMinimalExtensionPackage(missingFileDir, {
       requestedCapabilities: ["mcp"],
-      contributes: { mcp: true },
+      contributes: { mcp: MCP_DECLARATION },
     });
     await assert.rejects(
       () =>
@@ -309,7 +338,7 @@ test("instruction contributions require matching capabilities and conventional f
     const invalidJsonDir = join(preparedRoot, "invalid-json");
     await writeMinimalExtensionPackage(
       invalidJsonDir,
-      { requestedCapabilities: ["mcp"], contributes: { mcp: true } },
+      { requestedCapabilities: ["mcp"], contributes: { mcp: MCP_DECLARATION } },
       { "mcp.json": "{ not json" },
     );
     await assert.rejects(
@@ -324,7 +353,7 @@ test("instruction contributions require matching capabilities and conventional f
     const emptySkillsDir = join(preparedRoot, "empty-skills");
     await writeMinimalExtensionPackage(
       emptySkillsDir,
-      { requestedCapabilities: ["skills"], contributes: { skills: true } },
+      { requestedCapabilities: ["skills"], contributes: { skills: SKILLS_DECLARATION } },
       { "skills/.keep": "" },
     );
     await assert.rejects(
@@ -339,7 +368,7 @@ test("instruction contributions require matching capabilities and conventional f
     const emptyRuleDir = join(preparedRoot, "empty-rule");
     await writeMinimalExtensionPackage(
       emptyRuleDir,
-      { requestedCapabilities: ["rules"], contributes: { rules: true } },
+      { requestedCapabilities: ["rules"], contributes: { rules: RULES_DECLARATION } },
       { "rule.md": "  \n" },
     );
     await assert.rejects(
@@ -385,7 +414,12 @@ test("undeclared instruction files are ignored and declared files install", asyn
       declaredDir,
       {
         requestedCapabilities: ["mcp", "hooks", "skills", "rules"],
-        contributes: { mcp: true, hooks: true, skills: true, rules: true },
+        contributes: {
+          mcp: MCP_DECLARATION,
+          hooks: HOOKS_DECLARATION,
+          skills: SKILLS_DECLARATION,
+          rules: RULES_DECLARATION,
+        },
       },
       {
         "mcp.json": VALID_MCP_JSON,
@@ -401,10 +435,10 @@ test("undeclared instruction files are ignored and declared files install", asyn
         replaceExisting: true,
       },
     );
-    assert.equal(declared.manifest.contributes?.mcp, true);
-    assert.equal(declared.manifest.contributes?.hooks, true);
-    assert.equal(declared.manifest.contributes?.skills, true);
-    assert.equal(declared.manifest.contributes?.rules, true);
+    assert.equal(declared.manifest.contributes?.mcp?.length, 1);
+    assert.equal(declared.manifest.contributes?.hooks?.length, 1);
+    assert.equal(declared.manifest.contributes?.skills?.length, 1);
+    assert.equal(declared.manifest.contributes?.rules?.displayName, "Demo Rules");
   } finally {
     await rm(spiritDataDir, { recursive: true, force: true });
     await rm(preparedRoot, { recursive: true, force: true });

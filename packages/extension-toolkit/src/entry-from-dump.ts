@@ -25,6 +25,8 @@ export function buildMarketplaceEntryFromDump(
   options: BuildMarketplaceEntryFromDumpOptions,
 ): MarketplaceExtensionEntry {
   return {
+    defaultLocale: dump.defaultLocale,
+    messages: dump.messages,
     name: dump.name,
     version: dump.version,
     source: options.source,

@@ -6,6 +6,7 @@ import {
 import path from "node:path";
 
 import { composeExtensionId, listInstalledExtensions } from "../extensions.js";
+import { localizeExtensionText, resolveExtensionContextLocale } from "../localization.js";
 import {
   listAllMarketplaceSources,
   readMarketplaceIndexForSource,
@@ -72,10 +73,11 @@ function resolveEntryContentDir(
 export function compareMarketplaceDisplayOrder(
   left: { displayName: string; id: string; featured?: boolean | undefined },
   right: { displayName: string; id: string; featured?: boolean | undefined },
+  locale = "en",
 ): number {
   return (
     Number(right.featured ?? false) - Number(left.featured ?? false) ||
-    left.displayName.localeCompare(right.displayName, "en") ||
+    left.displayName.localeCompare(right.displayName, locale) ||
     left.id.localeCompare(right.id, "en")
   );
 }
@@ -83,18 +85,20 @@ export function compareMarketplaceDisplayOrder(
 function compareMarketplaceCatalogItems(
   left: MarketplaceCatalogItem,
   right: MarketplaceCatalogItem,
+  locale: string | undefined,
 ): number {
   return compareMarketplaceDisplayOrder(
     {
-      displayName: left.entry.displayName,
+      displayName: localizeExtensionText(left.entry, left.entry.displayName, locale),
       id: composeExtensionId(left.source.id, left.entry.name),
       featured: left.entry.featured,
     },
     {
-      displayName: right.entry.displayName,
+      displayName: localizeExtensionText(right.entry, right.entry.displayName, locale),
       id: composeExtensionId(right.source.id, right.entry.name),
       featured: right.entry.featured,
     },
+    locale,
   );
 }
 
@@ -140,7 +144,8 @@ export async function readMarketplaceCatalogForSource(
       } satisfies MarketplaceCatalogItem;
     });
 
-  items.sort(compareMarketplaceCatalogItems);
+  const locale = resolveExtensionContextLocale(context.locale);
+  items.sort((left, right) => compareMarketplaceCatalogItems(left, right, locale));
   return { items, ...(read.warning ? { warning: read.warning } : {}) };
 }
 
@@ -165,7 +170,8 @@ export async function readMarketplaceCatalog(
   }
   // Per-source catalogs arrive sorted; the merge re-sorts so rows interleave
   // across sources instead of grouping by source.
-  items.sort(compareMarketplaceCatalogItems);
+  const locale = resolveExtensionContextLocale(context.locale);
+  items.sort((left, right) => compareMarketplaceCatalogItems(left, right, locale));
   return { items, warnings };
 }
 

@@ -7,11 +7,7 @@ import { useTranslation } from "react-i18next";
 import { Monitor, Plug, ScrollText, ShieldCheck, Wand2, Webhook, Wrench } from "lucide-react";
 import type { ElementType, ReactNode } from "react";
 
-import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
-import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
-
 import { DESKTOP_LIST_ITEM_PRIMARY_CLASS } from "@/lib/desktop-typography";
-import { markdownToPlainText } from "@/lib/markdown-plain-text";
 import { cn } from "@/lib/utils";
 import { ExtensionTabIcon } from "@/components/extension-tab-icon";
 import type { DesktopExtensionListItem, DesktopMarketplaceCatalogEntry } from "@/types";
@@ -73,9 +69,7 @@ export function MarketplaceContributionGroups({
   const mcpItems: ContributionEntry[] = (contributions?.mcp ?? []).map((server) => ({
     key: `mcp:${server.name}`,
     icon: Plug,
-    title:
-      server.displayName?.trim() ||
-      formatTitleFromId(server.name, { casingOverrides: WELL_KNOWN_CASING_OVERRIDES }),
+    title: server.displayName,
   }));
   if (mcpItems.length > 0) {
     groups.push({ key: "mcps", label: t("settings.mcps"), items: mcpItems });
@@ -83,9 +77,8 @@ export function MarketplaceContributionGroups({
     groups.push({ key: "mcps", label: t("settings.mcps"), items: [declaredEntry("mcp", Plug)] });
   }
 
-  const ruleContent = contributions?.rules?.content;
-  if (ruleContent) {
-    const overview = markdownToPlainText(ruleContent);
+  const rule = contributions?.rules;
+  if (rule) {
     groups.push({
       key: "rules",
       label: t("settings.rules"),
@@ -93,8 +86,8 @@ export function MarketplaceContributionGroups({
         {
           key: "rule",
           icon: ScrollText,
-          title: t("marketplace.contributionRuleTitle"),
-          ...(overview ? { overview } : {}),
+          title: rule.displayName,
+          overview: rule.summary,
         },
       ],
     });
@@ -106,11 +99,10 @@ export function MarketplaceContributionGroups({
     });
   }
 
-  const hookItems: ContributionEntry[] = (contributions?.hooks ?? []).map((event) => ({
-    key: `hook:${event}`,
+  const hookItems: ContributionEntry[] = (contributions?.hooks ?? []).map((hook) => ({
+    key: `hook:${hook.event}`,
     icon: Webhook,
-    // Hook event names stay verbatim with hooks.json; they are identifiers, not ids to prettify.
-    title: event,
+    title: hook.displayName,
   }));
   if (hookItems.length > 0) {
     groups.push({ key: "hooks", label: t("settings.hooks"), items: hookItems });
@@ -125,8 +117,8 @@ export function MarketplaceContributionGroups({
   const skillItems: ContributionEntry[] = (contributions?.skills ?? []).map((skill) => ({
     key: `skill:${skill.name}`,
     icon: Wand2,
-    title: formatTitleFromId(skill.name, { casingOverrides: WELL_KNOWN_CASING_OVERRIDES }),
-    ...(skill.description.trim() ? { overview: skill.description.trim() } : {}),
+    title: skill.displayName,
+    overview: skill.summary,
   }));
   if (skillItems.length > 0) {
     groups.push({ key: "skills", label: t("settings.skills"), items: skillItems });
@@ -141,8 +133,8 @@ export function MarketplaceContributionGroups({
   const toolItems: ContributionEntry[] = (item.contributedTools ?? []).map((tool) => ({
     key: `tool:${tool.name}`,
     icon: Wrench,
-    title: formatTitleFromId(tool.name, { casingOverrides: WELL_KNOWN_CASING_OVERRIDES }),
-    ...(tool.description.trim() ? { overview: tool.description.trim() } : {}),
+    title: tool.displayName,
+    overview: tool.summary,
   }));
   if (toolItems.length > 0) {
     groups.push({ key: "tools", label: t("marketplace.contributionGroupTools"), items: toolItems });
@@ -155,9 +147,7 @@ export function MarketplaceContributionGroups({
       items: item.authorizations.map((authorization) => ({
         key: `authorization:${authorization.id}`,
         icon: ShieldCheck,
-        title: formatTitleFromId(authorization.id, {
-          casingOverrides: WELL_KNOWN_CASING_OVERRIDES,
-        }),
+        title: authorization.displayName,
       })),
     });
   }

@@ -59,11 +59,17 @@ function demoEntry(overrides?: Partial<MarketplaceExtensionEntry>): MarketplaceE
     version: "1.0.0",
     source: "./extensions/extension-demo",
     icon: "extensions/extension-demo/icon.svg",
-    displayName: "Demo",
-    description: "Demo extension.",
+    defaultLocale: "en",
+    messages: {
+      en: {
+        metadata: { displayName: "Demo", description: "Demo extension.", example: "example" },
+      },
+    },
+    displayName: { message: "metadata.displayName" },
+    description: { message: "metadata.description" },
     author: { name: "Spirit", email: "support@spirit.dev", url: "https://spirit.dev" },
-    category: "developer-tools",
-    keywords: ["example"],
+    category: "development",
+    keywords: [{ message: "metadata.example" }],
     homepage: "https://spirit.dev/extensions/extension-demo",
     reviewStatus: "verified",
     manifest: { supportedHosts: ["desktop"] },
@@ -103,14 +109,14 @@ test("local source install copies content, dumps identity + declaration + source
     assert.equal(dump.name, "extension-demo");
     assert.equal(dump.version, "1.0.0");
     assert.equal(dump.sourceId, "test-source");
-    assert.equal(dump.displayName, "Demo");
+    assert.deepEqual(dump.displayName, { message: "metadata.displayName" });
     assert.deepEqual(dump.author, {
       name: "Spirit",
       email: "support@spirit.dev",
       url: "https://spirit.dev",
     });
-    assert.equal(dump.category, "developer-tools");
-    assert.deepEqual(dump.keywords, ["example"]);
+    assert.equal(dump.category, "development");
+    assert.deepEqual(dump.keywords, [{ message: "metadata.example" }]);
     assert.equal(dump.homepage, "https://spirit.dev/extensions/extension-demo");
     assert.deepEqual(dump.manifest.supportedHosts, ["desktop"]);
 
