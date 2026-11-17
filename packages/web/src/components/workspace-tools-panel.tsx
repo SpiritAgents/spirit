@@ -556,7 +556,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   codeCompletionEnabled = true,
   isResizing,
 }: WorkspaceToolsDockContentProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { openTools, toggleFullScreen } = useWorkspaceToolsChromeActions();
   const workspaceToolsOpen = useWorkspaceToolsChromeOpen();
   const workspaceToolsFullScreen = useWorkspaceToolsChromeFullScreen();
@@ -578,8 +578,9 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   const [taskCloseDialogOpen, setTaskCloseDialogOpen] = useState(false);
   const [addToolTabMenuOpen, setAddToolTabMenuOpen] = useState(false);
   const extensionContributions = useMemo(
-    () => (browserTabEnabled ? collectExtensionTabContributions(extensionsList) : []),
-    [browserTabEnabled, extensionsList],
+    () =>
+      browserTabEnabled ? collectExtensionTabContributions(extensionsList, i18n.language) : [],
+    [browserTabEnabled, extensionsList, i18n.language],
   );
   const toolTabsBarRef = useRef<HTMLDivElement>(null);
 

@@ -131,6 +131,38 @@ test("GitHub is available for manual installation but is not installed by defaul
   }
 });
 
+test("installed GitHub manifests follow the manager's current locale", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-github-locale-switch-"));
+  try {
+    let locale = "en";
+    const manager = createHostExtensionManager({
+      spiritDataDir,
+      hostKind: "desktop",
+      locale: () => locale,
+    });
+    await installBuiltInExtension({
+      spiritDataDir,
+      hostKind: "desktop",
+      extensionId: "built-in/github",
+    });
+
+    const english = (await manager.list()).find((item) => item.id === "built-in/github");
+    assert.equal(english?.manifest.contributes?.desktop?.tabs?.[0]?.name, "Pull Requests");
+    assert.equal(english?.manifest.settingsSchema?.[0]?.title, "Pull Request Overview Ratio");
+
+    locale = "ja";
+    const japanese = (await manager.list()).find((item) => item.id === "built-in/github");
+    assert.equal(japanese?.manifest.contributes?.desktop?.tabs?.[0]?.name, "プルリクエスト");
+    assert.equal(japanese?.manifest.settingsSchema?.[0]?.title, "プルリクエスト概要の比率");
+    assert.equal(
+      japanese?.manifest.contributes?.automationTriggers?.[0]?.description,
+      "リポジトリの新しいプルリクエストやイシューを受け取ります。",
+    );
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+  }
+});
+
 interface FixtureRegistry {
   root: string;
   setVersion(version: string): Promise<void>;

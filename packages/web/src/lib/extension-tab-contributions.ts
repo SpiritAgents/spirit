@@ -16,6 +16,7 @@ export function extensionTabDisplayName(contribution: DesktopExtensionDesktopTab
 
 export function collectExtensionTabContributions(
   extensions: readonly DesktopExtensionListItem[] | undefined,
+  locale = "en",
 ): ExtensionTabContribution[] {
   return (extensions ?? [])
     .filter((extension) => extension.enabled && extension.supportedHosts.includes("desktop"))
@@ -24,8 +25,8 @@ export function collectExtensionTabContributions(
     )
     .sort(
       (left, right) =>
-        left.extension.displayName.localeCompare(right.extension.displayName) ||
-        left.contribution.name.localeCompare(right.contribution.name),
+        left.extension.displayName.localeCompare(right.extension.displayName, locale) ||
+        left.contribution.name.localeCompare(right.contribution.name, locale),
     );
 }
 

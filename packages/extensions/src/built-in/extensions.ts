@@ -88,6 +88,7 @@ export interface EnsureBuiltInExtensionsRequest {
 export interface ListMarketplaceCatalogRequest {
   spiritDataDir: string;
   hostKind: ExtensionHostKind;
+  locale?: string;
   /** Test-only override for the built-in registry root. */
   registryRoot?: string;
 }
@@ -265,7 +266,11 @@ export async function listMarketplaceCatalog(
   request: ListMarketplaceCatalogRequest,
 ): Promise<readonly HostMarketplaceCatalogItem[]> {
   const { spiritDataDir, hostKind } = request;
-  const installed = await listInstalledExtensions({ spiritDataDir, hostKind });
+  const installed = await listInstalledExtensions({
+    spiritDataDir,
+    hostKind,
+    ...(request.locale ? { locale: request.locale } : {}),
+  });
   const installedById = new Map(installed.map((item) => [item.id, item]));
   const catalog: HostMarketplaceCatalogItem[] = [];
   const seen = new Set<string>();
@@ -290,6 +295,7 @@ export async function listMarketplaceCatalog(
         manifest: await buildHostExtensionManifestFromDump(
           buildExtensionDumpFromEntry(entry, source.id),
           contentDir,
+          { locale: request.locale },
         ),
         directoryPath: contentDir,
         manifestPath: path.join(contentDir, MARKETPLACE_SPIRIT_DIR_NAME, "extension.json"),
@@ -311,7 +317,7 @@ export async function listMarketplaceCatalog(
   }
 
   return catalog.sort((left, right) =>
-    left.manifest.displayName.localeCompare(right.manifest.displayName, "en"),
+    left.manifest.displayName.localeCompare(right.manifest.displayName, request.locale ?? "en"),
   );
 }
 

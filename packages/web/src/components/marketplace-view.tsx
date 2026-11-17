@@ -314,7 +314,7 @@ export function MarketplaceView({
     : undefined;
 
   const filteredExtensions = catalog.filter((item) => {
-    const query = searchText.trim().toLowerCase();
+    const query = searchText.trim().toLocaleLowerCase(i18n.language);
     if (!query) {
       return true;
     }
@@ -324,11 +324,11 @@ export function MarketplaceView({
       item.description ?? "",
       item.author?.name ?? "",
       item.name,
-      item.category ?? "",
+      item.category ? t(`marketplace.categories.${item.category}`) : "",
       ...(item.keywords ?? []),
     ]
       .join(" ")
-      .toLowerCase()
+      .toLocaleLowerCase(i18n.language)
       .includes(query);
   });
 
