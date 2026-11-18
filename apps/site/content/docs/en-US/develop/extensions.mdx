@@ -241,6 +241,8 @@ Declared but missing or invalid files fail install. Files in the package that ar
 
 Relative `command` and `cwd` values resolve against the extension root. If an MCP stdio server omits `cwd`, it defaults to the extension root. PATH-only commands are unchanged.
 
+Bundled HTTP MCP headers may use `${extension-secret:SLOT}` and `${extension-secret:SLOT:FIELD}` to read declared extension secrets at runtime. See [MCP secret references](../customize/mcp.mdx#extension-secret-references).
+
 These contributions overlay into the agent session when the extension is enabled. They do not appear in **Settings → MCPs | Hooks | Skills | Rules**. On a name conflict, workspace wins, then user, then extension.
 
 During `tools/call`, a bundled MCP server may send a JSON-RPC request `spirit/ui/open` with `{ viewId, params }` when the client advertised `experimental["spirit/ui"]`. {{product.name|mdx}} only opens a view declared by the same extension in `contributes.desktop.views`. User and workspace MCP servers are rejected. The Dialog stays open while that `tools/call` is in flight; `close(result)` returns on the same request. Hosts without a window respond `{ "kind": "unavailable", "reason": "host-has-no-ui" }` — the tool should degrade.

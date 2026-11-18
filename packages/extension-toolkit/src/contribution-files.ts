@@ -16,6 +16,7 @@ import {
   splitSkillFrontmatter,
   validateSkillName,
 } from "./skill-format.js";
+import { assertExtensionMcpSecretSlotsDeclared } from "./mcp-secrets.js";
 
 /** Extension package layout contract: declared files live at these paths. */
 export const EXTENSION_MCP_CONFIG_FILE_NAME = "mcp.json";
@@ -38,7 +39,10 @@ export interface MarketplaceContributionFileReaders {
 export interface MarketplaceContributionContentValidators {
   /** Throws when the parsed mcp.json content is invalid. */
   parseMcpConfigFile(parsed: unknown): {
-    servers: Record<string, { transport: { type: "stdio" | "http" } }>;
+    servers: Record<
+      string,
+      { transport: { type: "stdio" | "http"; headers?: Record<string, string> } }
+    >;
   };
   /** Throws when the parsed hooks.json content is invalid. */
   parseHooksConfigFile(parsed: unknown): { hooks: Record<string, unknown[]> };
@@ -46,6 +50,7 @@ export interface MarketplaceContributionContentValidators {
 
 export interface AssertDeclaredInstructionContributionFilesOptions extends MarketplaceContributionFileReaders {
   validators: MarketplaceContributionContentValidators;
+  secretSlots?: readonly string[];
   /** Error message prefix, e.g. "manifest.contributes" (default). */
   fieldPrefix?: string;
 }
@@ -82,6 +87,14 @@ export async function assertDeclaredInstructionContributionFiles(
       actual.map((entry) => `${entry.name}:${entry.transport}`),
       `${fieldPrefix}.mcp`,
     );
+    if (options.secretSlots) {
+      for (const server of Object.values(config.servers)) {
+        if (server.transport.type !== "http") continue;
+        for (const header of Object.values(server.transport.headers ?? {})) {
+          assertExtensionMcpSecretSlotsDeclared(header, options.secretSlots);
+        }
+      }
+    }
   }
   if (contributes.hooks) {
     const config = await assertDeclaredJsonContributionFile(

@@ -3,6 +3,11 @@ import {
   collectEnabledExtensionInstructionContributions,
   createHostExtensionManager,
 } from "@spiritagent/extensions";
+import {
+  createKeyringExtensionStateStore,
+  type ExtensionManagementContext,
+  type ExtensionStateStore,
+} from "@spiritagent/extensions/storage";
 
 export { McpRegistry } from "@spiritagent/mcp/registry";
 
@@ -14,6 +19,9 @@ export { McpRegistry } from "@spiritagent/mcp/registry";
 export function createExtensionMcpExtraConfigs(
   spiritDataDir: string,
   hostKind: "cli" | "desktop" | readonly ("cli" | "desktop")[],
+  createStateStore: (
+    context: ExtensionManagementContext,
+  ) => ExtensionStateStore = createKeyringExtensionStateStore,
 ): McpExtraConfigProvider {
   const hostKinds = typeof hostKind === "string" ? [hostKind] : [...hostKind];
   return async () => {
@@ -24,9 +32,15 @@ export function createExtensionMcpExtraConfigs(
       ReturnType<typeof collectEnabledExtensionInstructionContributions>
     >["mcpOwnership"] = {};
     for (const kind of hostKinds) {
-      const manager = createHostExtensionManager({ spiritDataDir, hostKind: kind });
+      const stateStore = createStateStore({ spiritDataDir, hostKind: kind });
+      const manager = createHostExtensionManager({ spiritDataDir, hostKind: kind, stateStore });
       const contributions = await collectEnabledExtensionInstructionContributions(
         await manager.list(),
+        undefined,
+        {
+          loadSecret: (extensionId, key) =>
+            stateStore.loadSecret?.(extensionId, key) ?? Promise.resolve(undefined),
+        },
       );
       Object.assign(servers, contributions.mcp.servers);
       Object.assign(extensionServerOwnership, contributions.mcpOwnership);

@@ -257,6 +257,13 @@ const MCP_DECLARATION = [
     transport: "stdio",
   },
 ];
+const HTTP_MCP_DECLARATION = [
+  {
+    name: "docs",
+    displayName: { message: "mcp.example.displayName" },
+    transport: "http",
+  },
+];
 const HOOKS_DECLARATION = [
   { event: "sessionStart", displayName: { message: "hooks.sessionStart.displayName" } },
 ];
@@ -348,6 +355,37 @@ test("instruction contributions require matching capabilities and conventional f
           { preparedDirectoryPath: invalidJsonDir },
         ),
       /mcp.json is not valid JSON/,
+    );
+
+    const undeclaredSecretDir = join(preparedRoot, "undeclared-secret");
+    await writeMinimalExtensionPackage(
+      undeclaredSecretDir,
+      {
+        requestedCapabilities: ["mcp", "secret-storage"],
+        secretSlots: [],
+        contributes: { mcp: HTTP_MCP_DECLARATION },
+      },
+      {
+        "mcp.json": JSON.stringify({
+          servers: {
+            docs: {
+              transport: {
+                type: "http",
+                url: "http://127.0.0.1/mcp",
+                headers: { Authorization: "Bearer ${extension-secret:credentials}" },
+              },
+            },
+          },
+        }),
+      },
+    );
+    await assert.rejects(
+      () =>
+        installPreparedExtensionDirectory(
+          { spiritDataDir, hostKind: "desktop" },
+          { preparedDirectoryPath: undeclaredSecretDir },
+        ),
+      /undeclared extension secret slot: credentials/,
     );
 
     const emptySkillsDir = join(preparedRoot, "empty-skills");

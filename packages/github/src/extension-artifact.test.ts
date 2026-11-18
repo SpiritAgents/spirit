@@ -14,8 +14,37 @@ test("the built extension backend has no workspace or host runtime dependency", 
   const manifest = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
   assert.equal(manifest.version, "1.0.0");
   assert.equal(manifest.author.name, "Spirit");
-  for (const file of ["README.md", "LICENSE", "icon.svg", "icons/github.svg"])
+  for (const file of ["README.md", "LICENSE", "icon.svg", "mcp.json", "icons/github.svg"])
     assert.ok((await stat(path.join(root, file))).size > 0);
+});
+
+test("the built extension contributes the official MCP with a declared secret reference", async () => {
+  const root = path.resolve(import.meta.dirname, "../dist/extension");
+  const config = JSON.parse(await readFile(path.join(root, "mcp.json"), "utf8"));
+  assert.deepEqual(config, {
+    servers: {
+      github: {
+        displayName: "GitHub",
+        transport: {
+          type: "http",
+          url: "https://api.githubcopilot.com/mcp",
+          headers: {
+            Authorization: "Bearer ${extension-secret:oauthCredentials:accessToken}",
+          },
+        },
+      },
+    },
+  });
+  const dump = JSON.parse(await readFile(path.join(root, ".spirit/extension.json"), "utf8"));
+  assert.ok(dump.manifest.requestedCapabilities.includes("mcp"));
+  assert.deepEqual(dump.manifest.secretSlots, ["oauthCredentials"]);
+  assert.deepEqual(dump.manifest.contributes.mcp, [
+    {
+      name: "github",
+      displayName: { message: "mcp.github.displayName" },
+      transport: "http",
+    },
+  ]);
 });
 
 test("the contribution glyph is transparent and separate from the padded marketplace logo", async () => {

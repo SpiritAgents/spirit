@@ -45,6 +45,7 @@ import {
   ensurePersonalMarketplace,
   collectEnabledExtensionInstructionContributions,
 } from "@spiritagent/extensions";
+import { createKeyringExtensionStateStore } from "@spiritagent/extensions/storage";
 import {
   NodeHostToolService,
   createNoopMcpAdapter,
@@ -405,11 +406,26 @@ async function prepareAcpRuntime(
     ...metadata.skills.enabledSkillCatalog,
   ];
   try {
-    const extensionManager = createHostExtensionManager({ spiritDataDir, hostKind: "cli" });
+    const extensionStateStore = createKeyringExtensionStateStore({
+      spiritDataDir,
+      hostKind: "cli",
+    });
+    const extensionManager = createHostExtensionManager({
+      spiritDataDir,
+      hostKind: "cli",
+      stateStore: extensionStateStore,
+    });
     const overlay = overlayExtensionRulesAndSkills(
       enabledRules,
       enabledSkillCatalog,
-      await collectEnabledExtensionInstructionContributions(await extensionManager.list()),
+      await collectEnabledExtensionInstructionContributions(
+        await extensionManager.list(),
+        undefined,
+        {
+          loadSecret: (extensionId, key) =>
+            extensionStateStore.loadSecret?.(extensionId, key) ?? Promise.resolve(undefined),
+        },
+      ),
     );
     enabledRules.length = 0;
     enabledRules.push(...overlay.rules);

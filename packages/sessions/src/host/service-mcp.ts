@@ -38,6 +38,15 @@ export function sharedMcpServiceForWorkspace(
   return service;
 }
 
+export async function refreshMcpServices(services: Iterable<McpService>): Promise<void> {
+  await Promise.all(
+    [...services].map(async (service) => {
+      await service.refreshConfig();
+      service.startBackgroundRefreshInBackground(true);
+    }),
+  );
+}
+
 /**
  * Counterpart of LSP's disposeLspServicesExcept: shrinks the MCP directory cache on workspace switch.
  * McpService has no persistent connection (connect→close per call), so deleting Map entries frees the memory.

@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "github": {
+      "displayName": "GitHub",
+      "transport": {
+        "type": "http",
+        "url": "https://api.githubcopilot.com/mcp",
+        "headers": {
+          "Authorization": "Bearer ${extension-secret:oauthCredentials:accessToken}"
+        }
+      }
+    }
+  }
+}

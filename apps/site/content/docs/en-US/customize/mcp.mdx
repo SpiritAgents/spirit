@@ -51,6 +51,15 @@ The root object has only `servers`. Each server must include `transport`, with `
 | `headers`   | Optional. Request headers. Values may use `${env:NAME}`          |
 | `timeoutMs` | Optional. Timeout in milliseconds. `timeout_ms` is also accepted |
 
+### Extension secret references
+
+HTTP headers bundled by an extension may reference secrets declared in that extension's `manifest.secretSlots`. This syntax is not available in user or workspace `mcp.json` files.
+
+- `${extension-secret:SLOT}` inserts the complete secret value.
+- `${extension-secret:SLOT:FIELD}` parses the secret as a JSON object and inserts a top-level non-empty string field.
+
+For example, an extension storing `{ "accessToken": "...", "login": "..." }` in its `oauthCredentials` slot can use `Bearer ${extension-secret:oauthCredentials:accessToken}` as its Authorization header. The host resolves the reference when refreshing MCP configuration, never writes the resolved value to `mcp.json`, and refreshes the tools catalog when extension secrets change. A missing or invalid secret skips only the affected server.
+
 ## Example
 
 ```json

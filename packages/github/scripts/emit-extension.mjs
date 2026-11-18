@@ -6,7 +6,7 @@ import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
 const output = path.join(root, "dist/extension");
 await mkdir(output, { recursive: true });
-for (const name of ["README.md", "LICENSE", "icon.svg"])
+for (const name of ["README.md", "LICENSE", "icon.svg", "mcp.json"])
   await copyFile(path.join(root, name), path.join(output, name));
 await writeFile(
   path.join(output, "package.json"),

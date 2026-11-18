@@ -50,8 +50,8 @@ description: A bundled demo skill.
 Do the demo skill.
 `;
 
-const mcpDeclaration = (name: string) => [
-  { name, displayName: { message: "mcp.example.displayName" }, transport: "stdio" },
+const mcpDeclaration = (name: string, transport: "stdio" | "http" = "stdio") => [
+  { name, displayName: { message: "mcp.example.displayName" }, transport },
 ];
 const skillsDeclaration = (name: string) => [
   {
@@ -74,6 +74,7 @@ async function writeExtensionPackage(
     name: string;
     requestedCapabilities?: string[];
     contributes?: Record<string, unknown>;
+    secretSlots?: string[];
     files?: Record<string, string>;
   },
 ): Promise<void> {
@@ -94,6 +95,7 @@ async function writeExtensionPackage(
         ? { requestedCapabilities: options.requestedCapabilities }
         : {}),
       ...(options.contributes ? { contributes: options.contributes } : {}),
+      ...(options.secretSlots ? { secretSlots: options.secretSlots } : {}),
     }),
   };
   await mkdir(join(packageDir, ".spirit"), { recursive: true });
@@ -332,6 +334,72 @@ Second.
     assert.equal(collected.skills.length, 1);
     assert.equal(collected.skills[0]?.description, "First skill.");
     assert.equal(collected.skills[0]?.extensionId, "personal/collect-aaa");
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(preparedRoot, { recursive: true, force: true });
+  }
+});
+
+test("collector resolves declared MCP secrets and isolates missing credentials", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-secret-mcp-data-"));
+  const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-secret-mcp-package-"));
+  const privateToken = "private-token-that-must-not-leak";
+  try {
+    const packageDir = join(preparedRoot, "secret-mcp");
+    await writeExtensionPackage(packageDir, {
+      name: "secret-mcp",
+      requestedCapabilities: ["mcp", "secret-storage"],
+      secretSlots: ["credentials", "missing"],
+      contributes: {
+        mcp: [...mcpDeclaration("secured", "http"), ...mcpDeclaration("unavailable", "http")],
+      },
+      files: {
+        "mcp.json": JSON.stringify({
+          servers: {
+            secured: {
+              transport: {
+                type: "http",
+                url: "http://127.0.0.1/mcp",
+                headers: {
+                  Authorization: "Bearer ${extension-secret:credentials:accessToken}",
+                },
+              },
+            },
+            unavailable: {
+              transport: {
+                type: "http",
+                url: "http://127.0.0.1/unavailable",
+                headers: { Authorization: "Bearer ${extension-secret:missing}" },
+              },
+            },
+          },
+        }),
+      },
+    });
+    await installPreparedExtensionDirectory(
+      { spiritDataDir, hostKind: "desktop" },
+      { preparedDirectoryPath: packageDir },
+    );
+    const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
+    const logs: string[] = [];
+    const collected = await collectEnabledExtensionInstructionContributions(
+      await manager.list(),
+      (message) => logs.push(message),
+      {
+        loadSecret: async (_extensionId, key) =>
+          key === "credentials" ? JSON.stringify({ accessToken: privateToken }) : undefined,
+      },
+    );
+    const secured = collected.mcp.servers.secured;
+    assert.equal(secured?.transport.type, "http");
+    if (secured?.transport.type === "http") {
+      assert.equal(secured.transport.headers?.Authorization, `Bearer ${privateToken}`);
+    }
+    assert.equal(collected.mcp.servers.unavailable, undefined);
+    assert.ok(collected.mcpOwnership.secured);
+    assert.equal(collected.mcpOwnership.unavailable, undefined);
+    assert.match(logs.join("\n"), /not configured: missing/);
+    assert.doesNotMatch(logs.join("\n"), new RegExp(privateToken));
   } finally {
     await rm(spiritDataDir, { recursive: true, force: true });
     await rm(preparedRoot, { recursive: true, force: true });

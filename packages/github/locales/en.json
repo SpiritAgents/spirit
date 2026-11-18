@@ -21,6 +21,11 @@
       "displayName": "OAuth"
     }
   },
+  "mcp": {
+    "github": {
+      "displayName": "GitHub"
+    }
+  },
   "automation": {
     "activity": {
       "name": "GitHub",

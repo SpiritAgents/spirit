@@ -541,6 +541,7 @@ import { listDesktopHookListItems } from "@spiritagent/sessions/host/hooks";
 import type { SessionEndHookInput, SessionStartHookInput } from "@spiritagent/agent-core";
 import {
   disposeMcpServicesExcept,
+  refreshMcpServices,
   sharedMcpServiceForWorkspace,
 } from "@spiritagent/sessions/host/service-mcp";
 import {
@@ -673,10 +674,18 @@ export class DesktopHostService {
     },
     (extensionId) => {
       if (!this.state) return;
-      void this.runSerialized(() => this.refreshExtensionAuthorizationState(extensionId))
+      void this.runSerialized(async () => {
+        await this.refreshExtensionAuthorizationState(extensionId);
+        await this.refreshSharedMcpConfigAfterExtensionMutation();
+        if (this.runtime?.isBusy()) {
+          this.activeBundle().deferredRuntimeRefreshWhileBusy = true;
+        } else {
+          await this.refreshRuntime();
+        }
+      })
         .then(() => this.emitLiveSnapshotUpdate())
         .catch((error) =>
-          console.error("[extensions] failed to refresh authorization state", error),
+          console.error("[extensions] failed to refresh authorization and MCP state", error),
         );
     },
   );
@@ -3853,6 +3862,11 @@ export class DesktopHostService {
       async () => {
         const contributions = await collectEnabledExtensionInstructionContributions(
           await this.extensionManager().list(),
+          undefined,
+          {
+            loadSecret: (extensionId, key) =>
+              this.extensionStateStore.loadSecret?.(extensionId, key) ?? Promise.resolve(undefined),
+          },
         );
         return {
           servers: contributions.mcp.servers,
@@ -5415,8 +5429,14 @@ export class DesktopHostService {
     state.marketplaceWarnings = warnings;
 
     state.extensionCss = await collectDesktopExtensionCssLayers(extensions);
-    state.extensionInstructionContributions =
-      await collectEnabledExtensionInstructionContributions(extensions);
+    state.extensionInstructionContributions = await collectEnabledExtensionInstructionContributions(
+      extensions,
+      undefined,
+      {
+        loadSecret: (extensionId, key) =>
+          this.extensionStateStore.loadSecret?.(extensionId, key) ?? Promise.resolve(undefined),
+      },
+    );
   }
 
   private async refreshExtensionToolDefinitions(
@@ -5452,9 +5472,9 @@ export class DesktopHostService {
 
   private async refreshSharedMcpConfigAfterExtensionMutation(): Promise<void> {
     const state = this.requireState();
-    const mcp = this.sharedMcpServiceForWorkspace(state.workspaceRoot, state.workspaceBinding);
-    await mcp.refreshConfig();
-    mcp.startBackgroundRefreshInBackground(true);
+    const services = new Set(this.mcpServiceByWorkspaceRoot.values());
+    services.add(this.sharedMcpServiceForWorkspace(state.workspaceRoot, state.workspaceBinding));
+    await refreshMcpServices(services);
     await notifyDesktopServerRefreshExtensions(spiritDataDir());
   }
 

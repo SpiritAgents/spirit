@@ -2410,7 +2410,7 @@ async function parseExtensionManifestFields(
   // (install, ZIP import, local catalog display); remote catalog entries
   // without local files are display-only and skip it.
   if (options.readRelativeTextFile) {
-    await assertDeclaredInstructionContributionFiles(contributes, options);
+    await assertDeclaredInstructionContributionFiles(contributes, options, secretSlots);
   }
 
   return {
@@ -3523,6 +3523,7 @@ function optionalDesktopSettingsPageDefinitionField(
 async function assertDeclaredInstructionContributionFiles(
   contributes: HostExtensionContributionSet | undefined,
   options: HostExtensionManifestParseOptions,
+  secretSlots: readonly string[],
 ): Promise<void> {
   await assertToolkitDeclaredInstructionContributionFiles(contributes, {
     ...(options.readRelativeTextFile ? { readRelativeTextFile: options.readRelativeTextFile } : {}),
@@ -3530,6 +3531,7 @@ async function assertDeclaredInstructionContributionFiles(
       ? { listRelativeChildDirectories: options.listRelativeChildDirectories }
       : {}),
     validators: { parseMcpConfigFile, parseHooksConfigFile },
+    secretSlots,
     fieldPrefix: "manifest.contributes",
   });
 }
