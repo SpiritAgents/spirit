@@ -8,35 +8,34 @@ import type {
 import type { AutomationTriggerProvider } from "@spiritagent/automations/trigger-provider";
 import { GITHUB_OAUTH_CLIENT_ID } from "./oauth-config.js";
 import { requestGitHubDeviceCode, pollGitHubDeviceToken } from "./device-flow.js";
-import { fetchGitHubUserLogin } from "./oauth.js";
+import { fetchGitHubUserLogin, GitHubOAuthError } from "./oauth.js";
 import { withGitHubRequest } from "./github-fetch.js";
+import {
+  createGitHubCredentialManager,
+  GITHUB_CREDENTIAL_SLOT,
+  InvalidGitHubCredentialsError,
+  type GitHubCredentials,
+} from "./credentials.js";
+import { createGitHubRefreshScheduler } from "./refresh-scheduler.js";
 import { createGitHubService } from "./service.js";
 import { parseGitHubPullRequestUrl } from "./pull-request-url.js";
 import { createGitHubAutomationProvider } from "./extension-automation.js";
 
-export const GITHUB_CREDENTIAL_SLOT = "oauthCredentials";
-export interface GitHubCredentials {
-  accessToken: string;
-  login: string;
-}
+export { GITHUB_CREDENTIAL_SLOT };
+export type { GitHubCredentials };
 export type GitHubAuthorizationState =
   | { phase: "loading" }
   | { phase: "challenge"; userCode: string; verificationUri: string }
   | { phase: "connected"; login: string }
   | { phase: "error"; message: string; unavailable?: boolean; canDisconnect?: boolean };
 
-class InvalidGitHubCredentialsError extends Error {
-  constructor() {
-    super("Stored GitHub authorization is invalid. Disconnect and authorize again.");
-    this.name = "InvalidGitHubCredentialsError";
-  }
-}
-
 export interface GitHubExtensionDependencies {
   fetch?: typeof fetch;
   clientId?: string;
   openExternal?: (url: string) => Promise<void>;
   readOrigin?: (root: string) => Promise<string | null>;
+  startBackgroundRefresh?: boolean;
+  now?: () => number;
 }
 
 export function createGitHubExtension(
@@ -46,36 +45,20 @@ export function createGitHubExtension(
   let authorization: Promise<unknown> | undefined;
   let pendingView: SpiritDesktopViewSession | undefined;
   let pendingController: AbortController | undefined;
-  const readCredentials = async (): Promise<GitHubCredentials | undefined> => {
-    const raw = await context.secrets.get(GITHUB_CREDENTIAL_SLOT);
-    if (!raw) return undefined;
-    let value: unknown;
-    try {
-      value = JSON.parse(raw);
-    } catch {
-      throw new InvalidGitHubCredentialsError();
-    }
-    if (
-      !value ||
-      typeof value !== "object" ||
-      !("accessToken" in value) ||
-      !("login" in value) ||
-      typeof value.accessToken !== "string" ||
-      !value.accessToken.trim() ||
-      typeof value.login !== "string" ||
-      !value.login.trim()
-    ) {
-      throw new InvalidGitHubCredentialsError();
-    }
-    return { accessToken: value.accessToken, login: value.login };
-  };
+  const clientId = dependencies.clientId ?? GITHUB_OAUTH_CLIENT_ID;
+  const credentialManager = createGitHubCredentialManager({
+    secrets: context.secrets,
+    clientId,
+    now: dependencies.now,
+  });
+  const readCredentials = () => credentialManager.read();
   const auth = {
-    token: async () => (await readCredentials())?.accessToken,
-    status: async () => {
-      const credentials = await readCredentials();
-      return credentials ? { connected: true, login: credentials.login } : { connected: false };
+    token: () => credentialManager.token(),
+    status: () => credentialManager.status(),
+    clear: async () => {
+      refreshScheduler.clear();
+      await credentialManager.clear();
     },
-    clear: () => context.secrets.delete(GITHUB_CREDENTIAL_SLOT),
   };
   const service = createGitHubService(
     auth,
@@ -84,8 +67,31 @@ export function createGitHubExtension(
   const request = <T>(signal: AbortSignal, run: () => T): T => {
     const lifetime = AbortSignal.any([context.signal, signal]);
     lifetime.throwIfAborted();
-    return withGitHubRequest({ fetch: dependencies.fetch, signal: lifetime }, run);
+    return withGitHubRequest(
+      {
+        fetch: dependencies.fetch,
+        signal: lifetime,
+        refreshAccessToken: credentialManager.refreshAfterRejected,
+      },
+      run,
+    );
   };
+  const refreshScheduler = createGitHubRefreshScheduler({
+    signal: context.signal,
+    read: () => credentialManager.read({ allowValidTokenOnRefreshFailure: false }),
+    runInBackground: (run) =>
+      withGitHubRequest(
+        {
+          fetch: dependencies.fetch,
+          signal: context.signal,
+          refreshAccessToken: credentialManager.refreshAfterRejected,
+        },
+        run,
+      ),
+    log: context.log,
+    now: dependencies.now,
+  });
+  if (dependencies.startBackgroundRefresh) refreshScheduler.start();
 
   async function authorize(action: SpiritDesktopActionContext): Promise<unknown> {
     action.signal.throwIfAborted();
@@ -94,8 +100,11 @@ export function createGitHubExtension(
     try {
       credentials = await readCredentials();
     } catch (error) {
-      if (!(error instanceof InvalidGitHubCredentialsError)) throw error;
-      credentialError = error;
+      if (error instanceof InvalidGitHubCredentialsError) {
+        credentialError = error;
+      } else if (!(error instanceof GitHubOAuthError && error.status === 401)) {
+        throw error;
+      }
     }
     action.signal.throwIfAborted();
     const controller = new AbortController();
@@ -122,7 +131,6 @@ export function createGitHubExtension(
         return { connected: Boolean(credentials) && !result?.disconnect };
       }
       try {
-        const clientId = dependencies.clientId ?? GITHUB_OAUTH_CLIENT_ID;
         if (!clientId) {
           view.update({
             phase: "error",
@@ -151,11 +159,9 @@ export function createGitHubExtension(
           });
           const login = await fetchGitHubUserLogin(token.access_token, signal);
           signal.throwIfAborted();
-          // One Secret write commits the credential and account together; no partial authorization state.
-          await action.secrets.set(
-            GITHUB_CREDENTIAL_SLOT,
-            JSON.stringify({ accessToken: token.access_token, login } satisfies GitHubCredentials),
-          );
+          // One Secret write commits the complete credential and account together.
+          await credentialManager.store(token, login);
+          if (dependencies.startBackgroundRefresh) refreshScheduler.start();
           view.close({ connected: true });
         });
         return { connected: true };
@@ -253,6 +259,7 @@ export function createGitHubExtension(
       return true;
     },
     dispose() {
+      refreshScheduler.dispose();
       pendingController?.abort();
       pendingView?.close({ dismissed: true });
     },
@@ -260,5 +267,5 @@ export function createGitHubExtension(
 }
 
 export function activate(context: SpiritExtensionContext) {
-  return createGitHubExtension(context);
+  return createGitHubExtension(context, { startBackgroundRefresh: true });
 }

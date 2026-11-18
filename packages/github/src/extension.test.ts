@@ -117,6 +117,13 @@ function fixture() {
 }
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+const storedOAuthCredentials = () => ({
+  accessToken: "stored-private-token",
+  refreshToken: "stored-private-refresh-token",
+  accessTokenExpiresAt: Date.now() + 28_800_000,
+  refreshTokenExpiresAt: Date.now() + 15_552_000_000,
+  login: "fixture-account",
+});
 function successfulFetch(input: RequestInfo | URL) {
   const url = String(input);
   if (url.endsWith("/device/code"))
@@ -131,7 +138,14 @@ function successfulFetch(input: RequestInfo | URL) {
     );
   if (url.endsWith("/access_token"))
     return Promise.resolve(
-      json({ access_token: "private-access-token", token_type: "bearer", scope: "repo" }),
+      json({
+        access_token: "private-access-token",
+        refresh_token: "private-refresh-token",
+        token_type: "bearer",
+        scope: "repo",
+        expires_in: 28_800,
+        refresh_token_expires_in: 15_552_000,
+      }),
     );
   if (url.endsWith("/user")) return Promise.resolve(json({ login: "fixture-account" }));
   throw new Error("Unexpected fixture request");
@@ -139,22 +153,30 @@ function successfulFetch(input: RequestInfo | URL) {
 
 test("authorization commits one Secret and never exposes private credentials to a page", async () => {
   const f = fixture();
+  const now = 1_800_000_000_000;
   const extension = createGitHubExtension(f.context, {
     clientId: "fixture-client",
     fetch: successfulFetch,
+    now: () => now,
   });
   const first = extension.actions.authorize(f.action);
   assert.equal(extension.actions.authorize(f.action), first);
   assert.deepEqual(await first, { connected: true });
   assert.deepEqual(JSON.parse(f.secrets.get(GITHUB_CREDENTIAL_SLOT)!), {
     accessToken: "private-access-token",
+    refreshToken: "private-refresh-token",
+    accessTokenExpiresAt: now + 28_800_000,
+    refreshTokenExpiresAt: now + 15_552_000_000,
     login: "fixture-account",
   });
   assert.deepEqual(
     f.states.map((state) => state.phase),
     ["loading", "challenge"],
   );
-  assert.doesNotMatch(JSON.stringify(f.states), /private-device-code|private-access-token/);
+  assert.doesNotMatch(
+    JSON.stringify(f.states),
+    /private-device-code|private-access-token|private-refresh-token/,
+  );
   assert.deepEqual(f.links, ["https://github.com/login/device"]);
 });
 
@@ -200,10 +222,7 @@ test("disposing during account lookup prevents late Secret writes even if transp
 
 test("disconnect clears the declared Secret and only exposes the account label", async () => {
   const f = fixture();
-  f.secrets.set(
-    GITHUB_CREDENTIAL_SLOT,
-    JSON.stringify({ accessToken: "stored-private-token", login: "fixture-account" }),
-  );
+  f.secrets.set(GITHUB_CREDENTIAL_SLOT, JSON.stringify(storedOAuthCredentials()));
   const extension = createGitHubExtension(f.context);
   const action = extension.actions.authorize(f.action);
   const view = await f.opened.promise;
@@ -239,10 +258,7 @@ test("PR link parsing remains in the extension and passes navigation to the host
 test("401 clears authorization while 403 preserves it", async () => {
   for (const status of [401, 403]) {
     const f = fixture();
-    f.secrets.set(
-      GITHUB_CREDENTIAL_SLOT,
-      JSON.stringify({ accessToken: "stored-private-token", login: "fixture-account" }),
-    );
+    f.secrets.set(GITHUB_CREDENTIAL_SLOT, JSON.stringify(storedOAuthCredentials()));
     const extension = createGitHubExtension(f.context, {
       fetch: async () => json({ message: "fixture denied" }, status),
     });
@@ -258,6 +274,76 @@ test("401 clears authorization while 403 preserves it", async () => {
     );
     assert.equal(f.secrets.has(GITHUB_CREDENTIAL_SLOT), status !== 401);
   }
+});
+
+test("an API 401 refreshes the stored credential and replays the original RPC", async () => {
+  const f = fixture();
+  f.secrets.set(GITHUB_CREDENTIAL_SLOT, JSON.stringify(storedOAuthCredentials()));
+  let refreshRequests = 0;
+  let pullRequests = 0;
+  const extension = createGitHubExtension(f.context, {
+    fetch: async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/access_token")) {
+        refreshRequests += 1;
+        return json({
+          access_token: "rotated-private-access-token",
+          refresh_token: "rotated-private-refresh-token",
+          token_type: "bearer",
+          expires_in: 28_800,
+          refresh_token_expires_in: 15_552_000,
+        });
+      }
+      if (url.includes("/pulls")) {
+        pullRequests += 1;
+        const authorization = new Headers(init?.headers).get("Authorization");
+        if (authorization === "Bearer stored-private-token") {
+          return json({ message: "Bad credentials" }, 401);
+        }
+        assert.equal(authorization, "Bearer rotated-private-access-token");
+        return json([]);
+      }
+      throw new Error("Unexpected fixture request");
+    },
+  });
+  const result = (await extension.onTabRequest({
+    ...f.context,
+    contributionId: "pull-requests",
+    instanceId: "tab",
+    method: "listGitHubPullRequests",
+    params: { owner: "example", repo: "project", state: "open" },
+    context: { workspaceRoot: "/workspace", sessionKey: "session", branch: "main" },
+  })) as { items: unknown[] };
+  assert.deepEqual(result.items, []);
+  assert.equal(refreshRequests, 1);
+  assert.equal(pullRequests, 2);
+  const stored = JSON.parse(f.secrets.get(GITHUB_CREDENTIAL_SLOT)!);
+  assert.equal(stored.accessToken, "rotated-private-access-token");
+  assert.equal(stored.refreshToken, "rotated-private-refresh-token");
+  assert.equal(stored.login, "fixture-account");
+  assert.doesNotMatch(JSON.stringify(f.states), /rotated-private/);
+});
+
+test("an expired refresh credential starts a new Device Flow instead of blocking authorization", async () => {
+  const f = fixture();
+  f.secrets.set(
+    GITHUB_CREDENTIAL_SLOT,
+    JSON.stringify({
+      ...storedOAuthCredentials(),
+      accessTokenExpiresAt: Date.now(),
+      refreshTokenExpiresAt: Date.now(),
+    }),
+  );
+  const extension = createGitHubExtension(f.context, {
+    clientId: "fixture-client",
+    fetch: successfulFetch,
+  });
+  assert.deepEqual(await extension.actions.authorize(f.action), { connected: true });
+  assert.deepEqual(
+    f.states.map((state) => state.phase),
+    ["loading", "challenge"],
+  );
+  assert.equal(f.secrets.has(GITHUB_CREDENTIAL_SLOT), true);
 });
 
 test("corrupt credentials still open management so the user can explicitly disconnect", async () => {
