@@ -8,6 +8,7 @@ import {
 } from "./contribution-files.js";
 
 const MCP_DECLARATION = [{ name: "demo", transport: "stdio" as const }];
+const HTTP_MCP_DECLARATION = [{ name: "demo", transport: "http" as const }];
 const HOOKS_DECLARATION = [{ event: "sessionStart" }];
 const RULES_DECLARATION = { displayName: {}, summary: {} };
 const SKILLS_DECLARATION = [{ name: "demo-skill" }];
@@ -104,6 +105,37 @@ test("mcp declaration requires a valid mcp.json", async () => {
   await assertDeclaredInstructionContributionFiles(
     { mcp: MCP_DECLARATION },
     { ...readersFromFiles({ "mcp.json": VALID_MCP_JSON }), validators: noopValidators() },
+  );
+});
+
+test("mcp secret references must use declared secret slots", async () => {
+  const files = {
+    "mcp.json": JSON.stringify({
+      servers: {
+        demo: {
+          transport: {
+            type: "http",
+            url: "http://127.0.0.1/mcp",
+            headers: { Authorization: "Bearer ${extension-secret:credentials:accessToken}" },
+          },
+        },
+      },
+    }),
+  };
+  await assert.rejects(
+    assertDeclaredInstructionContributionFiles(
+      { mcp: HTTP_MCP_DECLARATION },
+      { ...readersFromFiles(files), validators: noopValidators(), secretSlots: [] },
+    ),
+    /undeclared extension secret slot: credentials/,
+  );
+  await assertDeclaredInstructionContributionFiles(
+    { mcp: HTTP_MCP_DECLARATION },
+    {
+      ...readersFromFiles(files),
+      validators: noopValidators(),
+      secretSlots: ["credentials"],
+    },
   );
 });
 

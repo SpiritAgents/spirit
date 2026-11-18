@@ -2,6 +2,11 @@ import { Buffer } from "node:buffer";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  deleteKeyringPassword,
+  getKeyringPassword,
+  setKeyringPassword,
+} from "@spiritagent/config/keyring-secret";
 
 export { loadToggleState, saveToggleState } from "@spiritagent/config/toggle-state";
 
@@ -21,6 +26,12 @@ export interface ExtensionStateStore {
   saveSecret?(extensionId: string, key: string, value: string): Promise<void>;
   deleteSecret?(extensionId: string, key: string): Promise<void>;
   hasSecret?(extensionId: string, key: string): Promise<boolean>;
+}
+
+const KEYRING_SERVICE = "Spirit";
+
+function extensionSecretAccount(extensionId: string, key: string): string {
+  return `extension::${extensionId}::secret::${key}`;
 }
 
 export interface ExtensionManagementContext {
@@ -70,6 +81,32 @@ export function createFileExtensionStateStore(
       const filePath = extensionSettingsFilePath(paths, extensionId);
       await mkdir(path.dirname(filePath), { recursive: true });
       await writeFile(filePath, `${JSON.stringify(values, null, 2)}\n`, "utf8");
+    },
+  };
+}
+
+export function createKeyringExtensionStateStore(
+  context: ExtensionManagementContext,
+  onSecretsChanged?: (extensionId: string) => void,
+): ExtensionStateStore {
+  const fileStore = createFileExtensionStateStore(context);
+  return {
+    loadSettings: (extensionId) => fileStore.loadSettings(extensionId),
+    saveSettings: (extensionId, values) => fileStore.saveSettings(extensionId, values),
+    async loadSecret(extensionId, key) {
+      return getKeyringPassword(KEYRING_SERVICE, extensionSecretAccount(extensionId, key));
+    },
+    async saveSecret(extensionId, key, value) {
+      setKeyringPassword(KEYRING_SERVICE, extensionSecretAccount(extensionId, key), value);
+      onSecretsChanged?.(extensionId);
+    },
+    async deleteSecret(extensionId, key) {
+      deleteKeyringPassword(KEYRING_SERVICE, extensionSecretAccount(extensionId, key));
+      onSecretsChanged?.(extensionId);
+    },
+    async hasSecret(extensionId, key) {
+      const value = getKeyringPassword(KEYRING_SERVICE, extensionSecretAccount(extensionId, key));
+      return value !== undefined && value.length > 0;
     },
   };
 }

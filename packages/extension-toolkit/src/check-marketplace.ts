@@ -69,6 +69,7 @@ async function checkEntryContent(
     contentDir,
     entry.manifest.contributes,
     `extensions[${entry.name}].manifest.contributes`,
+    entry.manifest.secretSlots ?? [],
   );
 }
 

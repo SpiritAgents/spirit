@@ -32,6 +32,7 @@ import type {
   HostExtensionContributedRule,
   HostExtensionContributedSkill,
 } from "@spiritagent/instructions/contributions";
+import { resolveExtensionMcpSecretTemplate } from "@spiritagent/extension-toolkit";
 
 export type { HostExtensionContributedRule, HostExtensionContributedSkill };
 
@@ -53,9 +54,14 @@ export interface HostExtensionInstructionContributions {
   rules: HostExtensionContributedRule[];
 }
 
+export interface HostExtensionInstructionContributionOptions {
+  loadSecret?: (extensionId: string, key: string) => Promise<string | undefined>;
+}
+
 export async function collectEnabledExtensionInstructionContributions(
   extensions: readonly HostInstalledExtension[],
   log?: (message: string) => void,
+  options: HostExtensionInstructionContributionOptions = {},
 ): Promise<HostExtensionInstructionContributions> {
   const mcp: McpConfigFile = { servers: {} };
   const mcpOwnership: Record<string, HostExtensionMcpServerOwnership> = {};
@@ -70,7 +76,7 @@ export async function collectEnabledExtensionInstructionContributions(
 
   for (const extension of ordered) {
     if (isDeclaredInstructionContribution(extension, "mcp")) {
-      await collectExtensionMcpContribution(extension, mcp, mcpOwnership, log);
+      await collectExtensionMcpContribution(extension, mcp, mcpOwnership, log, options);
     }
     if (isDeclaredInstructionContribution(extension, "hooks")) {
       await collectExtensionHooksContribution(extension, hooks, log);
@@ -167,6 +173,7 @@ async function collectExtensionMcpContribution(
   merged: McpConfigFile,
   ownership: Record<string, HostExtensionMcpServerOwnership>,
   log?: (message: string) => void,
+  options: HostExtensionInstructionContributionOptions = {},
 ): Promise<void> {
   const configPath = path.join(extension.directoryPath, EXTENSION_MCP_CONFIG_FILE_NAME);
   let parsed: McpConfigFile;
@@ -186,7 +193,12 @@ async function collectExtensionMcpContribution(
       continue;
     }
     try {
-      merged.servers[name] = rewriteExtensionMcpServer(server, extension.directoryPath);
+      const rewritten = rewriteExtensionMcpServer(server, extension.directoryPath);
+      merged.servers[name] = await resolveExtensionMcpServerSecrets(
+        rewritten,
+        extension,
+        options.loadSecret,
+      );
       ownership[name] = {
         extensionId: extension.id,
         viewIds: (extension.manifest.contributes?.desktop?.views ?? []).map((view) => view.id),
@@ -197,6 +209,29 @@ async function collectExtensionMcpContribution(
       );
     }
   }
+}
+
+async function resolveExtensionMcpServerSecrets(
+  server: McpServerConfig,
+  extension: HostInstalledExtension,
+  loadSecret: HostExtensionInstructionContributionOptions["loadSecret"],
+): Promise<McpServerConfig> {
+  if (server.transport.type !== "http" || !server.transport.headers) {
+    return server;
+  }
+  const headers: Record<string, string> = {};
+  for (const [name, template] of Object.entries(server.transport.headers)) {
+    headers[name] = await resolveExtensionMcpSecretTemplate(template, async (slot) => {
+      if (!extension.manifest.secretSlots?.includes(slot)) {
+        throw new Error(`MCP header references an undeclared extension secret slot: ${slot}`);
+      }
+      if (!loadSecret) {
+        throw new Error("Extension secret storage is unavailable for MCP contributions.");
+      }
+      return loadSecret(extension.id, slot);
+    });
+  }
+  return { ...server, transport: { ...server.transport, headers } };
 }
 
 function rewriteExtensionMcpServer(

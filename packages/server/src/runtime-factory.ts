@@ -118,6 +118,10 @@ import {
   ensureBuiltInSkills,
   ensurePersonalMarketplace,
 } from "@spiritagent/extensions";
+import {
+  createKeyringExtensionStateStore,
+  type ExtensionStateStore,
+} from "@spiritagent/extensions/storage";
 
 import { normalizeHostUiPromptSection } from "./host-ui-prompt.js";
 import { createExtensionMcpExtraConfigs } from "./mcp-registry.js";
@@ -537,11 +541,17 @@ async function prepareServerRuntime(
     //    adapter (MCP tool execution lives on the executor's McpService, same
     //    split as Desktop), extensions, todos, approval level.
     let extensionManager: ReturnType<typeof createHostExtensionManager> | undefined;
+    let extensionStateStore: ExtensionStateStore | undefined;
     const extensionSystemPrompts: LlmExtensionSystemPrompt[] = [];
     if (!isDreamCollector) {
       await ensureBuiltInSkills(spiritDataDir);
       await ensurePersonalMarketplace(spiritDataDir);
-      extensionManager = createHostExtensionManager({ spiritDataDir, hostKind });
+      extensionStateStore = createKeyringExtensionStateStore({ spiritDataDir, hostKind });
+      extensionManager = createHostExtensionManager({
+        spiritDataDir,
+        hostKind,
+        stateStore: extensionStateStore,
+      });
       const builtInTreeKey = `${hostKind}\n${spiritDataDir}`;
       if (!builtInSeededTrees.has(builtInTreeKey)) {
         await ensureBuiltInExtensions({
@@ -672,7 +682,14 @@ async function prepareServerRuntime(
       const overlay = overlayExtensionRulesAndSkills(
         baseEnabledRules,
         baseEnabledSkillCatalog,
-        await collectEnabledExtensionInstructionContributions(await extensionManager.list()),
+        await collectEnabledExtensionInstructionContributions(
+          await extensionManager.list(),
+          undefined,
+          {
+            loadSecret: (extensionId, key) =>
+              extensionStateStore?.loadSecret?.(extensionId, key) ?? Promise.resolve(undefined),
+          },
+        ),
         (message: string) => log(message),
       );
       enabledRules.length = 0;
@@ -808,6 +825,10 @@ async function prepareServerRuntime(
         const contributions = await collectEnabledExtensionInstructionContributions(
           await extensionManager.list(),
           (message: string) => log(message),
+          {
+            loadSecret: (extensionId, key) =>
+              extensionStateStore?.loadSecret?.(extensionId, key) ?? Promise.resolve(undefined),
+          },
         );
         return contributions.hooks.filter((hook) => hook.event === event);
       },

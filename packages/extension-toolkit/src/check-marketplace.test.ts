@@ -128,3 +128,52 @@ test("npm-sourced entries skip content checks", async () => {
   });
   assert.deepEqual(await checkMarketplaceRegistry(dir), []);
 });
+
+test("local MCP contributions validate their declared secret slots", async () => {
+  const manifest = {
+    supportedHosts: ["cli"],
+    requestedCapabilities: ["mcp", "secret-storage"],
+    secretSlots: [],
+    contributes: {
+      mcp: [
+        {
+          name: "demo",
+          displayName: { message: "mcp.example.displayName" },
+          transport: "http",
+        },
+      ],
+    },
+  };
+  const files = {
+    "extensions/demo-ext/package.json": '{"name": "demo-ext", "version": "1.0.0"}\n',
+    "extensions/demo-ext/icon.svg": VALID_ICON,
+    "extensions/demo-ext/mcp.json": JSON.stringify({
+      servers: {
+        demo: {
+          transport: {
+            type: "http",
+            url: "http://127.0.0.1/mcp",
+            headers: { Authorization: "Bearer ${extension-secret:credentials:accessToken}" },
+          },
+        },
+      },
+    }),
+  };
+  const invalidDir = await fixture({
+    ...files,
+    ".spirit/marketplace.json": indexWith({ ...LOCAL_ENTRY, manifest }),
+  });
+  const findings = await checkMarketplaceRegistry(invalidDir);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0]?.path, "extensions[demo-ext].manifest.contributes");
+  assert.match(findings[0]?.message ?? "", /undeclared extension secret slot: credentials/);
+
+  const validDir = await fixture({
+    ...files,
+    ".spirit/marketplace.json": indexWith({
+      ...LOCAL_ENTRY,
+      manifest: { ...manifest, secretSlots: ["credentials"] },
+    }),
+  });
+  assert.deepEqual(await checkMarketplaceRegistry(validDir), []);
+});

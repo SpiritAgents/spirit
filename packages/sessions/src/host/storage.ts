@@ -37,7 +37,7 @@ import {
   resolveModelByRef,
 } from "@spiritagent/config";
 import {
-  createFileExtensionStateStore,
+  createKeyringExtensionStateStore,
   type ExtensionManagementContext,
   type ExtensionStateStore,
 } from "@spiritagent/extensions/storage";
@@ -189,10 +189,6 @@ export type DesktopWebHostDeviceRecord = RemoteControlDeviceRecord;
 
 /** Matches the keyring naming in `apps/cli/src/model_registry.rs` and config. */
 const KEYRING_SERVICE = "Spirit";
-
-function extensionSecretAccount(extensionId: string, key: string): string {
-  return `extension::${extensionId}::secret::${key}`;
-}
 
 export type RuleDiscoveryResult = HostRuleDiscoveryResult;
 export type SkillDiscoveryResult = HostSkillDiscoveryResult;
@@ -560,32 +556,7 @@ export function createDesktopExtensionStateStore(
   },
   onSecretsChanged?: (extensionId: string) => void,
 ): ExtensionStateStore {
-  const fileStore = createFileExtensionStateStore(context);
-
-  return {
-    loadSettings(extensionId) {
-      return fileStore.loadSettings(extensionId);
-    },
-    saveSettings(extensionId, values) {
-      return fileStore.saveSettings(extensionId, values);
-    },
-    async loadSecret(extensionId, key) {
-      const value = getKeyringPassword(KEYRING_SERVICE, extensionSecretAccount(extensionId, key));
-      return value;
-    },
-    async saveSecret(extensionId, key, value) {
-      setKeyringPassword(KEYRING_SERVICE, extensionSecretAccount(extensionId, key), value);
-      onSecretsChanged?.(extensionId);
-    },
-    async deleteSecret(extensionId, key) {
-      deleteKeyringPassword(KEYRING_SERVICE, extensionSecretAccount(extensionId, key));
-      onSecretsChanged?.(extensionId);
-    },
-    async hasSecret(extensionId, key) {
-      const value = getKeyringPassword(KEYRING_SERVICE, extensionSecretAccount(extensionId, key));
-      return value !== undefined && value.length > 0;
-    },
-  };
+  return createKeyringExtensionStateStore(context, onSecretsChanged);
 }
 
 export async function loadHostMetadata(

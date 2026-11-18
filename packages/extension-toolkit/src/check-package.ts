@@ -134,6 +134,7 @@ export async function checkDeclaredContributions(
   dir: string,
   contributes: MarketplaceInstructionContributionDeclarations | undefined,
   fieldPath = "manifest.contributes",
+  secretSlots?: readonly string[],
 ): Promise<CheckFinding[]> {
   const finding = await assertDeclaredInstructionContributionFiles(contributes, {
     readRelativeTextFile: async (relativePath, fieldName) => {
@@ -146,6 +147,7 @@ export async function checkDeclaredContributions(
     listRelativeChildDirectories: async (relativePath) =>
       (await listChildDirectories(path.join(dir, ...relativePath.split("/")))) ?? [],
     validators: { parseMcpConfigFile, parseHooksConfigFile },
+    ...(secretSlots ? { secretSlots } : {}),
     fieldPrefix: fieldPath,
   }).then(
     () => undefined,
@@ -181,7 +183,12 @@ async function checkInstalledExtension(dir: string, dumpRaw: string): Promise<Ch
       { path: dumpRelativePath, message: error instanceof Error ? error.message : String(error) },
     ];
   }
-  const findings = await checkDeclaredContributions(dir, dump.manifest.contributes);
+  const findings = await checkDeclaredContributions(
+    dir,
+    dump.manifest.contributes,
+    "manifest.contributes",
+    dump.manifest.secretSlots ?? [],
+  );
   if (dump.icon) {
     const iconFinding = await checkIconFile(dir, dump.icon);
     if (iconFinding) {
