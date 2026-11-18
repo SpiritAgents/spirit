@@ -264,7 +264,7 @@ Values are `string`, `number`, `boolean`, or `null`. `null` clears a non-require
 
 ### `secretSlots`
 
-`secretSlots` is a string array of extension-private credential keys. It never creates a generic editor in Settings. Only the extension backend can read or write these values through `secrets.get/has/set/delete`.
+`secretSlots` is a string array of extension-private credential keys. It never creates a generic editor in Settings. Only the extension backend can read or write these values through `secrets.get/has/set/update/delete`.
 
 ```jsonc
 {
@@ -273,7 +273,7 @@ Values are `string`, `number`, `boolean`, or `null`. `null` clears a non-require
 }
 ```
 
-`set` rejects empty strings and otherwise preserves the exact value, including whitespace and trailing newlines. Updating an extension deletes slots removed by the new manifest. Uninstalling deletes all declared credentials before removing the extension files; disabling preserves them.
+`set` rejects empty strings and otherwise preserves the exact value, including whitespace and trailing newlines. `update(slot, current => next)` serializes the read/modify/write cycle across extension-host processes; returning `undefined` deletes the Secret, while returning the current value performs no write. Use it for rotating credentials or other state that must not be overwritten by a concurrent writer. Updating an extension deletes slots removed by the new manifest. Uninstalling deletes all declared credentials before removing the extension files; disabling preserves them.
 
 ### `authorizations`
 

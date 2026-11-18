@@ -78,6 +78,12 @@ function fixture() {
       async set(key, value) {
         secrets.set(key, value);
       },
+      async update(key, updater) {
+        const next = await updater(secrets.get(key));
+        if (next === undefined) secrets.delete(key);
+        else secrets.set(key, next);
+        return next;
+      },
       async delete(key) {
         secrets.delete(key);
       },
