@@ -203,6 +203,11 @@ export interface SpiritExtensionContext {
     get(key: string): Promise<string | undefined>;
     has(key: string): Promise<boolean>;
     set(key: string, value: string): Promise<void>;
+    /** Atomically reads and writes a declared Secret across extension-host processes. */
+    update(
+      key: string,
+      updater: (current: string | undefined) => string | undefined | Promise<string | undefined>,
+    ): Promise<string | undefined>;
     delete(key: string): Promise<void>;
   };
 }

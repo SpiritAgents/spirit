@@ -118,13 +118,58 @@ test("secret accessors are extension-private and preserve exact non-empty values
     assert.equal(await secrets.has("privateKey"), true);
     assert.equal(current.secrets.get(`${current.extensionId}::privateKey`), value);
 
+    const updated = await secrets.update("privateKey", (currentValue) =>
+      Promise.resolve(`${currentValue}rotated`),
+    );
+    assert.equal(updated, `${value}rotated`);
+    assert.equal(await secrets.get("privateKey"), `${value}rotated`);
+    assert.equal(
+      await secrets.update("privateKey", (currentValue) => currentValue),
+      `${value}rotated`,
+    );
+
     await assert.rejects(() => secrets.set("privateKey", ""), /must not be empty/);
+    await assert.rejects(() => secrets.update("privateKey", () => ""), /must not be empty/);
     await assert.rejects(() => secrets.get("unknown"), /does not declare the secret slot/);
     await assert.rejects(() => secrets.set("unknown", "value"), /does not declare the secret slot/);
 
-    await secrets.delete("privateKey");
+    await secrets.update("privateKey", () => undefined);
     assert.equal(await secrets.get("privateKey"), undefined);
     assert.equal(await secrets.has("privateKey"), false);
+  } finally {
+    await cleanup(current);
+  }
+});
+
+test("an updater result is committed even if the extension is disabled while it runs", async () => {
+  const current = await fixture();
+  const context = {
+    spiritDataDir: current.spiritDataDir,
+    hostKind: "desktop" as const,
+    stateStore: stateStore(current),
+  };
+  try {
+    const manager = createHostExtensionManager(context);
+    await manager.run({ id: current.extensionId, host: {} });
+    const secrets = accessor();
+    let markStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve;
+    });
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const update = secrets.update("privateKey", async () => {
+      markStarted();
+      await gate;
+      return "rotated-secret";
+    });
+    await started;
+    await manager.setEnabled(current.extensionId, false);
+    release();
+    await assert.rejects(update, /abort/i);
+    assert.equal(current.secrets.get(`${current.extensionId}::privateKey`), "rotated-secret");
   } finally {
     await cleanup(current);
   }

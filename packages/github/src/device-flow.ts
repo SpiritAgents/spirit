@@ -138,6 +138,11 @@ export async function pollGitHubDeviceToken(input: {
           access_token: payload.access_token,
           token_type: payload.token_type,
           ...(payload.scope ? { scope: payload.scope } : {}),
+          ...(payload.refresh_token ? { refresh_token: payload.refresh_token } : {}),
+          ...(payload.expires_in !== undefined ? { expires_in: payload.expires_in } : {}),
+          ...(payload.refresh_token_expires_in !== undefined
+            ? { refresh_token_expires_in: payload.refresh_token_expires_in }
+            : {}),
         };
       }
 

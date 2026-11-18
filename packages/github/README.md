@@ -10,10 +10,20 @@ Website: **spirit.dev**. Contact: **hi@spirit.dev**.
 - The extension backend runs in the extension host and uses Node `fetch`. It does
   not depend on Electron transport, its system proxy/certificate integration, or
   GitHub-specific host commands.
-- Authorization uses OAuth Device Flow. The OAuth App identifier is intentionally
-  unconfigured; production authorization reports that explicitly until an app is
-  supplied. Credentials and account identity are committed together in the
-  declared `oauthCredentials` Secret slot, never sent to extension pages.
+- Authorization uses OAuth Device Flow with the Spirit OAuth App. The access
+  token, rotating refresh token, absolute expiry times, and account identity are
+  committed together in the declared `oauthCredentials` Secret slot, never sent
+  to extension pages. Credentials issued before refresh metadata was
+  introduced require one new Device Flow authorization.
+- Access tokens refresh in the background ten minutes before expiry without a
+  startup validity request or a launch-blocking check. Authorization status and
+  API token reads also refresh on demand. A GitHub API 401 refreshes and replays
+  the request once. Atomic Secret updates prevent concurrent processes from
+  consuming the same rotating refresh token, and existing Secret notifications
+  propagate each new access token to the official MCP contribution.
+- Rejected or expired refresh credentials require reauthorization. Transient
+  transport/server failures preserve the stored authorization and retry in the
+  background with bounded backoff.
 - Native React pages use Spirit UI, Icons, the canonical translations, and the
   shared Markdown/diff renderer. They communicate through the sandboxed extension
   page API; source dependencies are bundled only when building the artifact.

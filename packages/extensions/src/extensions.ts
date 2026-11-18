@@ -54,6 +54,7 @@ import {
 import { SKILLS_DIR_NAME } from "@spiritagent/instructions/skill-paths";
 import { SPIRIT_DIR_NAME, USER_RULE_FILE_NAME } from "@spiritagent/instructions/storage";
 import {
+  createAtomicExtensionStateStore,
   createFileExtensionStateStore,
   loadToggleState,
   resolveExtensionPaths,
@@ -467,6 +468,10 @@ export interface HostExtensionSecretsAccessor {
   get(key: string): Promise<string | undefined>;
   has(key: string): Promise<boolean>;
   set(key: string, value: string): Promise<void>;
+  update(
+    key: string,
+    updater: (current: string | undefined) => string | undefined | Promise<string | undefined>,
+  ): Promise<string | undefined>;
   delete(key: string): Promise<void>;
 }
 
@@ -729,7 +734,11 @@ export function createHostExtensionManager(
   context: ExtensionManagementContext,
 ): HostExtensionManager {
   const activatedExtensions = new Map<string, ActivatedExtensionCacheEntry>();
-  const stateStore = context.stateStore ?? createFileExtensionStateStore(context);
+  const stateStore = createAtomicExtensionStateStore(
+    context,
+    context.stateStore ?? createFileExtensionStateStore(context),
+  );
+  context = { ...context, stateStore };
 
   return {
     getPaths() {
@@ -1940,6 +1949,25 @@ function createSecretsAccessor(
         );
       }
       await stateStore.saveSecret(extension.id, key, value);
+    },
+    async update(key, updater) {
+      signal?.throwIfAborted();
+      assertSecretSlot(extension.manifest, key);
+      if (!stateStore.updateSecret) {
+        throw new Error(
+          `The current host does not implement extension secret storage: ${extension.id}`,
+        );
+      }
+      const result = await stateStore.updateSecret(extension.id, key, async (current) => {
+        signal?.throwIfAborted();
+        const next = await updater(current);
+        if (next?.length === 0) {
+          throw new Error(`Extension secret values must not be empty: ${key}`);
+        }
+        return next;
+      });
+      signal?.throwIfAborted();
+      return result;
     },
     async delete(key) {
       signal?.throwIfAborted();
