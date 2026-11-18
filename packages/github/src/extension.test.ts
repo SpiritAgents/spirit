@@ -155,6 +155,7 @@ test("authorization commits one Secret and never exposes private credentials to 
 test("missing OAuth App is an explicit non-network state", async () => {
   const f = fixture();
   const extension = createGitHubExtension(f.context, {
+    clientId: "",
     fetch: async () => {
       assert.fail("OAuth must not reach the network without an app");
     },
