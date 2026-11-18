@@ -20,7 +20,16 @@
         "caughtErrorsIgnorePattern": "^_"
       }
     ],
+    "react/exhaustive-effect-dependencies": "off",
+    "react/immutability": "off",
+    "react/incompatible-library": "off",
+    "react/memo-dependencies": "off",
+    "react/preserve-manual-memoization": "off",
+    "react/purity": "off",
     "react/react-in-jsx-scope": "off",
+    "react/refs": "off",
+    "react/set-state-in-effect": "off",
+    "react/static-components": "off",
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "off",
     "eslint/no-underscore-dangle": [

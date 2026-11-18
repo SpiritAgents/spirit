@@ -102,11 +102,11 @@ beforeEach(() => {
     },
   );
   vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(800);
-  vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(
-    function (this: HTMLElement) {
-      return this.hasAttribute("data-radix-scroll-area-viewport") ? 600 : 80;
-    },
-  );
+  vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return this.hasAttribute("data-radix-scroll-area-viewport") ? 600 : 80;
+  });
   Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     configurable: true,
     value: vi.fn(),

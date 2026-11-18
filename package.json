@@ -45,8 +45,8 @@
   "devDependencies": {
     "@spiritagent/product": "workspace:*",
     "cross-spawn": "7.0.6",
-    "oxfmt": "^0.62.0",
-    "oxlint": "^1.77.0",
+    "oxfmt": "^0.79.0",
+    "oxlint": "^1.94.0",
     "turbo": "2.10.13",
     "yaml": "^2.9.0"
   },
