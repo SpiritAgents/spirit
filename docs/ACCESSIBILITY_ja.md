@@ -1,0 +1,76 @@
+# Spirit のアクセシビリティ
+
+最終更新：2026-11-18
+
+[English](../ACCESSIBILITY.md) · [简体中文](ACCESSIBILITY_zh-CN.md) · [繁體中文](ACCESSIBILITY_zh-TW.md) · [한국어](ACCESSIBILITY_ko.md) · [Deutsch](ACCESSIBILITY_de.md) · [Français](ACCESSIBILITY_fr.md) · [Español](ACCESSIBILITY_es.md) · [Português do Brasil](ACCESSIBILITY_pt-BR.md) · [Русский](ACCESSIBILITY_ru.md)
+
+Spirit は活発に開発中です。この文書は、現在のアクセシビリティ対応、サポートされているワークフロー、検証のカバー範囲を記録します。
+
+## 優先事項と現在の取り組み
+
+Spirit が現在優先しているのは、Desktop とオプションの Web ホストが共有する React Workbench における、キーボード操作、可視フォーカス、意味のあるコントロールのセマンティクス、および視覚効果の低減です。
+
+[PR #437: fix(web): improve keyboard navigation and focus indicators](https://github.com/SpiritAgents/spirit/pull/437) では、対象となるビューに次の動作を実装し、テストしました。
+
+- 線形リスト、視覚的なグリッド、仮想化リスト、現在の行に属する操作のための共有[ロービングフォーカスプリミティブ](../packages/ui/src/roving-focus-group.tsx)。
+- モデルとプロバイダーのリスト、拡張機能のソースタブとカタログ、自動化リストと履歴、ワークスペースのファイルツリー、Git リスト、ツールタブ、セッションサイドバーでの矢印キーナビゲーション。実装されている場所では Home と End にも対応。
+- 対象となる複合リストでは主要な Tab 入口を 1 つに保ちながら、現在の行の操作にもキーボードで到達可能。
+- 共有 Tooltip 実装でキーボードフォーカスに応じて項目の詳細を表示し、フォーカス喪失または Escape で閉じ、`aria-describedby` で説明を関連付け。
+- サイドバーの行とインライン操作を含め、ポインターのホバースタイルとは区別されたフォーカスインジケーター。
+
+Workbench には、「システム」「オン」「オフ」を選べる視覚効果低減の設定もあります。[実装](../packages/web/src/lib/reduce-motion.ts) は「システム」モードで OS の `prefers-reduced-motion` 設定に従い、モーション対応のスタイルと動作が共有するドキュメント状態を提供します。
+
+React UI の一部には、ネイティブコントロール、ARIA ロール、アクセシブルな名前、`aria-current`、`aria-expanded`、`aria-selected` などの状態属性、status または alert ロールが使用されています。共有アイコンヘルパーは、アクセシビリティ属性や子コンテンツが指定されていない装飾アイコンを、デフォルトで支援技術から隠します。これらの実装は支援技術に意味情報を提供します。現在の検証は、主にキーボードとフォーカスの動作を対象としています。
+
+## コントリビューターへの期待事項
+
+インタラクティブな UI を変更する人間のコントリビューターとコーディングエージェントは、次を行ってください。
+
+- キーボード操作、可視フォーカス、意味のある名前・ロール・状態を維持すること。適切な場合は既存の共有コントロールとロービングフォーカスプリミティブを再利用すること。
+- 確立されたコントロールパターンが明示的に結び付けている場合を除き、フォーカスの移動とアクティベーションを分けること。従来ポインター中心だった操作にも、キーボードからの移動経路を維持すること。
+- 変更した動作に対する回帰テストを追加または更新すること。既存の例には、[ロービングフォーカステスト](../packages/web/test/components/roving-focus-group.test.tsx)、[複合リストテスト](../packages/web/test/components/keyboard-lists.test.tsx)、[サイドバーのキーボードテスト](../packages/web/test/components/session-sidebar-keyboard.test.tsx)、[ワークスペースのキーボードテスト](../packages/web/test/components/workspace-keyboard.test.tsx)があります。
+- 関連するチェックを実行し、検証のカバー範囲を報告すること。Workbench の変更には、次のパッケージコマンドを使用できます。
+
+```bash
+pnpm --filter @spiritagent/web test
+pnpm --filter @spiritagent/web typecheck
+```
+
+[Verify ワークフロー](../.github/workflows/verify.yml) では、TypeScript のビルド、テスト、型チェック、oxlint、oxfmt と、Rust のチェックを実行します。リポジトリ共通のガイダンスは[コントリビューションガイド](../CONTRIBUTING.md#testing-and-ci)を参照してください。
+
+Vitest と jsdom は回帰証拠に使用し、支援技術によるテストは別途記録します。Pull Request では、関連する手動チェックと検証上のギャップを示してください。
+
+## アクセシビリティ上の障壁を報告する
+
+[Spirit のバグ報告フォームからアクセシビリティ上の障壁を報告](https://github.com/SpiritAgents/spirit/issues/new?template=bug_report.md)してください。識別しやすくするため、Issue のタイトルに「Accessibility」を含めてください。
+
+影響を受けるタスクやページ、期待した動作、実際の動作を説明してください。有用な情報には、Spirit のバージョン、OS、入力方法、Web ホスト使用時のブラウザー、関連する支援技術があります。共有しても問題ないと考える情報だけを記載してください。
+
+文章だけでも報告できます。障害に関する背景、スクリーンショット、録画、ログは任意です。問題の特定に役立ち、共有してもよい場合に添えてください。ログを共有する際は、API キー、トークン、非公開のパスを除去してください。
+
+## 対応と追跡
+
+アクセシビリティの報告は、ほかの Spirit のバグと同じ GitHub Issue と Pull Request のワークフローを使用します。メンテナーはトリアージ時に評価と優先順位付けを行い、状態と実装に関する議論を Issue とリンクされた Pull Request に記録します。
+
+## 環境のカバー範囲
+
+- **Desktop:** Spirit の Electron シェルは Windows、macOS、Linux を対象としています。
+- **Web ホスト:** Desktop とオプションの Web ホストは、React Workbench レンダラーとキーボードフォーカスの回帰テストスイートを共有します。
+- **キーボード入力:** 自動テストは、共有 React Workbench における上記の特定のナビゲーションとフォーカス動作をカバーします。
+- **スクリーンリーダーとその他の支援技術:** ソースには、セマンティックなコントロール、アクセシブルな名前、状態属性、ライブステータス要素が含まれます。個別の支援技術に関する詳細な結果は、検証後に追加できます。
+- **CLI とターミナル UI:** Spirit には Rust CLI とオプションのターミナル UI があります。これらのホストのアクセシビリティ評価は、引き続き検討中の領域です。
+
+## 現在のカバー範囲のギャップ
+
+- PR #437 のキーボード対応は、特定の React ビューと共有プリミティブを対象としています。Monaco エディターのコンテンツ、埋め込みターミナル、アプリ内ブラウザー、拡張機能が提供する UI、その他の埋め込みまたはサードパーティコンテンツは、個別の評価対象です。
+- ストリーミングメッセージ、動的更新、ダイアログ、複雑なコンテンツについては、エンドツーエンドのスクリーンリーダー評価が今後の検証領域です。既存のテストは、DOM ロールとキーボード操作に焦点を当てています。
+
+## 責任者とメンテナンス
+
+Spirit のメンテナーは、通常の Pull Request プロセスでこの文書への変更をレビューします。
+
+対応動作、テスト範囲、既知の障壁を変更するコントリビューターは、同じ Pull Request でこの文書の更新も提案してください。翻訳では、英語版による動作の実装と検証状態の区別を維持してください。
+
+## フィードバックと改善
+
+この文書や Spirit のアクセシビリティ実践への改善を提案するには、[機能リクエストを作成](https://github.com/SpiritAgents/spirit/issues/new?template=feature_request.md)するか、対象を絞ったドキュメント Pull Request を提出してください。Spirit の利用中に実際の障壁が発生した場合は、上記の[アクセシビリティ上の障壁の報告方法](#アクセシビリティ上の障壁を報告する)を使用してください。

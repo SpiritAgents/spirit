@@ -213,7 +213,7 @@ scripts/             Release, eval, and repo automation
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) to get started. For architecture boundaries, commit conventions, and agent-core guidelines, also read [AGENTS.md](AGENTS.md). To report security issues, see [SECURITY.md](SECURITY.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) to get started. For architecture boundaries, commit conventions, and agent-core guidelines, also read [AGENTS.md](AGENTS.md). For accessibility priorities, verification status, and barrier reporting, see [ACCESSIBILITY.md](ACCESSIBILITY.md). To report security issues, see [SECURITY.md](SECURITY.md).
 
 ## License
 
