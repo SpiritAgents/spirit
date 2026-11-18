@@ -170,7 +170,7 @@
     "commitAttribution": "Atribución en commits",
     "commitAttributionDescription": "Acreditar a Spirit Agent en los commits del agente.",
     "prAttribution": "Atribución en PR",
-    "prAttributionDescription": "Acreditar a {{product.name}} Agent en los pull requests del agente.",
+    "prAttributionDescription": "Acreditar a {{product.name}} Agent en las solicitudes de incorporación del agente.",
     "editorTabCompletion": "Autocompletar con tabulador en el editor",
     "editorTabCompletionDescription": "Usar autocompletado en línea en el editor de archivos.",
     "lspStatusReady": "Listo",

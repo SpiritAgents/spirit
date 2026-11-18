@@ -13,7 +13,7 @@ Gracias por tu interés en Spirit! Este proyecto es un monorepo de código abier
 - Refactors que abarcan varios paquetes
 - Cambios de prompt, de contrato de herramienta o de inyección de contexto que alteran el comportamiento del agente
 
-**Los cambios más pequeños pueden ir directamente a un pull request**, por ejemplo:
+**Los cambios más pequeños pueden ir directamente a una solicitud de incorporación**, por ejemplo:
 
 - Actualizaciones de documentación, README o comentarios
 - Correcciones de ortografía y de estilo
@@ -149,7 +149,7 @@ Los cambios en prompts de sistema, definiciones de herramientas o inyección de 
 
 Las correcciones pequeñas de redacción o de ortografía, o los refactors no visibles para el modelo, normalmente no necesitan una ejecución completa de eval.
 
-## Pull requests
+## Solicitudes de incorporación
 
 - Usa un título y una descripción claros: **qué** cambió, **por qué** y **cómo lo probaste**
 - Cuando el PR esté destinado a cerrar una Issue, termina la descripción con una última línea independiente `Closed #N` o `Fixed #N` (una línea en blanco encima). Consulta [AGENTS.md](../AGENTS.md#pull-requests-that-close-issues)

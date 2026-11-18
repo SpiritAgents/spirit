@@ -170,7 +170,7 @@
     "commitAttribution": "Атрибуция коммитов",
     "commitAttributionDescription": "Указывать Spirit Agent в коммитах агента.",
     "prAttribution": "Атрибуция PR",
-    "prAttributionDescription": "Указывать {{product.name}} Agent в pull request агента.",
+    "prAttributionDescription": "Указывать {{product.name}} Agent в запросах на слияние агента.",
     "editorTabCompletion": "Автодополнение по Tab в редакторе",
     "editorTabCompletionDescription": "Использовать встроенное автодополнение в редакторе файлов.",
     "lspStatusReady": "Готов",

@@ -131,7 +131,7 @@
   "tui.tool.approval.schedule.weekday5": "금요일",
   "tui.tool.approval.schedule.weekday6": "토요일",
   "tui.tool.approval.schedule.github": "GitHub · %{owner}/%{repo} · %{event}",
-  "tui.tool.approval.schedule.event_pull_request_created": "풀 리퀘스트 생성됨",
+  "tui.tool.approval.schedule.event_pull_request_created": "끌어오기 요청 생성됨",
   "tui.tool.approval.schedule.event_issue_created": "이슈 생성됨",
   "tui.tool.result.mcp_done": "MCP 도구 호출 완료",
   "tui.tool.result.web_fetch_done": "웹 페이지를 가져왔습니다",

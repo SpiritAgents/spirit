@@ -131,7 +131,7 @@
   "tui.tool.approval.schedule.weekday5": "周五",
   "tui.tool.approval.schedule.weekday6": "周六",
   "tui.tool.approval.schedule.github": "GitHub · %{owner}/%{repo} · %{event}",
-  "tui.tool.approval.schedule.event_pull_request_created": "Pull Request 创建",
+  "tui.tool.approval.schedule.event_pull_request_created": "拉取请求创建",
   "tui.tool.approval.schedule.event_issue_created": "Issue 创建",
   "tui.tool.result.mcp_done": "MCP 工具调用完成",
   "tui.tool.result.web_fetch_done": "网页内容已抓取",

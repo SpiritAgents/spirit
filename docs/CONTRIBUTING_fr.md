@@ -13,7 +13,7 @@ Merci de votre intérêt pour Spirit ! Ce projet est un monorepo open source d�
 - Refactors qui couvrent plusieurs packages
 - Changements de prompt, de contrat d’outil ou d’injection de contexte qui modifient le comportement de l’agent
 
-**Les changements plus petits peuvent aller directement en pull request**, par exemple :
+**Les changements plus petits peuvent aller directement en demande de tirage**, par exemple :
 
 - Mises à jour de documentation, de README ou de commentaires
 - Corrections d’orthographe et de style
@@ -149,7 +149,7 @@ Les changements de prompts système, de définitions d’outils ou d’injection
 
 Les petites corrections de formulation, d’orthographe, ou les refactors non visibles par le modèle n’ont en général pas besoin d’une éval complète.
 
-## Pull requests
+## Demandes de tirage
 
 - Utilisez un titre et une description clairs : **ce qui** a changé, **pourquoi**, et **comment vous l’avez testé**
 - Lorsque la PR est destinée à fermer une Issue, terminez la description par une dernière ligne isolée `Closed #N` ou `Fixed #N` (une ligne vide au-dessus). Voir [AGENTS.md](../AGENTS.md#pull-requests-that-close-issues)

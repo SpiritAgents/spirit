@@ -13,7 +13,7 @@
 - 跨越多個套件的重構
 - 會改變智能體行為的提示詞、工具契約或上下文注入變更
 
-**較小的變更可以直接提交 Pull Request**，例如：
+**較小的變更可以直接提交拉取請求**，例如：
 
 - 文件、README 或註解更新
 - 拼寫與樣式修復
@@ -149,7 +149,7 @@ pnpm run eval:compare                        # 如果改了模型可見的 agent
 
 小的措辭修正、拼寫修正，或非模型可見的重構，通常不需要跑完整 eval。
 
-## Pull Request
+## 拉取請求
 
 - 使用清晰的標題和描述：**改了什麼**、**為什麼**，以及**如何測試**
 - 當 PR 旨在關閉某個 Issue 時，在描述末尾單獨寫一行 `Closed #N` 或 `Fixed #N`（上方留一空行）。見 [AGENTS.md](../AGENTS.md#pull-requests-that-close-issues)

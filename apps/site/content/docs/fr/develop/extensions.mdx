@@ -369,7 +369,7 @@ Un marché d'extensions distant est un répertoire servable avec un index `{{pro
 
 [Use this template](https://github.com/new?template_owner=SpiritAgents&template_name=extension-template) crée votre propre dépôt de marché à partir de `SpiritAgents/extension-template`.
 
-Le modèle fournit la structure de registre, deux extensions d'exemple et une CI qui valide le registre à chaque push et pull request. Pour publier une extension :
+Le modèle fournit la structure de registre, deux extensions d'exemple et une CI qui valide le registre à chaque push et demande de tirage. Pour publier une extension :
 
 1. Générez-la avec `npm create @spiritagent/extension`.
 2. Exécutez `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` — cela copie l'extension dans `extensions/` et fusionne l'entrée dans `{{product.workspaceDataFolderName}}/marketplace.json`. Voir [Publier avec publish](#publier-avec-publish).
@@ -408,7 +408,7 @@ Validez le registre localement — hors ligne : schéma, noms kebab-case, semver
 npx -y @spiritagent/extension-toolkit marketplace check .
 ```
 
-Discipline de vérification : les pull requests qui ajoutent une entrée ou modifient sa `version` doivent conserver `reviewStatus: "unverified"` ; la promotion en `verified` se fait dans un commit séparé après une revue humaine. Le `.github/workflows/marketplace.yml` du dépôt modèle est une implémentation de référence — il diff l'index contre la base de la PR.
+Discipline de vérification : les demandes de tirage qui ajoutent une entrée ou modifient sa `version` doivent conserver `reviewStatus: "unverified"` ; la promotion en `verified` se fait dans un commit séparé après une revue humaine. Le `.github/workflows/marketplace.yml` du dépôt modèle est une implémentation de référence — il diff l'index contre la base de la PR.
 
 </Tab>
 </Tabs>

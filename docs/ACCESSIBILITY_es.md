@@ -38,7 +38,7 @@ pnpm --filter @spiritagent/web typecheck
 
 El [flujo de trabajo Verify](../.github/workflows/verify.yml) ejecuta compilaciones, pruebas, comprobaciones de tipos, oxlint y oxfmt de TypeScript, además de comprobaciones de Rust. Consulta la [guía de contribución](../CONTRIBUTING.md#testing-and-ci) para conocer las instrucciones generales del repositorio.
 
-Vitest y jsdom aportan evidencia de regresión, mientras que las pruebas con tecnologías de asistencia se documentan por separado. Las pull requests deben identificar las comprobaciones manuales relevantes y las lagunas de verificación.
+Vitest y jsdom aportan evidencia de regresión, mientras que las pruebas con tecnologías de asistencia se documentan por separado. Las solicitudes de incorporación deben identificar las comprobaciones manuales relevantes y las lagunas de verificación.
 
 ## Informar de barreras de accesibilidad
 
@@ -50,7 +50,7 @@ Puedes informar solo con una descripción de texto. La información sobre discap
 
 ## Respuesta y seguimiento
 
-Los informes de accesibilidad usan el mismo flujo de trabajo de issues y pull requests de GitHub que otros errores de Spirit. Los mantenedores los evalúan y priorizan durante la clasificación. El estado y el debate sobre la implementación se registran en el issue y las pull requests vinculadas.
+Los informes de accesibilidad usan el mismo flujo de trabajo de issues y solicitudes de incorporación de GitHub que otros errores de Spirit. Los mantenedores los evalúan y priorizan durante la clasificación. El estado y el debate sobre la implementación se registran en el issue y las solicitudes de incorporación vinculadas.
 
 ## Cobertura por entorno
 
@@ -67,10 +67,10 @@ Los informes de accesibilidad usan el mismo flujo de trabajo de issues y pull re
 
 ## Responsabilidad y mantenimiento
 
-Los mantenedores de Spirit revisan los cambios de esta declaración mediante el proceso habitual de pull requests del proyecto.
+Los mantenedores de Spirit revisan los cambios de esta declaración mediante el proceso habitual de solicitudes de incorporación del proyecto.
 
-Los colaboradores que modifiquen el comportamiento compatible, la cobertura de pruebas o las barreras conocidas deben proponer actualizaciones correspondientes de esta declaración en la misma pull request. Las traducciones deben conservar la distinción de la versión inglesa entre el comportamiento implementado y su estado de verificación.
+Los colaboradores que modifiquen el comportamiento compatible, la cobertura de pruebas o las barreras conocidas deben proponer actualizaciones correspondientes de esta declaración en la misma solicitud de incorporación. Las traducciones deben conservar la distinción de la versión inglesa entre el comportamiento implementado y su estado de verificación.
 
 ## Comentarios y mejoras
 
-Para sugerir mejoras de esta declaración o de las prácticas de accesibilidad de Spirit, [abre una solicitud de función](https://github.com/SpiritAgents/spirit/issues/new?template=feature_request.md) o propón una pull request de documentación centrada. Para un problema activo al usar Spirit, utiliza la [ruta para informar de barreras de accesibilidad](#informar-de-barreras-de-accesibilidad) indicada anteriormente.
+Para sugerir mejoras de esta declaración o de las prácticas de accesibilidad de Spirit, [abre una solicitud de función](https://github.com/SpiritAgents/spirit/issues/new?template=feature_request.md) o propón una solicitud de incorporación de documentación centrada. Para un problema activo al usar Spirit, utiliza la [ruta para informar de barreras de accesibilidad](#informar-de-barreras-de-accesibilidad) indicada anteriormente.

@@ -38,7 +38,7 @@ pnpm --filter @spiritagent/web typecheck
 
 Le [workflow Verify](../.github/workflows/verify.yml) exécute les builds, tests, vérifications de types, oxlint et oxfmt pour TypeScript, ainsi que les vérifications Rust. Consultez le [guide de contribution](../CONTRIBUTING.md#testing-and-ci) pour les instructions générales du dépôt.
 
-Vitest et jsdom fournissent des preuves de non-régression, tandis que les tests avec les technologies d’assistance sont consignés séparément. Les pull requests doivent indiquer les vérifications manuelles pertinentes et les lacunes de vérification.
+Vitest et jsdom fournissent des preuves de non-régression, tandis que les tests avec les technologies d’assistance sont consignés séparément. Les demandes de tirage doivent indiquer les vérifications manuelles pertinentes et les lacunes de vérification.
 
 ## Signaler un obstacle d’accessibilité
 
@@ -50,7 +50,7 @@ Une description textuelle suffit pour signaler un problème. Les informations su
 
 ## Traitement et suivi
 
-Les signalements d’accessibilité suivent le même workflow de tickets et de pull requests GitHub que les autres bogues de Spirit. Les mainteneurs les évaluent et les priorisent lors du tri. Le statut et les discussions sur l’implémentation sont consignés dans le ticket et les pull requests associées.
+Les signalements d’accessibilité suivent le même workflow de tickets et de demandes de tirage GitHub que les autres bogues de Spirit. Les mainteneurs les évaluent et les priorisent lors du tri. Le statut et les discussions sur l’implémentation sont consignés dans le ticket et les demandes de tirage associées.
 
 ## Périmètre par environnement
 
@@ -67,10 +67,10 @@ Les signalements d’accessibilité suivent le même workflow de tickets et de p
 
 ## Responsabilité et maintenance
 
-Les mainteneurs de Spirit examinent les modifications de cette déclaration selon le processus habituel des pull requests du projet.
+Les mainteneurs de Spirit examinent les modifications de cette déclaration selon le processus habituel des demandes de tirage du projet.
 
-Les contributeurs qui modifient le comportement pris en charge, la couverture des tests ou les obstacles connus doivent proposer une mise à jour correspondante de cette déclaration dans la même pull request. Les traductions doivent préserver la distinction faite en anglais entre le comportement implémenté et son état de vérification.
+Les contributeurs qui modifient le comportement pris en charge, la couverture des tests ou les obstacles connus doivent proposer une mise à jour correspondante de cette déclaration dans la même demande de tirage. Les traductions doivent préserver la distinction faite en anglais entre le comportement implémenté et son état de vérification.
 
 ## Commentaires et améliorations
 
-Pour proposer une amélioration de cette déclaration ou des pratiques d’accessibilité de Spirit, [ouvrez une demande de fonctionnalité](https://github.com/SpiritAgents/spirit/issues/new?template=feature_request.md) ou une pull request de documentation ciblée. Pour un problème concret lors de l’utilisation de Spirit, utilisez le [parcours de signalement des obstacles d’accessibilité](#signaler-un-obstacle-daccessibilité) ci-dessus.
+Pour proposer une amélioration de cette déclaration ou des pratiques d’accessibilité de Spirit, [ouvrez une demande de fonctionnalité](https://github.com/SpiritAgents/spirit/issues/new?template=feature_request.md) ou une demande de tirage de documentation ciblée. Pour un problème concret lors de l’utilisation de Spirit, utilisez le [parcours de signalement des obstacles d’accessibilité](#signaler-un-obstacle-daccessibilité) ci-dessus.

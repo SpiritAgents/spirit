@@ -170,7 +170,7 @@
     "commitAttribution": "커밋 어트리뷰션",
     "commitAttributionDescription": "에이전트 커밋에 Spirit Agent를 표시합니다.",
     "prAttribution": "PR 어트리뷰션",
-    "prAttributionDescription": "에이전트 pull request에 {{product.name}} Agent를 표시합니다.",
+    "prAttributionDescription": "에이전트 끌어오기 요청에 {{product.name}} Agent를 표시합니다.",
     "editorTabCompletion": "편집기 탭 완성",
     "editorTabCompletionDescription": "파일 편집기에서 인라인 완성을 사용합니다.",
     "lspStatusReady": "준비",

@@ -131,7 +131,7 @@
   "tui.tool.approval.schedule.weekday5": "Viernes",
   "tui.tool.approval.schedule.weekday6": "Sábado",
   "tui.tool.approval.schedule.github": "GitHub · %{owner}/%{repo} · %{event}",
-  "tui.tool.approval.schedule.event_pull_request_created": "Pull request creado",
+  "tui.tool.approval.schedule.event_pull_request_created": "Solicitud de incorporación creada",
   "tui.tool.approval.schedule.event_issue_created": "Issue creado",
   "tui.tool.result.mcp_done": "Llamada de herramienta MCP completada",
   "tui.tool.result.web_fetch_done": "Página web obtenida",
