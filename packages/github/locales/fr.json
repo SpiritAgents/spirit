@@ -1,16 +1,16 @@
 {
   "metadata": {
     "displayName": "GitHub",
-    "description": "Pull requests et automatisations, directement dans Spirit.",
+    "description": "Demandes de tirage et automatisations, directement dans Spirit.",
     "keywords": {
-      "pullRequests": "pull requests",
+      "pullRequests": "demandes de tirage",
       "repositories": "dépôts",
       "automations": "automatisations"
     }
   },
   "settings": {
     "prOverviewRatio": {
-      "title": "Ratio d’aperçu des pull requests"
+      "title": "Ratio d’aperçu des demandes de tirage"
     },
     "prFilesWidth": {
       "title": "Largeur des fichiers modifiés"
@@ -24,7 +24,7 @@
   "automation": {
     "activity": {
       "name": "GitHub",
-      "description": "Nouvelles pull requests ou issues dans un dépôt."
+      "description": "Nouvelles demandes de tirage ou issues dans un dépôt."
     }
   },
   "views": {
@@ -34,41 +34,41 @@
   },
   "tabs": {
     "pullRequests": {
-      "name": "Pull Requests"
+      "name": "Demandes de tirage"
     }
   },
   "workspace": {
-    "prTab": "Pull Request",
-    "prElectronOnly": "Les Pull Requests sont disponibles uniquement dans la version de bureau Electron.",
+    "prTab": "Demande de tirage",
+    "prElectronOnly": "Les demandes de tirage sont disponibles uniquement dans la version de bureau Electron.",
     "prGitHubAuthChecking": "Vérification de la connexion GitHub…",
-    "prGitHubAuthorizationRequired": "<authorize>Autorisez GitHub</authorize> pour utiliser Pull Requests",
+    "prGitHubAuthorizationRequired": "<authorize>Autorisez GitHub</authorize> pour utiliser les demandes de tirage",
     "prNoRepo": "L'espace de travail n'est pas un dépôt Git.",
     "prNoGitHubOrigin": "Aucun dépôt distant GitHub origin trouvé pour ce dépôt.",
-    "prNoOpenPullRequest": "Aucune Pull Request ouverte pour la branche {{branch}}.",
-    "prListSearchPlaceholder": "Rechercher des Pull Requests",
-    "prListTabsAria": "Liste des Pull Requests",
+    "prNoOpenPullRequest": "Aucune demande de tirage ouverte pour la branche {{branch}}.",
+    "prListSearchPlaceholder": "Rechercher des demandes de tirage",
+    "prListTabsAria": "Liste des demandes de tirage",
     "prListTabOpen": "{{count}} Ouvertes",
     "prListTabClosed": "{{count}} Fermées",
-    "prListLoading": "Chargement des Pull Requests…",
-    "prListLoadingMore": "Chargement de plus de Pull Requests…",
-    "prListLoadMore": "Charger plus de Pull Requests",
-    "prListEmpty": "Aucune Pull Request dans cet état.",
-    "prListSearchEmpty": "Aucune Pull Request ne correspond à votre recherche.",
+    "prListLoading": "Chargement des demandes de tirage…",
+    "prListLoadingMore": "Chargement de plus de demandes de tirage…",
+    "prListLoadMore": "Charger plus de demandes de tirage",
+    "prListEmpty": "Aucune demande de tirage dans cet état.",
+    "prListSearchEmpty": "Aucune demande de tirage ne correspond à votre recherche.",
     "prListTasksCount_one": "{{count}} tâche",
     "prListTasksCount_other": "{{count}} tâches",
     "prListTasksPartial": "{{completed}} sur {{total}} tâches",
     "prListTasksDone": "{{count}} tâches terminées",
     "prListTasksProgressAria": "{{completed}} sur {{total}} tâches terminées",
     "prListTasksDoneAria": "Toutes les {{count}} tâches terminées",
-    "prListOpenDetailAria": "Ouvrir la Pull Request #{{number}} : {{title}}",
-    "prLoading": "Chargement de la pull request…",
+    "prListOpenDetailAria": "Ouvrir la demande de tirage #{{number}} : {{title}}",
+    "prLoading": "Chargement de la demande de tirage…",
     "prLoadingDetail": "Chargement des détails…",
     "prShowDetail": "Afficher les détails",
     "prOpenOnGitHub": "Ouvrir sur GitHub",
     "prLabels": "Étiquettes : {{labels}}",
     "prNoDescription": "Aucune description.",
-    "prDetailUnavailable": "Impossible de charger les détails de la pull request.",
-    "prDetailTabsAria": "Détail de la pull request",
+    "prDetailUnavailable": "Impossible de charger les détails de la demande de tirage.",
+    "prDetailTabsAria": "Détail de la demande de tirage",
     "prResizeOverviewTabs": "Redimensionner la hauteur de la vue d'ensemble et des onglets",
     "prTabConversations": "Conversations",
     "prTabCommits": "Commits",
@@ -87,7 +87,7 @@
     "prConversationLoadMore": "Charger plus d'activités",
     "prConversationLoadingMore": "Chargement de plus d'activités…",
     "prChangesLoading": "Chargement des fichiers modifiés…",
-    "prChangesEmpty": "Aucun fichier modifié dans cette pull request.",
+    "prChangesEmpty": "Aucun fichier modifié dans cette demande de tirage.",
     "prChangesFileExpand": "Afficher le diff du fichier",
     "prChangesFileCollapse": "Masquer le diff du fichier",
     "prChangesNoPatch": "Diff indisponible pour ce fichier (trop volumineux ou binaire).",
@@ -95,10 +95,10 @@
     "prChangesResizeTreeWidth": "Redimensionner la largeur de l'arborescence des fichiers modifiés",
     "prChangesHasMore": "Plus de fichiers modifiés disponibles sur GitHub.",
     "prCommitsLoading": "Chargement des commits…",
-    "prCommitsEmpty": "Aucun commit dans cette pull request.",
+    "prCommitsEmpty": "Aucun commit dans cette demande de tirage.",
     "prCommitsHasMore": "Plus de commits disponibles sur GitHub.",
     "prChecksLoading": "Chargement des vérifications…",
-    "prChecksEmpty": "Aucune vérification rapportée pour cette pull request.",
+    "prChecksEmpty": "Aucune vérification rapportée pour cette demande de tirage.",
     "prChecksHasMore": "Plus de vérifications disponibles sur GitHub.",
     "prChecksLoadingMore": "Chargement de plus de vérifications…",
     "prChecksLoadMore": "Charger plus de vérifications",
@@ -117,20 +117,20 @@
     "prOpen": "Ouverte",
     "prClosed": "Fermée",
     "prMerged": "Fusionnée",
-    "prMergedThisPullRequest": "a fusionné cette pull request",
+    "prMergedThisPullRequest": "a fusionné cette demande de tirage",
     "prMergeable": "Mergeable",
     "prConflicts": "A des conflits",
     "prMergeStatusUnknown": "Statut de fusion inconnu",
     "prMergeSquash": "Squash et fusionner",
     "prMergeRebase": "Rebase et fusionner",
     "prMerging": "Fusion en cours…",
-    "prMergeFailed": "Échec de la fusion de la pull request",
-    "prMergeNotMergeable": "Cette pull request ne peut pas encore être fusionnée",
+    "prMergeFailed": "Échec de la fusion de la demande de tirage",
+    "prMergeNotMergeable": "Cette demande de tirage ne peut pas encore être fusionnée",
     "prMergeConflicts": "Conflits de fusion",
     "prMergeMoreActions": "Plus d'options de fusion",
     "prMarkReadyForReview": "Prêt pour la revue",
     "prMarkingReady": "Marquage prêt…",
-    "prMarkReadyFailed": "Échec du marquage de la pull request comme prête pour la revue",
+    "prMarkReadyFailed": "Échec du marquage de la demande de tirage comme prête pour la revue",
     "addSelectionToChat": "Ajouter à la discussion"
   },
   "github": {
@@ -156,7 +156,7 @@
       "repositorySearchPlaceholder": "Rechercher des dépôts",
       "repositoryEmpty": "Aucun dépôt trouvé",
       "repositoryLoadFailed": "Échec du chargement des dépôts. Réessayez.",
-      "pullRequestCreated": "Pull request créée",
+      "pullRequestCreated": "Demande de tirage créée",
       "issueCreated": "Issue créée"
     }
   }

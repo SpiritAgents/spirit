@@ -30,6 +30,52 @@ test("PR authorization hints localize the complete sentence and preserve its nav
   }
 });
 
+test("Pull Request keywords use canonical localized terminology", () => {
+  const expected = {
+    en: "pull requests",
+    "zh-CN": "拉取请求",
+    "zh-TW": "拉取請求",
+    ja: "プルリクエスト",
+    ko: "끌어오기 요청",
+    de: "Pull Requests",
+    fr: "demandes de tirage",
+    es: "solicitudes de incorporación",
+    "pt-BR": "pull requests",
+    ru: "запросы на слияние",
+  } as const;
+  for (const [locale, label] of Object.entries(expected)) {
+    assert.equal(
+      resources[locale as keyof typeof resources].translation.metadata.keywords.pullRequests,
+      label,
+      locale,
+    );
+  }
+});
+
+test("translated GitHub catalogs omit English and legacy Pull Request terms", () => {
+  const legacyTerms: Record<string, RegExp[]> = {
+    es: [/solicitudes? de extracción/iu],
+    ko: [/풀 리퀘스트/u],
+  };
+  for (const [locale, { translation }] of Object.entries(resources)) {
+    if (locale === "en" || locale === "de" || locale === "pt-BR") {
+      continue;
+    }
+    for (const [key, message] of Object.entries(flattenMessageCatalog(translation))) {
+      assert.doesNotMatch(message, /pull[ -]?requests?/iu, `${locale}:${key}: ${message}`);
+      for (const legacy of legacyTerms[locale] ?? []) {
+        assert.doesNotMatch(message, legacy, `${locale}:${key}: ${message}`);
+      }
+    }
+  }
+});
+
+test("Simplified Chinese uses the same open status in the empty state and badge", () => {
+  const { workspace } = resources["zh-CN"].translation;
+  assert.equal(workspace.prOpen, "进行中");
+  assert.ok(workspace.prNoOpenPullRequest.includes("进行中的拉取请求"));
+});
+
 function placeholders(catalog: Parameters<typeof flattenMessageCatalog>[0]) {
   return Object.fromEntries(
     Object.entries(flattenMessageCatalog(catalog)).map(([key, message]) => [

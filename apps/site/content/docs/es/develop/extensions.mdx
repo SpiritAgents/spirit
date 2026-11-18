@@ -369,7 +369,7 @@ Un mercado de extensiones remoto es un directorio servible con un índice `{{pro
 
 [Usa esta plantilla](https://github.com/new?template_owner=SpiritAgents&template_name=extension-template) para crear tu propio repositorio de mercado a partir de `SpiritAgents/extension-template`.
 
-La plantilla incluye la estructura de registro, dos extensiones de ejemplo y CI que valida el registro en cada push y pull request. Para publicar una extensión:
+La plantilla incluye la estructura de registro, dos extensiones de ejemplo y CI que valida el registro en cada push y solicitud de incorporación. Para publicar una extensión:
 
 1. Genérala con `npm create @spiritagent/extension`.
 2. Ejecuta `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` — copia la extensión a `extensions/` y fusiona la entrada en `{{product.workspaceDataFolderName}}/marketplace.json`. Consulta [Publicar con publish](#publicar-con-publish).
@@ -408,7 +408,7 @@ Valida el registro localmente — sin conexión: esquema, nombres kebab-case, se
 npx -y @spiritagent/extension-toolkit marketplace check .
 ```
 
-Disciplina de revisión: los pull requests que añaden una entrada o cambian su `version` deben mantener `reviewStatus: "unverified"`; la promoción a `verified` se hace en un commit separado tras una revisión humana. El `.github/workflows/marketplace.yml` del repositorio de plantilla es una implementación de referencia: compara el índice contra la base del PR.
+Disciplina de revisión: las solicitudes de incorporación que añaden una entrada o cambian su `version` deben mantener `reviewStatus: "unverified"`; la promoción a `verified` se hace en un commit separado tras una revisión humana. El `.github/workflows/marketplace.yml` del repositorio de plantilla es una implementación de referencia: compara el índice contra la base del PR.
 
 </Tab>
 </Tabs>

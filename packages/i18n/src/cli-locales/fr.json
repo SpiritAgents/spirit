@@ -131,7 +131,7 @@
   "tui.tool.approval.schedule.weekday5": "Vendredi",
   "tui.tool.approval.schedule.weekday6": "Samedi",
   "tui.tool.approval.schedule.github": "GitHub · %{owner}/%{repo} · %{event}",
-  "tui.tool.approval.schedule.event_pull_request_created": "Pull request créée",
+  "tui.tool.approval.schedule.event_pull_request_created": "Demande de tirage créée",
   "tui.tool.approval.schedule.event_issue_created": "Issue créée",
   "tui.tool.result.mcp_done": "Appel d'outil MCP terminé",
   "tui.tool.result.web_fetch_done": "Page web récupérée",

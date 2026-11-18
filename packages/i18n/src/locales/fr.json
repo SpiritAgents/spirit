@@ -170,7 +170,7 @@
     "commitAttribution": "Attribution des commits",
     "commitAttributionDescription": "Créditer Spirit Agent sur les commits de l'agent.",
     "prAttribution": "Attribution des PR",
-    "prAttributionDescription": "Créditer {{product.name}} Agent sur les pull requests de l'agent.",
+    "prAttributionDescription": "Créditer {{product.name}} Agent sur les demandes de tirage de l'agent.",
     "editorTabCompletion": "Complétion par Tab dans l'éditeur",
     "editorTabCompletionDescription": "Utiliser la complétion en ligne dans l'éditeur de fichiers.",
     "lspStatusReady": "Prêt",

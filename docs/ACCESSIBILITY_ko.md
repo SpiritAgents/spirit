@@ -38,7 +38,7 @@ pnpm --filter @spiritagent/web typecheck
 
 [Verify 워크플로](../.github/workflows/verify.yml)는 TypeScript 빌드, 테스트, 타입 검사, oxlint, oxfmt와 Rust 검사를 실행합니다. 저장소의 일반 지침은 [Spirit 기여 가이드](../CONTRIBUTING.md#testing-and-ci)를 참조하세요.
 
-Vitest와 jsdom은 회귀 증거를 수집하는 데 사용하고, 보조 기술 테스트는 별도로 기록합니다. Pull Request에는 관련 수동 검사와 검증 공백을 명시하세요.
+Vitest와 jsdom은 회귀 증거를 수집하는 데 사용하고, 보조 기술 테스트는 별도로 기록합니다. 끌어오기 요청에는 관련 수동 검사와 검증 공백을 명시하세요.
 
 ## 접근성 장벽 신고
 
@@ -50,7 +50,7 @@ Vitest와 jsdom은 회귀 증거를 수집하는 데 사용하고, 보조 기술
 
 ## 대응 및 추적
 
-접근성 신고는 다른 Spirit 버그와 동일한 GitHub Issue 및 Pull Request 워크플로를 사용합니다. 유지관리자는 분류 과정에서 평가하고 우선순위를 정하며, 상태와 구현 논의는 Issue와 연결된 Pull Request에 기록합니다.
+접근성 신고는 다른 Spirit 버그와 동일한 GitHub Issue 및 끌어오기 요청 워크플로를 사용합니다. 유지관리자는 분류 과정에서 평가하고 우선순위를 정하며, 상태와 구현 논의는 Issue와 연결된 끌어오기 요청에 기록합니다.
 
 ## 환경별 검증 범위
 
@@ -67,10 +67,10 @@ Vitest와 jsdom은 회귀 증거를 수집하는 데 사용하고, 보조 기술
 
 ## 소유 및 유지관리
 
-Spirit 유지관리자는 프로젝트의 일반 Pull Request 과정을 통해 이 문서의 변경을 검토합니다.
+Spirit 유지관리자는 프로젝트의 일반 끌어오기 요청 과정을 통해 이 문서의 변경을 검토합니다.
 
-지원 동작, 테스트 범위 또는 알려진 장벽을 변경하는 기여자는 같은 Pull Request에서 이 문서의 업데이트도 제안해야 합니다. 번역은 영어 원문의 동작 구현과 검증 상태 구분을 유지해야 합니다.
+지원 동작, 테스트 범위 또는 알려진 장벽을 변경하는 기여자는 같은 끌어오기 요청에서 이 문서의 업데이트도 제안해야 합니다. 번역은 영어 원문의 동작 구현과 검증 상태 구분을 유지해야 합니다.
 
 ## 피드백 및 개선
 
-이 문서나 Spirit의 접근성 관행에 개선을 제안하려면 [기능 요청을 열거나](https://github.com/SpiritAgents/spirit/issues/new?template=feature_request.md) 범위를 한정한 문서 Pull Request를 제출하세요. Spirit 사용 중 실제 장벽을 겪었다면 위의 [접근성 장벽 신고 경로](#접근성-장벽-신고)를 이용하세요.
+이 문서나 Spirit의 접근성 관행에 개선을 제안하려면 [기능 요청을 열거나](https://github.com/SpiritAgents/spirit/issues/new?template=feature_request.md) 범위를 한정한 문서 끌어오기 요청을 제출하세요. Spirit 사용 중 실제 장벽을 겪었다면 위의 [접근성 장벽 신고 경로](#접근성-장벽-신고)를 이용하세요.

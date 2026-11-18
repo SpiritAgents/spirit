@@ -38,7 +38,7 @@ pnpm --filter @spiritagent/web typecheck
 
 [Verify 工作流程](../.github/workflows/verify.yml) 會執行 TypeScript 建置、測試、型別檢查、oxlint 和 oxfmt，以及 Rust 檢查。儲存庫通用要求見[貢獻指南](../CONTRIBUTING.md#testing-and-ci)。
 
-Vitest 和 jsdom 用於提供回歸證據，輔助技術測試則單獨記錄。Pull Request 應說明相關手動檢查與驗證缺口。
+Vitest 和 jsdom 用於提供回歸證據，輔助技術測試則單獨記錄。拉取請求應說明相關手動檢查與驗證缺口。
 
 ## 回報無障礙問題
 
@@ -50,7 +50,7 @@ Vitest 和 jsdom 用於提供回歸證據，輔助技術測試則單獨記錄。
 
 ## 回應與追蹤
 
-無障礙報告使用與其他 Spirit Bug 相同的 GitHub Issue 和 Pull Request 工作流程。維護者會在分類處理時評估並確定優先順序，狀態與實作討論記錄在 Issue 及關聯的 Pull Request 中。
+無障礙報告使用與其他 Spirit Bug 相同的 GitHub Issue 和拉取請求工作流程。維護者會在分類處理時評估並確定優先順序，狀態與實作討論記錄在 Issue 及關聯的拉取請求中。
 
 ## 環境涵蓋
 
@@ -67,10 +67,10 @@ Vitest 和 jsdom 用於提供回歸證據，輔助技術測試則單獨記錄。
 
 ## 責任與維護
 
-Spirit 維護者透過專案常規的 Pull Request 流程審查本文的變更。
+Spirit 維護者透過專案常規的拉取請求流程審查本文的變更。
 
-貢獻者更改受支援行為、測試涵蓋範圍或已知障礙時，應在同一 Pull Request 中提議更新本文。翻譯應保留英文版對行為實作及其驗證狀態的區分。
+貢獻者更改受支援行為、測試涵蓋範圍或已知障礙時，應在同一拉取請求中提議更新本文。翻譯應保留英文版對行為實作及其驗證狀態的區分。
 
 ## 意見與改進
 
-如需對本文或 Spirit 的無障礙實踐提出改進建議，請[提交功能請求](https://github.com/SpiritAgents/spirit/issues/new?template=feature_request.md)，或提出專注的文件 Pull Request。使用 Spirit 時遇到實際障礙，請透過上方的[無障礙問題回報路徑](#回報無障礙問題)回報。
+如需對本文或 Spirit 的無障礙實踐提出改進建議，請[提交功能請求](https://github.com/SpiritAgents/spirit/issues/new?template=feature_request.md)，或提出專注的文件拉取請求。使用 Spirit 時遇到實際障礙，請透過上方的[無障礙問題回報路徑](#回報無障礙問題)回報。

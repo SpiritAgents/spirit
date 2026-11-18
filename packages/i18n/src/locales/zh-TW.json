@@ -170,7 +170,7 @@
     "commitAttribution": "提交署名",
     "commitAttributionDescription": "在智能體建立的提交中標註 Spirit Agent。",
     "prAttribution": "PR 署名",
-    "prAttributionDescription": "在智能體建立的 Pull Request 中標註 {{product.name}} Agent。",
+    "prAttributionDescription": "在智能體建立的拉取請求中標註 {{product.name}} Agent。",
     "editorTabCompletion": "編輯器 Tab 補全",
     "editorTabCompletionDescription": "在檔案編輯器中使用行內補全。",
     "lspStatusReady": "就緒",

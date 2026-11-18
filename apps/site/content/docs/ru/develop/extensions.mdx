@@ -369,7 +369,7 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 [Use this template](https://github.com/new?template_owner=SpiritAgents&template_name=extension-template) — создайте собственный репозиторий маркетплейса из `SpiritAgents/extension-template`.
 
-Шаблон содержит структуру реестра, два примера расширений и CI, проверяющий реестр при каждом push и pull request. Чтобы опубликовать расширение:
+Шаблон содержит структуру реестра, два примера расширений и CI, проверяющий реестр при каждом push и каждом запросе на слияние. Чтобы опубликовать расширение:
 
 1. Создайте каркас командой `npm create @spiritagent/extension`.
 2. Выполните `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` — команда скопирует расширение в `extensions/` и объединит запись с `{{product.workspaceDataFolderName}}/marketplace.json`. См. [Публикация через publish](#публикация-через-publish).
@@ -408,7 +408,7 @@ my-marketplace/
 npx -y @spiritagent/extension-toolkit marketplace check .
 ```
 
-Дисциплина проверки: pull request'ы, добавляющие запись или меняющие её `version`, должны сохранять `reviewStatus: "unverified"`; повышение до `verified` происходит отдельным коммитом после человеческой проверки. `.github/workflows/marketplace.yml` репозитория-шаблона — эталонная реализация: он сравнивает индекс с базой PR.
+Дисциплина проверки: запросы на слияние, добавляющие запись или меняющие её `version`, должны сохранять `reviewStatus: "unverified"`; повышение до `verified` происходит отдельным коммитом после человеческой проверки. `.github/workflows/marketplace.yml` репозитория-шаблона — эталонная реализация: он сравнивает индекс с базой PR.
 
 </Tab>
 </Tabs>
