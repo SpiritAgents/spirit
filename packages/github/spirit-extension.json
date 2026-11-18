@@ -25,6 +25,7 @@
     "requestedCapabilities": [
       "settings",
       "secret-storage",
+      "mcp",
       "automation-triggers",
       "desktop-ui",
       "desktop-composer-attachments"
@@ -45,6 +46,13 @@
       }
     ],
     "contributes": {
+      "mcp": [
+        {
+          "name": "github",
+          "displayName": { "message": "mcp.github.displayName" },
+          "transport": "http"
+        }
+      ],
       "authorizations": [
         {
           "id": "oauth",
