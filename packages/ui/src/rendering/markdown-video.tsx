@@ -40,39 +40,31 @@ export function MarkdownVideo({
         )
       : null;
 
-  const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
-  const [loadState, setLoadState] = useState<VideoLoadState>("idle");
+  const initialLoadState: VideoLoadState =
+    !normalizedSrc || srcKind === "invalid" || srcKind === "remote"
+      ? "idle"
+      : managedRef
+        ? !readManagedVideoPreviewUrl
+          ? "unavailable"
+          : "loading"
+        : !localFilePath || !readLocalVideoPreviewUrl
+          ? "unavailable"
+          : "loading";
+  const [resolvedSrc, setResolvedSrc] = useState<string | null>(
+    srcKind === "remote" ? normalizedSrc : null,
+  );
+  const [loadState, setLoadState] = useState<VideoLoadState>(initialLoadState);
+  const sourceKey = `${normalizedSrc ?? ""}\u0000${srcKind}\u0000${managedRef ?? ""}\u0000${localFilePath ?? ""}\u0000${Boolean(readManagedVideoPreviewUrl)}\u0000${Boolean(readLocalVideoPreviewUrl)}`;
+  const [previousSourceKey, setPreviousSourceKey] = useState(sourceKey);
+  if (previousSourceKey !== sourceKey) {
+    setPreviousSourceKey(sourceKey);
+    setResolvedSrc(srcKind === "remote" ? normalizedSrc : null);
+    setLoadState(initialLoadState);
+  }
 
   useEffect(() => {
     let cancelled = false;
-
-    if (!normalizedSrc || srcKind === "invalid") {
-      setResolvedSrc(null);
-      setLoadState("idle");
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (srcKind === "remote") {
-      setResolvedSrc(normalizedSrc);
-      setLoadState("idle");
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (managedRef) {
-      if (!readManagedVideoPreviewUrl) {
-        setResolvedSrc(null);
-        setLoadState("unavailable");
-        return () => {
-          cancelled = true;
-        };
-      }
-
-      setResolvedSrc(null);
-      setLoadState("loading");
+    if (managedRef && readManagedVideoPreviewUrl) {
       void readManagedVideoPreviewUrl(managedRef)
         .then((previewUrl: string | null) => {
           if (!cancelled) {
@@ -97,46 +89,31 @@ export function MarkdownVideo({
       };
     }
 
-    if (!localFilePath || !readLocalVideoPreviewUrl) {
-      setResolvedSrc(null);
-      setLoadState("unavailable");
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    setResolvedSrc(null);
-    setLoadState("loading");
-    void readLocalVideoPreviewUrl(localFilePath)
-      .then((previewUrl: string | null) => {
-        if (!cancelled) {
-          if (previewUrl) {
-            setResolvedSrc(previewUrl);
-            setLoadState("idle");
-            return;
+    if (localFilePath && readLocalVideoPreviewUrl) {
+      void readLocalVideoPreviewUrl(localFilePath)
+        .then((previewUrl: string | null) => {
+          if (!cancelled) {
+            if (previewUrl) {
+              setResolvedSrc(previewUrl);
+              setLoadState("idle");
+              return;
+            }
+            setResolvedSrc(null);
+            setLoadState("unavailable");
           }
-          setResolvedSrc(null);
-          setLoadState("unavailable");
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setResolvedSrc(null);
-          setLoadState("unavailable");
-        }
-      });
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setResolvedSrc(null);
+            setLoadState("unavailable");
+          }
+        });
+    }
 
     return () => {
       cancelled = true;
     };
-  }, [
-    localFilePath,
-    managedRef,
-    normalizedSrc,
-    readLocalVideoPreviewUrl,
-    readManagedVideoPreviewUrl,
-    srcKind,
-  ]);
+  }, [localFilePath, managedRef, readLocalVideoPreviewUrl, readManagedVideoPreviewUrl]);
 
   const placeholderClassName =
     "my-3 flex min-h-28 w-full items-center justify-center rounded-md border border-dashed border-border/50 bg-muted/20 px-3 text-xs text-muted-foreground";

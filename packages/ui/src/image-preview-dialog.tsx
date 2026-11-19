@@ -67,11 +67,14 @@ function computeImagePreviewCssSize(
 }
 
 export function useImagePreviewAspectRatio(src: string | null): CSSProperties | undefined {
-  const [previewSize, setPreviewSize] = useState<{ width: number; height: number } | null>(null);
+  const [previewResult, setPreviewResult] = useState<{
+    src: string | null;
+    size: { width: number; height: number } | null;
+  }>({ src: null, size: null });
+  const previewSize = previewResult.src === src ? previewResult.size : null;
 
   useEffect(() => {
     let cancelled = false;
-    setPreviewSize(null);
     if (!src) {
       return () => {
         cancelled = true;
@@ -81,12 +84,15 @@ export function useImagePreviewAspectRatio(src: string | null): CSSProperties | 
     const image = new Image();
     image.onload = () => {
       if (!cancelled && image.naturalWidth > 0 && image.naturalHeight > 0) {
-        setPreviewSize(computeImagePreviewCssSize(image.naturalWidth, image.naturalHeight));
+        setPreviewResult({
+          src,
+          size: computeImagePreviewCssSize(image.naturalWidth, image.naturalHeight),
+        });
       }
     };
     image.onerror = () => {
       if (!cancelled) {
-        setPreviewSize(null);
+        setPreviewResult({ src, size: null });
       }
     };
     image.src = src;
@@ -95,7 +101,10 @@ export function useImagePreviewAspectRatio(src: string | null): CSSProperties | 
       if (cancelled || image.naturalWidth <= 0 || image.naturalHeight <= 0) {
         return;
       }
-      setPreviewSize(computeImagePreviewCssSize(image.naturalWidth, image.naturalHeight));
+      setPreviewResult({
+        src,
+        size: computeImagePreviewCssSize(image.naturalWidth, image.naturalHeight),
+      });
     };
     window.addEventListener("resize", onViewportChange);
 
@@ -140,10 +149,11 @@ export function ImagePreviewDialog({
 }: ImagePreviewDialogProps) {
   const viewerFrameStyle = useImagePreviewAspectRatio(src);
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
+  const [previousSrc, setPreviousSrc] = useState(src);
+  if (previousSrc !== src) {
+    setPreviousSrc(src);
     setCopied(false);
-  }, [src]);
+  }
 
   const handleCopyImage = () => {
     if (!src) {

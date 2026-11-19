@@ -88,9 +88,17 @@ export function useTextSelectionActionMenu({
     setOpen(true);
   }, [dismiss, enabled, isSelectionAllowed, readSelectionText, rootRef]);
 
+  const [previousEnabled, setPreviousEnabled] = useState(enabled);
+  if (previousEnabled !== enabled) {
+    setPreviousEnabled(enabled);
+    if (!enabled) {
+      setOpen(false);
+      setAnchor(null);
+      setSelectionText("");
+    }
+  }
   useEffect(() => {
     if (!enabled) {
-      dismiss();
       return;
     }
 

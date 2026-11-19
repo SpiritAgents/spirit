@@ -49,7 +49,6 @@ export function MarkdownImageSource({
 
   useEffect(() => {
     let cancelled = false;
-    setResolved(null);
     void Promise.all(
       parseMarkdownImageSrcSet(srcSet ?? "").map(async ({ src, descriptor }) => {
         let resolvedSrc: string | null = null;
@@ -129,39 +128,31 @@ export function MarkdownImage({
         )
       : null;
 
-  const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
-  const [loadState, setLoadState] = useState<ImageLoadState>("idle");
+  const initialLoadState: ImageLoadState =
+    !normalizedSrc || srcKind === "invalid" || srcKind === "remote"
+      ? "idle"
+      : managedRef
+        ? !readManagedImagePreviewDataUrl
+          ? "unavailable"
+          : "loading"
+        : !localFilePath || !readLocalImagePreviewDataUrl
+          ? "unavailable"
+          : "loading";
+  const [resolvedSrc, setResolvedSrc] = useState<string | null>(
+    srcKind === "remote" ? normalizedSrc : null,
+  );
+  const [loadState, setLoadState] = useState<ImageLoadState>(initialLoadState);
+  const sourceKey = `${normalizedSrc ?? ""}\u0000${srcKind}\u0000${managedRef ?? ""}\u0000${localFilePath ?? ""}\u0000${Boolean(readManagedImagePreviewDataUrl)}\u0000${Boolean(readLocalImagePreviewDataUrl)}`;
+  const [previousSourceKey, setPreviousSourceKey] = useState(sourceKey);
+  if (previousSourceKey !== sourceKey) {
+    setPreviousSourceKey(sourceKey);
+    setResolvedSrc(srcKind === "remote" ? normalizedSrc : null);
+    setLoadState(initialLoadState);
+  }
 
   useEffect(() => {
     let cancelled = false;
-
-    if (!normalizedSrc || srcKind === "invalid") {
-      setResolvedSrc(null);
-      setLoadState("idle");
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (srcKind === "remote") {
-      setResolvedSrc(normalizedSrc);
-      setLoadState("idle");
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (managedRef) {
-      if (!readManagedImagePreviewDataUrl) {
-        setResolvedSrc(null);
-        setLoadState("unavailable");
-        return () => {
-          cancelled = true;
-        };
-      }
-
-      setResolvedSrc(null);
-      setLoadState("loading");
+    if (managedRef && readManagedImagePreviewDataUrl) {
       void readManagedImagePreviewDataUrl(managedRef)
         .then((dataUrl: string | null) => {
           if (!cancelled) {
@@ -186,46 +177,31 @@ export function MarkdownImage({
       };
     }
 
-    if (!localFilePath || !readLocalImagePreviewDataUrl) {
-      setResolvedSrc(null);
-      setLoadState("unavailable");
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    setResolvedSrc(null);
-    setLoadState("loading");
-    void readLocalImagePreviewDataUrl(localFilePath)
-      .then((dataUrl: string | null) => {
-        if (!cancelled) {
-          if (dataUrl) {
-            setResolvedSrc(dataUrl);
-            setLoadState("idle");
-            return;
+    if (localFilePath && readLocalImagePreviewDataUrl) {
+      void readLocalImagePreviewDataUrl(localFilePath)
+        .then((dataUrl: string | null) => {
+          if (!cancelled) {
+            if (dataUrl) {
+              setResolvedSrc(dataUrl);
+              setLoadState("idle");
+              return;
+            }
+            setResolvedSrc(null);
+            setLoadState("unavailable");
           }
-          setResolvedSrc(null);
-          setLoadState("unavailable");
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setResolvedSrc(null);
-          setLoadState("unavailable");
-        }
-      });
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setResolvedSrc(null);
+            setLoadState("unavailable");
+          }
+        });
+    }
 
     return () => {
       cancelled = true;
     };
-  }, [
-    localFilePath,
-    managedRef,
-    normalizedSrc,
-    readLocalImagePreviewDataUrl,
-    readManagedImagePreviewDataUrl,
-    srcKind,
-  ]);
+  }, [localFilePath, managedRef, readLocalImagePreviewDataUrl, readManagedImagePreviewDataUrl]);
 
   if (srcKind === "invalid" || loadState === "unavailable") {
     return (

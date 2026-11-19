@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { ModelCatalogDetailPanel } from "./model-catalog-detail-panel.js";
 import { modelCatalogHasDetailBody } from "./model-catalog-detail.js";
@@ -107,9 +107,12 @@ export function ModelPickerInspectorPanel({
     onThinkingEnabledChange !== undefined && showsThinkingSwitchControl(model);
   const thinkingForcedOn = thinkingSwitchForcedOn(runtime, model);
   const [pendingThinkingEnabled, setPendingThinkingEnabled] = useState<boolean | null>(null);
-  useEffect(() => {
+  const thinkingKey = `${model.name}\u0000${model.thinkingEnabled}\u0000${model.effort}`;
+  const [previousThinkingKey, setPreviousThinkingKey] = useState(thinkingKey);
+  if (previousThinkingKey !== thinkingKey) {
+    setPreviousThinkingKey(thinkingKey);
     setPendingThinkingEnabled(null);
-  }, [model.name, model.thinkingEnabled, model.effort]);
+  }
   const thinkingEnabled = pendingThinkingEnabled ?? effectiveThinkingEnabled(runtime, model);
   const showEffort = showsEffortControl(model);
   const effortOptions = declaredEffortOptions(model);
@@ -130,9 +133,12 @@ export function ModelPickerInspectorPanel({
   const [pendingServiceTier, setPendingServiceTier] = useState<{
     value: ModelServiceTier | undefined;
   } | null>(null);
-  useEffect(() => {
+  const serviceTierKey = `${model.name}\u0000${model.serviceTier}\u0000${lastInputTokens}`;
+  const [previousServiceTierKey, setPreviousServiceTierKey] = useState(serviceTierKey);
+  if (previousServiceTierKey !== serviceTierKey) {
+    setPreviousServiceTierKey(serviceTierKey);
     setPendingServiceTier(null);
-  }, [model.name, model.serviceTier, lastInputTokens]);
+  }
   const effectiveServiceTier = effectiveDeclaredServiceTier(
     runtime,
     model,

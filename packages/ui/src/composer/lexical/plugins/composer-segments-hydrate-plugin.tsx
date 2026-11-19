@@ -52,7 +52,7 @@ export function ComposerSegmentsHydratePlugin({
       );
       skipEditorSyncRef.current = false;
     });
-  }, [editor, editorRef, mountHydratedRef, segmentsRef, skipEditorSyncRef]);
+  }, [editor, mountHydratedRef, segmentsRef, skipEditorSyncRef]);
 
   return null;
 }

@@ -1,5 +1,4 @@
-import type { ReactNode } from "react";
-import { createContext, useContext } from "react";
+import { createContext, createElement, useContext, type ReactNode } from "react";
 
 import { File } from "lucide-react";
 
@@ -36,9 +35,7 @@ export function WorkspaceFileIconSlot({
 }) {
   const Injected = useWorkspaceFileIcon();
   if (Injected) {
-    return (
-      <Injected path={path} kind={kind} size={size} className={className} colorMode="inherit" />
-    );
+    return createElement(Injected, { path, kind, size, className, colorMode: "inherit" });
   }
   return <File size={size} className={className} aria-hidden strokeWidth={1.75} />;
 }

@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -407,7 +408,9 @@ export function useGlobalTooltipSwitch({
     isRegistrationHoverableContent,
     scheduleHoverClose,
   ]);
-  reconcileRef.current = reconcilePointer;
+  useLayoutEffect(() => {
+    reconcileRef.current = reconcilePointer;
+  }, [reconcilePointer]);
 
   const recordPointer = useCallback(
     (event: ClientPoint & { pointerType?: string }, explicitPointerInput = false) => {
