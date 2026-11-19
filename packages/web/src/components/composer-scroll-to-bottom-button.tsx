@@ -20,10 +20,17 @@ export function ComposerScrollToBottomButton({
   const { t } = useTranslation();
   const [rendered, setRendered] = useState(visible);
   const [shown, setShown] = useState(false);
+  const [previousVisible, setPreviousVisible] = useState(visible);
+  if (previousVisible !== visible) {
+    setPreviousVisible(visible);
+    setShown(false);
+    if (visible) {
+      setRendered(true);
+    }
+  }
 
   useEffect(() => {
     if (visible) {
-      setRendered(true);
       return;
     }
     if (!rendered) {
@@ -35,19 +42,20 @@ export function ComposerScrollToBottomButton({
   }, [visible, rendered]);
 
   useLayoutEffect(() => {
-    if (!rendered) {
+    if (!rendered || !visible) {
       return;
     }
-    if (!visible) {
-      setShown(false);
-      return;
-    }
-    if (prefersReducedMotion()) {
-      setShown(true);
-      return;
-    }
-    setShown(false);
     let cancelled = false;
+    if (prefersReducedMotion()) {
+      queueMicrotask(() => {
+        if (!cancelled) {
+          setShown(true);
+        }
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
     const outer = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (!cancelled) {

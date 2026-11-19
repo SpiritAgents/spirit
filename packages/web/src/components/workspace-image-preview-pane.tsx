@@ -57,10 +57,11 @@ export function WorkspaceImagePreviewPane({
     setZoom(1);
     setPan({ x: 0, y: 0 });
   }, []);
-
-  useEffect(() => {
+  const [previousPreviewDataUrl, setPreviousPreviewDataUrl] = useState(previewDataUrl);
+  if (previousPreviewDataUrl !== previewDataUrl) {
+    setPreviousPreviewDataUrl(previewDataUrl);
     resetView();
-  }, [previewDataUrl, resetView]);
+  }
 
   const handleWheel = useCallback(
     (event: WheelEvent) => {

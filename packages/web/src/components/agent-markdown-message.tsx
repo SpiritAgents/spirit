@@ -1,12 +1,4 @@
-import {
-  createContext,
-  memo,
-  useContext,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  type MutableRefObject,
-} from "react";
+import { createContext, memo, useContext, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Block, parseMarkdownIntoBlocks, type BlockProps } from "streamdown";
 import type { Pluggable } from "unified";
 
@@ -33,38 +25,19 @@ function isAnimateRehypePlugin(entry: Pluggable): boolean {
 
 type StreamBlockAnimateContextValue = {
   lastBlockIndex: number;
-  /** Tail-block char length committed after the previous paint (used instead of getLastRenderCharCount). */
-  frozenCharCountRef: MutableRefObject<number>;
+  tailBlockLength: number;
 };
 
 const StreamBlockAnimateContext = createContext<StreamBlockAnimateContextValue>({
   lastBlockIndex: 0,
-  frozenCharCountRef: { current: 0 },
+  tailBlockLength: 0,
 });
-
-type StreamdownAnimatePlugin = NonNullable<BlockProps["animatePlugin"]>;
 
 /**
  * Block calls getLastRenderCharCount() then setPrevContentLength(result). In practice get()
  * often returns 0 (Strict Mode / multi-instance), so every character re-animates. Return our
  * committed string length instead and drain the real counter.
  */
-function wrapStreamingAnimatePlugin(
-  plugin: StreamdownAnimatePlugin,
-  getCommittedCharCount: () => number,
-): StreamdownAnimatePlugin {
-  return {
-    ...plugin,
-    getLastRenderCharCount() {
-      plugin.getLastRenderCharCount();
-      return getCommittedCharCount();
-    },
-    setPrevContentLength(length: number) {
-      plugin.setPrevContentLength(length);
-    },
-  };
-}
-
 export type StreamBlockCache = { content: string; blocks: string[] };
 
 const FOOTNOTE_SYNTAX = /\[\^/;
@@ -113,8 +86,14 @@ export function parseStreamBlocksIncrementally(
 
 function StreamingAnimateBlock(props: BlockProps) {
   const { index, content, animatePlugin, rehypePlugins, ...rest } = props;
-  const { lastBlockIndex, frozenCharCountRef } = useContext(StreamBlockAnimateContext);
+  const { lastBlockIndex, tailBlockLength } = useContext(StreamBlockAnimateContext);
   const isTailBlock = index === lastBlockIndex;
+  const committedCharCountRef = useRef(0);
+  useLayoutEffect(() => {
+    if (isTailBlock) {
+      committedCharCountRef.current = tailBlockLength;
+    }
+  }, [isTailBlock, tailBlockLength]);
 
   const blockRehypePlugins = useMemo(() => {
     if (isTailBlock || !rehypePlugins) return rehypePlugins;
@@ -123,8 +102,17 @@ function StreamingAnimateBlock(props: BlockProps) {
 
   const blockPlugin = useMemo(() => {
     if (!isTailBlock || !animatePlugin) return null;
-    return wrapStreamingAnimatePlugin(animatePlugin, () => frozenCharCountRef.current);
-  }, [animatePlugin, frozenCharCountRef, isTailBlock]);
+    return {
+      ...animatePlugin,
+      getLastRenderCharCount() {
+        animatePlugin.getLastRenderCharCount();
+        return committedCharCountRef.current;
+      },
+      setPrevContentLength(length: number) {
+        animatePlugin.setPrevContentLength(length);
+      },
+    };
+  }, [animatePlugin, isTailBlock]);
 
   return (
     <Block
@@ -171,38 +159,22 @@ function AgentMarkdownMessageImpl({
   const prefersReducedMotion = usePrefersReducedMotion();
   const motionActive = streaming && !prefersReducedMotion;
 
-  const streamBlocksCacheRef = useRef<StreamBlockCache | null>(null);
-  const streamBlocks = useMemo(() => {
-    if (!motionActive) {
-      streamBlocksCacheRef.current = null;
-      return [];
-    }
-    const next = parseStreamBlocksIncrementally(streamBlocksCacheRef.current, content);
-    streamBlocksCacheRef.current = next;
-    return next.blocks;
-  }, [content, motionActive]);
+  const [streamBlocksCache, setStreamBlocksCache] = useState<StreamBlockCache | null>(null);
+  const nextStreamBlocksCache = useMemo(
+    () => (motionActive ? parseStreamBlocksIncrementally(streamBlocksCache, content) : null),
+    [content, motionActive, streamBlocksCache],
+  );
+  if (nextStreamBlocksCache !== streamBlocksCache) {
+    setStreamBlocksCache(nextStreamBlocksCache);
+  }
+  const streamBlocks = nextStreamBlocksCache?.blocks ?? [];
 
   const lastBlockIndex = Math.max(0, streamBlocks.length - 1);
   const tailBlockLength = motionActive ? (streamBlocks[lastBlockIndex]?.length ?? 0) : 0;
 
-  // Multi-block streaming: only the tail block animates new chars, so prev-length must
-  // track the tail block (not the whole doc). Reset to 0 when a new tail block begins
-  // (its content is entirely new) so its first chars animate; updated to the committed
-  // tail length after each paint so subsequent growth only animates the delta.
-  const frozenCharCountRef = useRef(0);
-  const prevTailIndexRef = useRef(-1);
-  if (motionActive && lastBlockIndex !== prevTailIndexRef.current) {
-    prevTailIndexRef.current = lastBlockIndex;
-    frozenCharCountRef.current = 0;
-  }
-
-  useLayoutEffect(() => {
-    frozenCharCountRef.current = motionActive ? tailBlockLength : 0;
-  }, [tailBlockLength, motionActive]);
-
   const streamBlockAnimateContext = useMemo(
-    () => ({ lastBlockIndex, frozenCharCountRef }),
-    [lastBlockIndex, frozenCharCountRef],
+    () => ({ lastBlockIndex, tailBlockLength }),
+    [lastBlockIndex, tailBlockLength],
   );
 
   return (

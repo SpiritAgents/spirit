@@ -468,8 +468,11 @@ export function WorkspaceFilesTab({
   type MonacoEditor = Monaco.editor.IStandaloneCodeEditor;
   const [selectedEntry, setSelectedEntry] = useState<SelectedEntry>(null);
   const [doc, setDoc] = useState<LoadedDoc | null>(null);
-  const [imagePreviewDataUrl, setImagePreviewDataUrl] = useState<string | null>(null);
-  const [imagePreviewState, setImagePreviewState] = useState<WorkspaceImagePreviewState>("loading");
+  const [imagePreviewResult, setImagePreviewResult] = useState<{
+    path: string | null;
+    dataUrl: string | null;
+    state: WorkspaceImagePreviewState;
+  }>({ path: null, dataUrl: null, state: "loading" });
   const [saveError, setSaveError] = useState("");
   const [draftText, setDraftText] = useState("");
   const [savedText, setSavedText] = useState("");
@@ -478,7 +481,6 @@ export function WorkspaceFilesTab({
   const [fileSearchOpen, setFileSearchOpen] = useState(false);
   const [directoryRevealPath, setDirectoryRevealPath] = useState("");
   const [directoryRevealNonce, setDirectoryRevealNonce] = useState(0);
-  const directoryRevealNonceRef = useRef(0);
   const [editorRevealLocation, setEditorRevealLocation] = useState<EditorFileRevealLocation | null>(
     null,
   );
@@ -493,7 +495,7 @@ export function WorkspaceFilesTab({
   const [isResizingFileTree, setIsResizingFileTree] = useState(false);
   const [splitContainerWidthPx, setSplitContainerWidthPx] = useState(0);
   const [monacoEditor, setMonacoEditor] = useState<MonacoEditor | null>(null);
-  const [editorDirty, setEditorDirty] = useState(false);
+  const [monacoDirty, setMonacoDirty] = useState(false);
   const editorRef = useRef<WorkspaceMonacoEditorHandle>(null);
   const previewScrollRef = useRef<ComponentRef<typeof ScrollArea>>(null);
   const previewRootRef = useRef<HTMLElement | null>(null);
@@ -513,11 +515,17 @@ export function WorkspaceFilesTab({
   const selectedEntryRef = useRef(selectedEntry);
   const draftSavedRef = useRef({ draftText, savedText });
   const workspaceContentInvalidationRef = useRef(workspaceContentInvalidation);
-  selectedEntryRef.current = selectedEntry;
-  draftSavedRef.current = { draftText, savedText };
-  workspaceContentInvalidationRef.current = workspaceContentInvalidation;
-
-  latestFileTreeWidthPxRef.current = fileTreeWidthPx;
+  useLayoutEffect(() => {
+    selectedEntryRef.current = selectedEntry;
+    draftSavedRef.current = { draftText, savedText };
+    workspaceContentInvalidationRef.current = workspaceContentInvalidation;
+    latestFileTreeWidthPxRef.current = fileTreeWidthPx;
+  });
+  const [splitContainerElement, setSplitContainerElement] = useState<HTMLDivElement | null>(null);
+  const handleSplitContainerRef = useCallback((node: HTMLDivElement | null) => {
+    splitContainerRef.current = node;
+    setSplitContainerElement(node);
+  }, []);
   const fileTreeDragCursor = useDragResizeCursor();
 
   const maxFileTreeWidthPx = useMemo(
@@ -535,7 +543,7 @@ export function WorkspaceFilesTab({
   );
 
   useEffect(() => {
-    const container = splitContainerRef.current;
+    const container = splitContainerElement;
     if (!container) {
       return;
     }
@@ -546,14 +554,11 @@ export function WorkspaceFilesTab({
     const observer = new ResizeObserver(syncContainerWidth);
     observer.observe(container);
     return () => observer.disconnect();
-  }, [fileTreeOpen, selectedEntry]);
+  }, [splitContainerElement]);
 
-  useEffect(() => {
-    if (fileTreeWidthPx <= maxFileTreeWidthPx) {
-      return;
-    }
+  if (fileTreeWidthPx > maxFileTreeWidthPx) {
     setFileTreeWidthPx(clampFileTreeWidth(fileTreeWidthPx));
-  }, [clampFileTreeWidth, fileTreeWidthPx, maxFileTreeWidthPx]);
+  }
 
   const onFileTreeResizePointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
@@ -616,7 +621,7 @@ export function WorkspaceFilesTab({
     prevSelectedEntryRef.current = selectedEntry;
     if (prev !== selectedEntry) {
       onDirtyChangeRef.current?.(false);
-      setEditorDirty(false);
+      setMonacoDirty(false);
     }
     if (!selectedEntry) {
       if (prev !== null) {
@@ -673,9 +678,8 @@ export function WorkspaceFilesTab({
   const revealDirectoryInThisTab = useCallback((relativePath: string) => {
     setFileTreeOpen(true);
     setFileSearchOpen(false);
-    directoryRevealNonceRef.current += 1;
     setDirectoryRevealPath(relativePath);
-    setDirectoryRevealNonce(directoryRevealNonceRef.current);
+    setDirectoryRevealNonce((current) => current + 1);
   }, []);
 
   const onMarkdownPreviewLinkClick: WorkspaceMarkdownLinkClickHandler = useCallback(
@@ -736,72 +740,75 @@ export function WorkspaceFilesTab({
     };
   }, [api, selectedPath, savedText, draftText]);
 
-  useEffect(() => {
-    if (!planRevealEnabled) {
-      return;
-    }
-    if (autoRevealPlanNonce > 0) {
+  const planRevealKey = `${planRevealEnabled}\u0000${autoRevealPlanNonce}`;
+  const [previousPlanRevealKey, setPreviousPlanRevealKey] = useState(planRevealKey);
+  if (previousPlanRevealKey !== planRevealKey) {
+    setPreviousPlanRevealKey(planRevealKey);
+    if (planRevealEnabled && autoRevealPlanNonce > 0) {
       setMarkdownViewMode("preview");
       setSelectedEntry({ kind: "plan" });
     }
-  }, [autoRevealPlanNonce, planRevealEnabled]);
+  }
 
-  useEffect(() => {
-    if (!fileRevealEnabled || autoRevealFileNonce <= 0) {
-      return;
-    }
-    if (fileRevealDirectoryOnly) {
-      setFileTreeOpen(true);
-      setFileSearchOpen(false);
-      directoryRevealNonceRef.current += 1;
-      setDirectoryRevealPath(fileRevealPath);
-      setDirectoryRevealNonce(directoryRevealNonceRef.current);
-      return;
-    }
-    setMarkdownViewMode(fileRevealViewMode);
-    if (fileRevealScope === "external") {
-      if (!fileRevealAbsolutePath) {
-        return;
-      }
-      setSelectedEntry({ kind: "external", absolutePath: fileRevealAbsolutePath });
-      return;
-    }
-    if (!fileRevealPath) {
-      return;
-    }
-    setSelectedEntry({ kind: "workspace", relativePath: fileRevealPath });
-    if (fileRevealLine != null && fileRevealLine > 0) {
-      setEditorRevealLocation({
-        line: fileRevealLine,
-        column: fileRevealColumn ?? undefined,
-      });
-    } else {
-      setEditorRevealLocation(null);
-    }
-  }, [
+  const fileRevealRequestKey = JSON.stringify([
+    fileRevealEnabled,
     autoRevealFileNonce,
     fileRevealAbsolutePath,
     fileRevealColumn,
     fileRevealDirectoryOnly,
-    fileRevealEnabled,
     fileRevealLine,
     fileRevealPath,
     fileRevealScope,
     fileRevealViewMode,
   ]);
+  const [previousFileRevealRequestKey, setPreviousFileRevealRequestKey] =
+    useState(fileRevealRequestKey);
+  if (previousFileRevealRequestKey !== fileRevealRequestKey) {
+    setPreviousFileRevealRequestKey(fileRevealRequestKey);
+    if (fileRevealEnabled && autoRevealFileNonce > 0) {
+      if (fileRevealDirectoryOnly) {
+        setFileTreeOpen(true);
+        setFileSearchOpen(false);
+        setDirectoryRevealPath(fileRevealPath);
+        setDirectoryRevealNonce((current) => current + 1);
+      } else {
+        setMarkdownViewMode(fileRevealViewMode);
+        if (fileRevealScope === "external") {
+          if (fileRevealAbsolutePath) {
+            setSelectedEntry({ kind: "external", absolutePath: fileRevealAbsolutePath });
+          }
+        } else if (fileRevealPath) {
+          setSelectedEntry({ kind: "workspace", relativePath: fileRevealPath });
+          if (fileRevealLine != null && fileRevealLine > 0) {
+            setEditorRevealLocation({
+              line: fileRevealLine,
+              column: fileRevealColumn ?? undefined,
+            });
+          } else {
+            setEditorRevealLocation(null);
+          }
+        }
+      }
+    }
+  }
 
-  useEffect(() => {
+  const documentStateKey = selectedEntry
+    ? selectedEntry.kind === "plan"
+      ? `plan\u0000${plan.exists}\u0000${plan.content ?? ""}\u0000${plan.path}`
+      : selectedEntry.kind === "external"
+        ? `external\u0000${selectedEntry.absolutePath}`
+        : `workspace\u0000${selectedEntry.relativePath}`
+    : "";
+  const [previousDocumentStateKey, setPreviousDocumentStateKey] = useState(documentStateKey);
+  if (previousDocumentStateKey !== documentStateKey) {
+    setPreviousDocumentStateKey(documentStateKey);
+    setSaveError("");
     if (!selectedEntry) {
       setDoc(null);
-      setSaveError("");
       setDraftText("");
       setSavedText("");
       setEditorRevealLocation(null);
-      return;
-    }
-
-    if (selectedEntry.kind === "plan") {
-      setSaveError("");
+    } else if (selectedEntry.kind === "plan") {
       if (!plan.exists) {
         setDraftText("");
         setSavedText("");
@@ -812,34 +819,38 @@ export function WorkspaceFilesTab({
           title: "Plan",
           subtitle: plan.path,
         });
-        return;
+      } else {
+        setDraftText(plan.content ?? "");
+        setSavedText(plan.content ?? "");
+        setDoc({
+          status: "ready",
+          text: plan.content ?? "",
+          readOnly: true,
+          title: "Plan",
+          subtitle: plan.path,
+        });
       }
-
-      setDraftText(plan.content ?? "");
-      setSavedText(plan.content ?? "");
+    } else {
+      const filePath =
+        selectedEntry.kind === "external" ? selectedEntry.absolutePath : selectedEntry.relativePath;
       setDoc({
-        status: "ready",
-        text: plan.content ?? "",
-        readOnly: true,
-        title: "Plan",
-        subtitle: plan.path,
+        status: "loading",
+        readOnly: false,
+        title: pathBasename(filePath),
+        subtitle: filePath,
       });
+      setDraftText("");
+      setSavedText("");
+    }
+  }
+  useEffect(() => {
+    if (!selectedEntry || selectedEntry.kind === "plan") {
       return;
     }
-
     const filePath =
       selectedEntry.kind === "external" ? selectedEntry.absolutePath : selectedEntry.relativePath;
     const readFile = selectedEntry.kind === "external" ? readHostTextFile : readWorkspaceTextFile;
     let cancelled = false;
-    setDoc({
-      status: "loading",
-      readOnly: false,
-      title: pathBasename(filePath),
-      subtitle: filePath,
-    });
-    setSaveError("");
-    setDraftText("");
-    setSavedText("");
     void readFile(filePath)
       .then((r) => {
         if (!cancelled) {
@@ -898,20 +909,12 @@ export function WorkspaceFilesTab({
     return () => {
       cancelled = true;
     };
-  }, [
-    plan.content,
-    plan.exists,
-    plan.path,
-    readHostTextFile,
-    readWorkspaceTextFile,
-    selectedEntry,
-    selectedPath,
-    workspaceRoot,
-  ]);
+  }, [readHostTextFile, readWorkspaceTextFile, selectedEntry, workspaceRoot]);
 
   useEffect(() => {
     const invalidation = workspaceContentInvalidationRef.current;
-    if (!invalidation || invalidation.revision <= 0) {
+    const invalidationRevision = workspaceContentInvalidation?.revision;
+    if (!invalidation || invalidationRevision === undefined || invalidationRevision <= 0) {
       return;
     }
     const entry = selectedEntryRef.current;
@@ -957,39 +960,41 @@ export function WorkspaceFilesTab({
     };
   }, [readWorkspaceTextFile, workspaceContentInvalidation?.revision]);
 
+  const imagePreviewPath = doc?.status === "image" ? doc.absolutePath : null;
+  const imagePreviewDataUrl =
+    imagePreviewResult.path === imagePreviewPath ? imagePreviewResult.dataUrl : null;
+  const imagePreviewState: WorkspaceImagePreviewState = !imagePreviewPath
+    ? "loading"
+    : !readLocalImagePreviewDataUrl
+      ? "unavailable"
+      : imagePreviewResult.path === imagePreviewPath
+        ? imagePreviewResult.state
+        : "loading";
   useEffect(() => {
-    if (doc?.status !== "image") {
-      setImagePreviewDataUrl(null);
-      setImagePreviewState("loading");
+    if (!imagePreviewPath || !readLocalImagePreviewDataUrl) {
       return;
     }
-    if (!readLocalImagePreviewDataUrl) {
-      setImagePreviewDataUrl(null);
-      setImagePreviewState("unavailable");
-      return;
-    }
-
     let cancelled = false;
-    setImagePreviewDataUrl(null);
-    setImagePreviewState("loading");
-    void readLocalImagePreviewDataUrl(doc.absolutePath)
+    void readLocalImagePreviewDataUrl(imagePreviewPath)
       .then((dataUrl) => {
         if (cancelled) {
           return;
         }
-        setImagePreviewDataUrl(dataUrl);
-        setImagePreviewState(dataUrl ? "ready" : "unavailable");
+        setImagePreviewResult({
+          path: imagePreviewPath,
+          dataUrl,
+          state: dataUrl ? "ready" : "unavailable",
+        });
       })
       .catch(() => {
         if (!cancelled) {
-          setImagePreviewDataUrl(null);
-          setImagePreviewState("unavailable");
+          setImagePreviewResult({ path: imagePreviewPath, dataUrl: null, state: "unavailable" });
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [doc, readLocalImagePreviewDataUrl]);
+  }, [imagePreviewPath, readLocalImagePreviewDataUrl]);
 
   const persistEditorText = useCallback(
     async (text: string) => {
@@ -1032,12 +1037,13 @@ export function WorkspaceFilesTab({
   );
 
   const onMonacoDirtyChange = useCallback((dirty: boolean) => {
-    setEditorDirty(dirty);
+    setMonacoDirty(dirty);
     onDirtyChangeRef.current?.(dirty);
   }, []);
 
   const isPreviewVisible =
     doc?.status === "ready" && isMarkdownDocument && markdownViewMode === "preview";
+  const editorDirty = isPreviewVisible && !doc?.readOnly ? draftText !== savedText : monacoDirty;
 
   useLayoutEffect(() => {
     if (!isPreviewVisible) {
@@ -1050,20 +1056,17 @@ export function WorkspaceFilesTab({
       return;
     }
     return installContainedSelectAll(viewport);
-  }, [isPreviewVisible, draftText, selectedPath]);
-
-  useEffect(() => {
-    if (isPreviewVisible) {
-      setMonacoEditor(null);
-    }
   }, [isPreviewVisible]);
+
+  if (isPreviewVisible && monacoEditor) {
+    setMonacoEditor(null);
+  }
 
   useEffect(() => {
     if (!isPreviewVisible || doc?.readOnly) {
       return;
     }
     const dirty = draftText !== savedText;
-    setEditorDirty(dirty);
     onDirtyChangeRef.current?.(dirty);
   }, [draftText, doc?.readOnly, isPreviewVisible, savedText]);
 
@@ -1193,7 +1196,7 @@ export function WorkspaceFilesTab({
         <p className="shrink-0 px-2 pt-1 text-xs text-destructive/90">{saveError}</p>
       ) : null}
       <div
-        ref={splitContainerRef}
+        ref={handleSplitContainerRef}
         className={cn(
           "flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden",
           isResizingFileTree && "select-none",

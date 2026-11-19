@@ -1,6 +1,6 @@
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { product } from "@spiritagent/product";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import i18n from "@/lib/i18n";
@@ -450,7 +450,6 @@ function DreamGraphCanvas({
   workspaceRoot?: string;
   gitBranch?: string;
 }) {
-  const { i18n } = useTranslation();
   const [selectedDreamId, setSelectedDreamId] = useState<string | null>(null);
   const [pinnedNodeIds, setPinnedNodeIds] = useState<string[]>([]);
   const iconSrc = spiritAgentBrandIconSrc(theme !== "light");
@@ -481,29 +480,30 @@ function DreamGraphCanvas({
     });
   };
 
-  useEffect(() => {
-    if (selectedDreamId && !itemIds.has(selectedDreamId)) {
-      setSelectedDreamId(null);
-    }
-  }, [itemIds, selectedDreamId]);
-
-  useEffect(() => {
-    setPinnedNodeIds((current) => current.filter((id) => graphNodeIds.has(id)));
-  }, [graphNodeIds]);
+  if (selectedDreamId && !itemIds.has(selectedDreamId)) {
+    setSelectedDreamId(null);
+  }
+  const visiblePinnedNodeIds = pinnedNodeIds.filter((id) => graphNodeIds.has(id));
+  if (visiblePinnedNodeIds.length !== pinnedNodeIds.length) {
+    setPinnedNodeIds(visiblePinnedNodeIds);
+  }
 
   const graph = useMemo(
     () => buildGraph(items, iconSrc, workspaceRoot, gitBranch),
-    [gitBranch, iconSrc, items, workspaceRoot, i18n.language],
+    [gitBranch, iconSrc, items, workspaceRoot],
   );
   const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges);
-
-  useEffect(() => {
+  const [syncedGraph, setSyncedGraph] = useState(graph);
+  const [syncedPinnedNodeIdSet, setSyncedPinnedNodeIdSet] = useState(pinnedNodeIdSet);
+  if (syncedGraph !== graph || syncedPinnedNodeIdSet !== pinnedNodeIdSet) {
+    setSyncedGraph(graph);
+    setSyncedPinnedNodeIdSet(pinnedNodeIdSet);
     setNodes((currentNodes) => {
       return mergeGraphNodes(currentNodes as DreamFlowNode[], graph.nodes, pinnedNodeIdSet);
     });
     setEdges(graph.edges);
-  }, [graph, pinnedNodeIdSet, setEdges, setNodes]);
+  }
 
   return (
     <DreamGraphInteractionContext.Provider value={dreamGraphInteraction}>

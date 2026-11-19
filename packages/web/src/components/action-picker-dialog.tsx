@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ActionPickerRow } from "@/components/action-picker-row";
@@ -65,10 +65,16 @@ export function ActionPickerDialog({
   const [commandValue, setCommandValue] = useState("");
   const [localePreference, setLocalePreference] = useState(getStoredLanguagePreference);
   const commandListWheelHoverRef = useCommandListWheelHover();
+  const [previousOpen, setPreviousOpen] = useState(open);
+  if (previousOpen !== open) {
+    setPreviousOpen(open);
+    if (open) {
+      setLocalePreference(getStoredLanguagePreference());
+    }
+  }
 
   useEffect(() => {
     if (open) {
-      setLocalePreference(getStoredLanguagePreference());
       return;
     }
     const timeoutId = window.setTimeout(() => {
@@ -94,17 +100,13 @@ export function ActionPickerDialog({
 
   // cmdk keeps a stale value after view switches (old item id no longer in list),
   // and skips its internal select-first path while value is truthy. Re-bind to first item.
-  useLayoutEffect(() => {
-    if (!open) {
-      return;
-    }
+  if (open) {
     const visibleIds = new Set(items.map((item) => actionPaletteItemValue(item)));
-    if (commandValue && visibleIds.has(commandValue)) {
-      return;
+    if (!commandValue || !visibleIds.has(commandValue)) {
+      const first = items[0];
+      setCommandValue(first ? actionPaletteItemValue(first) : "");
     }
-    const first = items[0];
-    setCommandValue(first ? actionPaletteItemValue(first) : "");
-  }, [open, view, items, commandValue]);
+  }
 
   const goBackToRoot = () => {
     setView("root");

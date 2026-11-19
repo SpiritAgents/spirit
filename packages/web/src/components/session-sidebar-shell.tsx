@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
 
@@ -39,7 +39,9 @@ export function SessionSidebarShell({
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const dragCursor = useDragResizeCursor();
   const latestWidthPxRef = useRef(widthPx);
-  latestWidthPxRef.current = widthPx;
+  useLayoutEffect(() => {
+    latestWidthPxRef.current = widthPx;
+  }, [widthPx]);
   const [viewportMaxWidthPx, setViewportMaxWidthPx] = useState(computeSessionSidebarMaxWidthPx);
   const maxWidthPx = maxWidthPxProp ?? viewportMaxWidthPx;
 
@@ -54,11 +56,9 @@ export function SessionSidebarShell({
     return () => window.removeEventListener("resize", onWindowResize);
   }, [maxWidthPxProp]);
 
-  useEffect(() => {
-    if (!open) {
-      setIsResizing(false);
-    }
-  }, [open]);
+  if (!open && isResizing) {
+    setIsResizing(false);
+  }
 
   const clampWidth = useCallback(
     (value: number) => Math.min(maxWidthPx, Math.max(minWidthPx, value)),

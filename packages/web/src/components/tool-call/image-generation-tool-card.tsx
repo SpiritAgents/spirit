@@ -26,35 +26,28 @@ export function ImageGenerationToolCard({
   const { t } = useTranslation();
   const previewableImagePath = tool.imagePaths?.find(isPreviewableImagePath) ?? "";
   const imagePath = tool.imagePaths?.find((path) => path.trim().length > 0) ?? "";
-  const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
+  const cachedPreview = previewableImagePath
+    ? readCachedLocalFilePreviewDataUrl(previewableImagePath)
+    : null;
+  const [previewStatePath, setPreviewStatePath] = useState(previewableImagePath);
+  const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(cachedPreview ?? null);
   const [previewState, setPreviewState] = useState<"idle" | "loading" | "ready" | "unavailable">(
-    "idle",
+    previewableImagePath ? (cachedPreview ? "ready" : "loading") : "unavailable",
   );
   const [viewerOpen, setViewerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  if (previewStatePath !== previewableImagePath) {
+    setPreviewStatePath(previewableImagePath);
+    setPreviewDataUrl(cachedPreview ?? null);
+    setPreviewState(previewableImagePath ? (cachedPreview ? "ready" : "loading") : "unavailable");
+  }
 
   useEffect(() => {
     let cancelled = false;
-    if (!previewableImagePath) {
-      setPreviewDataUrl(null);
-      setPreviewState("unavailable");
-      return () => {
-        cancelled = true;
-      };
+    if (!previewableImagePath || cachedPreview) {
+      return;
     }
 
-    // Virtualized scrolling repeatedly unmounts/remounts this card; a module-level cache hit skips the IPC
-    const cached = readCachedLocalFilePreviewDataUrl(previewableImagePath);
-    if (cached) {
-      setPreviewDataUrl(cached);
-      setPreviewState("ready");
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    setPreviewDataUrl(null);
-    setPreviewState("loading");
     void readLocalImagePreviewDataUrl(previewableImagePath)
       .then((dataUrl) => {
         if (cancelled) {
@@ -75,7 +68,7 @@ export function ImageGenerationToolCard({
     return () => {
       cancelled = true;
     };
-  }, [previewableImagePath, readLocalImagePreviewDataUrl]);
+  }, [cachedPreview, previewableImagePath, readLocalImagePreviewDataUrl]);
 
   const loading =
     tool.phase === "preview" || tool.phase === "running" || previewState === "loading";

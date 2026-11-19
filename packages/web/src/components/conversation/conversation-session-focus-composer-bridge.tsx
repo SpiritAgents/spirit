@@ -23,7 +23,7 @@ export function ConversationSessionFocusComposerBridge({
     // Read at call time. Split layout stays mounted across settings, and the
     // pane that was focused before leaving is still the one that should receive the caret.
     split.getFocusedPaneComposerControls()?.focusComposer();
-  }, [split.getFocusedPaneComposerControls]);
+  }, [split]);
 
   useEffect(() => {
     if (!composerAutomationApiRef) {
@@ -36,7 +36,7 @@ export function ConversationSessionFocusComposerBridge({
       setSlashSelectedIndex: (index) => getControls()?.setSlashSelectedIndex(index),
       prefillSkillChip: (skillName) => getControls()?.prefillSkillChip(skillName),
     };
-  }, [composerAutomationApiRef, split.getFocusedPaneComposerControls]);
+  }, [composerAutomationApiRef, split]);
 
   useConversationSessionFocusComposer({
     composerSessionKey,

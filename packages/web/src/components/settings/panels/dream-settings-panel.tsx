@@ -42,8 +42,18 @@ export function DreamSettingsPanel({
   const { t } = useTranslation();
   const collector = snapshot?.dreams.collector;
   const disabled = !settings.dreamEnabled;
-  const [dreamItems, setDreamItems] = useState<DesktopDreamOverviewItem[]>([]);
+  const dreamsRequestKey = JSON.stringify([
+    snapshot?.workspaceRoot,
+    snapshot?.git.branch,
+    snapshot?.dreams.collector.processedCount,
+    snapshot?.dreams.collector.lastSuccessAtUnixMs,
+  ]);
+  const [dreamResult, setDreamResult] = useState<{
+    key: string;
+    items: DesktopDreamOverviewItem[];
+  } | null>(null);
   const [dreamsLoading, setDreamsLoading] = useState(false);
+  const dreamItems = dreamResult?.key === dreamsRequestKey ? dreamResult.items : [];
 
   useEffect(() => {
     let cancelled = false;
@@ -53,11 +63,11 @@ export function DreamSettingsPanel({
       try {
         const items = await onListDreamsOverview();
         if (!cancelled) {
-          setDreamItems(items);
+          setDreamResult({ key: dreamsRequestKey, items });
         }
       } catch {
         if (!cancelled) {
-          setDreamItems([]);
+          setDreamResult({ key: dreamsRequestKey, items: [] });
         }
       } finally {
         if (!cancelled) {
@@ -70,13 +80,7 @@ export function DreamSettingsPanel({
     return () => {
       cancelled = true;
     };
-  }, [
-    onListDreamsOverview,
-    snapshot?.workspaceRoot,
-    snapshot?.git.branch,
-    snapshot?.dreams.collector.processedCount,
-    snapshot?.dreams.collector.lastSuccessAtUnixMs,
-  ]);
+  }, [onListDreamsOverview, dreamsRequestKey]);
 
   return (
     <div className="space-y-6">

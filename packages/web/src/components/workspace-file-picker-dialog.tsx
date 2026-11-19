@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ListTodo } from "lucide-react";
 
@@ -59,8 +59,10 @@ export function WorkspaceFilePickerDialog({
 }: WorkspaceFilePickerDialogProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [absolutePathExists, setAbsolutePathExists] = useState<boolean | null>(null);
+  const [absolutePathResult, setAbsolutePathResult] = useState<{
+    path: string | null;
+    exists: boolean | null;
+  }>({ path: null, exists: null });
   const absoluteStatRequestIdRef = useRef(0);
   const commandListWheelHoverRef = useCommandListWheelHover();
 
@@ -70,8 +72,7 @@ export function WorkspaceFilePickerDialog({
     }
     const timeoutId = window.setTimeout(() => {
       setQuery("");
-      setSuggestions([]);
-      setAbsolutePathExists(null);
+      setAbsolutePathResult({ path: null, exists: null });
     }, RADIX_OVERLAY_CLOSE_MS);
     return () => window.clearTimeout(timeoutId);
   }, [open]);
@@ -82,9 +83,9 @@ export function WorkspaceFilePickerDialog({
     }
   }, [open, onValidateRecentFiles]);
 
-  useEffect(() => {
+  const suggestions = useMemo(() => {
     if (!open) {
-      return;
+      return [];
     }
 
     const trimmed = query.trim();
@@ -95,12 +96,10 @@ export function WorkspaceFilePickerDialog({
         ? searchWorkspaceFiles(toWorkspaceFileReferenceQueryInput(trimmed))
         : [];
 
-    setSuggestions(
-      mergeRecentIntoSuggestions(
-        toWorkspaceFileReferenceQueryInput(trimmed),
-        indexSuggestions,
-        recentFiles,
-      ),
+    return mergeRecentIntoSuggestions(
+      toWorkspaceFileReferenceQueryInput(trimmed),
+      indexSuggestions,
+      recentFiles,
     );
   }, [indexReady, open, query, recentFiles, searchWorkspaceFiles, workspaceBinding, workspaceRoot]);
 
@@ -108,10 +107,11 @@ export function WorkspaceFilePickerDialog({
   const absolutePathCandidate = looksLikeAbsolutePath(trimmedQuery)
     ? normalizeAbsolutePathInput(trimmedQuery)
     : null;
+  const absolutePathExists =
+    absolutePathResult.path === absolutePathCandidate ? absolutePathResult.exists : null;
 
   useEffect(() => {
     if (!open || !absolutePathCandidate) {
-      setAbsolutePathExists(null);
       return;
     }
 
@@ -123,13 +123,16 @@ export function WorkspaceFilePickerDialog({
         if (absoluteStatRequestIdRef.current !== requestId) {
           return;
         }
-        setAbsolutePathExists(result.exists && result.isFile);
+        setAbsolutePathResult({
+          path: absolutePathCandidate,
+          exists: result.exists && result.isFile,
+        });
       })
       .catch(() => {
         if (absoluteStatRequestIdRef.current !== requestId) {
           return;
         }
-        setAbsolutePathExists(false);
+        setAbsolutePathResult({ path: absolutePathCandidate, exists: false });
       });
   }, [absolutePathCandidate, open, statHostTextFile]);
 

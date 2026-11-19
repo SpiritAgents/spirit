@@ -29,35 +29,26 @@ export function VideoGenerationToolCard({
     tool.videoPaths?.find(
       (path) => isManagedGeneratedVideoRef(path) || isPreviewableVideoPath(path),
     ) ?? "";
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const cachedPreview = previewSourcePath
+    ? readCachedLocalFilePreviewDataUrl(previewSourcePath)
+    : null;
+  const [previewStatePath, setPreviewStatePath] = useState(previewSourcePath);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(cachedPreview ?? null);
   const [previewState, setPreviewState] = useState<"idle" | "loading" | "ready" | "unavailable">(
-    "idle",
+    previewSourcePath ? (cachedPreview ? "ready" : "loading") : "unavailable",
   );
+  if (previewStatePath !== previewSourcePath) {
+    setPreviewStatePath(previewSourcePath);
+    setPreviewUrl(cachedPreview ?? null);
+    setPreviewState(previewSourcePath ? (cachedPreview ? "ready" : "loading") : "unavailable");
+  }
 
   useEffect(() => {
     let cancelled = false;
-    if (!previewSourcePath) {
-      setPreviewUrl(null);
-      setPreviewState("unavailable");
-      return () => {
-        cancelled = true;
-      };
+    if (!previewSourcePath || cachedPreview) {
+      return;
     }
 
-    // The video preview resolves to a stable protocol URL (not a blob), so it shares the
-    // module-level LRU cache with image data URLs; repeated remounts from virtualized scrolling
-    // skip the IPC on a cache hit
-    const cached = readCachedLocalFilePreviewDataUrl(previewSourcePath);
-    if (cached) {
-      setPreviewUrl(cached);
-      setPreviewState("ready");
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    setPreviewUrl(null);
-    setPreviewState("loading");
     const resolvePreview = isManagedGeneratedVideoRef(previewSourcePath)
       ? readManagedVideoPreviewUrl(previewSourcePath)
       : readLocalVideoPreviewUrl(previewSourcePath);
@@ -82,7 +73,7 @@ export function VideoGenerationToolCard({
     return () => {
       cancelled = true;
     };
-  }, [previewSourcePath, readLocalVideoPreviewUrl, readManagedVideoPreviewUrl]);
+  }, [cachedPreview, previewSourcePath, readLocalVideoPreviewUrl, readManagedVideoPreviewUrl]);
 
   const loading =
     tool.phase === "preview" || tool.phase === "running" || previewState === "loading";

@@ -62,7 +62,6 @@ export function FontSelect({
 
   useEffect(() => {
     if (fonts !== undefined) {
-      setInternalLoading(false);
       return;
     }
 
@@ -94,7 +93,7 @@ export function FontSelect({
     };
   }, [fonts]);
 
-  const effectiveLoading = loading ?? internalLoading;
+  const effectiveLoading = loading ?? (fonts === undefined ? internalLoading : false);
   const fontOptions = useMemo(() => {
     const sourceFonts = fonts ?? loadedFonts;
     const values = new Set<string>();

@@ -45,6 +45,10 @@ export function ExtensionTabIcon({
       <img aria-hidden src={icon.dataUrl} className={cn("shrink-0 object-contain", className)} />
     );
   }
-  const Icon = getSpiritIconComponent(icon.name) ?? Globe;
-  return <Icon className={cn("shrink-0", className)} aria-hidden strokeWidth={1.75} />;
+  return createElement(getSpiritIconComponent(icon.name) ?? Globe, {
+    className: cn("shrink-0", className),
+    "aria-hidden": true,
+    strokeWidth: 1.75,
+  });
 }
+import { createElement } from "react";

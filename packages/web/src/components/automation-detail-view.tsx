@@ -1,5 +1,5 @@
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AutomationHistoryTable } from "@/components/automation-history-table";
@@ -105,6 +105,18 @@ export function AutomationDetailView({
   const [detail, setDetail] = useState<DesktopAutomationDetail | undefined>();
   const [loading, setLoading] = useState(true);
   const showInitialLoadingRef = useRef(true);
+  const initialLoadingAutomationIdRef = useRef(automationId);
+  const [previousAutomationId, setPreviousAutomationId] = useState(automationId);
+  if (previousAutomationId !== automationId) {
+    setPreviousAutomationId(automationId);
+    setActiveTab("history");
+  }
+  useLayoutEffect(() => {
+    if (initialLoadingAutomationIdRef.current !== automationId) {
+      initialLoadingAutomationIdRef.current = automationId;
+      showInitialLoadingRef.current = true;
+    }
+  }, [automationId]);
 
   const refresh = useCallback(
     async (options?: { silent?: boolean }) => {
@@ -125,15 +137,12 @@ export function AutomationDetailView({
   );
 
   useEffect(() => {
-    setActiveTab("history");
-    showInitialLoadingRef.current = true;
-  }, [automationId]);
-
-  useEffect(() => {
-    void refresh({ silent: !showInitialLoadingRef.current }).finally(() => {
+    const hasListDefinition =
+      snapshot?.automationsList.some((item) => item.id === automationId) === true;
+    void refresh({ silent: !showInitialLoadingRef.current && hasListDefinition }).finally(() => {
       showInitialLoadingRef.current = false;
     });
-  }, [refresh, snapshot?.automationsList]);
+  }, [automationId, refresh, snapshot?.automationsList]);
 
   const definition = detail?.definition;
   const listFallback = snapshot?.automationsList.find((item) => item.id === automationId);

@@ -64,7 +64,7 @@ export function WorkspaceFileContextMenuContent({
 }: WorkspaceFileContextMenuContentProps) {
   const { t } = useTranslation();
   const revealLabel = useRevealInExplorerLabel();
-  const resolved = targetRef.current ?? target;
+  const resolved = target;
   const shellActionsEnabled = isElectron && Boolean(onReveal) && Boolean(resolved);
   const deleteEnabled = isElectron && Boolean(onDelete) && Boolean(resolved);
 

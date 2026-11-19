@@ -151,7 +151,7 @@ export function ConversationPaneHost({
         await controllerInput.onDeleteSession(path);
       }
     },
-    [controllerInput.onDeleteSession, controllerInput.runtime, splitPaneCount],
+    [controllerInput, splitPaneCount],
   );
   const handleDeleteSessionOverlayClosed = useCallback(() => {
     if (splitPaneCount > 1) {
@@ -165,7 +165,7 @@ export function ConversationPaneHost({
         await controllerInput.onRenameSession(path, displayName);
       }
     },
-    [controllerInput.onRenameSession],
+    [controllerInput],
   );
 
   const handleTogglePinSession = useCallback(
@@ -174,7 +174,7 @@ export function ConversationPaneHost({
         await controllerInput.onTogglePinSession(path, pinned);
       }
     },
-    [controllerInput.onTogglePinSession],
+    [controllerInput],
   );
 
   const paneSessionPathKey = normalizeSessionPathKey(sessionPath);

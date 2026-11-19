@@ -61,6 +61,7 @@ export function AutomationHistoryTable({ runs, onOpenSession }: AutomationHistor
     [i18n.language, t],
   );
 
+  // oxlint-disable-next-line react/incompatible-library -- TanStack Table returns functions that React Compiler cannot safely memoize.
   const table = useReactTable({
     data: sortedRuns,
     columns,

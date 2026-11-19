@@ -138,14 +138,13 @@ export function OnboardingWizard({
   const handleConnectBottomFadeChange = useCallback((hasMoreBelow: boolean) => {
     connectBottomFadeRef.current = hasMoreBelow;
   }, []);
-
-  useEffect(() => {
-    if (active) {
+  if (active) {
+    if (phase !== "running") {
       setPhase("running");
-      return;
     }
+  } else if (phase === "running") {
     setPhase((current) => (current === "gone" ? current : "leaving"));
-  }, [active]);
+  }
 
   useEffect(() => {
     if (phase !== "leaving") {
@@ -339,7 +338,7 @@ function OnboardingWelcomeStep({ onContinue }: { onContinue: () => void }) {
   const { t } = useTranslation();
   const [titleVisible, setTitleVisible] = useState(false);
   const [continueVisible, setContinueVisible] = useState(false);
-  const [shimmerActive, setShimmerActive] = useState(true);
+  const [shimmerActive, setShimmerActive] = useState(() => !prefersReducedMotion());
   const shimmerSweepRef = useRef<HTMLDivElement>(null);
 
   // The shimmer is decoupled from Continue: on mount it schedules a natural end based on the
@@ -350,7 +349,6 @@ function OnboardingWelcomeStep({ onContinue }: { onContinue: () => void }) {
       return;
     }
     if (prefersReducedMotion()) {
-      setShimmerActive(false);
       return;
     }
     const remainingMs = readShimmerRemainingMs(el);
@@ -363,9 +361,6 @@ function OnboardingWelcomeStep({ onContinue }: { onContinue: () => void }) {
   // Fixed timing counted from entering Step 1, independent of snapshot readiness (first entry and
   // returning from Step 2 feel the same)
   useEffect(() => {
-    setTitleVisible(false);
-    setContinueVisible(false);
-
     const titleTimeout = window.setTimeout(() => setTitleVisible(true), WELCOME_TITLE_DELAY_MS);
 
     const continueId = window.setTimeout(() => {

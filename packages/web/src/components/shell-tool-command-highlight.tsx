@@ -15,11 +15,14 @@ const SHIKI_HIGHLIGHT_THEMES = [...SPIRIT_SHIKI_PLUS_THEMES] as ["light-plus", "
 function useShikiToolCodeHighlight(code: string, language: BundledLanguage): TokensResult {
   const normalizedCode = useMemo(() => trimTrailingNewlines(code), [code]);
   const plainResult = useMemo(() => plainHighlightResult(normalizedCode), [normalizedCode]);
-  const [result, setResult] = useState<TokensResult>(plainResult);
+  const requestKey = `${language}\u0000${normalizedCode}`;
+  const [highlighted, setHighlighted] = useState<{ key: string; result: TokensResult }>({
+    key: requestKey,
+    result: plainResult,
+  });
   const supportsLanguage = spiritShikiCodePlugin.supportsLanguage(language);
 
   useEffect(() => {
-    setResult(plainResult);
     if (!supportsLanguage) {
       return;
     }
@@ -27,15 +30,17 @@ function useShikiToolCodeHighlight(code: string, language: BundledLanguage): Tok
     const syncResult = spiritShikiCodePlugin.highlight(
       { code: normalizedCode, language, themes: SHIKI_HIGHLIGHT_THEMES },
       (highlighted) => {
-        setResult(highlighted as TokensResult);
+        setHighlighted({ key: requestKey, result: highlighted as TokensResult });
       },
     );
     if (syncResult) {
-      setResult(syncResult as TokensResult);
+      queueMicrotask(() => {
+        setHighlighted({ key: requestKey, result: syncResult as TokensResult });
+      });
     }
-  }, [normalizedCode, plainResult, supportsLanguage, language]);
+  }, [normalizedCode, requestKey, supportsLanguage, language]);
 
-  return result;
+  return highlighted.key === requestKey ? highlighted.result : plainResult;
 }
 
 export function ShellToolCommandHighlight({ command }: { command: string }) {

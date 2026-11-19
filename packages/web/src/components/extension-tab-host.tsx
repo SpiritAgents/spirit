@@ -76,7 +76,20 @@ export function ExtensionTabHost({
   const { t, i18n } = useTranslation();
   const [attempt, setAttempt] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const tabInstanceKey = `${tab.instanceId}\u0000${attempt}`;
+  const [statusResult, setStatusResult] = useState<{
+    key: string;
+    status: "loading" | "ready" | "error";
+  }>({ key: tabInstanceKey, status: "loading" });
+  const status = statusResult.key === tabInstanceKey ? statusResult.status : "loading";
+  const setStatus = useCallback(
+    (next: "loading" | "ready" | "error") => {
+      setStatusResult({ key: tabInstanceKey, status: next });
+    },
+    [tabInstanceKey],
+  );
+  const previousAttemptRef = useRef(attempt);
+  const closedAttemptRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (status !== "loading") {
@@ -84,11 +97,7 @@ export function ExtensionTabHost({
     }
     const timeout = window.setTimeout(() => setStatus("error"), 10_000);
     return () => window.clearTimeout(timeout);
-  }, [attempt, status, tab.instanceId]);
-
-  useEffect(() => {
-    setStatus("loading");
-  }, [attempt, tab.instanceId]);
+  }, [setStatus, status]);
 
   const sendContext = useCallback(() => {
     const chrome = collectHostDocumentChrome();
@@ -246,11 +255,11 @@ export function ExtensionTabHost({
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, [
-    attempt,
     handleWebViewMessage,
     onRequest,
     onChrome,
     sendContext,
+    setStatus,
     tab,
     active,
     allowComposerAttachments,
@@ -259,6 +268,7 @@ export function ExtensionTabHost({
 
   useEffect(() => {
     // A cached page can request context before the host listener attaches.
+    previousAttemptRef.current = attempt;
     sendContext();
   }, [attempt, sendContext]);
 
@@ -294,9 +304,13 @@ export function ExtensionTabHost({
     const iframe = iframeRef.current;
     const identity = { ...tab };
     return () => {
+      if (closedAttemptRef.current === attempt) {
+        return;
+      }
+      closedAttemptRef.current = attempt;
       iframe?.contentWindow?.postMessage({ type: SPIRIT_EXTENSION_TAB_CLOSED, ...identity }, "*");
     };
-  }, [attempt, tab.instanceId]);
+  }, [attempt, tab]);
 
   return (
     <div

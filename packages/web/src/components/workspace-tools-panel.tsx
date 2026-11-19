@@ -7,6 +7,7 @@ import {
   useCallback,
   useMemo,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -310,7 +311,7 @@ function WorkspaceToolsDockShell({
     }
     asideRef.current?.focus({ preventScroll: true });
     setWorkspacePanelRegionActive(true);
-  }, [open, fullScreen]);
+  }, [open]);
   const [viewportMaxWidthPx, setViewportMaxWidthPx] = useState(computeWorkspaceToolsMaxWidthPx);
   const maxWidthPx = maxWidthPxProp ?? viewportMaxWidthPx;
   const widthPx = Math.min(
@@ -566,7 +567,9 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   const darwinElectron = isDarwinElectronShell();
   const darwinWindowFullscreen = useDarwinWindowFullscreen(darwinElectron);
   const workspaceToolsOpenRef = useRef(workspaceToolsOpen);
-  workspaceToolsOpenRef.current = workspaceToolsOpen;
+  useLayoutEffect(() => {
+    workspaceToolsOpenRef.current = workspaceToolsOpen;
+  }, [workspaceToolsOpen]);
 
   /** Mount the terminal only after the user first switches to the Terminal tab (so the default tab does not trigger node-pty); keep it mounted after switching away. */
   const [mountedTerminalTabIds, setMountedTerminalTabIds] = useState<ReadonlySet<string>>(
@@ -611,22 +614,13 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
 
   const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId), [activeTabId, tabs]);
 
-  useEffect(() => {
-    if (
-      !isWorkspaceToolTabKind(activeTab, "terminal") &&
-      !isWorkspaceToolTabKind(activeTab, "task")
-    ) {
-      return;
-    }
-    setMountedTerminalTabIds((prev) => {
-      if (prev.has(activeTabId)) {
-        return prev;
-      }
-      const next = new Set(prev);
+  if (isWorkspaceToolTabKind(activeTab, "terminal") || isWorkspaceToolTabKind(activeTab, "task")) {
+    if (!mountedTerminalTabIds.has(activeTabId)) {
+      const next = new Set(mountedTerminalTabIds);
       next.add(activeTabId);
-      return next;
-    });
-  }, [activeTab?.kind, activeTabId]);
+      setMountedTerminalTabIds(next);
+    }
+  }
 
   const handleAddTab = useCallback(
     (kind: WorkspaceToolTabKind) => {

@@ -41,9 +41,11 @@ export function DiffCodeScrollView({
   // Streaming previews rewrite lines continuously; highlight the debounced snapshot so the
   // shiki pass does not run on every chunk.
   const [debouncedLines, setDebouncedLines] = useState(lines);
+  if (lines.length === 0 && debouncedLines.length !== 0) {
+    setDebouncedLines([]);
+  }
   useEffect(() => {
     if (lines.length === 0) {
-      setDebouncedLines([]);
       return undefined;
     }
     if (!followTail) {
@@ -53,11 +55,18 @@ export function DiffCodeScrollView({
     return () => window.clearTimeout(timer);
   }, [followTail, lines]);
 
-  const displayLines = resolveToolCallDisplayLines(lines, debouncedLines, followTail);
+  const displayLines = resolveToolCallDisplayLines(
+    lines,
+    lines.length === 0 ? [] : debouncedLines,
+    followTail,
+  );
   const highlightedLines = useDiffLineHighlight(displayLines, languageId);
+  const previousHighlightedLinesRef = useRef<typeof highlightedLines | null>(null);
 
   useEffect(() => {
-    if (!followTail) {
+    const highlightChanged = previousHighlightedLinesRef.current !== highlightedLines;
+    previousHighlightedLinesRef.current = highlightedLines;
+    if (!followTail || !highlightChanged) {
       return;
     }
     const viewport = scrollAreaViewport(scrollAreaRef.current);

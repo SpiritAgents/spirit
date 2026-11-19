@@ -39,10 +39,12 @@ export function LaunchSplash({
   onPhaseChange,
 }: LaunchSplashProps) {
   const [phase, setPhase] = useState<Phase>(() => (active ? "running" : "gone"));
+  if (active && phase !== "running") {
+    setPhase("running");
+  }
 
   useEffect(() => {
     if (active) {
-      setPhase("running");
       return;
     }
     const id = window.setTimeout(() => {

@@ -964,8 +964,8 @@ function SessionListNav({
     return nav;
   }
 
-  const busy = (contextMenuSession ?? contextMenuSessionRef.current)?.isBusy === true;
-  const togglePinTarget = contextMenuSessionRef.current ?? contextMenuSession;
+  const busy = contextMenuSession?.isBusy === true;
+  const togglePinTarget = contextMenuSession;
   const togglePinTargetPinned = typeof togglePinTarget?.pinnedAtUnixMs === "number";
   const togglePinLabel = togglePinTargetPinned
     ? t("sidebar.unpinSession")
@@ -1094,13 +1094,11 @@ function WorkspaceListNav({
     return inner;
   }
 
-  const isWorkspaceTarget = Boolean(
-    contextMenuWorkspaceGroup ?? contextMenuWorkspaceGroupRef.current,
-  );
-  const workspaceTarget = contextMenuWorkspaceGroupRef.current ?? contextMenuWorkspaceGroup;
-  const sessionTarget = contextMenuSession ?? contextMenuSessionRef.current;
+  const isWorkspaceTarget = Boolean(contextMenuWorkspaceGroup);
+  const workspaceTarget = contextMenuWorkspaceGroup;
+  const sessionTarget = contextMenuSession;
   const sessionBusy = sessionTarget?.isBusy === true;
-  const togglePinTarget = contextMenuSessionRef.current ?? contextMenuSession;
+  const togglePinTarget = contextMenuSession;
   const togglePinTargetPinned = typeof togglePinTarget?.pinnedAtUnixMs === "number";
   const togglePinLabel = togglePinTargetPinned
     ? t("sidebar.unpinSession")
@@ -1393,7 +1391,7 @@ function SessionSidebarInner({
   disabled,
   unseenCompletedSessionPaths,
 }: SessionSidebarProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const split = useOptionalConversationSplit();
   const settingsMode = mode === "settings";
 
@@ -1426,10 +1424,7 @@ function SessionSidebarInner({
     () => partitionSessionsForSidebar(unpinnedSessions, userHomeDirectory),
     [unpinnedSessions, userHomeDirectory],
   );
-  const builtWorkspaceGroups = useMemo(
-    () => buildWorkspaceGroups(bound, undefined),
-    [bound, i18n.language],
-  );
+  const builtWorkspaceGroups = useMemo(() => buildWorkspaceGroups(bound, undefined), [bound]);
   const [workspaceGroupOrder, setWorkspaceGroupOrder] = useState(readWorkspaceSidebarGroupOrder);
   const workspaceGroups = useMemo(
     () => applyWorkspaceGroupOrder(builtWorkspaceGroups, workspaceGroupOrder),
@@ -1490,10 +1485,10 @@ function SessionSidebarInner({
   const renameCommitInFlightRef = useRef(false);
   const pendingRenameFocusPathRef = useRef<string | null>(null);
   const scrollFadeRegionRef = useRef<HTMLDivElement>(null);
-  const [scrollEdgeFades, setScrollEdgeFades] = useState<SidebarScrollEdgeFades>({
-    top: false,
-    bottom: false,
-  });
+  const [scrollFadeResult, setScrollFadeResult] = useState<{
+    key: string;
+    fades: SidebarScrollEdgeFades;
+  } | null>(null);
   const sessionByPath = useMemo(() => {
     const map = new Map<string, SessionListItem>();
     for (const session of sessions) {
@@ -1710,42 +1705,45 @@ function SessionSidebarInner({
     !marketplaceActive && !automationsActive && (newChatBusy || !isActiveSessionInSidebar);
   const newChatDragEnabled = Boolean(split) && !disabled && !(newChatBusy && !newChatNavActive);
 
-  useEffect(() => {
-    if (!activeFilePath) {
-      return;
-    }
+  if (activeFilePath) {
     const pinnedIndex = pinnedSessions.findIndex((session) =>
       samePath(session.path, activeFilePath),
     );
     if (pinnedIndex >= 0) {
       const needed = visibleCountForSessionIndex(pinnedIndex);
-      setPinnedVisibleCount((current) => (current >= needed ? current : needed));
-      return;
-    }
-    const unboundIndex = unboundSessions.findIndex((session) =>
-      samePath(session.path, activeFilePath),
-    );
-    if (unboundIndex >= 0) {
-      const needed = visibleCountForSessionIndex(unboundIndex);
-      setUnboundVisibleCount((current) => (current >= needed ? current : needed));
-      return;
-    }
-    for (const group of workspaceGroups) {
-      const index = group.sessions.findIndex((session) => samePath(session.path, activeFilePath));
-      if (index < 0) {
-        continue;
+      if (pinnedVisibleCount < needed) {
+        setPinnedVisibleCount(needed);
       }
-      const needed = visibleCountForSessionIndex(index);
-      setVisibleCountByWorkspaceGroupId((current) => {
-        const previous = current[group.id] ?? SIDEBAR_SESSION_PAGE_SIZE;
-        if (previous >= needed) {
-          return current;
+    } else {
+      const unboundIndex = unboundSessions.findIndex((session) =>
+        samePath(session.path, activeFilePath),
+      );
+      if (unboundIndex >= 0) {
+        const needed = visibleCountForSessionIndex(unboundIndex);
+        if (unboundVisibleCount < needed) {
+          setUnboundVisibleCount(needed);
         }
-        return { ...current, [group.id]: needed };
-      });
-      return;
+      } else {
+        for (const group of workspaceGroups) {
+          const index = group.sessions.findIndex((session) =>
+            samePath(session.path, activeFilePath),
+          );
+          if (index < 0) {
+            continue;
+          }
+          const needed = visibleCountForSessionIndex(index);
+          const previous = visibleCountByWorkspaceGroupId[group.id] ?? SIDEBAR_SESSION_PAGE_SIZE;
+          if (previous < needed) {
+            setVisibleCountByWorkspaceGroupId({
+              ...visibleCountByWorkspaceGroupId,
+              [group.id]: needed,
+            });
+          }
+          break;
+        }
+      }
     }
-  }, [activeFilePath, pinnedSessions, unboundSessions, workspaceGroups]);
+  }
 
   const loadMoreWorkspaceGroupSessions = useCallback((groupId: string, total: number) => {
     setVisibleCountByWorkspaceGroupId((current) => {
@@ -1769,13 +1767,30 @@ function SessionSidebarInner({
     );
   }, [pinnedSessions.length]);
 
+  const suppressScrollFade = !settingsMode && narrow;
+  const scrollFadeLayoutKey = JSON.stringify([
+    translucency,
+    settingsTab,
+    extensionSettingsId,
+    extensionSettingsItems.length,
+    sessions.length,
+    pinnedSessions.length,
+    workspaceGroups.length,
+    unboundSessions.length,
+    collapsedWorkspaceIds,
+    pinnedSectionExpanded,
+    workspaceSectionExpanded,
+    noWorkspaceSectionExpanded,
+  ]);
+  const scrollEdgeFades = suppressScrollFade
+    ? { top: false, bottom: false }
+    : scrollFadeResult?.key === scrollFadeLayoutKey
+      ? scrollFadeResult.fades
+      : { top: false, bottom: false };
   useEffect(() => {
-    const suppressScrollFade = !settingsMode && narrow;
     if (suppressScrollFade) {
-      setScrollEdgeFades({ top: false, bottom: false });
       return;
     }
-
     const region = scrollFadeRegionRef.current;
     if (!region) {
       return;
@@ -1787,7 +1802,10 @@ function SessionSidebarInner({
     }
 
     const syncScrollEdgeFades = () => {
-      setScrollEdgeFades(readSidebarScrollEdgeFades(viewport));
+      setScrollFadeResult({
+        key: scrollFadeLayoutKey,
+        fades: readSidebarScrollEdgeFades(viewport),
+      });
     };
 
     syncScrollEdgeFades();
@@ -1803,22 +1821,7 @@ function SessionSidebarInner({
       viewport.removeEventListener("scroll", syncScrollEdgeFades);
       resizeObserver.disconnect();
     };
-  }, [
-    translucency,
-    settingsMode,
-    narrow,
-    settingsTab,
-    extensionSettingsId,
-    extensionSettingsItems.length,
-    sessions.length,
-    pinnedSessions.length,
-    workspaceGroups.length,
-    unboundSessions.length,
-    collapsedWorkspaceIds,
-    pinnedSectionExpanded,
-    workspaceSectionExpanded,
-    noWorkspaceSectionExpanded,
-  ]);
+  }, [suppressScrollFade, scrollFadeLayoutKey]);
 
   const setWorkspaceGroupExpanded = useCallback((groupId: string, open: boolean) => {
     setCollapsedWorkspaceIds((current) => {

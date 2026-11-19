@@ -1,5 +1,5 @@
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { product } from "@spiritagent/product";
 import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
@@ -111,13 +111,38 @@ export function McpsSettingsPanel({
   const [newMetadata, setNewMetadata] = useState("");
   const [runtimeInfo, setRuntimeInfo] = useState<Record<string, McpServerRuntimeInfo>>({});
   const runtimeInfoRef = useRef(runtimeInfo);
-  runtimeInfoRef.current = runtimeInfo;
+  useLayoutEffect(() => {
+    runtimeInfoRef.current = runtimeInfo;
+  }, [runtimeInfo]);
 
   const items = snapshot?.mcpServers ?? [];
   const itemsSig = useMemo(
     () => items.map((item) => `${item.scope}:${item.name}:${item.enabled}`).join("|"),
     [items],
   );
+  const [inspectionItems, setInspectionItems] = useState(items);
+  const [inspectionSignature, setInspectionSignature] = useState(itemsSig);
+  if (inspectionSignature !== itemsSig) {
+    setInspectionSignature(itemsSig);
+    setInspectionItems(items);
+  }
+  const nextRuntimeInfo: Record<string, McpServerRuntimeInfo> = {};
+  for (const item of inspectionItems) {
+    if (!item.enabled) {
+      continue;
+    }
+    const key = `${item.scope}:${item.name}`;
+    const existing = runtimeInfo[key];
+    nextRuntimeInfo[key] = existing ?? { state: "connecting" };
+  }
+  const runtimeInfoKeys = Object.keys(runtimeInfo);
+  const nextRuntimeInfoKeys = Object.keys(nextRuntimeInfo);
+  if (
+    runtimeInfoKeys.length !== nextRuntimeInfoKeys.length ||
+    nextRuntimeInfoKeys.some((key) => runtimeInfo[key] !== nextRuntimeInfo[key])
+  ) {
+    setRuntimeInfo(nextRuntimeInfo);
+  }
   const availableMcpCreateScopeOptions = workspaceBindingDisabled
     ? mcpCreateScopeOptions.filter((option) => option.scope === "user")
     : mcpCreateScopeOptions;
@@ -131,7 +156,7 @@ export function McpsSettingsPanel({
     let cancelled = false;
 
     const keysToInspect: string[] = [];
-    for (const item of items) {
+    for (const item of inspectionItems) {
       if (!item.enabled) {
         continue;
       }
@@ -142,25 +167,8 @@ export function McpsSettingsPanel({
       }
     }
 
-    setRuntimeInfo((current) => {
-      const next: Record<string, McpServerRuntimeInfo> = {};
-      for (const item of items) {
-        if (!item.enabled) {
-          continue;
-        }
-        const key = `${item.scope}:${item.name}`;
-        const existing = current[key];
-        if (existing?.state === "connected" || existing?.state === "failed") {
-          next[key] = existing;
-          continue;
-        }
-        next[key] = { state: "connecting" };
-      }
-      return next;
-    });
-
     void Promise.all(
-      items.map(async (item) => {
+      inspectionItems.map(async (item) => {
         if (!item.enabled) {
           return;
         }
@@ -205,7 +213,7 @@ export function McpsSettingsPanel({
     return () => {
       cancelled = true;
     };
-  }, [itemsSig, onInspectMcpServer]);
+  }, [inspectionItems, onInspectMcpServer]);
 
   const resetForm = () => {
     setCreateScope(workspaceBindingDisabled ? "user" : "workspace");

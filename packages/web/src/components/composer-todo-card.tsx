@@ -1,7 +1,7 @@
 import { Check } from "@spiritagent/icons/check";
 import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Circle } from "lucide-react";
 
 import type { ConversationTodoSnapshot } from "@/types";
@@ -66,7 +66,8 @@ export function ComposerTodoCard({
   sessionKey,
   useTranslucency = false,
 }: ComposerTodoCardProps) {
-  const [expanded, setExpanded] = useState(() => {
+  const expansionKey = `${sessionKey}\u0000${todos.items.length}`;
+  const readExpanded = () => {
     if (typeof window === "undefined") {
       return true;
     }
@@ -78,21 +79,15 @@ export function ComposerTodoCard({
       return true;
     }
     return todos.items.length > 1;
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    const stored = window.localStorage.getItem(storageKey(sessionKey));
-    if (stored === "0") {
-      setExpanded(false);
-    } else if (stored === "1") {
-      setExpanded(true);
-    } else {
-      setExpanded(todos.items.length > 1);
-    }
-  }, [sessionKey, todos.items.length]);
+  };
+  const [expansion, setExpansion] = useState(() => ({
+    key: expansionKey,
+    expanded: readExpanded(),
+  }));
+  if (expansion.key !== expansionKey) {
+    setExpansion({ key: expansionKey, expanded: readExpanded() });
+  }
+  const expanded = expansion.expanded;
 
   const firstActiveIndex = useMemo(
     () =>
@@ -104,12 +99,12 @@ export function ComposerTodoCard({
   const hasInProgress = todos.items.some((item) => item.status === "in_progress");
 
   const toggleExpanded = () => {
-    setExpanded((current) => {
-      const next = !current;
+    setExpansion((current) => {
+      const next = !current.expanded;
       if (typeof window !== "undefined") {
         window.localStorage.setItem(storageKey(sessionKey), next ? "1" : "0");
       }
-      return next;
+      return { key: expansionKey, expanded: next };
     });
   };
 
