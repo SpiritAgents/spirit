@@ -172,6 +172,7 @@ export function DownloadCliTerminalPreview({ className }: DownloadCliTerminalPre
     [inputInnerWidth],
   );
 
+  const previousLogoBannerRef = useRef<typeof logoBanner | null>(null);
   useLayoutEffect(() => {
     const shell = shellRef.current;
     const input = inputRef.current;
@@ -197,7 +198,11 @@ export function DownloadCliTerminalPreview({ className }: DownloadCliTerminalPre
       setInputInnerWidth(Math.max(LOGO_INNER_WIDTH, fitInnerWidth));
     };
 
-    sync();
+    const previousLogoBanner = previousLogoBannerRef.current;
+    previousLogoBannerRef.current = logoBanner;
+    if (previousLogoBanner !== logoBanner) {
+      sync();
+    }
     const observer = new ResizeObserver(sync);
     observer.observe(shell);
     observer.observe(input);

@@ -36,12 +36,13 @@ const itemClassName =
 const externalIconLinkClassName =
   "inline-flex rounded-md p-0.5 text-foreground/50 outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 /**
  * Site-wide footer: sectioned layout. Section titles are sentence-case, text-sm, muted;
  * links default to the body color and shift to muted on hover.
  */
 export function SiteFooter() {
-  const year = new Date().getFullYear();
   const pathname = usePathname();
   const isDocs = HAS_PUBLISHED_DOCS && /\/docs(?:\/|$)/.test(pathname);
   const { messages, localizedPath } = useI18n();
@@ -117,7 +118,7 @@ export function SiteFooter() {
         <div className="mt-16 pt-2">
           <div className="relative flex flex-col gap-4 sm:min-h-7 sm:flex-row sm:items-center sm:justify-between">
             <p className="order-2 text-left font-sans text-xs text-foreground/40 sm:order-1">
-              {protectBrandTokens(fm.copyrightLine(year))}
+              {protectBrandTokens(fm.copyrightLine(CURRENT_YEAR))}
             </p>
             <ul
               className="order-1 flex list-none flex-wrap items-center justify-end sm:order-2"

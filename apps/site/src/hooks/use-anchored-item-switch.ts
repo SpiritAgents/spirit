@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -179,7 +180,9 @@ export function useAnchoredItemSwitch<TItem>({
   const triggerZoneRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  activeItemRef.current = activeItem;
+  useLayoutEffect(() => {
+    activeItemRef.current = activeItem;
+  }, [activeItem]);
 
   const clearHoverOpenTimer = useCallback(() => {
     if (hoverOpenTimerRef.current !== undefined) {

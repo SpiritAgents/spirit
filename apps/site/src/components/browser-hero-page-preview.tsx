@@ -60,8 +60,13 @@ export function BrowserHeroPagePreview({
     });
   }, [containerRef, onTargetRectsChange]);
 
+  const previousHeadlineVariantRef = useRef<typeof headlineVariant | null>(null);
   useLayoutEffect(() => {
-    reportRects();
+    const variantChanged = previousHeadlineVariantRef.current !== headlineVariant;
+    previousHeadlineVariantRef.current = headlineVariant;
+    if (variantChanged) {
+      reportRects();
+    }
     const root = rootRef.current;
     if (!root) {
       return;

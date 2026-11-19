@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeft } from "lucide-react";
 
@@ -64,10 +64,16 @@ export function SiteCompactMega({
     features: null,
     resources: null,
   });
-  const wasOpenRef = useRef(open);
-  const [overlayTarget, setOverlayTarget] = useState<HTMLElement | null>(null);
+  const overlayTarget = useSyncExternalStore(
+    () => () => {},
+    () => document.body,
+    () => null,
+  );
   const hasExplore = menus.length > 0;
-  const panelKeys = hasExplore ? COMPACT_PANEL_KEYS : ROOT_PANEL_KEYS;
+  const panelKeys = useMemo(
+    () => (hasExplore ? COMPACT_PANEL_KEYS : ROOT_PANEL_KEYS),
+    [hasExplore],
+  );
   const activePanel: CompactPanelKey =
     panel !== "root" && !menus.some((menu) => menu.key === panel) ? "root" : panel;
   const visibleKey: CompactPanelKey =
@@ -75,22 +81,17 @@ export function SiteCompactMega({
       ? "root"
       : visiblePanel;
 
-  useLayoutEffect(() => {
-    setOverlayTarget(document.body);
-  }, []);
-
-  useLayoutEffect(() => {
-    const wasOpen = wasOpenRef.current;
-    wasOpenRef.current = open;
-    if (open && !wasOpen) {
+  const [previousOpen, setPreviousOpen] = useState(open);
+  if (previousOpen !== open) {
+    setPreviousOpen(open);
+    if (open) {
       setPanel("root");
       setVisiblePanel("root");
     }
-  }, [open]);
+  }
 
   useEffect(() => {
     if (open) {
-      setVisiblePanel(panel);
       return;
     }
     const timer = window.setTimeout(() => {
@@ -98,7 +99,10 @@ export function SiteCompactMega({
       setVisiblePanel("root");
     }, SITE_MEGA_PANEL_DURATION_MS);
     return () => window.clearTimeout(timer);
-  }, [open, panel]);
+  }, [open]);
+  if (open && visiblePanel !== panel) {
+    setVisiblePanel(panel);
+  }
 
   useEffect(() => {
     const observer = new ResizeObserver(() => {
@@ -122,7 +126,7 @@ export function SiteCompactMega({
       if (el) observer.observe(el);
     }
     return () => observer.disconnect();
-  }, [hasExplore]);
+  }, [panelKeys]);
 
   useEffect(() => {
     if (open) {

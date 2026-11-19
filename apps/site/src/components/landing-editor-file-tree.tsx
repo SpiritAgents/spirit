@@ -10,7 +10,6 @@ type LandingEditorFileTreeProps = {
 };
 
 function TreeNode({ node, depth }: { node: LandingEditorTreeNode; depth: number }) {
-  const Icon = workspaceExplorerIcon(node.name, node.kind);
   const isDir = node.kind === "dir";
   const paddingLeft = 6 + depth * 9;
 
@@ -32,7 +31,11 @@ function TreeNode({ node, depth }: { node: LandingEditorTreeNode; depth: number 
         ) : (
           <span className="size-2.5 shrink-0" aria-hidden />
         )}
-        <Icon className="size-3 shrink-0 text-foreground/55" aria-hidden strokeWidth={1.75} />
+        {createElement(workspaceExplorerIcon(node.name, node.kind), {
+          className: "size-3 shrink-0 text-foreground/55",
+          "aria-hidden": true,
+          strokeWidth: 1.75,
+        })}
         <span className="truncate">{node.name}</span>
       </div>
       {node.children?.map((child) => (
@@ -54,3 +57,4 @@ export function LandingEditorFileTree({ root, className }: LandingEditorFileTree
     </div>
   );
 }
+import { createElement } from "react";

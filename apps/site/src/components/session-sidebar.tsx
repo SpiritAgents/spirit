@@ -534,7 +534,7 @@ function SessionListNav({
     return nav;
   }
 
-  const busy = (contextMenuSession ?? contextMenuSessionRef.current)?.isBusy === true;
+  const busy = contextMenuSession?.isBusy === true;
 
   return (
     <ContextMenu onOpenChange={onContextMenuOpenChange}>
@@ -604,10 +604,8 @@ function WorkspaceListNav({
     return inner;
   }
 
-  const isWorkspaceTarget = Boolean(
-    contextMenuWorkspaceGroup ?? contextMenuWorkspaceGroupRef.current,
-  );
-  const sessionTarget = contextMenuSession ?? contextMenuSessionRef.current;
+  const isWorkspaceTarget = Boolean(contextMenuWorkspaceGroup);
+  const sessionTarget = contextMenuSession;
   const sessionBusy = sessionTarget?.isBusy === true;
 
   return (
@@ -765,7 +763,7 @@ function SessionSidebarInner({
   disabled,
   unseenCompletedSessionPaths,
 }: SessionSidebarProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { messages } = useI18n();
   const previewSettingsTabs = useMemo(
     () =>
@@ -797,10 +795,7 @@ function SessionSidebarInner({
     () => partitionSessionsForSidebar(sessions, userHomeDirectory),
     [sessions, userHomeDirectory],
   );
-  const workspaceGroups = useMemo(
-    () => buildWorkspaceGroups(bound, undefined),
-    [bound, i18n.language],
-  );
+  const workspaceGroups = useMemo(() => buildWorkspaceGroups(bound, undefined), [bound]);
   const unboundSessions = useMemo(() => sortSessionsByModified(unbound), [unbound]);
   const [collapsedWorkspaceIds, setCollapsedWorkspaceIds] = useState(
     readWorkspaceSidebarExpandedById,
@@ -825,10 +820,10 @@ function SessionSidebarInner({
     useState<SessionWorkspaceGroup | null>(null);
   const contextMenuWorkspaceGroupRef = useRef<SessionWorkspaceGroup | null>(null);
   const scrollFadeRegionRef = useRef<HTMLDivElement>(null);
-  const [scrollEdgeFades, setScrollEdgeFades] = useState<SidebarScrollEdgeFades>({
-    top: false,
-    bottom: false,
-  });
+  const [scrollFadeResult, setScrollFadeResult] = useState<{
+    key: string;
+    fades: SidebarScrollEdgeFades;
+  } | null>(null);
   const sessionByPath = useMemo(() => {
     const map = new Map<string, SessionListItem>();
     for (const session of sessions) {
@@ -932,34 +927,33 @@ function SessionSidebarInner({
     activeFilePath !== null &&
     samePath(sessionPath, activeFilePath);
 
-  useEffect(() => {
-    if (!activeFilePath) {
-      return;
-    }
+  if (activeFilePath) {
     const unboundIndex = unboundSessions.findIndex((session) =>
       samePath(session.path, activeFilePath),
     );
     if (unboundIndex >= 0) {
       const needed = visibleCountForSessionIndex(unboundIndex);
-      setUnboundVisibleCount((current) => (current >= needed ? current : needed));
-      return;
-    }
-    for (const group of workspaceGroups) {
-      const index = group.sessions.findIndex((session) => samePath(session.path, activeFilePath));
-      if (index < 0) {
-        continue;
+      if (unboundVisibleCount < needed) {
+        setUnboundVisibleCount(needed);
       }
-      const needed = visibleCountForSessionIndex(index);
-      setVisibleCountByWorkspaceGroupId((current) => {
-        const previous = current[group.id] ?? SIDEBAR_SESSION_PAGE_SIZE;
-        if (previous >= needed) {
-          return current;
+    } else {
+      for (const group of workspaceGroups) {
+        const index = group.sessions.findIndex((session) => samePath(session.path, activeFilePath));
+        if (index < 0) {
+          continue;
         }
-        return { ...current, [group.id]: needed };
-      });
-      return;
+        const needed = visibleCountForSessionIndex(index);
+        const previous = visibleCountByWorkspaceGroupId[group.id] ?? SIDEBAR_SESSION_PAGE_SIZE;
+        if (previous < needed) {
+          setVisibleCountByWorkspaceGroupId({
+            ...visibleCountByWorkspaceGroupId,
+            [group.id]: needed,
+          });
+        }
+        break;
+      }
     }
-  }, [activeFilePath, unboundSessions, workspaceGroups]);
+  }
 
   const loadMoreWorkspaceGroupSessions = useCallback((groupId: string, total: number) => {
     setVisibleCountByWorkspaceGroupId((current) => {
@@ -977,13 +971,28 @@ function SessionSidebarInner({
     );
   }, [unboundSessions.length]);
 
+  const suppressScrollFade = !settingsMode && narrow;
+  const scrollFadeLayoutKey = JSON.stringify([
+    translucency,
+    settingsTab,
+    extensionSettingsId,
+    extensionSettingsItems.length,
+    sessions.length,
+    workspaceGroups.length,
+    unboundSessions.length,
+    collapsedWorkspaceIds,
+    workspaceSectionExpanded,
+    noWorkspaceSectionExpanded,
+  ]);
+  const scrollEdgeFades = suppressScrollFade
+    ? { top: false, bottom: false }
+    : scrollFadeResult?.key === scrollFadeLayoutKey
+      ? scrollFadeResult.fades
+      : { top: false, bottom: false };
   useEffect(() => {
-    const suppressScrollFade = !settingsMode && narrow;
     if (suppressScrollFade) {
-      setScrollEdgeFades({ top: false, bottom: false });
       return;
     }
-
     const region = scrollFadeRegionRef.current;
     if (!region) {
       return;
@@ -995,7 +1004,10 @@ function SessionSidebarInner({
     }
 
     const syncScrollEdgeFades = () => {
-      setScrollEdgeFades(readSidebarScrollEdgeFades(viewport));
+      setScrollFadeResult({
+        key: scrollFadeLayoutKey,
+        fades: readSidebarScrollEdgeFades(viewport),
+      });
     };
 
     syncScrollEdgeFades();
@@ -1011,20 +1023,7 @@ function SessionSidebarInner({
       viewport.removeEventListener("scroll", syncScrollEdgeFades);
       resizeObserver.disconnect();
     };
-  }, [
-    translucency,
-    settingsMode,
-    narrow,
-    settingsTab,
-    extensionSettingsId,
-    extensionSettingsItems.length,
-    sessions.length,
-    workspaceGroups.length,
-    unboundSessions.length,
-    collapsedWorkspaceIds,
-    workspaceSectionExpanded,
-    noWorkspaceSectionExpanded,
-  ]);
+  }, [suppressScrollFade, scrollFadeLayoutKey]);
 
   const setWorkspaceGroupExpanded = useCallback((groupId: string, open: boolean) => {
     setCollapsedWorkspaceIds((current) => {

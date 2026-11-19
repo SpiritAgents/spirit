@@ -1,6 +1,6 @@
 import { Globe } from "@spiritagent/icons/globe";
 import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
 import { FileText, GitBranch, Terminal } from "lucide-react";
@@ -117,7 +117,9 @@ export function WorkspaceToolsDock({
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const dragCursor = useDragResizeCursor();
   const latestWidthPxRef = useRef(widthPx);
-  latestWidthPxRef.current = widthPx;
+  useLayoutEffect(() => {
+    latestWidthPxRef.current = widthPx;
+  }, [widthPx]);
   const [viewportMaxWidthPx, setViewportMaxWidthPx] = useState(computeWorkspaceToolsMaxWidthPx);
   const maxWidthPx = maxWidthPxProp ?? viewportMaxWidthPx;
   const dockWidthPx = open ? widthPx + 4 : 0;
@@ -138,11 +140,9 @@ export function WorkspaceToolsDock({
     return () => window.removeEventListener("resize", onWindowResize);
   }, [maxWidthPxProp]);
 
-  useEffect(() => {
-    if (!open) {
-      setIsResizing(false);
-    }
-  }, [open]);
+  if (!open && isResizing) {
+    setIsResizing(false);
+  }
 
   const clampWidth = useCallback(
     (value: number) => Math.min(maxWidthPx, Math.max(minWidthPx, value)),

@@ -128,12 +128,14 @@ export function SiteNav() {
   // hide it. Reopening mid-collapse cancels the pending hide, so nothing flickers.
   useEffect(() => {
     if (openMenu !== null) {
-      setVisibleMenu(openMenu);
       return;
     }
     const timer = window.setTimeout(() => setVisibleMenu(null), SITE_MEGA_PANEL_DURATION_MS);
     return () => window.clearTimeout(timer);
   }, [openMenu]);
+  if (openMenu !== null && visibleMenu !== openMenu) {
+    setVisibleMenu(openMenu);
+  }
 
   useEffect(() => {
     if (!openMenu) return;

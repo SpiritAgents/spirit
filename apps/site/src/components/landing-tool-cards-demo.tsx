@@ -28,6 +28,14 @@ export function LandingToolCardsDemo({ className }: LandingToolCardsDemoProps) {
   const timersRef = useRef<number[]>([]);
   const streamIntervalRef = useRef<number | null>(null);
   const animatedIdsRef = useRef(new Set<string>());
+  const [previousInView, setPreviousInView] = useState(inView);
+  if (previousInView !== inView) {
+    setPreviousInView(inView);
+    if (!inView) {
+      setSnapshot(createInitialToolCardsSnapshot());
+      setEnteringItemId(null);
+    }
+  }
 
   const items = useMemo(() => buildToolCardsDemoItems(snapshot, copy), [snapshot, copy]);
 
@@ -158,8 +166,6 @@ export function LandingToolCardsDemo({ className }: LandingToolCardsDemoProps) {
     clearTimers();
 
     if (!inView) {
-      setSnapshot(createInitialToolCardsSnapshot());
-      setEnteringItemId(null);
       animatedIdsRef.current.clear();
       return clearTimers;
     }

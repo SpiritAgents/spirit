@@ -43,18 +43,25 @@ function WindowDialog({
 
   React.useEffect(() => {
     if (open) {
-      setPresent(true);
-      setState("open");
       return;
     }
 
-    setState("closed");
     const timeoutId = window.setTimeout(() => {
       setPresent(false);
     }, RADIX_OVERLAY_CLOSE_MS);
 
     return () => window.clearTimeout(timeoutId);
   }, [open]);
+  if (open) {
+    if (!present) {
+      setPresent(true);
+    }
+    if (state !== "open") {
+      setState("open");
+    }
+  } else if (state !== "closed") {
+    setState("closed");
+  }
 
   const value = React.useMemo(
     () => ({
