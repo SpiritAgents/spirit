@@ -221,9 +221,12 @@ export function DesktopLayoutChromeBar({
     trimmedSessionTitle,
   ]);
 
-  useEffect(() => {
+  const [previousRenameSessionPath, setPreviousRenameSessionPath] =
+    useState(trimmedRenameSessionPath);
+  if (previousRenameSessionPath !== trimmedRenameSessionPath) {
+    setPreviousRenameSessionPath(trimmedRenameSessionPath);
     handleRenameCancel();
-  }, [handleRenameCancel, trimmedRenameSessionPath]);
+  }
 
   const dismissDeleteSessionDialog = useCallback((afterClose?: () => void) => {
     setDeleteSessionDialogOpen(false);

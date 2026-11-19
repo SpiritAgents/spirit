@@ -90,7 +90,11 @@ export function WorkspaceGitTab({
   const latestChangesPaneHeightPxRef = useRef<number | null>(null);
   const [changesPaneHeightPx, setChangesPaneHeightPx] = useState<number | null>(null);
   const splitDragCursor = useDragResizeCursor();
-  latestChangesPaneHeightPxRef.current = changesPaneHeightPx;
+  useLayoutEffect(() => {
+    latestChangesPaneHeightPxRef.current = changesPaneHeightPx;
+  }, [changesPaneHeightPx]);
+  const [splitContainerHeightPx, setSplitContainerHeightPx] = useState(0);
+  const lastWorkingTreeRevisionRef = useRef<number | undefined>(undefined);
   const [isResizingSplit, setIsResizingSplit] = useState(false);
   const splitDragRef = useRef<{ startY: number; startHeight: number } | null>(null);
   const hasInitializedSplitFromStorageRef = useRef(false);
@@ -118,6 +122,7 @@ export function WorkspaceGitTab({
       if (containerHeight <= 0 || panelHidden) {
         return;
       }
+      setSplitContainerHeightPx(containerHeight);
       setChangesPaneHeightPx((prev) => {
         const storedRatio = readGitChangesPaneRatio(containerHeight);
         const next = !hasInitializedSplitFromStorageRef.current
@@ -296,7 +301,13 @@ export function WorkspaceGitTab({
       prevTabActiveRef.current = false;
       return;
     }
-    void loadWorkingTree();
+    const revision = gitSnapshot?.revision;
+    if (prevTabActiveRef.current && lastWorkingTreeRevisionRef.current === revision) {
+      return;
+    }
+    prevTabActiveRef.current = true;
+    lastWorkingTreeRevisionRef.current = revision;
+    queueMicrotask(() => void loadWorkingTree());
   }, [isActive, loadWorkingTree, gitSnapshot?.revision]);
 
   useEffect(() => {
@@ -318,7 +329,7 @@ export function WorkspaceGitTab({
     if (becameActive || branchChanged || clearedChanges) {
       void loadHistory();
     }
-  }, [isActive, loadHistory, gitSnapshot?.revision, gitSnapshot?.branch, gitSnapshot?.hasChanges]);
+  }, [isActive, loadHistory, gitSnapshot?.branch, gitSnapshot?.hasChanges]);
 
   useEffect(() => {
     return () => {
@@ -427,10 +438,7 @@ export function WorkspaceGitTab({
           cursor: resizeCursor(
             changesPaneHeightPx ?? GIT_CHANGES_MIN_PX,
             GIT_CHANGES_MIN_PX,
-            (splitContainerRef.current?.clientHeight ?? 0) -
-              GIT_HISTORY_MIN_PX -
-              GIT_HISTORY_HEADER_PX -
-              GIT_SPLITTER_PX,
+            splitContainerHeightPx - GIT_HISTORY_MIN_PX - GIT_HISTORY_HEADER_PX - GIT_SPLITTER_PX,
             "down",
           ),
         }}

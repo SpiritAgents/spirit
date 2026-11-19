@@ -101,9 +101,9 @@ function AnimatedCollapseContent({
   const outerRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   /** Mounted already open: skip the first expand animation (settings return / app restart). */
-  const allowAnimationRef = useRef(!open);
-  const hasOpenedRef = useRef(false);
-  const prevOpenRef = useRef(open);
+  const [allowAnimation, setAllowAnimation] = useState(!open);
+  const [hasOpened, setHasOpened] = useState(open);
+  const [previousOpen, setPreviousOpen] = useState(open);
   // After the expand animation ends, remove the animation class and hand the height back to layout
   // (auto). fill-mode:forwards would pin the height permanently to var(--…-content-height); from
   // then on, nested collapsing-card animations could only chase the variable via RO writes every
@@ -113,20 +113,24 @@ function AnimatedCollapseContent({
   const [expandSettled, setExpandSettled] = useState(false);
   const mounted = useCollapsibleChildMount(open);
 
-  if (prevOpenRef.current !== open) {
-    allowAnimationRef.current = true;
-  }
-  if (open) {
-    hasOpenedRef.current = true;
-  }
-  const shouldAnimate = allowAnimationRef.current && hasOpenedRef.current;
-
-  useLayoutEffect(() => {
-    prevOpenRef.current = open;
+  if (previousOpen !== open) {
+    setPreviousOpen(open);
+    setAllowAnimation(true);
     setExpandSettled(false);
-  }, [open]);
+  }
+  if (open && !hasOpened) {
+    setHasOpened(true);
+  }
+  const shouldAnimate = allowAnimation && hasOpened;
+
+  const previousStyleOpenRef = useRef(open);
 
   useLayoutEffect(() => {
+    const openChanged = previousStyleOpenRef.current !== open;
+    previousStyleOpenRef.current = open;
+    if (!openChanged) {
+      return;
+    }
     const outer = outerRef.current;
     if (!outer) {
       return;
@@ -136,6 +140,7 @@ function AnimatedCollapseContent({
     outer.style.removeProperty("animation");
   }, [open]);
 
+  const previousHeightInputsRef = useRef<{ open: boolean; children: ReactNode } | null>(null);
   useLayoutEffect(() => {
     const outer = outerRef.current;
     const inner = innerRef.current;
@@ -147,7 +152,12 @@ function AnimatedCollapseContent({
       outer.style.setProperty("--spirit-collapsible-content-height", `${inner.scrollHeight}px`);
     };
 
-    syncHeight();
+    const previous = previousHeightInputsRef.current;
+    const inputsChanged = !previous || previous.open !== open || previous.children !== children;
+    previousHeightInputsRef.current = { open, children };
+    if (inputsChanged) {
+      syncHeight();
+    }
 
     const observer = new ResizeObserver(() => {
       syncHeight();

@@ -120,17 +120,21 @@ export function ExtensionViewHost({
   }, [sessionKey]);
   useEffect(() => () => closeAllOpenExtensionViews(), []);
 
+  const openExtensionId = openRequest?.extensionId;
+  const openViewId = openRequest?.viewId;
+  const openRequestId = openRequest?.requestId;
+  const openChannelId = openRequest?.channelId;
   const identity = useMemo(
     () =>
-      openRequest
+      openExtensionId && openViewId && openRequestId && openChannelId
         ? {
-            extensionId: openRequest.extensionId,
-            contributionId: openRequest.viewId,
-            instanceId: openRequest.requestId,
-            channelId: openRequest.channelId,
+            extensionId: openExtensionId,
+            contributionId: openViewId,
+            instanceId: openRequestId,
+            channelId: openChannelId,
           }
         : null,
-    [openRequest?.extensionId, openRequest?.viewId, openRequest?.requestId, openRequest?.channelId],
+    [openExtensionId, openViewId, openRequestId, openChannelId],
   );
 
   const sendContext = useCallback(() => {
@@ -148,12 +152,14 @@ export function ExtensionViewHost({
     );
   }, [identity, openRequest?.params, dialogOpen, i18n.resolvedLanguage, i18n.language]);
 
-  useEffect(() => {
+  const [previousIdentity, setPreviousIdentity] = useState(identity);
+  if (previousIdentity !== identity) {
+    setPreviousIdentity(identity);
     if (identity) {
       setStatus("loading");
       setFrameHeight(undefined);
     }
-  }, [identity]);
+  }
   useEffect(() => {
     if (!identity || status !== "loading") return;
     const timer = setTimeout(() => setStatus("error"), 10_000);

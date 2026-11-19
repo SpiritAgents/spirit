@@ -40,7 +40,6 @@ export function useScrollTopBandOcclusion(
 
   useLayoutEffect(() => {
     if (!bandElement) {
-      setBandHeight(null);
       return;
     }
     const sync = () => {
@@ -54,7 +53,6 @@ export function useScrollTopBandOcclusion(
 
   useLayoutEffect(() => {
     if (!enabled || bandHeight == null || bandHeight <= 0 || !scrollAreaRoot) {
-      setOcclusionStyle(undefined);
       return;
     }
     const root = scrollAreaRoot;
@@ -68,9 +66,14 @@ export function useScrollTopBandOcclusion(
     return () => {
       observer.disconnect();
       window.removeEventListener("resize", sync);
-      setOcclusionStyle(undefined);
     };
   }, [bandHeight, enabled, scrollAreaRoot]);
 
-  return { occlusionStyle, bandHeight };
+  return {
+    occlusionStyle:
+      enabled && bandHeight != null && bandHeight > 0 && scrollAreaRoot
+        ? occlusionStyle
+        : undefined,
+    bandHeight: bandElement ? bandHeight : null,
+  };
 }

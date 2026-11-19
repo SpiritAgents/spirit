@@ -295,7 +295,7 @@ export function ShellToolXtermOutput({
       }
     }
     writtenDisplayRef.current = nextDisplay;
-  }, [text, followTail]);
+  }, [text]);
 
   const quoteMenuEnabled = Boolean(quoteActions?.onMessageQuoteAddToChat);
   const {

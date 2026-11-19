@@ -1,6 +1,6 @@
 import { Copy } from "@spiritagent/icons/copy";
 import { Check } from "@spiritagent/icons/check";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n/provider";
@@ -57,7 +57,11 @@ function scrollDurationMs(distancePx: number): number {
 export function DownloadCopyInstallButton({ className }: DownloadCopyInstallButtonProps) {
   const { messages } = useI18n();
   const [copied, setCopied] = useState(false);
-  const [command, setCommand] = useState(SPIRIT_CLI_INSTALL_CURL);
+  const command = useSyncExternalStore(
+    () => () => {},
+    resolveSpiritCliInstallCommand,
+    () => SPIRIT_CLI_INSTALL_CURL,
+  );
   const [overflowPx, setOverflowPx] = useState(0);
   const [offsetPx, setOffsetPx] = useState(0);
   const [maskAnimated, setMaskAnimated] = useState(false);
@@ -66,10 +70,7 @@ export function DownloadCopyInstallButton({ className }: DownloadCopyInstallButt
   const textRef = useRef<HTMLSpanElement>(null);
   const offsetRef = useRef(0);
   const rafRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    setCommand(resolveSpiritCliInstallCommand());
-  }, []);
+  const previousCommandRef = useRef(command);
 
   useEffect(() => {
     if (!copied) {
@@ -95,7 +96,11 @@ export function DownloadCopyInstallButton({ className }: DownloadCopyInstallButt
       }
     };
 
-    measure();
+    const commandChanged = previousCommandRef.current !== command;
+    previousCommandRef.current = command;
+    if (commandChanged) {
+      measure();
+    }
     void document.fonts.ready.then(measure);
 
     const observer = new ResizeObserver(measure);

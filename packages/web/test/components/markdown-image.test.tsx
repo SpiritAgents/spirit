@@ -197,3 +197,24 @@ test("raw Markdown img width survives the full pipeline", async () => {
   });
   expect(container.querySelector("img")?.style.width).toBe("120px");
 });
+
+test("managed images without a preview reader show the host error immediately", () => {
+  const { container } = render(
+    <MarkdownImage src={`${product.urlProtocol}://generated/image/demo.png`} alt="Spirit" />,
+  );
+
+  expect(container.textContent).toContain("does not support previewing");
+});
+
+test("managed images enter loading before the preview reader resolves", () => {
+  const pending = new Promise<string | null>(() => {});
+  const { container } = render(
+    <MarkdownImage
+      src={`${product.urlProtocol}://generated/image/demo.png`}
+      alt="Spirit"
+      readManagedImagePreviewDataUrl={() => pending}
+    />,
+  );
+
+  expect(container.textContent).toContain("Loading image");
+});

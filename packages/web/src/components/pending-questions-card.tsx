@@ -1,7 +1,7 @@
 import { ChevronLeft } from "@spiritagent/icons/chevron-left";
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -82,10 +82,11 @@ export function PendingQuestionsCard({
   const { t } = useTranslation();
   const questions = pendingQuestions.request.questions;
   const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
+  const [currentToolCallId, setCurrentToolCallId] = useState(pendingQuestions.toolCallId);
+  if (currentToolCallId !== pendingQuestions.toolCallId) {
+    setCurrentToolCallId(pendingQuestions.toolCallId);
     setCurrentIndex(0);
-  }, [pendingQuestions.toolCallId]);
+  }
 
   const question = questions[currentIndex];
   if (!question) {

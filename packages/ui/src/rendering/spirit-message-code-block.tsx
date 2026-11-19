@@ -44,10 +44,9 @@ export function SpiritMessageCodeBlock({
   const resolvedLanguage = resolveHighlightLanguage(codePlugin, language);
   const normalizedCode = useMemo(() => trimTrailingNewlines(code), [code]);
   const plainResult = useMemo(() => plainHighlightResult(normalizedCode), [normalizedCode]);
-  const [result, setResult] = useState<TokensResult>(plainResult);
+  const [result, setResult] = useState<{ input: string; value: TokensResult } | null>(null);
 
   useEffect(() => {
-    setResult(plainResult);
     if (!resolvedLanguage) {
       return;
     }
@@ -55,18 +54,21 @@ export function SpiritMessageCodeBlock({
     const syncResult = codePlugin.highlight(
       { code: normalizedCode, language: resolvedLanguage, themes },
       (highlighted) => {
-        setResult(highlighted as TokensResult);
+        setResult({ input: normalizedCode, value: highlighted as TokensResult });
       },
     );
     if (syncResult) {
-      setResult(syncResult as TokensResult);
+      queueMicrotask(() => {
+        setResult({ input: normalizedCode, value: syncResult as TokensResult });
+      });
     }
-  }, [codePlugin, normalizedCode, plainResult, resolvedLanguage, themes]);
+  }, [codePlugin, normalizedCode, resolvedLanguage, themes]);
+  const displayResult = result?.input === normalizedCode ? result.value : plainResult;
 
   return (
     <CodeBlockContainer isIncomplete={isIncomplete} language={language}>
       <ScrollArea scrollbars="horizontal" className="w-full">
-        {renderHighlightedCodeBody(result)}
+        {renderHighlightedCodeBody(displayResult)}
       </ScrollArea>
     </CodeBlockContainer>
   );

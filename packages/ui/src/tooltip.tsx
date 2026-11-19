@@ -10,6 +10,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   useSyncExternalStore,
   type ComponentProps,
   type CSSProperties,
@@ -298,13 +299,15 @@ function GlobalTooltipContentHost() {
     getTooltipContentHostRevision,
     getTooltipContentHostRevision,
   );
-  const lastRegistrationIdRef = useRef<string | null>(null);
+  const [lastRegistrationId, setLastRegistrationId] = useState<string | null>(null);
 
   if (global.activeRegistrationId) {
-    lastRegistrationIdRef.current = global.activeRegistrationId;
+    if (lastRegistrationId !== global.activeRegistrationId) {
+      setLastRegistrationId(global.activeRegistrationId);
+    }
   }
 
-  const registrationId = global.activeRegistrationId ?? lastRegistrationIdRef.current;
+  const registrationId = global.activeRegistrationId ?? lastRegistrationId;
   const contentRegistration = registrationId
     ? global.getContentRegistration(registrationId)
     : undefined;
@@ -318,6 +321,15 @@ function GlobalTooltipContentHost() {
     lingerExitPosition !== null
       ? toLocalPoint(lingerExitPosition.top, lingerExitPosition.left)
       : null;
+  const handleContentRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      composeElementRef(global.contentRef, node);
+    },
+    [global],
+  );
+  const handleContentPointerEnter = useCallback(() => {
+    global.onContentPointerEnter();
+  }, [global]);
 
   if (!hasContent || !contentRegistration) {
     return null;
@@ -332,12 +344,11 @@ function GlobalTooltipContentHost() {
     resolvedClassName,
     isNonHoverableContent && "pointer-events-none",
   );
-
   if (lingerExitPosition !== null && lingerExitLocal !== null) {
     return (
       <PopoverPrimitive.Portal container={portalContainer}>
         <div
-          ref={global.contentRef}
+          ref={handleContentRef}
           id={registrationId ? tooltipContentId(registrationId) : undefined}
           role="tooltip"
           data-slot="tooltip-content"
@@ -350,7 +361,7 @@ function GlobalTooltipContentHost() {
           }}
           className={contentClassName}
           onAnimationEnd={contentRegistration.onAnimationEnd}
-          onPointerEnter={global.onContentPointerEnter}
+          onPointerEnter={handleContentPointerEnter}
         >
           {renderedChildren}
         </div>
@@ -361,7 +372,7 @@ function GlobalTooltipContentHost() {
   return (
     <PopoverPrimitive.Portal container={portalContainer}>
       <PopoverPrimitive.Content
-        ref={global.contentRef}
+        ref={handleContentRef}
         id={registrationId ? tooltipContentId(registrationId) : undefined}
         role="tooltip"
         data-slot="tooltip-content"
@@ -394,7 +405,7 @@ function GlobalTooltipContentHost() {
         {...(contentRegistration.onAnimationEnd === undefined
           ? {}
           : { onAnimationEnd: contentRegistration.onAnimationEnd })}
-        onPointerEnter={global.onContentPointerEnter}
+        onPointerEnter={handleContentPointerEnter}
       >
         {renderedChildren}
       </PopoverPrimitive.Content>
@@ -418,7 +429,9 @@ export function TooltipProvider({
   const contentRegistryRef = useRef(new Map<string, TooltipContentRegistration>());
   const lingerContentRegistryRef = useRef(new Map<string, TooltipContentRegistration>());
   const contentActiveItemRef = useRef(globalSwitch.contentActiveItem);
-  contentActiveItemRef.current = globalSwitch.contentActiveItem;
+  useLayoutEffect(() => {
+    contentActiveItemRef.current = globalSwitch.contentActiveItem;
+  }, [globalSwitch.contentActiveItem]);
   const onOpenChangeByRegistrationRef = useRef(
     new Map<string, ((open: boolean) => void) | undefined>(),
   );
@@ -495,7 +508,9 @@ export function TooltipProvider({
   );
 
   const globalSwitchRef = useRef(globalSwitch);
-  globalSwitchRef.current = globalSwitch;
+  useLayoutEffect(() => {
+    globalSwitchRef.current = globalSwitch;
+  }, [globalSwitch]);
   const stableActionsValue = useMemo(
     (): TooltipStableActionsValue => ({
       getTriggerProps: (...args) => globalSwitchRef.current.getTriggerProps(...args),
@@ -699,7 +714,9 @@ function useTooltipElementRegistration<TItem>(
   actions: TooltipStableActionsValue | null,
 ) {
   const itemRef = useRef(item);
-  itemRef.current = item;
+  useLayoutEffect(() => {
+    itemRef.current = item;
+  }, [item]);
   const registrationId = registration?.registrationId;
   const itemId = registration && item !== null ? registration.getItemId(item) : null;
   const openDelayMs = registration?.openDelayMs ?? 0;
@@ -924,9 +941,11 @@ function TooltipContent({
   const stableRegistration = useTooltipStableRegistration();
   const { registrationId } = useTooltipRegistrationContext();
   const childrenRef = useRef(children);
-  childrenRef.current = children;
   const resolveClassNameRef = useRef(resolveClassName);
-  resolveClassNameRef.current = resolveClassName;
+  useLayoutEffect(() => {
+    childrenRef.current = children;
+    resolveClassNameRef.current = resolveClassName;
+  }, [children, resolveClassName]);
   useLayoutEffect(() => {
     bumpTooltipContentHostRevision();
   });

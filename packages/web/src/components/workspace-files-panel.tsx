@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type DragEvent,
@@ -256,7 +257,7 @@ function ExplorerRow({
       focusRenameInput(input, target.name);
     });
     return () => cancelAnimationFrame(frame);
-  }, [renaming, target.relativePath]);
+  }, [renaming, target.name]);
 
   const handleRenameKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
@@ -538,7 +539,9 @@ export function WorkspaceFilesPanel({
   const explorerRootTriggerRef = useRef<HTMLButtonElement>(null);
   const prevGitRevisionRef = useRef<number | undefined>(undefined);
   const cacheRef = useRef(cache);
-  cacheRef.current = cache;
+  useLayoutEffect(() => {
+    cacheRef.current = cache;
+  }, [cache]);
 
   const dismissDeleteDialog = useCallback(() => {
     setDeleteDialogOpen(false);
@@ -613,19 +616,23 @@ export function WorkspaceFilesPanel({
   );
 
   const loadDirRef = useRef(loadDir);
-  loadDirRef.current = loadDir;
+  useLayoutEffect(() => {
+    loadDirRef.current = loadDir;
+  }, [loadDir]);
 
-  useEffect(() => {
-    if (!workspaceRoot.trim()) {
-      setCache({});
-      setExpanded({});
-      return;
-    }
+  const [previousWorkspaceRoot, setPreviousWorkspaceRoot] = useState(workspaceRoot);
+  if (previousWorkspaceRoot !== workspaceRoot) {
+    setPreviousWorkspaceRoot(workspaceRoot);
     setCache({});
     setExpanded({});
     setRootOpen(true);
     setFocusedDirectoryRel(null);
-    void loadDirRef.current("");
+  }
+  useEffect(() => {
+    prevGitRevisionRef.current = undefined;
+    if (workspaceRoot.trim()) {
+      queueMicrotask(() => void loadDirRef.current(""));
+    }
   }, [workspaceRoot]);
 
   // When the git revision changes, re-fetch the ignore flags of cached directories in the
@@ -660,23 +667,19 @@ export function WorkspaceFilesPanel({
     }
   }, [gitRevision, workspaceRoot, listExplorerChildren]);
 
-  useEffect(() => {
-    prevGitRevisionRef.current = undefined;
-  }, [workspaceRoot]);
-
-  useEffect(() => {
-    if (expandDirectoryNonce <= 0) {
-      return;
-    }
-
+  const [handledExpandNonce, setHandledExpandNonce] = useState(expandDirectoryNonce);
+  const directoriesToExpand = useMemo(() => {
+    const directories = [""];
     const segments = expandDirectoryPath.split("/").filter((segment) => segment.length > 0);
-    const directoriesToExpand = [""];
     let current = "";
     for (const segment of segments) {
       current = current ? `${current}/${segment}` : segment;
-      directoriesToExpand.push(current);
+      directories.push(current);
     }
-
+    return directories;
+  }, [expandDirectoryPath]);
+  if (expandDirectoryNonce > 0 && handledExpandNonce !== expandDirectoryNonce) {
+    setHandledExpandNonce(expandDirectoryNonce);
     setRootOpen(true);
     setFocusedDirectoryRel(expandDirectoryPath);
     setExpanded((previous) => {
@@ -686,11 +689,15 @@ export function WorkspaceFilesPanel({
       }
       return next;
     });
-
-    for (const directory of directoriesToExpand) {
-      void loadDir(directory);
+  }
+  useEffect(() => {
+    if (expandDirectoryNonce <= 0) {
+      return;
     }
-  }, [expandDirectoryNonce, expandDirectoryPath, loadDir]);
+    for (const directory of directoriesToExpand) {
+      queueMicrotask(() => void loadDir(directory));
+    }
+  }, [expandDirectoryNonce, directoriesToExpand, loadDir]);
 
   const getExplorerDirEntries = useCallback(
     (relativePath: string): WorkspaceExplorerEntry[] | undefined => {

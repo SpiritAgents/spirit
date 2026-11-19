@@ -71,25 +71,23 @@ export function useMessageRewind({
     runtime.readLocalImagePreviewDataUrl,
   );
 
-  useEffect(() => {
-    if (!rewindDraft) {
-      return;
-    }
+  if (rewindDraft) {
     const anchor = messages[rewindDraft.listIndex];
     const stillAvailable = anchor?.id === rewindDraft.messageId && anchor.canRewind === true;
     if (!stillAvailable) {
       setRewindDraft(null);
     }
-  }, [messages, rewindDraft]);
+  }
 
+  const rewindFocusKey = rewindDraft ? `${rewindDraft.listIndex}:${rewindDraft.messageId}` : null;
   useLayoutEffect(() => {
-    if (!rewindDraft) {
+    if (rewindFocusKey === null) {
       return;
     }
     const focus = () => rewindRichInputRef.current?.focusAtEnd();
     queueMicrotask(focus);
     requestAnimationFrame(focus);
-  }, [rewindDraft?.listIndex, rewindDraft?.messageId]);
+  }, [rewindFocusKey]);
 
   const startMessageRewind = useCallback(
     (message: ConversationMessageSnapshot, listIndex: number) => {
@@ -183,7 +181,7 @@ export function useMessageRewind({
       rewindRichInputRef.current?.insertWorkspaceFileAtCaret(normalizeAttachmentPath(filePath));
       rewindRichInputRef.current?.focus();
     },
-    [attachRewindMediaFilePath, runtime.classifyLocalFileComposerRoute],
+    [attachRewindMediaFilePath, runtime],
   );
 
   const pickRewindLocalFileFromPalette = useCallback(() => {

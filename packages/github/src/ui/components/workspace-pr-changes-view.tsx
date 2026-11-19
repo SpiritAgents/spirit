@@ -290,7 +290,7 @@ function PrChangedFileCard({
       return;
     }
     return installContainedSelectAll(diffRoot);
-  }, [file.filename, file.patch, mounted]);
+  }, [file.patch, mounted]);
 
   useWorkspaceToolsShellHorizontalDivider(
     stickyHeaderRef,
@@ -489,7 +489,9 @@ export function WorkspacePrChangesView({
     },
   );
 
-  latestTreeWidthPxRef.current = treeWidthPx;
+  useLayoutEffect(() => {
+    latestTreeWidthPxRef.current = treeWidthPx;
+  }, [treeWidthPx]);
   const treeDragCursor = useDragResizeCursor();
 
   const maxTreeWidthPx = useMemo(
@@ -517,14 +519,11 @@ export function WorkspacePrChangesView({
     const observer = new ResizeObserver(syncContainerWidth);
     observer.observe(container);
     return () => observer.disconnect();
-  }, [files.length]);
+  }, []);
 
-  useEffect(() => {
-    if (treeWidthPx <= maxTreeWidthPx) {
-      return;
-    }
+  if (treeWidthPx > maxTreeWidthPx) {
     setTreeWidthPx(clampTreeWidth(treeWidthPx));
-  }, [clampTreeWidth, maxTreeWidthPx, treeWidthPx]);
+  }
 
   const onTreeResizePointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
@@ -574,7 +573,7 @@ export function WorkspacePrChangesView({
         // already released
       }
     },
-    [treeDragCursor],
+    [treeDragCursor, writePrChangesTreeWidthPx],
   );
 
   const navigateToFile = useCallback((filename: string) => {

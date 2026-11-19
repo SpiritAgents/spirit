@@ -163,16 +163,17 @@ export function WorkspaceFilesPanel({
     [listExplorerChildren],
   );
 
-  useEffect(() => {
-    if (!workspaceRoot.trim()) {
-      setCache({});
-      setExpanded({});
-      return;
-    }
+  const [previousWorkspaceRoot, setPreviousWorkspaceRoot] = useState(workspaceRoot);
+  if (previousWorkspaceRoot !== workspaceRoot) {
+    setPreviousWorkspaceRoot(workspaceRoot);
     setCache({});
     setExpanded({});
     setRootOpen(true);
-    void loadDir("");
+  }
+  useEffect(() => {
+    if (workspaceRoot.trim()) {
+      queueMicrotask(() => void loadDir(""));
+    }
   }, [workspaceRoot, loadDir]);
 
   const onToggleDir = useCallback(

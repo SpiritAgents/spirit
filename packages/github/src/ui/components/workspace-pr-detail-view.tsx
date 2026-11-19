@@ -160,7 +160,10 @@ export function WorkspacePrDetailView({
   const latestOverviewPaneHeightPxRef = useRef<number | null>(null);
   const [overviewPaneHeightPx, setOverviewPaneHeightPx] = useState<number | null>(null);
   const overviewDragCursor = useDragResizeCursor();
-  latestOverviewPaneHeightPxRef.current = overviewPaneHeightPx;
+  useLayoutEffect(() => {
+    latestOverviewPaneHeightPxRef.current = overviewPaneHeightPx;
+  }, [overviewPaneHeightPx]);
+  const [splitContainerHeightPx, setSplitContainerHeightPx] = useState(0);
   const [isResizingOverviewSplit, setIsResizingOverviewSplit] = useState(false);
   const overviewSplitDragRef = useRef<{ startY: number; startHeight: number } | null>(null);
   const hasInitializedOverviewSplitRef = useRef(false);
@@ -187,6 +190,7 @@ export function WorkspacePrDetailView({
       if (containerHeight <= 0 || panelHidden) {
         return;
       }
+      setSplitContainerHeightPx(containerHeight);
       setOverviewPaneHeightPx((prev) => {
         const storedRatio = readPrOverviewPaneRatio(containerHeight);
         const next = !hasInitializedOverviewSplitRef.current
@@ -204,7 +208,7 @@ export function WorkspacePrDetailView({
     const observer = new ResizeObserver(syncDefaultHeight);
     observer.observe(container);
     return () => observer.disconnect();
-  }, [clampOverviewPaneHeight]);
+  }, [clampOverviewPaneHeight, readPrOverviewPaneRatio]);
 
   useWorkspaceToolsShellHorizontalDivider(
     overviewTabsSplitterRef,
@@ -238,7 +242,7 @@ export function WorkspacePrDetailView({
       );
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [clampOverviewPaneHeight, overviewDragCursor, overviewPaneHeightPx],
+    [clampOverviewPaneHeight, overviewDragCursor, overviewPaneHeightPx, readPrOverviewPaneRatio],
   );
 
   const onOverviewSplitResizePointerMove = useCallback(
@@ -278,7 +282,7 @@ export function WorkspacePrDetailView({
         // already released
       }
     },
-    [overviewDragCursor],
+    [overviewDragCursor, writePrOverviewPaneRatio],
   );
 
   return (
@@ -380,9 +384,7 @@ export function WorkspacePrDetailView({
           cursor: resizeCursor(
             overviewPaneHeightPx ?? PR_OVERVIEW_MIN_PX,
             PR_OVERVIEW_MIN_PX,
-            (splitContainerRef.current?.clientHeight ?? 0) -
-              PR_TABS_SECTION_MIN_PX -
-              PR_OVERVIEW_SPLITTER_PX,
+            splitContainerHeightPx - PR_TABS_SECTION_MIN_PX - PR_OVERVIEW_SPLITTER_PX,
             "down",
           ),
         }}

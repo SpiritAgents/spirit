@@ -36,13 +36,22 @@ export function WorkspaceTerminalTab({
 }: WorkspaceTerminalTabProps) {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [terminal, setTerminal] = useState<Terminal | null>(null);
   const sessionScheduleFitRef = useRef<(() => void) | null>(null);
-  const [embedError, setEmbedError] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
   const bridge = typeof window !== "undefined" ? window.spiritDesktop : undefined;
   const canEmbed = Boolean(bridge?.ptyCreate);
   const trimmed = workspaceRoot.trim();
+  const terminalSessionKey = `${trimmed}\u0000${canEmbed}\u0000${retryNonce}`;
+  const [terminalResult, setTerminalResult] = useState<{
+    key: string;
+    terminal: Terminal | null;
+  }>({ key: terminalSessionKey, terminal: null });
+  const [embedErrorResult, setEmbedErrorResult] = useState<{
+    key: string;
+    message: string | null;
+  }>({ key: terminalSessionKey, message: null });
+  const terminal = terminalResult.key === terminalSessionKey ? terminalResult.terminal : null;
+  const embedError = embedErrorResult.key === terminalSessionKey ? embedErrorResult.message : null;
   const onTitleChangeRef = useRef(onTitleChange);
   const tRef = useRef(t);
   const suspendResizeRef = useRef(suspendTerminalResize);
@@ -57,8 +66,6 @@ export function WorkspaceTerminalTab({
   });
 
   useEffect(() => {
-    setEmbedError(null);
-    setTerminal(null);
     const b = typeof window !== "undefined" ? window.spiritDesktop : undefined;
     if (!trimmed || !b?.ptyCreate || !b.ptySubscribe) {
       return;
@@ -74,19 +81,24 @@ export function WorkspaceTerminalTab({
       cwd: trimmed,
       bridge: b,
       onTitleChange: (title) => onTitleChangeRef.current?.(title),
-      onEmbedError: setEmbedError,
+      onEmbedError: (message) => setEmbedErrorResult({ key: terminalSessionKey, message }),
       shellExitedMessage: (exitCode) => tRef.current("workspace.terminalExited", { exitCode }),
       isResizeSuspended: () => suspendResizeRef.current,
     });
-    setTerminal(session.terminal);
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setTerminalResult({ key: terminalSessionKey, terminal: session.terminal });
+      }
+    });
     sessionScheduleFitRef.current = session.scheduleFit;
 
     return () => {
+      cancelled = true;
       session.dispose();
-      setTerminal(null);
       sessionScheduleFitRef.current = null;
     };
-  }, [trimmed, canEmbed, retryNonce]);
+  }, [terminalSessionKey, trimmed]);
 
   useEffect(() => {
     if (!suspendTerminalResize) {
@@ -120,7 +132,7 @@ export function WorkspaceTerminalTab({
               variant="outline"
               size="sm"
               onClick={() => {
-                setEmbedError(null);
+                setEmbedErrorResult({ key: terminalSessionKey, message: null });
                 setRetryNonce((n) => n + 1);
               }}
             >

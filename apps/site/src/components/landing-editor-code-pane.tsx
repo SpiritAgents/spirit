@@ -68,37 +68,40 @@ export function LandingEditorCodePane({
   const [resetTailHtml, setResetTailHtml] = useState("");
   const resetTailTextRef = useRef("");
   const [afterHtml, setAfterHtml] = useState("");
-  const [cursorPos, setCursorPos] = useState<CursorPosition | null>(null);
+  const [cursorResult, setCursorResult] = useState<{
+    key: string;
+    position: CursorPosition | null;
+  }>({ key: "", position: null });
   const [completionsHidden, setCompletionsHidden] = useState(false);
   const contentRef = useRef<HTMLSpanElement>(null);
-  const displaySplitAtRef = useRef(solidText.length);
+  const [displaySplitAt, setDisplaySplitAt] = useState(solidText.length);
   const beforeTextRef = useRef("");
   const afterTextRef = useRef("");
-  const baseHtmlCacheRef = useRef("");
+  const [baseHtmlCache, setBaseHtmlCache] = useState("");
 
   const isBaseState = solidText === COMPLETION_DEMO_BASE && !ghostText && !resetFading;
-
-  useEffect(() => {
-    if (ghostText) {
-      displaySplitAtRef.current = solidText.length;
+  const [previousResetFading, setPreviousResetFading] = useState(resetFading);
+  if (previousResetFading !== resetFading) {
+    setPreviousResetFading(resetFading);
+    setCompletionsHidden(false);
+  }
+  if (ghostText && displaySplitAt !== solidText.length) {
+    setDisplaySplitAt(solidText.length);
+  }
+  if (isBaseState) {
+    if (displaySplitAt !== solidText.length) {
+      setDisplaySplitAt(solidText.length);
     }
-  }, [ghostText, solidText]);
-
-  useEffect(() => {
-    if (isBaseState) {
-      displaySplitAtRef.current = solidText.length;
-      resetTailTextRef.current = "";
+    if (resetTailHtml) {
       setResetTailHtml("");
     }
-  }, [isBaseState, solidText.length]);
+  }
 
   useEffect(() => {
     if (!resetFading) {
-      setCompletionsHidden(false);
       return;
     }
 
-    setCompletionsHidden(false);
     const frame = requestAnimationFrame(() => {
       setCompletionsHidden(true);
     });
@@ -108,7 +111,7 @@ export function LandingEditorCodePane({
     };
   }, [resetFading]);
 
-  const splitAt = ghostText ? solidText.length : displaySplitAtRef.current;
+  const splitAt = ghostText ? solidText.length : displaySplitAt;
 
   const beforeText = ghostText
     ? solidText
@@ -117,10 +120,11 @@ export function LandingEditorCodePane({
       : solidText.slice(0, splitAt);
 
   const afterText = ghostText ?? (isBaseState ? "" : solidText.slice(splitAt));
+  const displayedAfterHtml = afterText ? afterHtml : "";
 
   const beforeHighlightText = resetFading ? COMPLETION_DEMO_BASE : beforeText;
   const showResetTail = resetFading && solidText === FULL_COMPLETION_TEXT;
-  const showSplitLayout = Boolean(afterText && afterHtml && !resetFading);
+  const showSplitLayout = Boolean(afterText && displayedAfterHtml && !resetFading);
 
   const afterOpacity = resetFading ? 0 : ghostText ? 0.65 : 1;
   const resetTailOpacity = resetFading ? (completionsHidden ? 0 : 1) : 1;
@@ -156,15 +160,22 @@ export function LandingEditorCodePane({
     };
   }, [active, ghostText, resetFading, solidText]);
 
-  useEffect(() => {
+  const [previousActive, setPreviousActive] = useState(active);
+  if (previousActive !== active) {
+    setPreviousActive(active);
     if (!active) {
       setBeforeHtml("");
       setResetTailHtml("");
       setAfterHtml("");
+      setDisplaySplitAt(solidText.length);
+    }
+  }
+
+  useEffect(() => {
+    if (!active) {
       beforeTextRef.current = "";
       resetTailTextRef.current = "";
       afterTextRef.current = "";
-      displaySplitAtRef.current = solidText.length;
       return;
     }
 
@@ -179,7 +190,7 @@ export function LandingEditorCodePane({
             const stripped = stripShikiWrapper(html);
             setBeforeHtml(stripped);
             if (beforeHighlightText === COMPLETION_DEMO_BASE) {
-              baseHtmlCacheRef.current = stripped;
+              setBaseHtmlCache(stripped);
             }
           }
         }),
@@ -196,8 +207,6 @@ export function LandingEditorCodePane({
             }
           }),
         );
-      } else if (!cancelled) {
-        setAfterHtml("");
       }
     }
 
@@ -206,27 +215,31 @@ export function LandingEditorCodePane({
     return () => {
       cancelled = true;
     };
-  }, [active, beforeHighlightText, afterText, resetFading, solidText.length]);
+  }, [active, beforeHighlightText, afterText, resetFading]);
 
-  const displayedBeforeHtml =
-    resetFading && baseHtmlCacheRef.current ? baseHtmlCacheRef.current : beforeHtml;
-
-  useLayoutEffect(() => {
-    if (!active || !contentRef.current) {
-      setCursorPos(null);
-      return;
-    }
-
-    setCursorPos(measureTextOffset(contentRef.current, cursorCharOffset));
-  }, [
+  const displayedBeforeHtml = resetFading && baseHtmlCache ? baseHtmlCache : beforeHtml;
+  const cursorLayoutKey = JSON.stringify([
     active,
     cursorCharOffset,
     displayedBeforeHtml,
     resetTailHtml,
-    afterHtml,
+    displayedAfterHtml,
     showSplitLayout,
     showResetTail,
   ]);
+  const cursorPos = cursorResult.key === cursorLayoutKey ? cursorResult.position : null;
+
+  useLayoutEffect(() => {
+    if (!active || !contentRef.current) {
+      setCursorResult({ key: cursorLayoutKey, position: null });
+      return;
+    }
+
+    setCursorResult({
+      key: cursorLayoutKey,
+      position: measureTextOffset(contentRef.current, cursorCharOffset),
+    });
+  }, [active, cursorCharOffset, cursorLayoutKey]);
 
   return (
     <div className={cn("min-h-0 min-w-0 flex-1 overflow-hidden bg-background", className)}>
@@ -263,7 +276,7 @@ export function LandingEditorCodePane({
                       ghostText && !resetFading && "animate-in fade-in duration-300",
                     )}
                     style={{ opacity: afterOpacity }}
-                    dangerouslySetInnerHTML={{ __html: afterHtml }}
+                    dangerouslySetInnerHTML={{ __html: displayedAfterHtml }}
                   />
                 ) : null}
               </span>

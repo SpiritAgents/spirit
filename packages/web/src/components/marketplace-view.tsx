@@ -2,15 +2,7 @@ import { Globe } from "@spiritagent/icons/globe";
 import { Search } from "@spiritagent/icons/search";
 import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
-import {
-  useEffect,
-  useCallback,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ComponentRef,
-} from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ArrowLeft, Blocks, Folder, Sparkles, Store } from "lucide-react";
@@ -157,9 +149,9 @@ export function MarketplaceView({
   const [uninstallDialogOpen, setUninstallDialogOpen] = useState(false);
   /** null = list; non-null = that extension's detail page */
   const [detailExtensionId, setDetailExtensionId] = useState<string | null>(null);
-  useEffect(() => {
-    if (revealRequest) setDetailExtensionId(revealRequest.extensionId);
-  }, [revealRequest]);
+  if (revealRequest && detailExtensionId !== revealRequest.extensionId) {
+    setDetailExtensionId(revealRequest.extensionId);
+  }
   const [addSourceOpen, setAddSourceOpen] = useState(false);
   const [reviewGate, setReviewGate] = useState<ReviewGateTarget | null>(null);
   const [reviewGateOpen, setReviewGateOpen] = useState(false);
@@ -200,6 +192,11 @@ export function MarketplaceView({
     null,
   );
   const [headerElement, setHeaderElement] = useState<HTMLDivElement | null>(null);
+  const headerElementRef = useRef<HTMLDivElement | null>(null);
+  const handleHeaderElement = useCallback((node: HTMLDivElement | null) => {
+    headerElementRef.current = node;
+    setHeaderElement(node);
+  }, []);
   const stickySentinelRef = useRef<HTMLDivElement>(null);
   const getListScrollViewport = useCallback(
     () => scrollAreaViewport(listScrollRoot),
@@ -221,7 +218,6 @@ export function MarketplaceView({
   // is measured rather than hardcoded.
   useLayoutEffect(() => {
     if (!titleElement) {
-      setTitleHeight(0);
       return;
     }
     const syncTitleHeight = () => setTitleHeight(titleElement.offsetHeight);
@@ -236,6 +232,7 @@ export function MarketplaceView({
   // the pin-moment toggle still takes effect in the same frame (see scroll-top-band-occlusion).
   const { occlusionStyle: headerOcclusionStyle, bandHeight: headerHeight } =
     useScrollTopBandOcclusion(listScrollRoot, headerElement, headerPinned);
+  const measuredTitleHeight = titleElement ? titleHeight : 0;
 
   // clip-path occludes the header band; the alpha-mask fade below it (onboarding-style)
   // softens content approaching the docked header, animating in/out on pin transitions.
@@ -259,9 +256,10 @@ export function MarketplaceView({
   // inside the keyframes, pinning the header at translateY(0). One element at all times, so
   // input focus survives the pin. The scroll listener below is the single fallback for
   // engines without ScrollTimeline support.
-  const headerDockOffset = MARKETPLACE_HEADER_TOP_GAP_PX + titleHeight;
+  const headerDockOffset = MARKETPLACE_HEADER_TOP_GAP_PX + measuredTitleHeight;
   useLayoutEffect(() => {
-    if (detailExtensionId !== null || !headerElement || !listScrollRoot) {
+    const header = headerElementRef.current;
+    if (detailExtensionId !== null || !header || !listScrollRoot) {
       return;
     }
     const viewport = scrollAreaViewport(listScrollRoot);
@@ -273,7 +271,7 @@ export function MarketplaceView({
       // fill: both holds translateY(0) once scrolled past the range; the duration defaults
       // to auto, i.e. the timeline supplies the progress. rangeEnd docks the header once the
       // top gap + title have scrolled away instead of at the end of the list.
-      const animation = headerElement.animate(
+      const animation = header.animate(
         [{ transform: `translateY(${headerDockOffset}px)` }, { transform: "translateY(0px)" }],
         { fill: "both", timeline: new ScrollTimeline({ source: viewport }) },
       );
@@ -281,12 +279,12 @@ export function MarketplaceView({
       return () => animation.cancel();
     }
     const syncHeaderDock = () => {
-      headerElement.style.transform = `translateY(${Math.max(0, headerDockOffset - viewport.scrollTop)}px)`;
+      header.style.transform = `translateY(${Math.max(0, headerDockOffset - viewport.scrollTop)}px)`;
     };
     syncHeaderDock();
     viewport.addEventListener("scroll", syncHeaderDock, { passive: true });
     return () => viewport.removeEventListener("scroll", syncHeaderDock);
-  }, [detailExtensionId, headerDockOffset, headerElement, listScrollRoot]);
+  }, [detailExtensionId, headerDockOffset, listScrollRoot]);
 
   const sources = useMemo(() => snapshot?.marketplaceSources ?? [], [snapshot?.marketplaceSources]);
   const catalogs = snapshot?.marketplaceCatalogs ?? {};
@@ -813,7 +811,7 @@ export function MarketplaceView({
             </div>
           </ScrollArea>
           <div
-            ref={setHeaderElement}
+            ref={handleHeaderElement}
             className="absolute inset-x-0 top-0 z-20"
             // Base position below the title; applies only while the dock animation is not
             // running (list not overflowing) or as the pre-effect value. The WAAPI scroll

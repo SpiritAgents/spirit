@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 
 import {
   SPIRIT_EXTENSION_WEB_VIEW_EVENT,
@@ -41,7 +41,9 @@ export function useExtensionWebViewBridge({
   const regionsRef = useRef(new Map<string, LocalRegion>());
   const generationRef = useRef(0);
   const apiRef = useRef(onWebView);
-  apiRef.current = onWebView;
+  useLayoutEffect(() => {
+    apiRef.current = onWebView;
+  }, [onWebView]);
 
   const layoutRegion = useCallback(
     (region: LocalRegion) => {
@@ -72,6 +74,10 @@ export function useExtensionWebViewBridge({
       layoutRegion(region);
     }
   }, [layoutRegion]);
+  const syncLayoutRef = useRef(syncLayout);
+  useLayoutEffect(() => {
+    syncLayoutRef.current = syncLayout;
+  }, [syncLayout]);
 
   const handleRequest = useCallback(
     async (operation: string, payload: Record<string, unknown>) => {
@@ -171,29 +177,35 @@ export function useExtensionWebViewBridge({
   );
 
   useEffect(() => {
+    generationRef.current = Math.max(generationRef.current, attempt);
     const iframe = iframeRef.current;
-    if (!iframe) {
-      return;
-    }
     let frame = 0;
     const schedule = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(syncLayout);
+      frame = requestAnimationFrame(() => syncLayoutRef.current());
     };
     const resizeObserver =
-      typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(schedule);
-    resizeObserver?.observe(iframe);
-    window.addEventListener("resize", schedule);
+      iframe && typeof ResizeObserver !== "undefined" ? new ResizeObserver(schedule) : undefined;
+    if (iframe) {
+      resizeObserver?.observe(iframe);
+      window.addEventListener("resize", schedule);
+    }
     return () => {
       cancelAnimationFrame(frame);
       resizeObserver?.disconnect();
       window.removeEventListener("resize", schedule);
+      generationRef.current += 1;
+      for (const [viewId, region] of regionsRef.current) {
+        region.element.remove();
+        void apiRef.current?.({ operation: "destroy", viewId }).catch(() => undefined);
+      }
+      regionsRef.current.clear();
     };
-  }, [attempt, iframeRef, syncLayout]);
+  }, [attempt, iframeRef]);
 
   useEffect(() => {
     syncLayout();
-  }, [active, syncLayout]);
+  }, [syncLayout]);
 
   useEffect(() => {
     if (!subscribeEvents) {
@@ -214,18 +226,6 @@ export function useExtensionWebViewBridge({
       );
     });
   }, [iframeRef, subscribeEvents, tab]);
-
-  useEffect(() => {
-    const regions = regionsRef.current;
-    return () => {
-      generationRef.current += 1;
-      for (const [viewId, region] of regions) {
-        region.element.remove();
-        void apiRef.current?.({ operation: "destroy", viewId }).catch(() => undefined);
-      }
-      regions.clear();
-    };
-  }, [attempt]);
 
   return useCallback(
     (data: Record<string, unknown>): boolean => {

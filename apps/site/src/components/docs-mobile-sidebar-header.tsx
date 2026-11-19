@@ -2,7 +2,7 @@
 
 import type { Item, Node } from "fumadocs-core/page-tree";
 import type { ComponentProps, ReactNode } from "react";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useEffectEvent, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useTreeContext } from "fumadocs-ui/contexts/tree";
 import { useSidebar } from "fumadocs-ui/components/sidebar/base";
@@ -24,6 +24,12 @@ import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
+function subscribeToMegaRoot(callback: () => void): () => void {
+  const observer = new MutationObserver(callback);
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  return () => observer.disconnect();
+}
+
 export function DocsMobileSidebarHeader({ className, ...props }: ComponentProps<"header">) {
   return (
     <header
@@ -43,18 +49,27 @@ function DocsMobileMega() {
   const { open, setOpen } = useSidebar();
   const { root } = useTreeContext();
   const { messages, localizedPath } = useI18n();
-  const [megaRoot, setMegaRoot] = useState<HTMLElement | null>(null);
-  const isDrawer = useMediaQuery(DOCS_SIDEBAR_DRAWER_QUERY);
+  const megaRoot = useSyncExternalStore(
+    subscribeToMegaRoot,
+    () => document.getElementById(DOCS_MOBILE_MEGA_ROOT_ID),
+    () => null,
+  );
   const includeExplore = useMediaQuery(SITE_NAV_COMPACT_QUERY);
+  const isDrawer = useMediaQuery(DOCS_SIDEBAR_DRAWER_QUERY);
   const menus = getSiteNavMenus(messages.hero.nav, localizedPath);
 
-  useLayoutEffect(() => {
-    setMegaRoot(document.getElementById(DOCS_MOBILE_MEGA_ROOT_ID));
-  }, []);
-
+  const closeOnDesktop = useEffectEvent(() => {
+    if (open) {
+      setOpen(false);
+    }
+  });
   useEffect(() => {
-    if (!isDrawer && open) setOpen(false);
-  }, [isDrawer, open, setOpen]);
+    if (isDrawer || !open) {
+      return;
+    }
+    const frame = requestAnimationFrame(() => closeOnDesktop());
+    return () => cancelAnimationFrame(frame);
+  }, [isDrawer, open]);
 
   useEffect(() => {
     const close = () => setOpen(false);

@@ -8,10 +8,16 @@ export function useElapsedDuration(
   completedAt?: string,
 ): number {
   const [elapsedMs, setElapsedMs] = useState(() => computeDurationMs(startedAt, completedAt));
+  const [previousStartedAt, setPreviousStartedAt] = useState(startedAt);
+  const [previousActive, setPreviousActive] = useState(active);
+  if (previousStartedAt !== startedAt || previousActive !== active) {
+    setPreviousStartedAt(startedAt);
+    setPreviousActive(active);
+    setElapsedMs(computeDurationMs(startedAt, completedAt));
+  }
 
   useEffect(() => {
     if (!active) {
-      setElapsedMs(computeDurationMs(startedAt, completedAt));
       return;
     }
 
@@ -24,7 +30,7 @@ export function useElapsedDuration(
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [active, completedAt, startedAt]);
+  }, [active, startedAt]);
 
-  return elapsedMs;
+  return active ? elapsedMs : computeDurationMs(startedAt, completedAt);
 }

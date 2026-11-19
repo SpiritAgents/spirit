@@ -44,7 +44,6 @@ export function useConversationSessionScrollTail({
     if (!enabled) {
       // Empty sessions and similar unmount the message list; the next time it becomes visible it must be pinned again
       previousContentKeyRef.current = null;
-      setSettling(false);
       return;
     }
 
@@ -119,5 +118,5 @@ export function useConversationSessionScrollTail({
     };
   }, [contentKey, enabled, streaming, scrollAreaRef]);
 
-  return { listSettling: settling };
+  return { listSettling: enabled && settling };
 }

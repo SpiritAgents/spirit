@@ -72,7 +72,7 @@ export function ModelCatalogDetailPanel({
         catalogEntry,
         labels,
       }),
-    [catalogEntry, contextLength, labels],
+    [catalogEntry, contextLength, labels, maxCompletionTokens],
   );
   const hasDetailFields = detailFields.length > 0;
   const hasContentBelowHeader = Boolean(description || children || hasDetailFields);

@@ -1,5 +1,5 @@
 import { Search } from "@spiritagent/icons/search";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { FONT_WEIGHT_MEDIUM, FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
@@ -118,7 +118,7 @@ export function DesktopModelsPreview({
     setProviderDialogOpen(true);
   };
 
-  const resetConnectWizard = () => {
+  const resetConnectWizard = useCallback(() => {
     setSelectedProvider(null);
     setCustomConnectMode("bulk");
     setConnectName("");
@@ -126,53 +126,56 @@ export function DesktopModelsPreview({
     setConnectApiKey("");
     setDemoTypingValue("");
     setDemoStep("idle");
-  };
+  }, []);
 
-  const startConnect = (providerId: string) => {
+  const startConnect = useCallback((providerId: string) => {
     setSelectedProvider(providerId);
     setConnectApiBase(providerId === "custom" ? "" : resolveConnectApiBase(providerId));
     setConnectApiKey("");
     setProviderDialogOpen(false);
     setConnectDialogOpen(true);
-  };
+  }, []);
 
-  const clearDemoTimers = () => {
+  const clearDemoTimers = useCallback(() => {
     for (const timeoutId of timeoutsRef.current) {
       window.clearTimeout(timeoutId);
     }
     timeoutsRef.current = [];
-  };
+  }, []);
 
-  const clearResumeTimer = () => {
+  const clearResumeTimer = useCallback(() => {
     if (resumeTimeoutRef.current !== null) {
       window.clearTimeout(resumeTimeoutRef.current);
       resumeTimeoutRef.current = null;
     }
-  };
+  }, []);
 
-  const scheduleDemo = (callback: () => void, delayMs: number) => {
+  const scheduleDemo = useCallback((callback: () => void, delayMs: number) => {
     const timeoutId = window.setTimeout(callback, delayMs);
     timeoutsRef.current.push(timeoutId);
-  };
+  }, []);
 
-  const stopDemo = (resetUi: boolean) => {
-    interruptedRef.current = true;
-    clearDemoTimers();
-    clearResumeTimer();
-    setDemoStep("idle");
-    setDemoTypingValue("");
-    if (resetUi) {
-      setProviderDialogOpen(false);
-      setConnectDialogOpen(false);
-      setProviderQuery("");
-      setDeleteTarget(null);
-      setSelectedProvider(null);
-      setConnectApiKey("");
-      setConnectApiBase("");
-      setConnectName("");
-      setCustomConnectMode("bulk");
-    }
-  };
+  const stopDemo = useCallback(
+    (resetUi: boolean) => {
+      interruptedRef.current = true;
+      clearDemoTimers();
+      clearResumeTimer();
+      setDemoStep("idle");
+      setDemoTypingValue("");
+      if (resetUi) {
+        setProviderDialogOpen(false);
+        setConnectDialogOpen(false);
+        setProviderQuery("");
+        setDeleteTarget(null);
+        setSelectedProvider(null);
+        setConnectApiKey("");
+        setConnectApiBase("");
+        setConnectName("");
+        setCustomConnectMode("bulk");
+      }
+    },
+    [clearDemoTimers, clearResumeTimer],
+  );
 
   useEffect(() => {
     const node = rootRef.current;
@@ -203,7 +206,7 @@ export function DesktopModelsPreview({
       node.removeEventListener("pointerdown", handlePointerDown, true);
       clearResumeTimer();
     };
-  }, []);
+  }, [clearResumeTimer, resetConnectWizard, stopDemo]);
 
   useEffect(() => {
     interruptedRef.current = false;
@@ -321,7 +324,7 @@ export function DesktopModelsPreview({
       clearResumeTimer();
       startDemoCycleRef.current = null;
     };
-  }, []);
+  }, [clearDemoTimers, clearResumeTimer, resetConnectWizard, scheduleDemo, startConnect]);
 
   const displayedConnectApiKey =
     demoStep === "typing" || demoStep === "submitting" ? demoTypingValue : connectApiKey;

@@ -1,6 +1,6 @@
 import { X } from "@spiritagent/icons/x";
 import { Check } from "@spiritagent/icons/check";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ShieldCheck } from "lucide-react";
 
@@ -35,15 +35,16 @@ export function WorkspaceCapabilityTrustDialog({
   // and payload are decoupled (same pattern as the sidebar delete dialog).
   const [displayed, setDisplayed] = useState(pending);
   const [open, setOpen] = useState(pending !== undefined);
-
-  useEffect(() => {
-    if (pending !== undefined) {
+  if (pending !== undefined) {
+    if (displayed !== pending) {
       setDisplayed(pending);
-      setOpen(true);
-    } else {
-      setOpen(false);
     }
-  }, [pending]);
+    if (!open) {
+      setOpen(true);
+    }
+  } else if (open) {
+    setOpen(false);
+  }
 
   return (
     <Dialog open={open}>

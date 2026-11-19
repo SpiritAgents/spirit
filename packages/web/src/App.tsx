@@ -148,6 +148,12 @@ export default function App() {
   const moveBackgroundShortcutTargetRef = useRef<MoveBackgroundShortcutTarget>({
     eligible: false,
   });
+  const handleMoveBackgroundShortcutTargetChange = useCallback(
+    (target: MoveBackgroundShortcutTarget) => {
+      moveBackgroundShortcutTargetRef.current = target;
+    },
+    [],
+  );
 
   // Hook order is intentional — do not reorder without checking cross-hook deps:
   // 1. surfaceNav — session surface routing; handleGenerateAutomation reads composerAutomationApiRef
@@ -172,18 +178,24 @@ export default function App() {
   });
 
   const { dismissForNewChat: dismissWorkspaceToolsForNewChat } = useWorkspaceToolsChromeActions();
+  const surfaceHandleNewChat = surfaceNav.handleNewChat;
+  const surfaceHandleNewChatInWorkspace = surfaceNav.handleNewChatInWorkspace;
+  const beginSessionNavigation = surfaceNav.beginSessionNavigation;
+  const saveSettingsPatch = runtime.saveSettingsPatch;
+  const setSelectedAutomationId = surfaceNav.setSelectedAutomationId;
+  const setActiveSurface = surfaceNav.setActiveSurface;
   // Every new-chat path (chrome bar, sidebar, keyboard shortcut, app menu) funnels through
   // these wrappers so a full-screen tools panel never lingers into the new chat's space.
   const handleNewChat = useCallback(() => {
     dismissWorkspaceToolsForNewChat();
-    surfaceNav.handleNewChat();
-  }, [dismissWorkspaceToolsForNewChat, surfaceNav.handleNewChat]);
+    surfaceHandleNewChat();
+  }, [dismissWorkspaceToolsForNewChat, surfaceHandleNewChat]);
   const handleNewChatInWorkspace = useCallback(
     (workspaceRoot: string) => {
       dismissWorkspaceToolsForNewChat();
-      void surfaceNav.handleNewChatInWorkspace(workspaceRoot);
+      void surfaceHandleNewChatInWorkspace(workspaceRoot);
     },
-    [dismissWorkspaceToolsForNewChat, surfaceNav.handleNewChatInWorkspace],
+    [dismissWorkspaceToolsForNewChat, surfaceHandleNewChatInWorkspace],
   );
 
   const conversation = useConversationViewState({
@@ -260,9 +272,9 @@ export default function App() {
 
   const handleSelectSession = useCallback(
     (path: string) => {
-      surfaceNav.beginSessionNavigation(path);
+      beginSessionNavigation(path);
     },
-    [surfaceNav.beginSessionNavigation],
+    [beginSessionNavigation],
   );
 
   useDesktopKeyboardShortcuts({
@@ -366,10 +378,10 @@ export default function App() {
 
   const handleOnboardingDone = useCallback(() => {
     void (async () => {
-      await runtime.saveSettingsPatch({ onboardingCompleted: true });
+      await saveSettingsPatch({ onboardingCompleted: true });
       setOnboardingDismissed(true);
     })();
-  }, [runtime.saveSettingsPatch]);
+  }, [saveSettingsPatch]);
 
   useLayoutEffect(() => {
     applyUiLayoutScale(uiLayoutScale.scale);
@@ -424,10 +436,10 @@ export default function App() {
   useEffect(() => {
     const bridge = window.spiritDesktop;
     return bridge?.subscribeAutomationNotification?.(({ automationId }) => {
-      surfaceNav.setSelectedAutomationId(automationId);
-      surfaceNav.setActiveSurface("automation-detail");
+      setSelectedAutomationId(automationId);
+      setActiveSurface("automation-detail");
     });
-  }, [surfaceNav.setActiveSurface, surfaceNav.setSelectedAutomationId]);
+  }, [setActiveSurface, setSelectedAutomationId]);
 
   if (runtime.webHostPairingRequired && runtime.hostKind === "web" && !snapshot) {
     return (
@@ -521,7 +533,9 @@ export default function App() {
                           runtime={runtime}
                           snapshot={snapshot}
                           conversationAbortShortcutTargetRef={conversationAbortShortcutTargetRef}
-                          moveBackgroundShortcutTargetRef={moveBackgroundShortcutTargetRef}
+                          onMoveBackgroundShortcutTargetChange={
+                            handleMoveBackgroundShortcutTargetChange
+                          }
                           registerBeginSideChat={registerBeginSideChat}
                           onEnsureConversationSurface={() => {
                             surfaceNav.setLastNonSettingsSurface("conversation");

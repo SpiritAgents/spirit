@@ -327,6 +327,7 @@ export function ConversationList({
   // yet at the bottom suddenly jumps to the bottom".
   const lastPinnedTotalSizeRef = useRef(-1);
   const suppressTailPinRef = useRef(false);
+  // oxlint-disable-next-line react/incompatible-library -- TanStack Virtual returns functions that React Compiler cannot safely memoize.
   const virtualizer = useVirtualizer({
     count: conversationRenderItems.length,
     getScrollElement: () => scrollElement,

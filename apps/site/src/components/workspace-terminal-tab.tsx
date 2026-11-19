@@ -147,14 +147,18 @@ export function WorkspaceTerminalTab({ workspaceRoot }: WorkspaceTerminalTabProp
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const activePtyIdRef = useRef<string | null>(null);
-  const [embedError, setEmbedError] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
   const bridge = typeof window !== "undefined" ? window.spiritDesktop : undefined;
   const canEmbed = Boolean(bridge?.ptyCreate && bridge?.ptySubscribe);
   const trimmed = workspaceRoot.trim();
+  const terminalSessionKey = `${trimmed}\u0000${retryNonce}`;
+  const [embedErrorResult, setEmbedErrorResult] = useState<{
+    key: string;
+    message: string | null;
+  }>({ key: terminalSessionKey, message: null });
+  const embedError = embedErrorResult.key === terminalSessionKey ? embedErrorResult.message : null;
 
   useEffect(() => {
-    setEmbedError(null);
     activePtyIdRef.current = null;
     termRef.current = null;
     if (!trimmed) {
@@ -277,7 +281,7 @@ export function WorkspaceTerminalTab({ workspaceRoot }: WorkspaceTerminalTabProp
         }
 
         if (!created.ok) {
-          setEmbedError(created.error);
+          setEmbedErrorResult({ key: terminalSessionKey, message: created.error });
           teardown();
           return;
         }
@@ -368,7 +372,7 @@ export function WorkspaceTerminalTab({ workspaceRoot }: WorkspaceTerminalTabProp
       alive = false;
       teardown();
     };
-  }, [bridge, canEmbed, messages.desktop.shell, retryNonce, trimmed]);
+  }, [bridge, canEmbed, messages.desktop.shell, terminalSessionKey, trimmed]);
 
   const openExternal = (): void => {
     if (!bridge?.openSystemTerminal || !trimmed) {
@@ -392,7 +396,7 @@ export function WorkspaceTerminalTab({ workspaceRoot }: WorkspaceTerminalTabProp
               variant="outline"
               size="sm"
               onClick={() => {
-                setEmbedError(null);
+                setEmbedErrorResult({ key: terminalSessionKey, message: null });
                 setRetryNonce((value) => value + 1);
               }}
             >

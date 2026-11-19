@@ -87,7 +87,9 @@ export function OnboardingConnectControls({
       return;
     }
     const update = () => {
-      const next = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight > 1;
+      const next =
+        filteredProviders.length > 0 &&
+        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight > 1;
       setHasMoreBelow(next);
       onBottomFadeChange?.(next);
     };

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { createElement, useMemo, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   GitCommit,
@@ -214,7 +214,6 @@ function PrDiffCard({
   part: Extract<MessageContentPart, { kind: "prDiff" }>;
   navigateMeta?: ComposerChipNavigateMeta;
 }) {
-  const Icon = prDiffStatusIcon(part.status);
   return (
     <NavigableChipShell
       target={{
@@ -234,11 +233,11 @@ function PrDiffCard({
       className={MESSAGE_BUBBLE_CHIP_CLASS}
       trailingSpacer={false}
     >
-      <Icon
-        className={cn(WORKSPACE_FILE_ICON_CHIP_CLASS, PR_DIFF_CHIP_ICON_CLASS)}
-        aria-hidden
-        strokeWidth={1.75}
-      />
+      {createElement(prDiffStatusIcon(part.status), {
+        className: cn(WORKSPACE_FILE_ICON_CHIP_CLASS, PR_DIFF_CHIP_ICON_CLASS),
+        "aria-hidden": true,
+        strokeWidth: 1.75,
+      })}
       <ChipLabel>{formatPrDiffChipLabel(part.filename, part.lineStart, part.lineEnd)}</ChipLabel>
     </NavigableChipShell>
   );
@@ -437,11 +436,15 @@ export function UserMessageBubble({
     [contentParts, message.chipNavigateMeta],
   );
   const partsWithMeta = useMemo(() => {
-    let chipIndex = 0;
-    return contentParts.map((part) => ({
-      part,
-      meta: isNavigableComposerChipKind(part.kind) ? alignedMeta?.[chipIndex++] : undefined,
-    }));
+    return contentParts.map((part, index) => {
+      if (!isNavigableComposerChipKind(part.kind)) {
+        return { part, meta: undefined };
+      }
+      const chipIndex = contentParts
+        .slice(0, index)
+        .filter((candidate) => isNavigableComposerChipKind(candidate.kind)).length;
+      return { part, meta: alignedMeta?.[chipIndex] };
+    });
   }, [alignedMeta, contentParts]);
   // `@` workspace-file references render as inline chips; their attachment snapshots are
   // attributed by matching the chip-recorded path and excluded from the upload card strip.
@@ -462,14 +465,16 @@ export function UserMessageBubble({
   const attachmentSnapshotKey = localFileAttachmentsSnapshotKey(uploadAttachmentSnapshots);
   const initialViews = useMemo(
     () => snapshotsToComposerAttachmentViews(uploadAttachmentSnapshots),
-    [attachmentSnapshotKey],
+    [uploadAttachmentSnapshots],
   );
   const [attachmentViews, setAttachmentViews] =
     useState<ComposerLocalFileAttachmentView[]>(initialViews);
-
-  useEffect(() => {
+  const attachmentStateKey = `${message.id}\u0000${attachmentSnapshotKey}`;
+  const [previousAttachmentStateKey, setPreviousAttachmentStateKey] = useState(attachmentStateKey);
+  if (previousAttachmentStateKey !== attachmentStateKey) {
+    setPreviousAttachmentStateKey(attachmentStateKey);
     setAttachmentViews((previous) => mergeComposerAttachmentViews(previous, initialViews));
-  }, [message.id, attachmentSnapshotKey, initialViews]);
+  }
 
   useLocalFileAttachmentPreviews(attachmentViews, setAttachmentViews, readLocalImagePreviewDataUrl);
   const visibleText = contentParts

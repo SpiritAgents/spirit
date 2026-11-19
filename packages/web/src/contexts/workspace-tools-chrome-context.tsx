@@ -163,11 +163,17 @@ export function WorkspaceToolsChromeProvider({
   const [flight, setFlight] = useState<WorkspaceToolsWidthFlight | null>(null);
   const [newChatChromeCount, setNewChatChromeCount] = useState(0);
   const openRef = useRef(open);
-  openRef.current = open;
   const fullScreenRef = useRef(fullScreen);
-  fullScreenRef.current = fullScreen;
   /** Restore snapshot of `open` taken when entering full screen; consumed by any exit path. */
   const restoreOpenRef = useRef(readWorkspaceToolsFullScreenRestoreOpen());
+  const updateOpen = useCallback((next: boolean) => {
+    openRef.current = next;
+    setOpenState(next);
+  }, []);
+  const updateFullScreen = useCallback((next: boolean) => {
+    fullScreenRef.current = next;
+    setFullScreenState(next);
+  }, []);
 
   const settleFlight = useCallback(() => {
     setFlight(null);
@@ -176,8 +182,6 @@ export function WorkspaceToolsChromeProvider({
   const exitFullScreen = useCallback(
     (toOpen: boolean) => {
       restoreOpenRef.current = false;
-      fullScreenRef.current = false;
-      openRef.current = toOpen;
       if (prefersReducedMotion()) {
         clearShellWidthTransitionTimer();
         setFlight(null);
@@ -193,11 +197,11 @@ export function WorkspaceToolsChromeProvider({
           setFlight(null);
         }
       }
-      setFullScreenState(false);
-      setOpenState(toOpen);
+      updateFullScreen(false);
+      updateOpen(toOpen);
       writeWorkspaceToolsFullScreen(false);
     },
-    [settleFlight],
+    [settleFlight, updateFullScreen, updateOpen],
   );
 
   const enterFullScreen = useCallback(() => {
@@ -206,8 +210,6 @@ export function WorkspaceToolsChromeProvider({
     writeWorkspaceToolsFullScreen(true);
     writeWorkspaceToolsFullScreenRestoreOpen(wasOpen);
     requestFocusWorkspaceToolsPanelOnOpen();
-    fullScreenRef.current = true;
-    openRef.current = true;
     if (prefersReducedMotion()) {
       clearShellWidthTransitionTimer();
       setFlight(null);
@@ -221,9 +223,9 @@ export function WorkspaceToolsChromeProvider({
         setFlight(null);
       }
     }
-    setFullScreenState(true);
-    setOpenState(true);
-  }, [settleFlight]);
+    updateFullScreen(true);
+    updateOpen(true);
+  }, [settleFlight, updateFullScreen, updateOpen]);
 
   const setOpen = useCallback(
     (updater: boolean | ((current: boolean) => boolean)) => {
@@ -238,9 +240,9 @@ export function WorkspaceToolsChromeProvider({
         return;
       }
       applyWorkspaceToolsShellWidthImmediate(next, settleFlight);
-      setOpenState(next);
+      updateOpen(next);
     },
-    [exitFullScreen, settleFlight],
+    [exitFullScreen, settleFlight, updateOpen],
   );
 
   const toggle = useCallback(() => {
@@ -255,8 +257,8 @@ export function WorkspaceToolsChromeProvider({
       requestFocusWorkspaceToolsPanelOnOpen();
     }
     applyWorkspaceToolsShellWidthImmediate(next, settleFlight);
-    setOpenState(next);
-  }, [exitFullScreen, settleFlight]);
+    updateOpen(next);
+  }, [exitFullScreen, settleFlight, updateOpen]);
 
   const openTools = useCallback(() => {
     if (fullScreenRef.current || openRef.current) {
@@ -264,8 +266,8 @@ export function WorkspaceToolsChromeProvider({
       return;
     }
     applyWorkspaceToolsShellWidthImmediate(true, settleFlight);
-    setOpenState(true);
-  }, [settleFlight]);
+    updateOpen(true);
+  }, [settleFlight, updateOpen]);
 
   const toggleFullScreen = useCallback(() => {
     if (fullScreenRef.current) {
@@ -283,18 +285,16 @@ export function WorkspaceToolsChromeProvider({
       return;
     }
     restoreOpenRef.current = false;
-    fullScreenRef.current = false;
-    openRef.current = false;
     clearShellWidthTransitionTimer();
     const shell = getWorkspaceToolsShell();
     if (shell) {
       shell.style.removeProperty("transition");
     }
     setFlight(null);
-    setFullScreenState(false);
-    setOpenState(false);
+    updateFullScreen(false);
+    updateOpen(false);
     writeWorkspaceToolsFullScreen(false);
-  }, []);
+  }, [updateFullScreen, updateOpen]);
 
   const registerNewChatChrome = useCallback(() => {
     setNewChatChromeCount((count) => count + 1);

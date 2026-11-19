@@ -70,7 +70,9 @@ export function AutomationSettingsPanel({
   const [approvalLevel, setApprovalLevel] = useState<ApprovalLevel>("default");
 
   useEffect(() => {
-    initializedForAutomationIdRef.current = null;
+    if (initializedForAutomationIdRef.current !== automationId) {
+      initializedForAutomationIdRef.current = null;
+    }
   }, [automationId]);
 
   const definitionModel = snapshot?.config.models.find((model) =>

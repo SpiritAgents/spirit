@@ -625,6 +625,7 @@ export function GitCommitGraph({
     }
   }, [loadingMore]);
 
+  // oxlint-disable-next-line react/incompatible-library -- TanStack Virtual returns functions that React Compiler cannot safely memoize.
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollAreaViewport(scrollAreaRef.current),

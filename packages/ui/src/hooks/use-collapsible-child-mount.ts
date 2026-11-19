@@ -11,12 +11,14 @@ export function useCollapsibleChildMount(
 
   useEffect(() => {
     if (open) {
-      setMounted(true);
       return;
     }
     const timer = window.setTimeout(() => setMounted(false), delayMs);
     return () => window.clearTimeout(timer);
   }, [open, delayMs]);
+  if (open && !mounted) {
+    setMounted(true);
+  }
 
   return mounted;
 }

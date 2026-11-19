@@ -42,11 +42,13 @@ export function useDiffLineHighlight(
   languageId: string,
 ): DiffLineHighlightTokens[] {
   const plainTokens = useMemo(() => plainDiffLineTokens(lines), [lines]);
-  const [highlightedTokens, setHighlightedTokens] = useState(plainTokens);
+  const [highlighted, setHighlighted] = useState<{
+    input: DiffDisplayLine[];
+    tokens: DiffLineHighlightTokens[];
+  } | null>(null);
   const shikiLanguage = useMemo(() => shikiLanguageForMonacoId(languageId), [languageId]);
 
   useEffect(() => {
-    setHighlightedTokens(plainTokens);
     if (!shikiLanguage) {
       return undefined;
     }
@@ -58,14 +60,14 @@ export function useDiffLineHighlight(
         lines.map((line) => highlightDiffLine(line.content, shikiLanguage)),
       );
       if (!cancelled) {
-        setHighlightedTokens(results);
+        setHighlighted({ input: lines, tokens: results });
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [lines, plainTokens, shikiLanguage]);
+  }, [lines, shikiLanguage]);
 
-  return highlightedTokens;
+  return highlighted?.input === lines ? highlighted.tokens : plainTokens;
 }

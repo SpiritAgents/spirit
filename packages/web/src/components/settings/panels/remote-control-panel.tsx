@@ -1,5 +1,5 @@
 import { CircleHelp, Globe } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { SettingsRow } from "@/components/settings/settings-row";
@@ -94,8 +94,16 @@ export function RemoteControlPanel({
       .finally(() => setPairingBusy(false));
   };
 
-  useEffect(() => setHostDraft(settings.webHostHost), [settings.webHostHost]);
-  useEffect(() => setPortDraft(String(settings.webHostPort)), [settings.webHostPort]);
+  const [previousHost, setPreviousHost] = useState(settings.webHostHost);
+  const [previousPort, setPreviousPort] = useState(settings.webHostPort);
+  if (previousHost !== settings.webHostHost) {
+    setPreviousHost(settings.webHostHost);
+    setHostDraft(settings.webHostHost);
+  }
+  if (previousPort !== settings.webHostPort) {
+    setPreviousPort(settings.webHostPort);
+    setPortDraft(String(settings.webHostPort));
+  }
 
   return (
     <div className="space-y-6">

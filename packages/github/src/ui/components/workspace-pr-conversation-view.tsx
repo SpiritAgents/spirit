@@ -31,7 +31,7 @@ export function WorkspacePrConversationView({
   const loadMoreInFlightRef = useRef(false);
 
   useEffect(() => {
-    if (!hasMore || !onLoadMore || loadingMore) {
+    if (!hasMore || !onLoadMore || loadingMore || items.length === 0) {
       return;
     }
 

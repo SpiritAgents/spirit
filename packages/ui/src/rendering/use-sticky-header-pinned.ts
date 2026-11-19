@@ -24,14 +24,12 @@ export function useStickyHeaderPinned(
 
   useEffect(() => {
     if (!enabled) {
-      setPinned(false);
       return;
     }
 
     const sentinel = sentinelRef.current;
     const root = getScrollViewport();
     if (!sentinel || !root) {
-      setPinned(false);
       return;
     }
 
@@ -45,5 +43,5 @@ export function useStickyHeaderPinned(
     return () => observer.disconnect();
   }, [enabled, getScrollViewport, sentinelRef]);
 
-  return pinned;
+  return enabled ? pinned : false;
 }

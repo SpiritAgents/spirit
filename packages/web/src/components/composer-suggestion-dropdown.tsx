@@ -1,11 +1,4 @@
-import {
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type ReactNode,
-  type RefObject,
-} from "react";
+import { useEffect, useState, type ReactNode, type RefObject } from "react";
 
 import {
   DropdownMenu,
@@ -75,34 +68,39 @@ export function ComposerSuggestionDropdown({
   // Temporarily force a text cursor until the open animation lands, avoiding a pointer-cursor flash
   // when the menu expands under the pointer; afterwards restore the settings-page pointer/default rules
   const [openCursorSettling, setOpenCursorSettling] = useState(false);
-  const stickyAnchorRef = useRef<DOMRect | null>(null);
-  const frozenChildrenRef = useRef<ReactNode>(null);
+  const [stickyAnchor, setStickyAnchor] = useState<DOMRect | null>(anchor);
+  const [frozenChildren, setFrozenChildren] = useState<ReactNode>(children);
 
   if (active && anchor) {
-    stickyAnchorRef.current = anchor;
+    if (stickyAnchor !== anchor) {
+      setStickyAnchor(anchor);
+    }
   }
   if (active && children) {
-    frozenChildrenRef.current = children;
+    if (frozenChildren !== children) {
+      setFrozenChildren(children);
+    }
   }
-
-  useLayoutEffect(() => {
-    if (active) {
-      setMounted(true);
-      setRadixOpen(true);
-      return;
-    }
+  if (active) {
     if (!mounted) {
-      return;
+      setMounted(true);
     }
+    if (!radixOpen) {
+      setRadixOpen(true);
+    }
+  } else if (radixOpen) {
     setRadixOpen(false);
-  }, [active, mounted]);
+  }
+  const [previousRadixOpen, setPreviousRadixOpen] = useState(radixOpen);
+  if (previousRadixOpen !== radixOpen) {
+    setPreviousRadixOpen(radixOpen);
+    setOpenCursorSettling(radixOpen);
+  }
 
   useEffect(() => {
     if (!radixOpen) {
-      setOpenCursorSettling(false);
       return;
     }
-    setOpenCursorSettling(true);
     const timeout = window.setTimeout(() => setOpenCursorSettling(false), RADIX_OVERLAY_CLOSE_MS);
     return () => window.clearTimeout(timeout);
   }, [radixOpen]);
@@ -136,8 +134,8 @@ export function ComposerSuggestionDropdown({
     return () => window.clearTimeout(timeout);
   }, [active, mounted]);
 
-  const displayAnchor = anchor ?? stickyAnchorRef.current;
-  const displayChildren = mounted ? frozenChildrenRef.current : null;
+  const displayAnchor = anchor ?? stickyAnchor;
+  const displayChildren = mounted ? (active ? children : frozenChildren) : null;
 
   if (!mounted || !displayAnchor) {
     return null;

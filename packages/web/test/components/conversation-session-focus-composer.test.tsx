@@ -3,7 +3,7 @@
 import "./setup";
 
 import { act, render } from "@testing-library/react";
-import { StrictMode, useRef } from "react";
+import { StrictMode, useLayoutEffect, useRef } from "react";
 import { describe, expect, test, vi } from "vitest";
 
 import {
@@ -123,7 +123,9 @@ describe("useConversationSessionFocusComposer", () => {
       focusedPane: "left" | "right";
     }) {
       const focusedPaneRef = useRef(focusedPane);
-      focusedPaneRef.current = focusedPane;
+      useLayoutEffect(() => {
+        focusedPaneRef.current = focusedPane;
+      }, [focusedPane]);
       useConversationSessionFocusComposer({
         composerSessionKey: "session-a",
         surfaceActive,

@@ -45,22 +45,25 @@ export function WorkspaceFileIcon({
   }
 
   if (kind === "dir") {
-    const Folder = workspaceExplorerIcon(resolvedName, "dir");
-    return (
-      <Folder
-        className={workspaceDirectoryIconClassName(colorMode, className)}
-        aria-hidden
-        strokeWidth={1.75}
-      />
-    );
+    return createElement(workspaceExplorerIcon(resolvedName, "dir"), {
+      className: workspaceDirectoryIconClassName(colorMode, className),
+      "aria-hidden": true,
+      strokeWidth: 1.75,
+    });
   }
 
-  const Icon = workspaceExplorerIcon(resolvedName, kind);
   const iconClassName = workspaceFileIconClassName(colorMode, className);
+  const icon = workspaceExplorerIcon(resolvedName, kind);
 
   if (colorMode === "inherit") {
-    return <Icon size={size} className={iconClassName} aria-hidden strokeWidth={1.75} />;
+    return createElement(icon, {
+      size,
+      className: iconClassName,
+      "aria-hidden": true,
+      strokeWidth: 1.75,
+    });
   }
 
-  return <Icon className={iconClassName} aria-hidden strokeWidth={1.75} />;
+  return createElement(icon, { className: iconClassName, "aria-hidden": true, strokeWidth: 1.75 });
 }
+import { createElement } from "react";

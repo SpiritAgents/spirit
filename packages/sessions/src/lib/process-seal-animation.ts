@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useState } from "react";
 
 import type { ConversationRenderItem } from "@/lib/conversation-process-groups";
 import type { ConversationMessageSnapshot, PendingAssistantAux } from "@/types";
@@ -132,31 +132,69 @@ function useProcessSealAnimationPlan(
   options: ProcessSealAnimationPlanOptions,
   planResetKey?: number,
 ): (groupId: string) => boolean {
-  const planStateRef = useRef(createInitialProcessSealPlanState());
-  const planRef = useRef(new Map<string, boolean>());
-  const prevPlanResetKeyRef = useRef(planResetKey ?? 0);
-
-  if (planResetKey !== undefined && planResetKey !== prevPlanResetKeyRef.current) {
-    planStateRef.current = createInitialProcessSealPlanState();
-    prevPlanResetKeyRef.current = planResetKey;
-  }
-
+  const PLAY_CLEAR_DELAY_MS = 300;
   const groupIds = processGroupIds(renderItems);
   const groupIdsKey = groupIds.join("|");
-
-  const { shouldPlayByGroupId, nextState } = buildProcessSealAnimationPlan(
-    planStateRef.current,
-    conversationViewKey,
-    groupIds,
-    options,
-  );
-  planRef.current = shouldPlayByGroupId;
-
+  const resetKey = planResetKey ?? 0;
+  const planKey = `${resetKey}\u0000${conversationViewKey}\u0000${groupIdsKey}`;
+  const optionsKey = `${options.liveTurnActive}:${options.composeTurnInFlight}:${options.sessionNavigationPending}`;
+  const [committed, setCommitted] = useState(() => {
+    const result = buildProcessSealAnimationPlan(
+      createInitialProcessSealPlanState(),
+      conversationViewKey,
+      groupIds,
+      options,
+    );
+    return {
+      planKey,
+      optionsKey,
+      resetKey,
+      state: result.nextState,
+      shouldPlayByGroupId: result.shouldPlayByGroupId,
+    };
+  });
+  if (committed.planKey !== planKey) {
+    const baseState =
+      committed.resetKey === resetKey ? committed.state : createInitialProcessSealPlanState();
+    const result = buildProcessSealAnimationPlan(baseState, conversationViewKey, groupIds, options);
+    setCommitted({
+      planKey,
+      optionsKey,
+      resetKey,
+      state: result.nextState,
+      shouldPlayByGroupId: result.shouldPlayByGroupId,
+    });
+  } else if (committed.optionsKey !== optionsKey) {
+    const result = buildProcessSealAnimationPlan(
+      committed.state,
+      conversationViewKey,
+      groupIds,
+      options,
+    );
+    setCommitted({
+      ...committed,
+      optionsKey,
+      shouldPlayByGroupId: result.shouldPlayByGroupId,
+    });
+  }
   useLayoutEffect(() => {
-    planStateRef.current = nextState;
-  }, [conversationViewKey, groupIdsKey]);
-
-  return (groupId: string) => planRef.current.get(groupId) ?? false;
+    const planKey = committed.planKey;
+    const optionsKey = committed.optionsKey;
+    const timeout = window.setTimeout(() => {
+      setCommitted((current) => {
+        if (
+          current.planKey !== planKey ||
+          current.optionsKey !== optionsKey ||
+          current.shouldPlayByGroupId.size === 0
+        ) {
+          return current;
+        }
+        return { ...current, shouldPlayByGroupId: new Map() };
+      });
+    }, PLAY_CLEAR_DELAY_MS);
+    return () => window.clearTimeout(timeout);
+  }, [committed.optionsKey, committed.planKey]);
+  return (groupId: string) => committed.shouldPlayByGroupId.get(groupId) ?? false;
 }
 
 /** Returns whether a newly mounted process group should play the seal collapse animation. */
@@ -172,14 +210,14 @@ export function useProcessSealAnimationGate(input: {
   sessionMessages: readonly ConversationMessageSnapshot[];
   planResetKey?: number;
 }): (groupId: string) => boolean {
-  const stickyComposeTurnInFlightRef = useRef(false);
+  const [stickyComposeTurnInFlight, setStickyComposeTurnInFlight] = useState(false);
 
   const navigationSignals = resolveProcessSealNavigationSignals({
     conversationViewKey: input.conversationViewKey,
     busyAction: input.busyAction,
     isBusy: input.isBusy,
     sessionMessages: input.sessionMessages,
-    stickyComposeTurnInFlight: stickyComposeTurnInFlightRef.current,
+    stickyComposeTurnInFlight,
   });
 
   const liveTurnActive = resolveProcessSealLiveTurnActive({
@@ -204,12 +242,12 @@ export function useProcessSealAnimationGate(input: {
   );
 
   useLayoutEffect(() => {
-    stickyComposeTurnInFlightRef.current = navigationSignals.nextStickyComposeTurnInFlight;
-  }, [
-    input.conversationViewKey,
-    input.renderItems,
-    navigationSignals.nextStickyComposeTurnInFlight,
-  ]);
+    if (stickyComposeTurnInFlight !== navigationSignals.nextStickyComposeTurnInFlight) {
+      queueMicrotask(() =>
+        setStickyComposeTurnInFlight(navigationSignals.nextStickyComposeTurnInFlight),
+      );
+    }
+  }, [navigationSignals.nextStickyComposeTurnInFlight, stickyComposeTurnInFlight]);
 
   return shouldPlaySealAnimation;
 }

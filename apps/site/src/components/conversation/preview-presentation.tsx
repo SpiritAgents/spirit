@@ -180,16 +180,16 @@ function PreviewToolCallCard({ tool }: { tool: ToolBlockSnapshot }) {
   const shimmerActive = toolCallPhaseShowsShimmer(tool.phase);
   const expandable = previewToolHasExpandableContent(tool);
   const [open, setOpen] = useState(false);
-  const prevShimmerRef = useRef(shimmerActive);
-
-  useEffect(() => {
-    if (shimmerActive && expandable) {
-      setOpen(true);
-    } else if (prevShimmerRef.current && !shimmerActive) {
+  const [previousShimmer, setPreviousShimmer] = useState(shimmerActive);
+  if (shimmerActive && expandable && !open) {
+    setOpen(true);
+  }
+  if (previousShimmer !== shimmerActive) {
+    setPreviousShimmer(shimmerActive);
+    if (previousShimmer && !shimmerActive) {
       setOpen(false);
     }
-    prevShimmerRef.current = shimmerActive;
-  }, [expandable, shimmerActive]);
+  }
 
   if (!expandable) {
     return (

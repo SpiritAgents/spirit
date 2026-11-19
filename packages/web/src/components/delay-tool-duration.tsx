@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatedCount } from "./animated-count";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
@@ -13,11 +13,11 @@ export function DelayToolDuration({ tool }: { tool: ToolBlockSnapshot }) {
   const finished = tool.phase === "succeeded" || tool.phase === "failed";
   const wasFinished = useRef(finished);
   const deadline = tool.delay?.deadlineUnixMs;
-  const elapsed = tool.delay?.elapsedMs;
-  const initial = delayDisplaySeconds(tool);
+  const readCurrentSeconds = useEffectEvent(() => delayDisplaySeconds(tool));
   useEffect(() => {
     let frame: number | undefined;
     let timer: ReturnType<typeof setInterval> | undefined;
+    const effectInitial = readCurrentSeconds();
     const update = (value: number | undefined) => {
       displayed.current = value;
       setSeconds(value);
@@ -27,11 +27,11 @@ export function DelayToolDuration({ tool }: { tool: ToolBlockSnapshot }) {
       !wasFinished.current &&
       !reduced &&
       displayed.current !== undefined &&
-      initial !== undefined;
+      effectInitial !== undefined;
     wasFinished.current = finished;
     if (animate) {
       const from = displayed.current!;
-      const target = initial!;
+      const target = effectInitial!;
       const start = performance.now();
       const tick = (now: number) => {
         const progress = Math.min(1, (now - start) / 320);
@@ -40,11 +40,11 @@ export function DelayToolDuration({ tool }: { tool: ToolBlockSnapshot }) {
       };
       frame = requestAnimationFrame(tick);
     } else {
-      update(initial);
+      update(effectInitial);
     }
     const refresh = () => {
       if (!finished && deadline !== undefined) {
-        update(delayDisplaySeconds(tool));
+        update(readCurrentSeconds());
       }
     };
     if (!finished && deadline !== undefined) {
@@ -57,41 +57,44 @@ export function DelayToolDuration({ tool }: { tool: ToolBlockSnapshot }) {
       document.removeEventListener("visibilitychange", refresh);
     };
     // The live clock is recalculated by the timer, not by parent rerenders.
-  }, [finished, deadline, elapsed, reduced, tool.delay?.startedAtUnixMs, tool.argsExcerpt]);
+  }, [finished, deadline, reduced]);
 
   const parts =
     seconds === undefined ? [] : durationSegments(seconds, i18n.resolvedLanguage ?? i18n.language);
   const text = parts.map((part) => part.number + part.suffix + part.separator).join("");
   const signature = parts.map((part) => `${part.unit}:${part.suffix}`).join("|");
-  const previous = useRef({ text, signature });
   const content = useRef<HTMLSpanElement>(null);
   const [width, setWidth] = useState<number>();
   const [outgoing, setOutgoing] = useState<string>();
+  const previousMeasureSignatureRef = useRef(signature);
   useLayoutEffect(() => {
     const node = content.current;
     if (!node) return;
     const measure = () => setWidth(node.getBoundingClientRect().width);
-    measure();
+    const signatureChanged = previousMeasureSignatureRef.current !== signature;
+    previousMeasureSignatureRef.current = signature;
+    if (signatureChanged) {
+      measure();
+    }
     const observer = new ResizeObserver(measure);
     observer.observe(node);
     return () => observer.disconnect();
-  }, [signature]);
-  useLayoutEffect(() => {
-    const changed = previous.current.signature !== signature;
-    if (reduced) {
-      setOutgoing(undefined);
-      return;
+  }, [content, previousMeasureSignatureRef, signature]);
+  const [previousFrame, setPreviousFrame] = useState({ text, signature });
+  if (previousFrame.text !== text || previousFrame.signature !== signature) {
+    if (previousFrame.signature !== signature && !reduced) {
+      setOutgoing(previousFrame.text);
     }
-    if (changed && !reduced) setOutgoing(previous.current.text);
-    if (!changed) return;
+    setPreviousFrame({ text, signature });
+  }
+  if (reduced && outgoing !== undefined) {
+    setOutgoing(undefined);
+  }
+  useLayoutEffect(() => {
+    if (outgoing === undefined) return;
     const timer = setTimeout(() => setOutgoing(undefined), 240);
     return () => clearTimeout(timer);
-  }, [signature, reduced]);
-  useLayoutEffect(() => {
-    setWidth(content.current?.getBoundingClientRect().width ?? 0);
-    previous.current = { text, signature };
-  }, [text, signature]);
-
+  }, [outgoing]);
   return (
     <span
       className="spirit-delay-duration"

@@ -30,22 +30,21 @@ export function WorkspacePlanPreviewTab({
   hideFileTree = false,
 }: WorkspacePlanPreviewTabProps) {
   const { messages } = useI18n();
-  const [selectedPlan, setSelectedPlan] = useState(false);
+  const [selectedPlanState, setSelectedPlan] = useState(false);
+  const [previousRevealNonce, setPreviousRevealNonce] = useState(autoRevealPlanNonce);
+  if (previousRevealNonce !== autoRevealPlanNonce) {
+    setPreviousRevealNonce(autoRevealPlanNonce);
+    if (autoRevealPlanNonce > 0) {
+      setSelectedPlan(true);
+    }
+  }
+  const selectedPlan = selectedEntryKey ? selectedEntryKey === "plan" : selectedPlanState;
 
   useEffect(() => {
     if (autoRevealPlanNonce > 0) {
-      setSelectedPlan(true);
       onSelectPlan?.();
     }
   }, [autoRevealPlanNonce, onSelectPlan]);
-
-  useEffect(() => {
-    if (selectedEntryKey === "plan") {
-      setSelectedPlan(true);
-    } else if (selectedEntryKey && selectedEntryKey !== "plan") {
-      setSelectedPlan(false);
-    }
-  }, [selectedEntryKey]);
 
   const showPlanPreview = hideFileTree ? true : selectedPlan && plan.exists;
   const planFileName = plan.path.split(/[/\\]/u).pop() ?? "plan";

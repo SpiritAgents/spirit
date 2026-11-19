@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
 import { ComposerSurface, segmentsToPlainText, type RichSegment } from "@spiritagent/ui/composer";
@@ -172,7 +172,7 @@ export function DesktopConversationPreview({
   onDesignModeReset,
   designModeUserInteractRef,
 }: DesktopConversationPreviewProps) {
-  const { messages: i18nMessages, locale } = useI18n();
+  const { messages: i18nMessages } = useI18n();
   const previewDensity = useDesktopPreviewDensity();
   const nestedPreview = isNestedDesktopPreview(previewDensity);
   const conversationCopy = i18nMessages.desktop.conversation;
@@ -187,6 +187,7 @@ export function DesktopConversationPreview({
   const demoActiveRef = useRef(false);
   const interruptedRef = useRef(false);
   const startDemoCycleRef = useRef<(() => void) | null>(null);
+  const demoResetGenerationRef = useRef(0);
   const onPlanRevealRef = useRef(onPlanReveal);
   const onPlanContentUpdateRef = useRef(onPlanContentUpdate);
   const onPlanResetRef = useRef(onPlanReset);
@@ -196,8 +197,10 @@ export function DesktopConversationPreview({
   const onDesignModeResetRef = useRef(onDesignModeReset);
   const [composerSegments, setComposerSegments] = useState<RichSegment[]>([]);
   const composer = segmentsToPlainText(composerSegments);
-  const setComposer = (text: string) =>
-    setComposerSegments(text ? [{ kind: "text", value: text }] : []);
+  const setComposer = useCallback(
+    (text: string) => setComposerSegments(text ? [{ kind: "text", value: text }] : []),
+    [],
+  );
   const [browserElementAttachments, setBrowserElementAttachments] = useState<
     BrowserElementAttachment[]
   >([]);
@@ -232,78 +235,81 @@ export function DesktopConversationPreview({
     onWorkspaceToolsOpen,
   ]);
 
-  const allocateMessageId = () => {
+  const allocateMessageId = useCallback(() => {
     const nextId = nextMessageIdRef.current;
     nextMessageIdRef.current += 1;
     return nextId;
-  };
+  }, []);
 
-  const clearDemoTimers = () => {
+  const clearDemoTimers = useCallback(() => {
     for (const timeoutId of demoTimersRef.current) {
       window.clearTimeout(timeoutId);
     }
     demoTimersRef.current = [];
-  };
+  }, []);
 
-  const clearManualResponseTimer = () => {
+  const clearManualResponseTimer = useCallback(() => {
     if (manualResponseTimerRef.current !== null) {
       window.clearTimeout(manualResponseTimerRef.current);
       manualResponseTimerRef.current = null;
     }
-  };
+  }, []);
 
-  const scheduleDemo = (callback: () => void, delayMs: number) => {
+  const scheduleDemo = useCallback((callback: () => void, delayMs: number) => {
     const timeoutId = window.setTimeout(callback, delayMs);
     demoTimersRef.current.push(timeoutId);
-  };
+  }, []);
 
-  const scheduleThinkingStream = (
-    thinkingMessageId: number,
-    thinkingText: string,
-    thinkingStartAt: number,
-    charSpeedMs: number,
-  ): number => {
-    scheduleDemo(() => {
-      if (interruptedRef.current) {
-        return;
+  const scheduleThinkingStream = useCallback(
+    (
+      thinkingMessageId: number,
+      thinkingText: string,
+      thinkingStartAt: number,
+      charSpeedMs: number,
+    ): number => {
+      scheduleDemo(() => {
+        if (interruptedRef.current) {
+          return;
+        }
+        setMessages((current) => [
+          ...current,
+          {
+            id: thinkingMessageId,
+            role: "assistant",
+            content: "",
+            aux: { thinking: "" },
+            pending: true,
+          },
+        ]);
+      }, thinkingStartAt);
+
+      for (let index = 0; index < thinkingText.length; index += 1) {
+        scheduleDemo(
+          () => {
+            if (interruptedRef.current) {
+              return;
+            }
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === thinkingMessageId
+                  ? { ...message, aux: { thinking: thinkingText.slice(0, index + 1) } }
+                  : message,
+              ),
+            );
+          },
+          thinkingStartAt + charSpeedMs * (index + 1),
+        );
       }
-      setMessages((current) => [
-        ...current,
-        {
-          id: thinkingMessageId,
-          role: "assistant",
-          content: "",
-          aux: { thinking: "" },
-          pending: true,
-        },
-      ]);
-    }, thinkingStartAt);
 
-    for (let index = 0; index < thinkingText.length; index += 1) {
-      scheduleDemo(
-        () => {
-          if (interruptedRef.current) {
-            return;
-          }
-          setMessages((current) =>
-            current.map((message) =>
-              message.id === thinkingMessageId
-                ? { ...message, aux: { thinking: thinkingText.slice(0, index + 1) } }
-                : message,
-            ),
-          );
-        },
-        thinkingStartAt + charSpeedMs * (index + 1),
-      );
-    }
-
-    return thinkingStartAt + charSpeedMs * thinkingText.length + 100;
-  };
+      return thinkingStartAt + charSpeedMs * thinkingText.length + 100;
+    },
+    [scheduleDemo],
+  );
 
   const pruneInterruptedMessages = (current: ConversationMessageSnapshot[]) =>
     current.filter((message) => !message.pending);
 
-  const resetConversation = () => {
+  const resetConversation = useCallback(() => {
     nextMessageIdRef.current = 1;
     setComposer("");
     setBrowserElementAttachments([]);
@@ -316,28 +322,31 @@ export function DesktopConversationPreview({
     if (demoVariant === "designMode") {
       onDesignModeResetRef.current?.();
     }
-  };
+  }, [demoVariant, setBrowserElementAttachments, setComposer]);
 
-  const clearResumeTimer = () => {
+  const clearResumeTimer = useCallback(() => {
     if (resumeTimeoutRef.current !== null) {
       window.clearTimeout(resumeTimeoutRef.current);
       resumeTimeoutRef.current = null;
     }
-  };
+  }, []);
 
-  const stopDemo = (resetUi: boolean) => {
-    const wasDemoActive = demoActiveRef.current;
-    interruptedRef.current = true;
-    clearDemoTimers();
-    clearResumeTimer();
-    demoActiveRef.current = false;
-    if (wasDemoActive) {
-      setBusy(false);
-    }
-    if (resetUi) {
-      resetConversation();
-    }
-  };
+  const stopDemo = useCallback(
+    (resetUi: boolean) => {
+      const wasDemoActive = demoActiveRef.current;
+      interruptedRef.current = true;
+      clearDemoTimers();
+      clearResumeTimer();
+      demoActiveRef.current = false;
+      if (wasDemoActive) {
+        setBusy(false);
+      }
+      if (resetUi) {
+        resetConversation();
+      }
+    },
+    [clearDemoTimers, clearResumeTimer, resetConversation],
+  );
 
   const takeConversationControl = () => {
     stopDemo(false);
@@ -410,6 +419,10 @@ export function DesktopConversationPreview({
     if (!(viewport instanceof HTMLDivElement)) {
       return;
     }
+    if (messages.length === 0) {
+      viewport.scrollTop = 0;
+      return;
+    }
     viewport.scrollTop = viewport.scrollHeight;
   }, [messages]);
 
@@ -445,7 +458,15 @@ export function DesktopConversationPreview({
       node.removeEventListener("pointerdown", handlePointerDown, true);
       clearResumeTimer();
     };
-  }, [demoVariant, demoPlaybackActive]);
+  }, [
+    clearResumeTimer,
+    demoVariant,
+    demoPlaybackActive,
+    resetConversation,
+    resumeTimeoutRef,
+    rootRef,
+    stopDemo,
+  ]);
 
   useEffect(() => {
     if (!designModeUserInteractRef || demoVariant !== "designMode") {
@@ -468,9 +489,24 @@ export function DesktopConversationPreview({
     return () => {
       designModeUserInteractRef.current = null;
     };
-  }, [demoPlaybackActive, demoVariant, designModeUserInteractRef]);
+  }, [
+    clearResumeTimer,
+    demoPlaybackActive,
+    demoVariant,
+    designModeUserInteractRef,
+    resetConversation,
+    resumeTimeoutRef,
+    stopDemo,
+  ]);
 
   useEffect(() => {
+    const resetGeneration = demoResetGenerationRef.current + 1;
+    demoResetGenerationRef.current = resetGeneration;
+    const resetIfCurrent = () => {
+      if (demoResetGenerationRef.current === resetGeneration) {
+        resetConversation();
+      }
+    };
     if (demoStaticSnapshot === "defaultEnd") {
       interruptedRef.current = true;
       demoActiveRef.current = false;
@@ -479,10 +515,14 @@ export function DesktopConversationPreview({
       clearResumeTimer();
       startDemoCycleRef.current = null;
       nextMessageIdRef.current = 5;
-      setComposer("");
-      setBrowserElementAttachments([]);
-      setBusy(false);
-      setMessages(buildDefaultEndSnapshot(conversationCopy));
+      queueMicrotask(() => {
+        if (demoResetGenerationRef.current === resetGeneration) {
+          setComposer("");
+          setBrowserElementAttachments([]);
+          setBusy(false);
+          setMessages(buildDefaultEndSnapshot(conversationCopy));
+        }
+      });
       return;
     }
 
@@ -492,7 +532,7 @@ export function DesktopConversationPreview({
       clearDemoTimers();
       clearManualResponseTimer();
       clearResumeTimer();
-      resetConversation();
+      queueMicrotask(resetIfCurrent);
       startDemoCycleRef.current = null;
       return;
     }
@@ -1171,7 +1211,23 @@ export function DesktopConversationPreview({
       clearResumeTimer();
       startDemoCycleRef.current = null;
     };
-  }, [conversationCopy, demoPlaybackActive, demoStaticSnapshot, demoVariant, locale]);
+  }, [
+    agentDemoCopy,
+    allocateMessageId,
+    clearDemoTimers,
+    clearManualResponseTimer,
+    clearResumeTimer,
+    conversationCopy,
+    demoPlaybackActive,
+    demoStaticSnapshot,
+    demoVariant,
+    designDemoCopy,
+    nextMessageIdRef,
+    resetConversation,
+    scheduleDemo,
+    scheduleThinkingStream,
+    setComposer,
+  ]);
 
   const isEmptySession = messages.length === 0;
 

@@ -3,7 +3,6 @@ import { useEffect, type Dispatch, type SetStateAction } from "react";
 import type { ComposerLocalFileAttachmentView } from "@spiritagent/ui/composer";
 import {
   isPreviewableImagePath,
-  localFileAttachmentsSnapshotKey,
   normalizeSlashPath,
   readCachedLocalFilePreviewDataUrl,
   rememberLocalFilePreviewDataUrl,
@@ -16,14 +15,6 @@ export function useLocalFileAttachmentPreviews(
   setAttachments: Dispatch<SetStateAction<ComposerLocalFileAttachmentView[]>>,
   readLocalImagePreviewDataUrl: ReadLocalImagePreview | undefined,
 ): void {
-  const attachmentSnapshotKey = localFileAttachmentsSnapshotKey(
-    attachments.map((attachment) => ({
-      path: attachment.path,
-      name: attachment.name,
-      isImage: attachment.isImage,
-    })),
-  );
-
   useEffect(() => {
     if (!readLocalImagePreviewDataUrl) {
       return;
@@ -65,5 +56,5 @@ export function useLocalFileAttachmentPreviews(
         );
       });
     }
-  }, [attachmentSnapshotKey, attachments, readLocalImagePreviewDataUrl, setAttachments]);
+  }, [attachments, readLocalImagePreviewDataUrl, setAttachments]);
 }

@@ -11,7 +11,6 @@ export function useElapsedDuration(
 
   useEffect(() => {
     if (!active) {
-      setElapsedMs(computeDurationMs(startedAt, completedAt));
       return;
     }
 
@@ -24,7 +23,7 @@ export function useElapsedDuration(
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [active, completedAt, startedAt]);
+  }, [active, startedAt]);
 
-  return elapsedMs;
+  return active ? elapsedMs : computeDurationMs(startedAt, completedAt);
 }

@@ -16,22 +16,46 @@ export function DesignModeDemoCursor({
   visible,
   transitionMs = 500,
 }: DesignModeDemoCursorProps) {
+  const cursorRef = useRef<SVGSVGElement>(null);
+  const positionedRef = useRef(false);
+  const rect = activeTarget ? targetRects[activeTarget] : undefined;
+  useLayoutEffect(() => {
+    if (!visible) {
+      positionedRef.current = false;
+      return;
+    }
+    const container = containerRef.current;
+    if (!rect || !container) {
+      return;
+    }
+    const containerRect = container.getBoundingClientRect();
+    const x = rect.left - containerRect.left + rect.width * 0.72;
+    const y = rect.top - containerRect.top + rect.height * 0.55;
+    const firstPositioning = !positionedRef.current;
+    if (firstPositioning) {
+      cursorRef.current?.style.setProperty("transition-duration", "0ms");
+      positionedRef.current = true;
+    }
+    cursorRef.current?.style.setProperty("left", `${x}px`);
+    cursorRef.current?.style.setProperty("top", `${y}px`);
+    if (firstPositioning) {
+      const frame = requestAnimationFrame(() => {
+        cursorRef.current?.style.setProperty("transition-duration", `${transitionMs}ms`);
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [containerRef, rect, transitionMs, visible]);
   if (!visible || !activeTarget) {
     return null;
   }
 
-  const rect = targetRects[activeTarget];
-  const container = containerRef.current;
-  if (!rect || !container) {
+  if (!rect) {
     return null;
   }
 
-  const containerRect = container.getBoundingClientRect();
-  const x = rect.left - containerRect.left + rect.width * 0.72;
-  const y = rect.top - containerRect.top + rect.height * 0.55;
-
   return (
     <svg
+      ref={cursorRef}
       aria-hidden
       className={cn(
         "pointer-events-none absolute z-30 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]",
@@ -40,7 +64,7 @@ export function DesignModeDemoCursor({
       width={18}
       height={22}
       viewBox="0 0 18 22"
-      style={{ left: x, top: y, transitionDuration: `${transitionMs}ms` }}
+      style={{ left: 0, top: 0, transitionDuration: "0ms" }}
     >
       <path
         d="M1 1l4.2 16.2L8.4 11 14.8 9.6 1 1z"
@@ -52,3 +76,4 @@ export function DesignModeDemoCursor({
     </svg>
   );
 }
+import { useLayoutEffect, useRef } from "react";

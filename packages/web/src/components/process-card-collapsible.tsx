@@ -1,5 +1,5 @@
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -60,32 +60,43 @@ export function ProcessCardCollapsible({
 }) {
   const { t } = useTranslation();
   const summary = formatProcessGroupSummary(t, toolCounts, messages, messageIndices);
-  const playSealOnMountRef = useRef(playSealAnimation);
-  const [autoExpanded, setAutoExpanded] = useState(() => playSealOnMountRef.current);
+  const [autoExpanded, setAutoExpanded] = useState(playSealAnimation);
   const [localManualOpen, setLocalManualOpen] = useState(false);
   const manualOpenControlled = manualOpen !== undefined;
   const manualOpenValue = manualOpenControlled ? manualOpen : localManualOpen;
-  const setManualOpenValue = (open: boolean) => {
-    if (manualOpenControlled) {
-      onManualOpenChange?.(open);
-      return;
-    }
-    setLocalManualOpen(open);
-  };
+  const setManualOpenValue = useCallback(
+    (open: boolean) => {
+      if (manualOpenControlled) {
+        onManualOpenChange?.(open);
+        return;
+      }
+      setLocalManualOpen(open);
+    },
+    [manualOpenControlled, onManualOpenChange],
+  );
+  const sealGroupIdRef = useRef(groupId);
+  const sealKey = `${groupId}\u0000${playSealAnimation}`;
+  const [previousSealKey, setPreviousSealKey] = useState(sealKey);
+  if (previousSealKey !== sealKey) {
+    setPreviousSealKey(sealKey);
+    setAutoExpanded(playSealAnimation);
+  }
 
   useLayoutEffect(() => {
-    if (!playSealOnMountRef.current) {
+    sealGroupIdRef.current = groupId;
+    if (!playSealAnimation) {
       return;
     }
-    setManualOpenValue(false);
-    setAutoExpanded(true);
+    queueMicrotask(() => setManualOpenValue(false));
     const collapseTimer = window.setTimeout(() => {
-      setAutoExpanded(false);
+      if (sealGroupIdRef.current === groupId) {
+        setAutoExpanded(false);
+      }
     }, SEAL_COLLAPSE_LAYOUT_DELAY_MS);
     return () => {
       window.clearTimeout(collapseTimer);
     };
-  }, [groupId]);
+  }, [groupId, playSealAnimation, setManualOpenValue]);
 
   const expanded = manualOpenValue || autoExpanded;
   const interactive = true;

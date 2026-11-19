@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { useWorkspaceToolsChromeActions } from "@/contexts/workspace-tools-chrome-context";
 import { useRecentFilePool } from "@/hooks/useRecentFilePool";
@@ -40,24 +40,19 @@ export type UseWorkspaceToolsControllerOptions = {
 export function useWorkspaceToolsController({
   runtime,
   snapshot,
-  activeFilePath,
 }: UseWorkspaceToolsControllerOptions) {
   const { setOpen: setWorkspaceToolsOpen } = useWorkspaceToolsChromeActions();
-  const initialWorkspaceToolsRef = useRef<ReturnType<
-    typeof createInitialWorkspaceToolsState
-  > | null>(null);
-  if (initialWorkspaceToolsRef.current === null) {
-    initialWorkspaceToolsRef.current = createInitialWorkspaceToolsState(false);
-  }
-  const initialWorkspaceTools = initialWorkspaceToolsRef.current;
+  const [initialWorkspaceTools] = useState(() => createInitialWorkspaceToolsState(false));
   const [workspaceToolTabs, setWorkspaceToolTabs] = useState(() => initialWorkspaceTools.tabs);
   const [activeWorkspaceToolTabId, setActiveWorkspaceToolTabId] = useState(
     () => initialWorkspaceTools.activeTabId,
   );
   const activeWorkspaceToolTabIdRef = useRef(activeWorkspaceToolTabId);
-  activeWorkspaceToolTabIdRef.current = activeWorkspaceToolTabId;
   const workspaceToolTabsRef = useRef(workspaceToolTabs);
-  workspaceToolTabsRef.current = workspaceToolTabs;
+  useLayoutEffect(() => {
+    activeWorkspaceToolTabIdRef.current = activeWorkspaceToolTabId;
+    workspaceToolTabsRef.current = workspaceToolTabs;
+  }, [activeWorkspaceToolTabId, workspaceToolTabs]);
   const getWorkspaceToolTabs = useCallback(() => workspaceToolTabsRef.current, []);
   const getActiveWorkspaceToolTabId = useCallback(() => activeWorkspaceToolTabIdRef.current, []);
   const workspaceToolsHostSyncedRef = useRef<typeof runtime.hostKind | null>(null);
@@ -65,6 +60,11 @@ export function useWorkspaceToolsController({
   const workspaceToolsHostSignatureRef = useRef("");
   const workspaceToolsHostRevisionRef = useRef(-1);
   const browserTabEnabled = runtime.hostKind === "electron";
+  const runtimeApiReady = runtime.apiReady;
+  const runtimeHostKind = runtime.hostKind;
+  const fetchWorkspaceToolTabs = runtime.getWorkspaceToolTabs;
+  const subscribeWorkspaceToolTabsUpdates = runtime.subscribeWorkspaceToolTabsUpdates;
+  const persistWorkspaceToolTabs = runtime.syncWorkspaceToolTabs;
 
   const [workspaceFilesPlanRevealNonce, setWorkspaceFilesPlanRevealNonce] = useState(0);
   const [workspaceFilesPlanRevealTargetId, setWorkspaceFilesPlanRevealTargetId] = useState<
@@ -101,7 +101,7 @@ export function useWorkspaceToolsController({
       setWorkspaceToolTabs(navigation.tabs);
       setActiveWorkspaceToolTabId(navigation.activeId);
     },
-    [runtime.hostKind],
+    [runtime.hostKind, setWorkspaceToolsOpen],
   );
 
   const recentFilePool = useRecentFilePool({
@@ -131,7 +131,7 @@ export function useWorkspaceToolsController({
       }
       setWorkspaceFileRevealNonce((value) => value + 1);
     },
-    [recentFilePool.recordOpenedFile, setWorkspaceToolsOpen],
+    [recentFilePool, setWorkspaceToolsOpen],
   );
 
   const openEditorFile = useCallback(
@@ -201,49 +201,58 @@ export function useWorkspaceToolsController({
     [revealEditorFile],
   );
 
-  const revealWorkspaceDirectory = useCallback((relativePath: string) => {
-    const navigation = resolveWorkspaceFilesTab(
-      workspaceToolTabsRef.current,
-      activeWorkspaceToolTabIdRef.current,
-    );
-    setWorkspaceToolsOpen(true);
-    setWorkspaceToolTabs(navigation.tabs);
-    setActiveWorkspaceToolTabId(navigation.activeTabId);
-    setWorkspaceFileRevealTargetId(navigation.filesTabId);
-    setWorkspaceFileRevealScope("workspace");
-    setWorkspaceFileRevealDirectoryOnly(true);
-    setWorkspaceFileRevealPath(relativePath.replace(/\/+$/u, ""));
-    setWorkspaceFileRevealAbsolutePath("");
-    setWorkspaceFileRevealNonce((value) => value + 1);
-  }, []);
+  const revealWorkspaceDirectory = useCallback(
+    (relativePath: string) => {
+      const navigation = resolveWorkspaceFilesTab(
+        workspaceToolTabsRef.current,
+        activeWorkspaceToolTabIdRef.current,
+      );
+      setWorkspaceToolsOpen(true);
+      setWorkspaceToolTabs(navigation.tabs);
+      setActiveWorkspaceToolTabId(navigation.activeTabId);
+      setWorkspaceFileRevealTargetId(navigation.filesTabId);
+      setWorkspaceFileRevealScope("workspace");
+      setWorkspaceFileRevealDirectoryOnly(true);
+      setWorkspaceFileRevealPath(relativePath.replace(/\/+$/u, ""));
+      setWorkspaceFileRevealAbsolutePath("");
+      setWorkspaceFileRevealNonce((value) => value + 1);
+    },
+    [setWorkspaceToolsOpen],
+  );
 
-  const openGitTab = useCallback((preferTabId?: string) => {
-    if (preferTabId) {
-      const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, preferTabId);
-      if (isWorkspaceToolTabKind(tab, "git")) {
-        setWorkspaceToolsOpen(true);
-        setActiveWorkspaceToolTabId(preferTabId);
-        return;
+  const openGitTab = useCallback(
+    (preferTabId?: string) => {
+      if (preferTabId) {
+        const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, preferTabId);
+        if (isWorkspaceToolTabKind(tab, "git")) {
+          setWorkspaceToolsOpen(true);
+          setActiveWorkspaceToolTabId(preferTabId);
+          return;
+        }
       }
-    }
-    const navigation = resolveWorkspaceGitTab(
-      workspaceToolTabsRef.current,
-      activeWorkspaceToolTabIdRef.current,
-    );
-    setWorkspaceToolsOpen(true);
-    setWorkspaceToolTabs(navigation.tabs);
-    setActiveWorkspaceToolTabId(navigation.activeTabId);
-  }, []);
+      const navigation = resolveWorkspaceGitTab(
+        workspaceToolTabsRef.current,
+        activeWorkspaceToolTabIdRef.current,
+      );
+      setWorkspaceToolsOpen(true);
+      setWorkspaceToolTabs(navigation.tabs);
+      setActiveWorkspaceToolTabId(navigation.activeTabId);
+    },
+    [setWorkspaceToolsOpen],
+  );
 
-  const focusWorkspaceToolTab = useCallback((tabId: string) => {
-    const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, tabId);
-    if (!tab) {
-      return false;
-    }
-    setWorkspaceToolsOpen(true);
-    setActiveWorkspaceToolTabId(tabId);
-    return true;
-  }, []);
+  const focusWorkspaceToolTab = useCallback(
+    (tabId: string) => {
+      const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, tabId);
+      if (!tab) {
+        return false;
+      }
+      setWorkspaceToolsOpen(true);
+      setActiveWorkspaceToolTabId(tabId);
+      return true;
+    },
+    [setWorkspaceToolsOpen],
+  );
 
   const openWorkspaceFileOnTab = useCallback(
     (
@@ -274,21 +283,24 @@ export function useWorkspaceToolsController({
     [openWorkspaceFile, revealEditorFile],
   );
 
-  const revealWorkspaceDirectoryOnTab = useCallback((tabId: string, relativePath: string) => {
-    const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, tabId);
-    if (!isWorkspaceToolTabKind(tab, "files")) {
-      revealWorkspaceDirectory(relativePath);
-      return;
-    }
-    setWorkspaceToolsOpen(true);
-    setActiveWorkspaceToolTabId(tabId);
-    setWorkspaceFileRevealTargetId(tabId);
-    setWorkspaceFileRevealScope("workspace");
-    setWorkspaceFileRevealDirectoryOnly(true);
-    setWorkspaceFileRevealPath(relativePath.replace(/\/+$/u, ""));
-    setWorkspaceFileRevealAbsolutePath("");
-    setWorkspaceFileRevealNonce((value) => value + 1);
-  }, []);
+  const revealWorkspaceDirectoryOnTab = useCallback(
+    (tabId: string, relativePath: string) => {
+      const tab = findWorkspaceToolTab(workspaceToolTabsRef.current, tabId);
+      if (!isWorkspaceToolTabKind(tab, "files")) {
+        revealWorkspaceDirectory(relativePath);
+        return;
+      }
+      setWorkspaceToolsOpen(true);
+      setActiveWorkspaceToolTabId(tabId);
+      setWorkspaceFileRevealTargetId(tabId);
+      setWorkspaceFileRevealScope("workspace");
+      setWorkspaceFileRevealDirectoryOnly(true);
+      setWorkspaceFileRevealPath(relativePath.replace(/\/+$/u, ""));
+      setWorkspaceFileRevealAbsolutePath("");
+      setWorkspaceFileRevealNonce((value) => value + 1);
+    },
+    [revealWorkspaceDirectory, setWorkspaceToolsOpen],
+  );
 
   const focusOrOpenBrowserUrl = useCallback(
     (rawUrl: string, preferTabId?: string) => {
@@ -327,7 +339,7 @@ export function useWorkspaceToolsController({
       }
       openBrowserUrlInNewTab(url);
     },
-    [openBrowserUrlInNewTab, runtime.hostKind],
+    [openBrowserUrlInNewTab, runtime.hostKind, setWorkspaceToolsOpen],
   );
 
   const openWorkspaceUrl = useCallback(
@@ -342,7 +354,7 @@ export function useWorkspaceToolsController({
           toast.error(error instanceof Error ? error.message : String(error)),
         );
     },
-    [runtime.openExtensionLink, focusOrOpenBrowserUrl],
+    [runtime, focusOrOpenBrowserUrl, setWorkspaceToolsOpen],
   );
 
   const openWorkspacePlan = useCallback(() => {
@@ -374,7 +386,7 @@ export function useWorkspaceToolsController({
   useEffect(() => {
     workspaceToolsHostReadyRef.current = false;
     workspaceToolsHostRevisionRef.current = -1;
-    if (!runtime.apiReady || runtime.hostKind !== "electron") {
+    if (!runtimeApiReady || runtimeHostKind !== "electron") {
       return;
     }
     let disposed = false;
@@ -391,9 +403,8 @@ export function useWorkspaceToolsController({
       setActiveWorkspaceToolTabId(snapshot.activeTabId);
       workspaceToolsHostReadyRef.current = true;
     };
-    const unsubscribe = runtime.subscribeWorkspaceToolTabsUpdates(applySnapshot);
-    void runtime
-      .getWorkspaceToolTabs()
+    const unsubscribe = subscribeWorkspaceToolTabsUpdates(applySnapshot);
+    void fetchWorkspaceToolTabs()
       .then(applySnapshot)
       .catch((error: unknown) => {
         console.error("[workspace-tabs] failed to restore Desktop tabs", error);
@@ -403,15 +414,10 @@ export function useWorkspaceToolsController({
       workspaceToolsHostReadyRef.current = false;
       unsubscribe();
     };
-  }, [
-    runtime.apiReady,
-    runtime.hostKind,
-    runtime.getWorkspaceToolTabs,
-    runtime.subscribeWorkspaceToolTabsUpdates,
-  ]);
+  }, [runtimeApiReady, runtimeHostKind, fetchWorkspaceToolTabs, subscribeWorkspaceToolTabsUpdates]);
 
   useEffect(() => {
-    if (runtime.hostKind !== "electron" || !workspaceToolsHostReadyRef.current) {
+    if (runtimeHostKind !== "electron" || !workspaceToolsHostReadyRef.current) {
       return;
     }
     const signature = JSON.stringify({
@@ -422,55 +428,40 @@ export function useWorkspaceToolsController({
       return;
     }
     workspaceToolsHostSignatureRef.current = signature;
-    void runtime
-      .syncWorkspaceToolTabs({
-        expectedRevision: workspaceToolsHostRevisionRef.current,
-        tabs: workspaceToolTabs,
-        activeTabId: activeWorkspaceToolTabId,
-      })
-      .catch((error: unknown) => {
-        workspaceToolsHostSignatureRef.current = "";
-        console.error("[workspace-tabs] failed to persist Desktop tabs", error);
-      });
-  }, [
-    activeWorkspaceToolTabId,
-    runtime.hostKind,
-    runtime.syncWorkspaceToolTabs,
-    workspaceToolTabs,
-  ]);
+    void persistWorkspaceToolTabs({
+      expectedRevision: workspaceToolsHostRevisionRef.current,
+      tabs: workspaceToolTabs,
+      activeTabId: activeWorkspaceToolTabId,
+    }).catch((error: unknown) => {
+      workspaceToolsHostSignatureRef.current = "";
+      console.error("[workspace-tabs] failed to persist Desktop tabs", error);
+    });
+  }, [activeWorkspaceToolTabId, runtimeHostKind, persistWorkspaceToolTabs, workspaceToolTabs]);
 
-  useEffect(() => {
-    const activeTab = findWorkspaceToolTab(workspaceToolTabs, activeWorkspaceToolTabId);
-    if (!activeTab || activeTab.kind !== "extension") {
-      return;
-    }
-    const context = {
-      workspaceRoot: snapshot?.workspaceRoot ?? "",
-      sessionKey: snapshot?.composerSessionKey ?? "",
-    };
-    if (isWorkspaceToolTabVisibleInContext(activeTab, context)) {
-      return;
-    }
+  const activeTab = findWorkspaceToolTab(workspaceToolTabs, activeWorkspaceToolTabId);
+  const tabVisibilityContext = {
+    workspaceRoot: snapshot?.workspaceRoot ?? "",
+    sessionKey: snapshot?.composerSessionKey ?? "",
+  };
+  if (
+    activeTab?.kind === "extension" &&
+    !isWorkspaceToolTabVisibleInContext(activeTab, tabVisibilityContext)
+  ) {
     const visibleTabs = workspaceToolTabs.filter((tab) =>
-      isWorkspaceToolTabVisibleInContext(tab, context),
+      isWorkspaceToolTabVisibleInContext(tab, tabVisibilityContext),
     );
     setActiveWorkspaceToolTabId(defaultActiveWorkspaceToolTabId(visibleTabs));
-  }, [
-    activeWorkspaceToolTabId,
-    snapshot?.composerSessionKey,
-    snapshot?.workspaceRoot,
-    workspaceToolTabs,
-  ]);
+  }
 
   useEffect(() => {
-    if (!runtime.apiReady || runtime.hostKind == null) {
+    if (!runtimeApiReady || runtimeHostKind == null) {
       return;
     }
-    if (workspaceToolsHostSyncedRef.current === runtime.hostKind) {
+    if (workspaceToolsHostSyncedRef.current === runtimeHostKind) {
       return;
     }
-    workspaceToolsHostSyncedRef.current = runtime.hostKind;
-    const includeBrowser = runtime.hostKind === "electron";
+    workspaceToolsHostSyncedRef.current = runtimeHostKind;
+    const includeBrowser = runtimeHostKind === "electron";
     setWorkspaceToolTabs((prev) => {
       const normalized = normalizeWorkspaceToolTabsForHost(
         prev,
@@ -482,7 +473,7 @@ export function useWorkspaceToolsController({
       }
       return normalized.tabs;
     });
-  }, [runtime.apiReady, runtime.hostKind]);
+  }, [runtimeApiReady, runtimeHostKind]);
 
   useEffect(() => {
     const bridge = window.spiritDesktop;
@@ -495,22 +486,22 @@ export function useWorkspaceToolsController({
   const previousPlanModifiedAtRef = useRef<number | undefined>(undefined);
   const previousPlanExistsRef = useRef<boolean | undefined>(undefined);
   const previousActiveSessionPathRef = useRef<string | null>(null);
+  const plan = snapshot?.plan;
+  const planSessionPath = snapshot?.activeSession?.filePath ?? null;
 
   useEffect(() => {
-    const plan = snapshot?.plan;
-    const sessionPath = snapshot?.activeSession?.filePath ?? null;
     if (!plan) {
       return;
     }
 
     const sessionChanged =
       previousActiveSessionPathRef.current !== null &&
-      previousActiveSessionPathRef.current !== sessionPath;
+      previousActiveSessionPathRef.current !== planSessionPath;
 
     const previousExists = previousPlanExistsRef.current;
     const previousModifiedAt = previousPlanModifiedAtRef.current;
 
-    previousActiveSessionPathRef.current = sessionPath;
+    previousActiveSessionPathRef.current = planSessionPath;
     previousPlanExistsRef.current = plan.exists;
     previousPlanModifiedAtRef.current = plan.modifiedAtUnixMs;
 
@@ -530,14 +521,7 @@ export function useWorkspaceToolsController({
     }
 
     openWorkspacePlan();
-  }, [
-    activeFilePath,
-    openWorkspacePlan,
-    openWorkspaceUrl,
-    snapshot?.plan?.exists,
-    snapshot?.plan?.modifiedAtUnixMs,
-    snapshot?.plan,
-  ]);
+  }, [openWorkspacePlan, plan, planSessionPath]);
 
   const visibleWorkspaceToolTabs = useMemo(
     () =>

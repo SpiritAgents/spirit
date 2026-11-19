@@ -32,6 +32,13 @@ export function LandingCodeCompletionDemo({ className }: LandingCodeCompletionDe
     () => getCompletionDemoGhostText(acceptedCount, ghostVisible),
     [acceptedCount, ghostVisible],
   );
+  const [previousInView, setPreviousInView] = useState(inView);
+  if (previousInView !== inView) {
+    setPreviousInView(inView);
+    setAcceptedCount(0);
+    setGhostVisible(false);
+    setResetFading(false);
+  }
 
   useEffect(() => {
     if (inView) {
@@ -44,9 +51,6 @@ export function LandingCodeCompletionDemo({ className }: LandingCodeCompletionDe
     timersRef.current = [];
 
     if (!inView) {
-      setAcceptedCount(0);
-      setGhostVisible(false);
-      setResetFading(false);
       return;
     }
 

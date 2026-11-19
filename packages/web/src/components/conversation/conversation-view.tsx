@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   ClipboardEvent as ReactClipboardEvent,
   CSSProperties,
   DragEvent as ReactDragEvent,
   ComponentRef,
   KeyboardEvent as ReactKeyboardEvent,
-  Ref,
+  RefCallback,
   RefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -103,7 +103,7 @@ export type ConversationListSectionProps = {
 };
 
 export type ComposerDockSectionProps = {
-  composerDockRef: Ref<HTMLDivElement | null>;
+  composerDockRef: RefCallback<HTMLDivElement | null>;
   doodleText: string;
   showWorkspaceBindingControls: boolean;
   paneSessionPath?: string;
@@ -407,6 +407,15 @@ export function ConversationView({
   const isDragSourcePane = Boolean(paneId && paneDragSourcePaneId === paneId);
   const showDropTargets = dropOverlayActive && !isDragSourcePane;
   const dropHostRef = useRef<HTMLDivElement | null>(null);
+  const [visibleDropZones, setVisibleDropZones] =
+    useState<readonly PaneDropZone[]>(PANE_DROP_ZONE_ORDER);
+  const [wasDropTargetActive, setWasDropTargetActive] = useState(showDropTargets);
+  if (showDropTargets !== wasDropTargetActive) {
+    setWasDropTargetActive(showDropTargets);
+    if (showDropTargets) {
+      setVisibleDropZones(PANE_DROP_ZONE_ORDER);
+    }
+  }
 
   const resolveVisibleDropZones = useCallback(() => {
     if (sidebarSessionDragActive) {
@@ -422,6 +431,26 @@ export function ConversationView({
       targetPaneHost: dropHostRef.current,
     });
   }, [paneDragSourcePaneId, paneId, sidebarSessionDragActive, split.paneCount]);
+  useLayoutEffect(() => {
+    if (!showDropTargets) {
+      return;
+    }
+    queueMicrotask(() => {
+      setVisibleDropZones(resolveVisibleDropZones());
+    });
+  }, [resolveVisibleDropZones, showDropTargets]);
+  const handleComposerDockRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      composerDock.composerDockRef(node);
+    },
+    [composerDock],
+  );
+  const handleMessageQuoteAddToChat = useCallback(
+    (attachment: MessageQuoteAttachment) => {
+      composerDock.onMessageQuoteAddToChat(attachment);
+    },
+    [composerDock],
+  );
 
   const updateDropTarget = useCallback(
     (zone: PaneDropZone) => {
@@ -534,54 +563,49 @@ export function ConversationView({
           sessionPinned={sessionPinned}
           onTogglePinSession={onTogglePinSession}
         />
-        {showDropTargets
-          ? (() => {
-              const visibleDropZones = resolveVisibleDropZones();
-              return (
-                <div
-                  className={cn(
-                    "absolute inset-0 z-30 grid cursor-crosshair",
-                    paneDropZoneGridLayoutClass(visibleDropZones),
-                  )}
-                >
-                  {visibleDropZones.map((zone) => (
-                    <div
-                      key={zone}
-                      data-pane-drop-zone={zone}
-                      className={cn(
-                        "pointer-events-auto",
-                        paneDropZoneGridCellClass(zone, visibleDropZones),
-                      )}
-                      onDragEnter={(event) => {
-                        event.preventDefault();
-                        updateDropTarget(zone);
-                      }}
-                      onDragOver={(event) => {
-                        event.preventDefault();
-                        updateDropTarget(zone);
-                      }}
-                      onDrop={(event) => {
-                        event.preventDefault();
-                        if (!visibleDropZones.includes(zone)) {
-                          return;
-                        }
-                        const repositionZone = effectiveRepositionZone(zone, visibleDropZones);
-                        if (sidebarSessionDragActive && onSidebarSessionDrop) {
-                          void onSidebarSessionDrop(paneId!, repositionZone);
-                          return;
-                        }
-                        if (zone === "swap") {
-                          onPaneDrop?.(paneId!, zone);
-                          return;
-                        }
-                        onPaneDrop?.(paneId!, repositionZone);
-                      }}
-                    />
-                  ))}
-                </div>
-              );
-            })()
-          : null}
+        {showDropTargets ? (
+          <div
+            className={cn(
+              "absolute inset-0 z-30 grid cursor-crosshair",
+              paneDropZoneGridLayoutClass(visibleDropZones),
+            )}
+          >
+            {visibleDropZones.map((zone) => (
+              <div
+                key={zone}
+                data-pane-drop-zone={zone}
+                className={cn(
+                  "pointer-events-auto",
+                  paneDropZoneGridCellClass(zone, visibleDropZones),
+                )}
+                onDragEnter={(event) => {
+                  event.preventDefault();
+                  updateDropTarget(zone);
+                }}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  updateDropTarget(zone);
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  if (!visibleDropZones.includes(zone)) {
+                    return;
+                  }
+                  const repositionZone = effectiveRepositionZone(zone, visibleDropZones);
+                  if (sidebarSessionDragActive && onSidebarSessionDrop) {
+                    void onSidebarSessionDrop(paneId!, repositionZone);
+                    return;
+                  }
+                  if (zone === "swap") {
+                    onPaneDrop?.(paneId!, zone);
+                    return;
+                  }
+                  onPaneDrop?.(paneId!, repositionZone);
+                }}
+              />
+            ))}
+          </div>
+        ) : null}
         <div
           data-spirit-surface="conversation-drop-host"
           className="relative flex min-h-0 min-w-0 flex-1 flex-col"
@@ -709,7 +733,7 @@ export function ConversationView({
               value={{
                 ...(quoteSessionPath ? { quoteSessionPath } : {}),
                 ...(quoteOrigin ? { quoteOrigin } : {}),
-                onMessageQuoteAddToChat: composerDock.onMessageQuoteAddToChat,
+                onMessageQuoteAddToChat: handleMessageQuoteAddToChat,
                 ...(showSideChat && paneId
                   ? { onMessageQuoteAddToSideChat: handleMessageQuoteAddToSideChat }
                   : {}),
@@ -816,7 +840,7 @@ export function ConversationView({
             !approvalPreviewDemoActive &&
             !toolCardPreviewDemoActive ? (
               <ComposerDock
-                ref={composerDock.composerDockRef}
+                ref={handleComposerDockRef}
                 isEmptySession={isEmptySession}
                 doodleText={composerDock.doodleText}
                 showWorkspaceBindingControls={composerDock.showWorkspaceBindingControls}

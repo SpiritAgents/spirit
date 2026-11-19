@@ -1,4 +1,4 @@
-import { useEffect, useRef, type MutableRefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, type MutableRefObject } from "react";
 
 import type { SessionSidebarChromeApi } from "@/contexts/session-sidebar-chrome-context";
 import {
@@ -95,9 +95,11 @@ export function useDesktopKeyboardShortcuts({
     useWorkspaceToolsChromeActions();
   const workspaceToolsOpen = useWorkspaceToolsChromeOpen();
   const workspaceToolsOpenRef = useRef(workspaceToolsOpen);
-  workspaceToolsOpenRef.current = workspaceToolsOpen;
   const workspaceToolTabsRef = useRef(workspaceToolTabs);
-  workspaceToolTabsRef.current = workspaceToolTabs;
+  useLayoutEffect(() => {
+    workspaceToolsOpenRef.current = workspaceToolsOpen;
+    workspaceToolTabsRef.current = workspaceToolTabs;
+  }, [workspaceToolTabs, workspaceToolsOpen]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) {
@@ -144,7 +146,7 @@ export function useDesktopKeyboardShortcuts({
     };
     window.addEventListener("keydown", onKeyDown, { capture: true });
     return () => window.removeEventListener("keydown", onKeyDown, { capture: true });
-  }, [moveBackgroundShortcutTargetRef, runtime.moveToBackground, sessionSidebarChromeApiRef]);
+  }, [moveBackgroundShortcutTargetRef, runtime, sessionSidebarChromeApiRef]);
 
   // Cmd+Opt+B is not stolen by Lexical (isBold requires an exact modifier match).
   // Capture here is pairing with Cmd+B, not a necessity for the same bug.
@@ -268,7 +270,7 @@ export function useDesktopKeyboardShortcuts({
     activeSurfaceRef,
     conversationAbortShortcutEligibleRef,
     conversationAbortShortcutTargetRef,
-    runtime.abortConversation,
+    runtime,
   ]);
 
   // Cmd/Ctrl+N — global new session (macOS menu accelerator handles this; skip here).
@@ -455,7 +457,7 @@ export function useDesktopKeyboardShortcuts({
     };
     window.addEventListener("keydown", onKeyDown, { capture: true });
     return () => window.removeEventListener("keydown", onKeyDown, { capture: true });
-  }, [uiLayoutScaleApi.zoomIn, uiLayoutScaleApi.zoomOut, uiLayoutScaleApi.resetScale]);
+  }, [uiLayoutScaleApi]);
 
   useEffect(() => {
     const bridge = window.spiritDesktop;
@@ -465,5 +467,5 @@ export function useDesktopKeyboardShortcuts({
     return bridge.subscribeUiLayoutZoom((action) => {
       applyUiLayoutZoomAction(action, uiLayoutScaleApi);
     });
-  }, [uiLayoutScaleApi.zoomIn, uiLayoutScaleApi.zoomOut, uiLayoutScaleApi.resetScale]);
+  }, [uiLayoutScaleApi]);
 }

@@ -198,6 +198,7 @@ export function WorkspaceFilesSearchPanel({
     [groups, expandedPaths],
   );
 
+  // oxlint-disable-next-line react/incompatible-library -- TanStack Virtual returns functions that React Compiler cannot safely memoize.
   const virtualizer = useVirtualizer({
     count: virtualRows.length,
     getScrollElement: () => scrollAreaViewport(scrollAreaRef.current),

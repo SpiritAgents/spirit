@@ -1,5 +1,5 @@
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { DelayToolDuration } from "./delay-tool-duration";
 
 import { Command, Square, SquareArrowOutUpRight } from "lucide-react";
@@ -185,10 +185,7 @@ function ToolCallSummaryRow({
   hideLspBadge?: boolean;
 }) {
   const { t } = useTranslation("settings");
-  const editLineDelta = useMemo(
-    () => resolveToolLineDeltaForDisplay(tool),
-    [tool.phase, tool.toolName, tool.editLineDelta, tool.argsExcerpt],
-  );
+  const editLineDelta = useMemo(() => resolveToolLineDeltaForDisplay(tool), [tool]);
   const statusSuffix = tool.phase === "failed" && !tool.taskNotification ? t("failed") : undefined;
   const statusSuffixTone: ToolSummaryStatusSuffixTone | undefined = statusSuffix
     ? shellSummary
@@ -354,11 +351,11 @@ function GenericToolExpandedBody({
       tool.toolName === "todo_write" || tool.toolName === "todo_list"
         ? resolveTodoToolSnapshotTodos(tool)
         : undefined,
-    [tool.toolName, tool.outputExcerpt, tool.streamingArgumentsJson, tool.argsExcerpt],
+    [tool],
   );
   const askQuestionsGroups = useMemo(
     () => (tool.toolName === "ask_questions" ? resolveAskQuestionsAnswerGroups(tool) : undefined),
-    [tool.toolName, tool.argsExcerpt, tool.outputExcerpt],
+    [tool],
   );
   const detailLines = genericExpandableDetailLines(tool);
   const showArgsExcerpt =
@@ -519,7 +516,7 @@ function FileToolDiffExpandedBody({ tool, open }: { tool: ToolBlockSnapshot; ope
   const diffHost = useToolCallDiffHost();
   const readWorkspaceTextFile = diffHost?.readWorkspaceTextFile;
   const diffMounted = useCollapsibleChildMount(open);
-  const cachedDiffRef = useRef<FileToolDiffSource | null>(null);
+  const [cachedDiff, setCachedDiff] = useState<FileToolDiffSource | null>(null);
   const [planBaselineText, setPlanBaselineText] = useState<string | undefined>();
 
   const planRelativePath = useMemo(() => {
@@ -527,17 +524,15 @@ function FileToolDiffExpandedBody({ tool, open }: { tool: ToolBlockSnapshot; ope
       return undefined;
     }
     return resolvePlanRelativePath(tool, open ? tool.streamingArgumentsJson : undefined);
-  }, [
-    open,
-    tool.toolName,
-    tool.phase,
-    tool.argsExcerpt,
-    open ? tool.streamingArgumentsJson : undefined,
-  ]);
+  }, [open, tool]);
+  const [baselinePath, setBaselinePath] = useState(planRelativePath);
+  if (baselinePath !== planRelativePath) {
+    setBaselinePath(planRelativePath);
+    setPlanBaselineText(undefined);
+  }
 
   useEffect(() => {
     if (!open || !planRelativePath || !readWorkspaceTextFile) {
-      setPlanBaselineText(undefined);
       return;
     }
     let cancelled = false;
@@ -564,30 +559,17 @@ function FileToolDiffExpandedBody({ tool, open }: { tool: ToolBlockSnapshot; ope
         workspaceRoot: diffHost?.workspaceRoot,
         planBaselineText,
       }),
-    [
-      open,
-      tool.toolCallId,
-      tool.toolName,
-      tool.phase,
-      tool.argsExcerpt,
-      tool.deleteFileBaselineText,
-      tool.fileToolDiffArgumentsJson,
-      open ? tool.streamingArgumentsJson : undefined,
-      diffHost?.workspaceRoot,
-      planBaselineText,
-    ],
+    [open, tool, diffHost?.workspaceRoot, planBaselineText],
   );
 
   if (diffResult && typeof diffResult === "object") {
-    cachedDiffRef.current = diffResult;
+    if (cachedDiff !== diffResult) {
+      setCachedDiff(diffResult);
+    }
   }
 
   const displayDiff =
-    diffResult && typeof diffResult === "object"
-      ? diffResult
-      : diffMounted
-        ? cachedDiffRef.current
-        : null;
+    diffResult && typeof diffResult === "object" ? diffResult : diffMounted ? cachedDiff : null;
 
   if (!diffMounted) {
     return null;
@@ -818,16 +800,13 @@ export function MinimalToolCallCard({
     isFileDiffNavTool &&
     ((tool.toolName === "create_plan" && onOpenPlan) || (fileDiffEditorTarget && onOpenReadFile)),
   );
-  const editLineDelta = useMemo(
-    () => resolveToolLineDeltaForDisplay(tool),
-    [tool.phase, tool.toolName, tool.editLineDelta, tool.argsExcerpt],
-  );
+  const editLineDelta = useMemo(() => resolveToolLineDeltaForDisplay(tool), [tool]);
   const isFileDiff = isFileDiffTool(tool.toolName);
   const isProviderToolCard =
     isResponsesBuiltInToolCard(tool.toolName) || Boolean(tool.providerToolLabel?.trim());
   const shellCommand = useMemo(
     () => (isShell ? resolveShellToolExpandedCommand(tool) : undefined),
-    [isShell, tool.argsExcerpt, tool.detailLines, tool.headlineDetail],
+    [isShell, tool],
   );
   const expandable = toolHasExpandableContent(tool);
   const moveToBackground =

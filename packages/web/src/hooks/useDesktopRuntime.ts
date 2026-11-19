@@ -812,7 +812,7 @@ export function useDesktopRuntime() {
         };
       });
     },
-    [],
+    [api?.kind, webViewingSessionPath],
   );
 
   const reapplySessionPathAliases = useCallback(() => {
@@ -1437,7 +1437,7 @@ export function useDesktopRuntime() {
 
   useEffect(() => {
     if (api && hostReady) {
-      void refreshSessions();
+      queueMicrotask(() => void refreshSessions());
     }
   }, [api, hostReady, refreshSessions]);
 
@@ -1447,27 +1447,34 @@ export function useDesktopRuntime() {
       return;
     }
     sessionListRevisionRef.current = revision;
-    void refreshSessions();
+    queueMicrotask(() => void refreshSessions());
   }, [refreshSessions, snapshot?.sessionListRevision]);
 
   const pendingQuestions = snapshot?.conversation.pendingQuestions ?? null;
 
-  useEffect(() => {
-    if (!pendingQuestions) {
+  if (!pendingQuestions) {
+    if (questionError) {
       setQuestionError("");
-      setQuestionDrafts({});
-      return;
     }
-
-    setQuestionError("");
-    setQuestionDrafts((current) => {
-      const next: Record<string, QuestionDraft> = {};
-      for (const question of pendingQuestions.request.questions) {
-        next[question.id] = current[question.id] ?? emptyQuestionDraft();
-      }
-      return next;
-    });
-  }, [pendingQuestions]);
+    if (Object.keys(questionDrafts).length > 0) {
+      setQuestionDrafts({});
+    }
+  } else {
+    if (questionError) {
+      setQuestionError("");
+    }
+    const next: Record<string, QuestionDraft> = {};
+    for (const question of pendingQuestions.request.questions) {
+      next[question.id] = questionDrafts[question.id] ?? emptyQuestionDraft();
+    }
+    const keys = Object.keys(next);
+    const changed =
+      keys.length !== Object.keys(questionDrafts).length ||
+      keys.some((key) => questionDrafts[key] !== next[key]);
+    if (changed) {
+      setQuestionDrafts(next);
+    }
+  }
 
   /**
    * Remote Web clients only: poll for snapshots at a fixed interval while busy (turn advancement is driven by the host pump; poll no longer drives the runtime).
@@ -1606,7 +1613,8 @@ export function useDesktopRuntime() {
   }, [api, applySnapshot, refreshSessions]);
 
   useEffect(() => {
-    if (!api) {
+    const workspaceRoot = snapshot?.workspaceRoot;
+    if (!api || workspaceRoot === undefined) {
       return;
     }
     let cancelled = false;
@@ -1705,11 +1713,14 @@ export function useDesktopRuntime() {
     };
   }, [api, applySnapshot, refreshSessions, snapshot]);
 
+  const workspaceBinding = snapshot?.workspaceBinding;
+  const gitIsRepository = snapshot?.git.isRepository;
+  const gitWorkspaceRoot = snapshot?.workspaceRoot;
   useEffect(() => {
-    if (!api?.refreshGitSnapshot) {
+    if (!api?.refreshGitSnapshot || gitWorkspaceRoot === undefined) {
       return;
     }
-    if (!snapshot || snapshot.workspaceBinding !== "project" || !snapshot.git.isRepository) {
+    if (workspaceBinding !== "project" || !gitIsRepository) {
       return;
     }
 
@@ -1754,13 +1765,7 @@ export function useDesktopRuntime() {
         clearTimeout(timer);
       }
     };
-  }, [
-    api,
-    applySnapshot,
-    snapshot?.workspaceBinding,
-    snapshot?.git.isRepository,
-    snapshot?.workspaceRoot,
-  ]);
+  }, [api, applySnapshot, workspaceBinding, gitIsRepository, gitWorkspaceRoot]);
 
   const updateQuestionDraft = useCallback(
     (questionId: string, updater: (draft: QuestionDraft) => QuestionDraft) => {
@@ -2798,7 +2803,16 @@ export function useDesktopRuntime() {
         }
       }
     },
-    [api, applySnapshot, resetComposerAfterSend, composer, refreshSessions, snapshot],
+    [
+      api,
+      applySnapshot,
+      resetComposerAfterSend,
+      composer,
+      refreshSessions,
+      snapshot,
+      syncWebViewingSessionPath,
+      webViewingSessionPath,
+    ],
   );
 
   const submitGitChip = useCallback(

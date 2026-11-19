@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import type { MermaidConfig } from "mermaid";
 
@@ -217,6 +217,7 @@ export function SpiritMermaidChart({
   eager?: boolean;
 }) {
   const plugin = useMemo(() => createSpiritMermaidPlugin(resolvedDark), [resolvedDark]);
+  const chartId = useId().replace(/:/g, "");
   const containerRef = useRef<HTMLDivElement>(null);
   const [shouldRender, setShouldRender] = useState(eager || fullscreen);
   const [svg, setSvg] = useState("");
@@ -226,7 +227,6 @@ export function SpiritMermaidChart({
 
   useEffect(() => {
     if (eager || fullscreen) {
-      setShouldRender(true);
       return;
     }
     const element = containerRef.current;
@@ -256,7 +256,7 @@ export function SpiritMermaidChart({
       setError(null);
       try {
         const mermaid = plugin.getMermaid(mermaidConfig);
-        const id = `spirit-mermaid-${Math.abs(hashChart(chart))}-${Date.now()}`;
+        const id = `spirit-mermaid-${Math.abs(hashChart(chart))}-${chartId}-${retryKey}`;
         const { svg: rendered } = await mermaid.render(id, chart);
         if (!cancelled) {
           setSvg(rendered);
@@ -277,8 +277,11 @@ export function SpiritMermaidChart({
     return () => {
       cancelled = true;
     };
-  }, [chart, mermaidConfig, plugin, retryKey, shouldRender]);
+  }, [chart, chartId, mermaidConfig, plugin, retryKey, shouldRender]);
 
+  if ((eager || fullscreen) && !shouldRender) {
+    setShouldRender(true);
+  }
   if (!shouldRender && !svg) {
     return <div className={cn("my-4 min-h-[200px]", className)} ref={containerRef} />;
   }
