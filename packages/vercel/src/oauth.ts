@@ -6,6 +6,7 @@ import {
   VERCEL_MCP_RESOURCE,
   VERCEL_OAUTH_AUTHORIZATION_URL,
   VERCEL_OAUTH_CLIENT_ID,
+  VERCEL_OAUTH_ISSUER,
   VERCEL_OAUTH_REDIRECT_HOST,
   VERCEL_OAUTH_REDIRECT_PATH,
   VERCEL_OAUTH_REVOCATION_URL,
@@ -28,9 +29,34 @@ export class VercelOAuthError extends Error {
 export interface VercelOAuthTokenResponse {
   access_token: string;
   refresh_token?: string;
+  /** Returned for the authorization code grant only; refresh responses omit it. */
+  id_token?: string;
   expires_in?: number;
   token_type?: string;
   scope?: string;
+}
+
+/**
+ * Reads the account label from an ID token received directly from the token endpoint over TLS
+ * (OpenID Connect Core 3.1.3.7). It only labels the connection, so the signature is not verified;
+ * the issuer and audience still have to name Vercel and this client.
+ */
+export function vercelUsernameFromIdToken(idToken: string | undefined): string | undefined {
+  const payload = idToken?.split(".")[1];
+  if (!payload) return undefined;
+  let claims: unknown;
+  try {
+    claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+  } catch {
+    return undefined;
+  }
+  if (!claims || typeof claims !== "object") return undefined;
+  const { iss, aud, preferred_username } = claims as Record<string, unknown>;
+  const audiences = Array.isArray(aud) ? aud : [aud];
+  if (iss !== VERCEL_OAUTH_ISSUER || !audiences.includes(VERCEL_OAUTH_CLIENT_ID)) return undefined;
+  return typeof preferred_username === "string" && preferred_username.trim()
+    ? preferred_username.trim()
+    : undefined;
 }
 
 export interface VercelAuthorizationRequest {

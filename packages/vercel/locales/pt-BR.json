@@ -27,6 +27,7 @@
     "waiting": "Aguardando autorização no navegador",
     "openAuthorizationPage": "Abrir página de autorização da Vercel",
     "connected": "Conectado à Vercel",
+    "connectedAs": "Conectado como @{{username}}",
     "disconnect": "Desconectar"
   },
   "common": {

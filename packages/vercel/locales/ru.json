@@ -27,6 +27,7 @@
     "waiting": "Ожидание авторизации в браузере",
     "openAuthorizationPage": "Открыть страницу авторизации Vercel",
     "connected": "Подключено к Vercel",
+    "connectedAs": "Подключено как @{{username}}",
     "disconnect": "Отключить"
   },
   "common": {

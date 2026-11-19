@@ -124,6 +124,18 @@ async function until(check: () => boolean) {
   }
 }
 
+const idToken = [
+  "header",
+  Buffer.from(
+    JSON.stringify({
+      iss: "https://vercel.com",
+      aud: "https://spirit.dev/oauth/client-metadata.json",
+      preferred_username: "fixture-account",
+    }),
+  ).toString("base64url"),
+  "signature",
+].join(".");
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
@@ -154,6 +166,7 @@ test("authorization stores one Secret from the loopback code and never shows cre
       return json({
         access_token: "private-access-token",
         refresh_token: "private-refresh-token",
+        id_token: idToken,
         expires_in: 3600,
       });
     },
@@ -167,6 +180,7 @@ test("authorization stores one Secret from the loopback code and never shows cre
     accessToken: "private-access-token",
     refreshToken: "private-refresh-token",
     accessTokenExpiresAt: NOW + 3_600_000,
+    username: "fixture-account",
   });
   assert.deepEqual(
     f.states.map((state) => state.phase),
@@ -248,6 +262,7 @@ test("disconnect removes the credential first and revokes both tokens", async ()
       accessToken: "stored-access",
       refreshToken: "stored-refresh",
       accessTokenExpiresAt: Date.now() + 3_600_000,
+      username: "fixture-account",
     }),
   );
   const revoked: Array<[string | null, string | null, boolean]> = [];
@@ -263,7 +278,7 @@ test("disconnect removes the credential first and revokes both tokens", async ()
   });
   const action = extension.actions.authorize(f.action);
   await f.opened.promise;
-  assert.deepEqual(f.states, [{ phase: "connected" }]);
+  assert.deepEqual(f.states, [{ phase: "connected", username: "fixture-account" }]);
   f.result.resolve({ disconnect: true });
   assert.deepEqual(await action, { connected: false });
   assert.equal(f.secrets.size, 0);

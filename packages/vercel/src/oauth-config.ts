@@ -8,8 +8,13 @@ export const VERCEL_OAUTH_AUTHORIZATION_URL = "https://vercel.com/oauth/authoriz
 export const VERCEL_OAUTH_TOKEN_URL = "https://api.vercel.com/login/oauth/token";
 export const VERCEL_OAUTH_REVOCATION_URL = "https://api.vercel.com/login/oauth/token/revoke";
 
-/** The MCP resource metadata lists only openid, but Vercel issues refresh tokens for offline_access. */
-export const VERCEL_OAUTH_SCOPE = "openid offline_access";
+export const VERCEL_OAUTH_ISSUER = "https://vercel.com";
+
+/**
+ * The MCP resource metadata lists only openid. profile adds preferred_username to the ID token for
+ * the account label, and offline_access is what makes Vercel issue a refresh token.
+ */
+export const VERCEL_OAUTH_SCOPE = "openid profile offline_access";
 
 /** RFC 8707 resource indicator; must match the MCP protected resource metadata exactly. */
 export const VERCEL_MCP_RESOURCE = "https://mcp.vercel.com/";

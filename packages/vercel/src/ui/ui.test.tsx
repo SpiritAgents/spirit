@@ -45,15 +45,29 @@ test("a connected account can be disconnected", () => {
   render(
     wrap(
       <VercelAuthorizationView
-        state={{ phase: "connected" }}
+        state={{ phase: "connected", username: "fixture-account" }}
         close={close}
         openExternal={async () => {}}
       />,
     ),
   );
-  expect(screen.getByText("Connected to Vercel")).toBeTruthy();
+  expect(screen.getByText("Connected as @fixture-account")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Disconnect" }));
   expect(close).toHaveBeenCalledWith({ disconnect: true });
+});
+
+test("a connection without an account label still reads as connected", () => {
+  render(
+    wrap(
+      <VercelAuthorizationView
+        state={{ phase: "connected" }}
+        close={() => {}}
+        openExternal={async () => {}}
+      />,
+    ),
+  );
+  expect(screen.getByText("Connected to Vercel")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Disconnect" })).toBeTruthy();
 });
 
 test("errors are announced and only invalid credentials offer disconnect", () => {

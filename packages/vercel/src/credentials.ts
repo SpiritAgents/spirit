@@ -2,6 +2,7 @@ import type { SpiritExtensionContext } from "@spiritagent/extension-toolkit/desk
 
 import {
   refreshVercelAccessToken,
+  vercelUsernameFromIdToken,
   VercelOAuthError,
   type VercelOAuthTokenResponse,
 } from "./oauth.js";
@@ -13,6 +14,11 @@ export interface VercelCredentials {
   accessToken: string;
   refreshToken: string;
   accessTokenExpiresAt: number;
+  /**
+   * Display label from the ID token at authorization. Refresh responses carry no ID token, so it
+   * is kept; a missing claim only drops the label and never blocks the connection.
+   */
+  username?: string;
 }
 
 export class InvalidVercelCredentialsError extends Error {
@@ -26,6 +32,7 @@ type VercelSecrets = Pick<SpiritExtensionContext["secrets"], "get" | "set" | "up
 
 export function vercelCredentialsFromTokenResponse(
   response: VercelOAuthTokenResponse,
+  username: string | undefined,
   now: number,
 ): VercelCredentials {
   if (
@@ -43,6 +50,7 @@ export function vercelCredentialsFromTokenResponse(
     accessToken: response.access_token,
     refreshToken: response.refresh_token,
     accessTokenExpiresAt: now + response.expires_in * 1000,
+    ...(username ? { username } : {}),
   };
 }
 
@@ -100,7 +108,7 @@ export function createVercelCredentialManager(options: {
           fetch: options.fetch,
           refreshToken: stored.refreshToken,
         });
-        return JSON.stringify(vercelCredentialsFromTokenResponse(response, now()));
+        return JSON.stringify(vercelCredentialsFromTokenResponse(response, stored.username, now()));
       } catch (error) {
         if (error instanceof VercelOAuthError && error.status === 401) {
           terminalError = error;
@@ -119,7 +127,11 @@ export function createVercelCredentialManager(options: {
   return {
     read,
     async store(response: VercelOAuthTokenResponse): Promise<VercelCredentials> {
-      const credentials = vercelCredentialsFromTokenResponse(response, now());
+      const credentials = vercelCredentialsFromTokenResponse(
+        response,
+        vercelUsernameFromIdToken(response.id_token),
+        now(),
+      );
       await options.secrets.set(VERCEL_CREDENTIAL_SLOT, JSON.stringify(credentials));
       return credentials;
     },
@@ -154,7 +166,9 @@ function parseStoredCredentials(raw: string): VercelCredentials | undefined {
     !record.refreshToken.trim() ||
     typeof record.accessTokenExpiresAt !== "number" ||
     !Number.isFinite(record.accessTokenExpiresAt) ||
-    record.accessTokenExpiresAt < 0
+    record.accessTokenExpiresAt < 0 ||
+    (record.username !== undefined &&
+      (typeof record.username !== "string" || !record.username.trim()))
   ) {
     return undefined;
   }
@@ -162,5 +176,6 @@ function parseStoredCredentials(raw: string): VercelCredentials | undefined {
     accessToken: record.accessToken,
     refreshToken: record.refreshToken,
     accessTokenExpiresAt: record.accessTokenExpiresAt,
+    ...(typeof record.username === "string" ? { username: record.username } : {}),
   };
 }

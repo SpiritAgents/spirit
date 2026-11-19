@@ -14,6 +14,7 @@ test("the next refresh is armed ahead of access token expiry", async () => {
     accessToken: "access",
     refreshToken: "refresh",
     accessTokenExpiresAt: expiresAt,
+    username: "fixture-account",
   }));
   const scheduler = createVercelRefreshScheduler({ signal: new AbortController().signal, read });
   scheduler.start();

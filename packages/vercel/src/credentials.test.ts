@@ -51,7 +51,11 @@ const stored = (accessTokenExpiresAt: number) => ({
   accessToken: "stored-access",
   refreshToken: "stored-refresh",
   accessTokenExpiresAt,
+  username: "fixture-account",
 });
+
+const idToken = (claims: Record<string, unknown>) =>
+  ["header", Buffer.from(JSON.stringify(claims)).toString("base64url"), "signature"].join(".");
 
 const noNetwork: typeof fetch = async () => assert.fail("no token request was expected");
 
@@ -61,7 +65,7 @@ test("a fresh access token is returned without a token request", async () => {
   assert.equal((await manager.read())?.accessToken, "stored-access");
 });
 
-test("a due access token rotates the refresh token in one atomic Secret write", async () => {
+test("a due access token rotates the refresh token and keeps the account label", async () => {
   const { secrets, values } = secretsFixture(stored(NOW + 60_000));
   let body: URLSearchParams | undefined;
   const manager = createVercelCredentialManager({
@@ -76,6 +80,7 @@ test("a due access token rotates the refresh token in one atomic Secret write", 
     accessToken: "next-access",
     refreshToken: "next-refresh",
     accessTokenExpiresAt: NOW + 3_600_000,
+    username: "fixture-account",
   });
   assert.equal(body?.get("grant_type"), "refresh_token");
   assert.equal(body?.get("refresh_token"), "stored-refresh");
@@ -148,6 +153,7 @@ test("clearing during a refresh returns the rotated credential that is still val
     accessToken: "next-access",
     refreshToken: "next-refresh",
     accessTokenExpiresAt: NOW + 3_600_000,
+    username: "fixture-account",
   });
   assert.equal(values.size, 0);
 });
@@ -161,6 +167,28 @@ test("unreadable credentials are reported instead of being silently replaced", a
   assert.equal(values.size, 0);
 });
 
+test("authorization stores the ID token username but not the ID token", async () => {
+  const { secrets, values } = secretsFixture();
+  const manager = createVercelCredentialManager({ secrets, fetch: noNetwork, now: () => NOW });
+  const token = idToken({
+    iss: "https://vercel.com",
+    aud: "https://spirit.dev/oauth/client-metadata.json",
+    preferred_username: "fixture-account",
+  });
+  await manager.store({
+    access_token: "access",
+    refresh_token: "refresh",
+    id_token: token,
+    expires_in: 3600,
+  });
+  assert.deepEqual(JSON.parse(values.get(VERCEL_CREDENTIAL_SLOT)!), {
+    accessToken: "access",
+    refreshToken: "refresh",
+    accessTokenExpiresAt: NOW + 3_600_000,
+    username: "fixture-account",
+  });
+});
+
 test("credentials without a refresh token are not stored", async () => {
   const { secrets, values } = secretsFixture();
   const manager = createVercelCredentialManager({ secrets, fetch: noNetwork, now: () => NOW });
@@ -169,4 +197,25 @@ test("credentials without a refresh token are not stored", async () => {
     /did not return refreshable credentials/,
   );
   assert.equal(values.size, 0);
+});
+
+test("a missing or untrusted ID token only drops the account label", async () => {
+  const { secrets, values } = secretsFixture();
+  const manager = createVercelCredentialManager({ secrets, fetch: noNetwork, now: () => NOW });
+  for (const id_token of [
+    undefined,
+    idToken({ iss: "https://vercel.com", aud: "other-client", preferred_username: "spoofed" }),
+  ]) {
+    await manager.store({
+      access_token: "access",
+      refresh_token: "refresh",
+      id_token,
+      expires_in: 3600,
+    });
+    assert.deepEqual(JSON.parse(values.get(VERCEL_CREDENTIAL_SLOT)!), {
+      accessToken: "access",
+      refreshToken: "refresh",
+      accessTokenExpiresAt: NOW + 3_600_000,
+    });
+  }
 });

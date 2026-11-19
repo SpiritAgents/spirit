@@ -27,6 +27,7 @@
     "waiting": "等待浏览器授权",
     "openAuthorizationPage": "打开 Vercel 授权页面",
     "connected": "已连接 Vercel",
+    "connectedAs": "已连接 @{{username}}",
     "disconnect": "断开连接"
   },
   "common": {

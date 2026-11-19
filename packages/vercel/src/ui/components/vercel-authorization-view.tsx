@@ -43,7 +43,11 @@ export function VercelAuthorizationView({
         ) : state.phase === "loading" ? (
           <Spinner className="size-8 text-muted-foreground" />
         ) : state.phase === "connected" ? (
-          <p className="text-sm">{t("vercel.connected")}</p>
+          <p className="text-sm">
+            {state.username
+              ? t("vercel.connectedAs", { username: state.username })
+              : t("vercel.connected")}
+          </p>
         ) : null}
       </div>
       {state.phase === "error" || externalError ? (

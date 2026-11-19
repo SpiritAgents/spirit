@@ -28,7 +28,7 @@ export const VERCEL_AUTHORIZATION_TIMEOUT_MS = 10 * 60 * 1000;
 export type VercelAuthorizationState =
   | { phase: "loading" }
   | { phase: "waiting"; authorizationUrl: string }
-  | { phase: "connected" }
+  | { phase: "connected"; username?: string }
   | { phase: "error"; message: string; canDisconnect?: boolean };
 
 export interface VercelExtensionDependencies {
@@ -112,7 +112,9 @@ export function createVercelExtension(
       (credentialError
         ? { phase: "error", message: credentialError.message, canDisconnect: true }
         : credentials
-          ? { phase: "connected" }
+          ? credentials.username
+            ? { phase: "connected", username: credentials.username }
+            : { phase: "connected" }
           : { phase: "loading" }) satisfies VercelAuthorizationState,
     );
     pendingView = view;

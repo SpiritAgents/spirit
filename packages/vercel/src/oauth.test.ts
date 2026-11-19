@@ -9,6 +9,7 @@ import {
   refreshVercelAccessToken,
   vercelAuthorizationUrl,
   VercelOAuthError,
+  vercelUsernameFromIdToken,
 } from "./oauth.js";
 
 const json = (body: unknown, status = 200) =>
@@ -32,7 +33,7 @@ test("the authorization URL identifies Spirit by its metadata URL and binds PKCE
     response_type: "code",
     client_id: "https://spirit.dev/oauth/client-metadata.json",
     redirect_uri: "http://127.0.0.1:43210/callback",
-    scope: "openid offline_access",
+    scope: "openid profile offline_access",
     state: request.state,
     code_challenge: request.codeChallenge,
     code_challenge_method: "S256",
@@ -129,4 +130,31 @@ test("token errors distinguish retired grants, outages, and unreachable Vercel",
       error.status === undefined &&
       /Could not reach Vercel/.test(error.message),
   );
+});
+
+const idToken = (claims: Record<string, unknown>) =>
+  ["header", Buffer.from(JSON.stringify(claims)).toString("base64url"), "signature"].join(".");
+
+test("the account label comes from an ID token issued by Vercel for this client", () => {
+  const claims = {
+    iss: "https://vercel.com",
+    aud: "https://spirit.dev/oauth/client-metadata.json",
+    preferred_username: "fixture-account",
+  };
+  assert.equal(vercelUsernameFromIdToken(idToken(claims)), "fixture-account");
+  assert.equal(
+    vercelUsernameFromIdToken(idToken({ ...claims, aud: [claims.aud, "other"] })),
+    "fixture-account",
+  );
+  assert.equal(vercelUsernameFromIdToken(idToken({ ...claims, aud: "other-client" })), undefined);
+  assert.equal(
+    vercelUsernameFromIdToken(idToken({ ...claims, iss: "https://example.com" })),
+    undefined,
+  );
+  assert.equal(
+    vercelUsernameFromIdToken(idToken({ ...claims, preferred_username: " " })),
+    undefined,
+  );
+  assert.equal(vercelUsernameFromIdToken("not-a-jwt"), undefined);
+  assert.equal(vercelUsernameFromIdToken(undefined), undefined);
 });

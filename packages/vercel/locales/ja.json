@@ -27,6 +27,7 @@
     "waiting": "ブラウザでの認証を待機中",
     "openAuthorizationPage": "Vercel 認証ページを開く",
     "connected": "Vercel に接続済み",
+    "connectedAs": "@{{username}} として接続済み",
     "disconnect": "切断"
   },
   "common": {

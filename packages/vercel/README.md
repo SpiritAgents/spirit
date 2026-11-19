@@ -20,10 +20,17 @@ Website: **spirit.dev**. Contact: **hi@spirit.dev**.
   listener closes on completion, denial, cancellation, extension disposal, or a
   ten-minute timeout. Vercel does not return the `iss` authorization response
   parameter, so it is not required.
-- Requests use the `openid offline_access` scope and the
+- Requests use the `openid profile offline_access` scope and the
   `https://mcp.vercel.com/` resource indicator. The access token, rotating refresh
-  token, and access token expiry are committed together in the declared
-  `oauthCredentials` Secret slot and never sent to the extension page.
+  token, access token expiry, and account username are committed together in the
+  declared `oauthCredentials` Secret slot; only the username reaches the extension
+  page.
+- The username is the `preferred_username` claim of the ID token returned by the
+  authorization code exchange. The token comes directly from Vercel's token
+  endpoint over TLS and only labels the connection, so its issuer and audience are
+  checked but its signature is not. Refresh responses carry no ID token, so the
+  stored username is kept; the ID token itself is never stored. A missing or
+  untrusted claim only drops the label, and the view reads "Connected to Vercel".
 - Access tokens last one hour and refresh in the background ten minutes before
   expiry. Each refresh runs inside the atomic Secret update, so concurrent
   extension-host processes never spend the same rotating refresh token, and the
