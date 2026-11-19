@@ -939,6 +939,9 @@ importers:
       '@spiritagent/github':
         specifier: workspace:*
         version: link:../github
+      '@spiritagent/vercel':
+        specifier: workspace:*
+        version: link:../vercel
       '@types/node':
         specifier: 26.6.6
         version: 26.6.6

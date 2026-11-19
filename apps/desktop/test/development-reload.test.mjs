@@ -54,6 +54,7 @@ test("runtime restart watches cover the Workbench domain graph", () => {
     "@spiritagent/brand",
     "@spiritagent/icons",
     "@spiritagent/ui",
+    "@spiritagent/vercel",
     "@spiritagent/web",
   ]) {
     assert.ok(!names.includes(name), `${name} should not be a Workbench runtime dependency`);
