@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "displayName": "Vercel",
+    "description": "Работайте с проектами, развертываниями и журналами.",
+    "keywords": {
+      "deployments": "развертывания",
+      "projects": "проекты",
+      "logs": "журналы"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "vercel": {
+      "displayName": "Vercel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Vercel"
+    }
+  },
+  "vercel": {
+    "waiting": "Ожидание авторизации в браузере",
+    "openAuthorizationPage": "Открыть страницу авторизации Vercel",
+    "connected": "Подключено к Vercel",
+    "connectedAs": "Подключено как @{{username}}",
+    "disconnect": "Отключить"
+  },
+  "common": {
+    "cancel": "Отмена"
+  }
+}

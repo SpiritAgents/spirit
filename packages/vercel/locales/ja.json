@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "displayName": "Vercel",
+    "description": "プロジェクト、デプロイ、ログを扱います。",
+    "keywords": {
+      "deployments": "デプロイ",
+      "projects": "プロジェクト",
+      "logs": "ログ"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "vercel": {
+      "displayName": "Vercel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Vercel"
+    }
+  },
+  "vercel": {
+    "waiting": "ブラウザでの認証を待機中",
+    "openAuthorizationPage": "Vercel 認証ページを開く",
+    "connected": "Vercel に接続済み",
+    "connectedAs": "@{{username}} として接続済み",
+    "disconnect": "切断"
+  },
+  "common": {
+    "cancel": "キャンセル"
+  }
+}

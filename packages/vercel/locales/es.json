@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "displayName": "Vercel",
+    "description": "Gestiona proyectos, implementaciones y registros.",
+    "keywords": {
+      "deployments": "implementaciones",
+      "projects": "proyectos",
+      "logs": "registros"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "vercel": {
+      "displayName": "Vercel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Vercel"
+    }
+  },
+  "vercel": {
+    "waiting": "Esperando la autorización en el navegador",
+    "openAuthorizationPage": "Abrir la página de autorización de Vercel",
+    "connected": "Conectado a Vercel",
+    "connectedAs": "Conectado como @{{username}}",
+    "disconnect": "Desconectar"
+  },
+  "common": {
+    "cancel": "Cancelar"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "displayName": "Vercel",
+    "description": "處理專案、部署與日誌。",
+    "keywords": {
+      "deployments": "部署",
+      "projects": "專案",
+      "logs": "日誌"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "vercel": {
+      "displayName": "Vercel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Vercel"
+    }
+  },
+  "vercel": {
+    "waiting": "等待瀏覽器授權",
+    "openAuthorizationPage": "開啟 Vercel 授權頁面",
+    "connected": "已連接 Vercel",
+    "connectedAs": "以 @{{username}} 身份連接",
+    "disconnect": "中斷連接"
+  },
+  "common": {
+    "cancel": "取消"
+  }
+}

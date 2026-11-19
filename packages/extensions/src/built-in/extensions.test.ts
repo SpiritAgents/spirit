@@ -131,6 +131,44 @@ test("GitHub is available for manual installation but is not installed by defaul
   }
 });
 
+test("Vercel is an opt-in built-in that contributes only its authorized MCP server", async () => {
+  const index = await readBuiltInMarketplaceIndex();
+  const vercel = index.extensions.find((entry) => entry.name === "vercel");
+  assert.ok(vercel);
+  assert.equal(vercel.defaultInstalled, false);
+  assert.equal(vercel.icon, "extensions/vercel/icon.svg");
+  assert.equal(readExtensionMessage(vercel, vercel.description, "zh-CN"), "处理项目、部署与日志。");
+  assert.deepEqual(Object.keys(vercel.manifest.contributes ?? {}).sort(), [
+    "authorizations",
+    "desktop",
+    "mcp",
+  ]);
+  assert.ok(existsSync(join(resolveBuiltInRegistryRoot(), "extensions/vercel/mcp.json")));
+
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-vercel-opt-in-"));
+  try {
+    const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
+    const seeded = await ensureBuiltInExtensions({ spiritDataDir, hostKind: "desktop", manager });
+    assert.equal(
+      seeded.some((item) => item.id === "built-in/vercel"),
+      false,
+    );
+    const installed = await installBuiltInExtension({
+      spiritDataDir,
+      hostKind: "desktop",
+      extensionId: "built-in/vercel",
+    });
+    assert.equal(installed.id, "built-in/vercel");
+    const listed = (await manager.list()).find((item) => item.id === "built-in/vercel");
+    assert.deepEqual(
+      listed?.manifest.contributes?.authorizations?.map(({ id, action }) => ({ id, action })),
+      [{ id: "oauth", action: "authorize" }],
+    );
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+  }
+});
+
 test("installed GitHub manifests follow the manager's current locale", async () => {
   const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-github-locale-switch-"));
   try {

@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "displayName": "Vercel",
+    "description": "프로젝트, 배포, 로그를 다루세요.",
+    "keywords": {
+      "deployments": "배포",
+      "projects": "프로젝트",
+      "logs": "로그"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "vercel": {
+      "displayName": "Vercel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Vercel"
+    }
+  },
+  "vercel": {
+    "waiting": "브라우저 인증 대기 중",
+    "openAuthorizationPage": "Vercel 인증 페이지 열기",
+    "connected": "Vercel에 연결됨",
+    "connectedAs": "@{{username}}(으)로 연결됨",
+    "disconnect": "연결 해제"
+  },
+  "common": {
+    "cancel": "취소"
+  }
+}

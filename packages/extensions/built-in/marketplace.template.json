@@ -14,6 +14,13 @@
       "icon": "./extensions/github/icon.svg",
       "reviewStatus": "verified",
       "defaultInstalled": false
+    },
+    {
+      "name": "vercel",
+      "source": "./extensions/vercel",
+      "icon": "./extensions/vercel/icon.svg",
+      "reviewStatus": "verified",
+      "defaultInstalled": false
     }
   ]
 }

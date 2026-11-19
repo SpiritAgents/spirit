@@ -84,11 +84,13 @@ const nodeDomains = new Set([
   "sessions",
   "tasks",
   "tools",
+  "vercel",
   "workbench",
   "workspace",
 ]);
 const reactPresentationPaths = [
   /^packages\/github\/src\/ui\//u,
+  /^packages\/vercel\/src\/ui\//u,
   /^packages\/extensions\/src\/extension-ui-kit\//u,
   /^packages\/sessions\/src\/lib\//u,
 ];

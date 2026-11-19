@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "vercel": {
+      "displayName": "Vercel",
+      "transport": {
+        "type": "http",
+        "url": "https://mcp.vercel.com",
+        "headers": {
+          "Authorization": "Bearer ${extension-secret:oauthCredentials:accessToken}"
+        }
+      }
+    }
+  }
+}

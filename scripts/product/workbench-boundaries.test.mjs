@@ -24,6 +24,7 @@ const domains = [
   "sessions",
   "tasks",
   "tools",
+  "vercel",
   "web",
   "workbench",
   "workspace",
