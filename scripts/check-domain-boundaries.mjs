@@ -84,6 +84,7 @@ const nodeDomains = new Set([
   "sessions",
   "tasks",
   "tools",
+  "vercel",
   "workbench",
   "workspace",
 ]);
