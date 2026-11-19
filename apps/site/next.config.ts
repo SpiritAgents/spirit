@@ -43,6 +43,13 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        source: "/oauth/client-metadata.json",
+        headers: [
+          { key: "Content-Type", value: "application/json" },
+          { key: "Cache-Control", value: "public, max-age=300" },
+        ],
+      },
+      {
         source: "/:locale/index.md",
         headers: [{ key: "Content-Type", value: "text/markdown; charset=utf-8" }],
       },
