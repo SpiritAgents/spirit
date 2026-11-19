@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <style>.background{fill:#fff}.glyph{fill:#000}@media(prefers-color-scheme:dark){.background{fill:#000}.glyph{fill:#fff}}</style>
+  <rect class="background" width="100" height="100"/>
+  <path class="glyph" transform="translate(20 21.4130434783) scale(0.5217391304)" d="M57.5 0 115 100H0z"/>
+</svg>

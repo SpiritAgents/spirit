@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Vercel",
+    "description": "Gérez projets, déploiements et journaux.",
+    "keywords": {
+      "deployments": "déploiements",
+      "projects": "projets",
+      "logs": "journaux"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "vercel": {
+      "displayName": "Vercel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Vercel"
+    }
+  },
+  "vercel": {
+    "waiting": "En attente d'autorisation dans le navigateur",
+    "openAuthorizationPage": "Ouvrir la page d'autorisation Vercel",
+    "connected": "Connecté à Vercel",
+    "disconnect": "Déconnecter"
+  },
+  "common": {
+    "cancel": "Annuler"
+  }
+}

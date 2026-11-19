@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Vercel",
+    "description": "Gerencie projetos, implantações e logs.",
+    "keywords": {
+      "deployments": "implantações",
+      "projects": "projetos",
+      "logs": "logs"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "vercel": {
+      "displayName": "Vercel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Vercel"
+    }
+  },
+  "vercel": {
+    "waiting": "Aguardando autorização no navegador",
+    "openAuthorizationPage": "Abrir página de autorização da Vercel",
+    "connected": "Conectado à Vercel",
+    "disconnect": "Desconectar"
+  },
+  "common": {
+    "cancel": "Cancelar"
+  }
+}

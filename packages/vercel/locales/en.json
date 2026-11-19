@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Vercel",
+    "description": "Work with projects, deployments, and logs.",
+    "keywords": {
+      "deployments": "deployments",
+      "projects": "projects",
+      "logs": "logs"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "vercel": {
+      "displayName": "Vercel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Vercel"
+    }
+  },
+  "vercel": {
+    "waiting": "Waiting for browser authorization",
+    "openAuthorizationPage": "Open Vercel Authorization Page",
+    "connected": "Connected to Vercel",
+    "disconnect": "Disconnect"
+  },
+  "common": {
+    "cancel": "Cancel"
+  }
+}
