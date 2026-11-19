@@ -194,11 +194,13 @@ function VirtualFixture({ appendBeforeMount = false }: { appendBeforeMount?: boo
   const [visibleCount, setVisibleCount] = useState(2);
   const [itemIds, setItemIds] = useState<readonly string[]>(["alpha", "beta", "gamma"]);
   const scrollCallsRef = useRef(0);
+  const [scrollCalls, setScrollCalls] = useState(0);
   const { onKeyDownCapture, onFocusCapture, onBlurCapture } = useVirtualRovingFocus({
     containerRef,
     itemIds,
     scrollToIndex: (index) => {
       scrollCallsRef.current += 1;
+      setScrollCalls(scrollCallsRef.current);
       if (appendBeforeMount && scrollCallsRef.current === 1) {
         document.body.focus();
         setItemIds((current) => [...current, "delta"]);
@@ -221,7 +223,7 @@ function VirtualFixture({ appendBeforeMount = false }: { appendBeforeMount?: boo
           <button type="button">{id}</button>
         </RovingFocusItem>
       ))}
-      <output data-testid="scroll-calls">{scrollCallsRef.current}</output>
+      <output data-testid="scroll-calls">{scrollCalls}</output>
     </RovingFocusGroup>
   );
 }

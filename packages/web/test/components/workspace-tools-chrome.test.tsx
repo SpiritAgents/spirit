@@ -3,7 +3,7 @@
 import "./setup";
 
 import { act, render, screen } from "@testing-library/react";
-import type { CSSProperties } from "react";
+import { useLayoutEffect, type CSSProperties } from "react";
 import { beforeEach, expect, test } from "vitest";
 
 import {
@@ -65,7 +65,9 @@ function FakeShell() {
 
 function ChromeProbe() {
   const chrome = useWorkspaceToolsChrome();
-  latestApi.current = chrome;
+  useLayoutEffect(() => {
+    latestApi.current = chrome;
+  }, [chrome]);
   return (
     <output data-testid="chrome">
       {JSON.stringify({
