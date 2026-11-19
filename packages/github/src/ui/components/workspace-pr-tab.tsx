@@ -207,10 +207,12 @@ export function WorkspacePrTab({
   const branchResultRef = useRef<GitHubPullRequestForBranchResult | null>(null);
   const onTitleChangeRef = useRef(onTitleChange);
   const onPrStatusChangeRef = useRef(onPrStatusChange);
-  detailRef.current = detail;
-  branchResultRef.current = branchResult;
-  onTitleChangeRef.current = onTitleChange;
-  onPrStatusChangeRef.current = onPrStatusChange;
+  useLayoutEffect(() => {
+    detailRef.current = detail;
+    branchResultRef.current = branchResult;
+    onTitleChangeRef.current = onTitleChange;
+    onPrStatusChangeRef.current = onPrStatusChange;
+  });
 
   const refreshAuthStatus = useCallback(async () => {
     if (!prTabEnabled) {
@@ -464,7 +466,9 @@ export function WorkspacePrTab({
     viewMode,
   ]);
 
-  refreshGitHubPanelRef.current = refreshGitHubPanel;
+  useLayoutEffect(() => {
+    refreshGitHubPanelRef.current = refreshGitHubPanel;
+  }, [refreshGitHubPanel]);
 
   const handleMergePullRequest = useCallback(
     async (mergeMethod: GitHubPullRequestMergeMethod) => {
@@ -647,7 +651,7 @@ export function WorkspacePrTab({
       repo: prRevealRequest.repo,
       number: prRevealRequest.number,
     };
-    setViewMode("detail");
+    queueMicrotask(() => setViewMode("detail"));
 
     if (!authStatus.connected) {
       return;
@@ -709,16 +713,9 @@ export function WorkspacePrTab({
 
     prevBranchRef.current = branch;
     pinnedPullRequestRequestRef.current = null;
-    setViewMode("list");
+    queueMicrotask(() => setViewMode("list"));
     void refreshRepositoryInfo();
-  }, [
-    authStatus.connected,
-    gitSnapshot?.branch,
-    gitSnapshot?.selectedBranch,
-    isActive,
-    prTabEnabled,
-    refreshRepositoryInfo,
-  ]);
+  }, [authStatus.connected, gitSnapshot, isActive, prTabEnabled, refreshRepositoryInfo]);
 
   useEffect(() => {
     if (viewMode === "detail" && detail) {

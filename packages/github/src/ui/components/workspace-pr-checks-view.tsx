@@ -117,7 +117,7 @@ export function WorkspacePrChecksView({
   });
 
   useEffect(() => {
-    if (!hasMore || !onLoadMore || loadingMore) {
+    if (!hasMore || !onLoadMore || loadingMore || checks.length === 0) {
       return;
     }
     const root = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
