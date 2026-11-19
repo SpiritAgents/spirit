@@ -18,6 +18,8 @@
 /apps/desktop/build/background.png
 /apps/desktop/build/background@2x.png
 /apps/desktop/build/tray/
+# Generated at build time from packages/brand SVGs (apps/site/scripts/generate-oauth-client.mjs); not checked in
+/apps/site/public/oauth/logo.png
 **/.next/
 **/.source/
 **/.vercel/

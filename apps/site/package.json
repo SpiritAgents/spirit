@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "node ../../packages/product/scripts/run-quality.mjs dev pnpm run dev:run",
-    "dev:run": "pnpm exec turbo run build --filter=\"@spiritagent/site^...\" && node scripts/generate-brand-assets.mjs && node scripts/dev.mjs",
-    "build": "pnpm --filter \"@spiritagent/site^...\" run build && node ../../scripts/product/generate-content.mjs --scope site && node scripts/generate-brand-assets.mjs && node scripts/generate-notice.mjs && node scripts/generate-install-scripts.mjs && tsx scripts/generate-markdown-companions.mjs && next build",
+    "dev:run": "pnpm exec turbo run build --filter=\"@spiritagent/site^...\" && node scripts/generate-brand-assets.mjs && node scripts/generate-oauth-client.mjs && node scripts/dev.mjs",
+    "build": "pnpm --filter \"@spiritagent/site^...\" run build && node ../../scripts/product/generate-content.mjs --scope site && node scripts/generate-brand-assets.mjs && node scripts/generate-oauth-client.mjs && node scripts/generate-notice.mjs && node scripts/generate-install-scripts.mjs && tsx scripts/generate-markdown-companions.mjs && next build",
     "start": "next start",
     "test": "node ../../scripts/product/generate-content.mjs --scope site && tsx --test scripts/*.test.ts",
     "test:og": "node scripts/og-route-smoke.mjs",
@@ -17,6 +17,7 @@
     "brand-assets": "node scripts/generate-brand-assets.mjs",
     "notice": "node scripts/generate-notice.mjs",
     "install-scripts": "node scripts/generate-install-scripts.mjs",
+    "oauth-client": "node scripts/generate-oauth-client.mjs",
     "markdown-companions": "tsx scripts/generate-markdown-companions.mjs"
   },
   "dependencies": {
@@ -45,6 +46,7 @@
     "radix-ui": "^1.4.3",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "sharp": "0.35.5",
     "shiki": "^4.3.1",
     "streamdown": "^2.5.0",
     "tailwind-merge": "^3.5.0",
