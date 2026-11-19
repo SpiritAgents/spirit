@@ -26,11 +26,7 @@ export function renderOAuthClientMetadata(product) {
     client_uri: origin,
     logo_uri: `${origin}${OAUTH_LOGO_PATH}`,
     application_type: "native",
-    grant_types: [
-      "authorization_code",
-      "refresh_token",
-      "urn:ietf:params:oauth:grant-type:device_code",
-    ],
+    grant_types: ["authorization_code", "refresh_token"],
     response_types: ["code"],
     redirect_uris: ["http://127.0.0.1/callback"],
     token_endpoint_auth_method: "none",

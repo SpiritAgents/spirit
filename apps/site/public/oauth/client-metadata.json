@@ -6,8 +6,7 @@
   "application_type": "native",
   "grant_types": [
     "authorization_code",
-    "refresh_token",
-    "urn:ietf:params:oauth:grant-type:device_code"
+    "refresh_token"
   ],
   "response_types": [
     "code"
