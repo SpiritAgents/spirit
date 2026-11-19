@@ -150,6 +150,9 @@ export function useComposerController({
     runtime.composerLocalFileAttachments,
   );
   const [paneQuestionDrafts, setPaneQuestionDrafts] = useState<Record<string, QuestionDraft>>({});
+  const [composerBrowserElementAttachments, setComposerBrowserElementAttachments] = useState<
+    BrowserElementAttachment[]
+  >([]);
 
   const composerSessionKey = snapshot?.composerSessionKey ?? "";
   const paneComposerDraftKey =
@@ -175,19 +178,26 @@ export function useComposerController({
     );
   }, [composerSessionKey, isPaneIsolated, paneComposerDraftKey]);
 
-  useEffect(() => {
-    if (!isPaneIsolated || !pendingQuestions) {
+  if (!isPaneIsolated || !pendingQuestions) {
+    if (Object.keys(paneQuestionDrafts).length > 0) {
       setPaneQuestionDrafts({});
-      return;
     }
-    setPaneQuestionDrafts((current) => {
-      const next: Record<string, QuestionDraft> = {};
-      for (const question of pendingQuestions.request.questions) {
-        next[question.id] = current[question.id] ?? { selectedOptionIds: [], customText: "" };
-      }
-      return next;
-    });
-  }, [isPaneIsolated, pendingQuestions]);
+  } else {
+    const next: Record<string, QuestionDraft> = {};
+    for (const question of pendingQuestions.request.questions) {
+      next[question.id] = paneQuestionDrafts[question.id] ?? {
+        selectedOptionIds: [],
+        customText: "",
+      };
+    }
+    const keys = Object.keys(next);
+    const changed =
+      keys.length !== Object.keys(paneQuestionDrafts).length ||
+      keys.some((key) => paneQuestionDrafts[key] !== next[key]);
+    if (changed) {
+      setPaneQuestionDrafts(next);
+    }
+  }
 
   const composerSegments = isPaneIsolated ? paneComposerSegments : runtime.composerSegments;
   const setComposerSegments = isPaneIsolated
@@ -240,14 +250,11 @@ export function useComposerController({
     snapshot?.conversation.loopEnabled,
   ]);
 
-  const [composerBrowserElementAttachments, setComposerBrowserElementAttachments] = useState<
-    BrowserElementAttachment[]
-  >([]);
   const [composerCursorCodeUnits, setComposerCursorCodeUnits] = useState(0);
   const [slashSelectedIndex, setSlashSelectedIndex] = useState(-1);
-  const [fileReferenceSuggestions, setFileReferenceSuggestions] =
-    useState<WorkspaceFileReferenceSuggestionsResponse>(null);
+  const [slashSelectionQueryKey, setSlashSelectionQueryKey] = useState("");
   const [fileReferenceSelectedIndex, setFileReferenceSelectedIndex] = useState(-1);
+  const [fileReferenceSelectionQueryKey, setFileReferenceSelectionQueryKey] = useState("");
   const [fileReferenceMenuView, setFileReferenceMenuView] = useState<AtReferenceMenuView>("root");
   const [dismissedFileReferenceKey, setDismissedFileReferenceKey] = useState<string | null>(null);
   const [dismissedSlashQueryKey, setDismissedSlashQueryKey] = useState<string | null>(null);
@@ -316,12 +323,13 @@ export function useComposerController({
     };
   }, [paneComposerDraftKey]);
 
+  const composerConfig = snapshot?.config;
   const composerDirectMediaMode = useMemo(() => {
-    if (!snapshot?.config) {
+    if (!composerConfig) {
       return null;
     }
-    return resolveComposerDirectMediaTool(snapshot.config.activeModel, snapshot.config);
-  }, [snapshot?.config]);
+    return resolveComposerDirectMediaTool(composerConfig.activeModel, composerConfig);
+  }, [composerConfig]);
 
   const composerPlaceholder = activeSessionReadOnly
     ? t("app.readOnlySession")
@@ -408,16 +416,19 @@ export function useComposerController({
     [composerCursorCodeUnits, composerText],
   );
 
+  const rawSlashQuery = useMemo(
+    () => currentSkillSlashQueryAtCursor(composerText, composerCursorChars),
+    [composerCursorChars, composerText],
+  );
   const slashQuery = useMemo(() => {
-    const query = currentSkillSlashQueryAtCursor(composerText, composerCursorChars);
-    if (!query) {
+    if (!rawSlashQuery) {
       return undefined;
     }
-    if (dismissedSlashQueryKey === skillSlashQueryKey(query)) {
+    if (dismissedSlashQueryKey === skillSlashQueryKey(rawSlashQuery)) {
       return undefined;
     }
-    return query;
-  }, [composerCursorChars, dismissedSlashQueryKey, composerText]);
+    return rawSlashQuery;
+  }, [dismissedSlashQueryKey, rawSlashQuery]);
 
   const slashSuggestions = useMemo(() => {
     const settingsSkills = snapshot?.skillsList ?? [];
@@ -459,24 +470,15 @@ export function useComposerController({
     );
   }, [composerCursorChars, composerSegments, composerText]);
 
-  useEffect(() => {
-    if (!fileReferenceQuery && dismissedFileReferenceKey !== null) {
-      setDismissedFileReferenceKey(null);
-    }
-  }, [dismissedFileReferenceKey, fileReferenceQuery]);
-
-  useEffect(() => {
-    if (!fileReferenceQuery) {
-      setFileReferenceMenuView("root");
-    }
-  }, [fileReferenceQuery]);
-
-  useEffect(() => {
-    const query = currentSkillSlashQueryAtCursor(composerText, composerCursorChars);
-    if (!query && dismissedSlashQueryKey !== null) {
-      setDismissedSlashQueryKey(null);
-    }
-  }, [composerCursorChars, dismissedSlashQueryKey, composerText]);
+  if (!fileReferenceQuery && dismissedFileReferenceKey !== null) {
+    setDismissedFileReferenceKey(null);
+  }
+  if (!fileReferenceQuery && fileReferenceMenuView !== "root") {
+    setFileReferenceMenuView("root");
+  }
+  if (!rawSlashQuery && dismissedSlashQueryKey !== null) {
+    setDismissedSlashQueryKey(null);
+  }
 
   const fileReferenceQueryKey = useMemo(
     () =>
@@ -509,41 +511,38 @@ export function useComposerController({
     // Only an existing Plan is referenceable; a missing Plan stays out of the @ menu.
     planPath: snapshot?.plan?.exists ? snapshot.plan.path : undefined,
   });
-
-  useEffect(() => {
-    setSlashSelectedIndex(0);
-  }, [slashQuery?.raw, slashQuery?.start, slashQuery?.end]);
-
-  useEffect(() => {
-    if (!fileReferenceQuery || dismissedFileReferenceKey === fileReferenceQueryKey) {
-      setFileReferenceSuggestions(null);
-      setFileReferenceSelectedIndex(-1);
-      return;
+  const recentFileDisplayPaths = recentFilePool.displayPaths;
+  const validateRecentFilePoolEntries = recentFilePool.validateEntries;
+  const workspaceFileIndexReady = workspaceFileIndex.ready;
+  const searchWorkspaceFileIndex = workspaceFileIndex.search;
+  const fileReferenceSuggestions = useMemo<WorkspaceFileReferenceSuggestionsResponse>(() => {
+    if (!activeFileReferenceQuery) {
+      return null;
     }
-
-    recentFilePool.validateEntries();
-    const indexSuggestions = workspaceFileIndex.ready
-      ? workspaceFileIndex.search(fileReferenceQuery.raw)
+    const indexSuggestions = workspaceFileIndexReady
+      ? searchWorkspaceFileIndex(activeFileReferenceQuery.raw)
       : [];
-    setFileReferenceSuggestions({
-      query: fileReferenceQuery,
+    return {
+      query: activeFileReferenceQuery,
       suggestions: mergeRecentIntoSuggestions(
-        fileReferenceQuery.raw,
+        activeFileReferenceQuery.raw,
         indexSuggestions,
-        recentFilePool.displayPaths,
+        recentFileDisplayPaths,
       ),
-    });
-    setFileReferenceSelectedIndex(0);
+    };
   }, [
-    dismissedFileReferenceKey,
-    fileReferenceQuery,
-    fileReferenceQueryKey,
-    recentFilePool.displayPaths,
-    recentFilePool.validateEntries,
-    workspaceFileIndex.ready,
-    workspaceFileIndex.fileCount,
-    workspaceFileIndex.search,
+    activeFileReferenceQuery,
+    recentFileDisplayPaths,
+    searchWorkspaceFileIndex,
+    workspaceFileIndexReady,
   ]);
+  const fileReferenceSuggestionQuery = fileReferenceSuggestions?.query;
+
+  useEffect(() => {
+    if (activeFileReferenceQuery) {
+      validateRecentFilePoolEntries();
+    }
+  }, [activeFileReferenceQuery, validateRecentFilePoolEntries]);
 
   const atReferenceSessionCandidates = useMemo(
     () =>
@@ -553,6 +552,7 @@ export function useComposerController({
       ),
     [paneSessionPath, runtime.sessions, snapshot?.activeSession?.filePath],
   );
+  const referencePlan = snapshot?.plan;
 
   const atReferenceMenuItems = useMemo((): AtReferenceMenuItem[] => {
     if (!fileReferenceSuggestions?.query) {
@@ -563,41 +563,45 @@ export function useComposerController({
       rawQuery: fileReferenceSuggestions.query.raw,
       fileSuggestions: fileReferenceSuggestions.suggestions,
       sessions: atReferenceSessionCandidates,
-      planPath: snapshot?.plan?.exists ? snapshot.plan.path : null,
+      planPath: referencePlan?.exists ? referencePlan.path : null,
     });
   }, [
     atReferenceSessionCandidates,
     fileReferenceMenuView,
     fileReferenceSuggestions,
-    snapshot?.plan?.exists,
-    snapshot?.plan?.path,
+    referencePlan,
   ]);
 
-  useEffect(() => {
-    if (slashSuggestions.length === 0) {
-      if (slashSelectedIndex !== -1) {
-        setSlashSelectedIndex(-1);
-      }
-      return;
-    }
-    if (slashSelectedIndex < 0 || slashSelectedIndex >= slashSuggestions.length) {
-      setSlashSelectedIndex(0);
-    }
-  }, [slashSelectedIndex, slashSuggestions.length]);
+  const nextSlashSelectionQueryKey = rawSlashQuery ? skillSlashQueryKey(rawSlashQuery) : "";
+  const slashQueryChanged = slashSelectionQueryKey !== nextSlashSelectionQueryKey;
+  if (slashQueryChanged) {
+    setSlashSelectionQueryKey(nextSlashSelectionQueryKey);
+  }
+  const nextSlashSelectedIndex =
+    slashSuggestions.length === 0
+      ? -1
+      : slashQueryChanged || slashSelectedIndex < 0 || slashSelectedIndex >= slashSuggestions.length
+        ? 0
+        : slashSelectedIndex;
+  if (nextSlashSelectedIndex !== slashSelectedIndex) {
+    setSlashSelectedIndex(nextSlashSelectedIndex);
+  }
 
-  useEffect(() => {
-    const itemCount = atReferenceMenuItems.length;
-    if (itemCount === 0) {
-      if (fileReferenceSelectedIndex !== -1) {
-        setFileReferenceSelectedIndex(-1);
-      }
-      return;
-    }
-
-    if (fileReferenceSelectedIndex < 0 || fileReferenceSelectedIndex >= itemCount) {
-      setFileReferenceSelectedIndex(0);
-    }
-  }, [atReferenceMenuItems.length, fileReferenceSelectedIndex]);
+  const fileReferenceQueryChanged = fileReferenceSelectionQueryKey !== fileReferenceQueryKey;
+  if (fileReferenceQueryChanged) {
+    setFileReferenceSelectionQueryKey(fileReferenceQueryKey);
+  }
+  const nextFileReferenceSelectedIndex =
+    atReferenceMenuItems.length === 0
+      ? -1
+      : fileReferenceQueryChanged ||
+          fileReferenceSelectedIndex < 0 ||
+          fileReferenceSelectedIndex >= atReferenceMenuItems.length
+        ? 0
+        : fileReferenceSelectedIndex;
+  if (nextFileReferenceSelectedIndex !== fileReferenceSelectedIndex) {
+    setFileReferenceSelectedIndex(nextFileReferenceSelectedIndex);
+  }
 
   const handleComposerAgentModeChange = useCallback(
     (agentMode: DesktopAgentMode) => {
@@ -631,7 +635,7 @@ export function useComposerController({
         composerRichInputRef.current?.focus();
       });
     },
-    [runtime, slashQuery],
+    [setComposerText, slashQuery],
   );
 
   const applyLoopSlash = useCallback(() => {
@@ -790,7 +794,7 @@ export function useComposerController({
         composerRichInputRef.current?.focus();
       });
     },
-    [setComposerText],
+    [setComposerSegments],
   );
 
   const filterActionPaletteItem = useCallback(
@@ -901,7 +905,7 @@ export function useComposerController({
 
   const applyFileReferenceSuggestion = useCallback(
     (path: string, options?: { isPlan?: boolean }) => {
-      const query = fileReferenceSuggestions?.query;
+      const query = fileReferenceSuggestionQuery;
       if (!query) {
         return;
       }
@@ -915,12 +919,12 @@ export function useComposerController({
       setFileReferenceMenuView("root");
       setDismissedFileReferenceKey(null);
     },
-    [fileReferenceSuggestions?.query, recentFilePool.recordAtReference],
+    [fileReferenceSuggestionQuery, recentFilePool],
   );
 
   const applySessionReferenceSuggestion = useCallback(
     (session: { path: string; title: string; sessionId?: string }) => {
-      const query = fileReferenceSuggestions?.query;
+      const query = fileReferenceSuggestionQuery;
       if (!query) {
         return;
       }
@@ -930,7 +934,7 @@ export function useComposerController({
       setFileReferenceMenuView("root");
       setDismissedFileReferenceKey(null);
     },
-    [fileReferenceSuggestions?.query],
+    [fileReferenceSuggestionQuery],
   );
 
   const openAtReferenceSessions = useCallback(() => {
@@ -991,7 +995,6 @@ export function useComposerController({
       setSlashSelectedIndex(-1);
       setFileReferenceSelectedIndex(-1);
       setFileReferenceMenuView("root");
-      setFileReferenceSuggestions(null);
       setDismissedFileReferenceKey(null);
       setDismissedSlashQueryKey(null);
       queueMicrotask(() => {
@@ -1032,7 +1035,7 @@ export function useComposerController({
       composerRichInputRef.current?.insertWorkspaceFileAtCaret(normalizeSlashPath(filePath));
       composerRichInputRef.current?.focus();
     },
-    [runtime.classifyLocalFileComposerRoute, setComposerLocalFileAttachments],
+    [runtime, setComposerLocalFileAttachments],
   );
 
   const handleBrowserElementPicked = useCallback(
@@ -1177,6 +1180,7 @@ export function useComposerController({
     [isPaneIsolated, paneSessionPath, runtime],
   );
 
+  const composerGit = snapshot?.git;
   const submitComposerMessage = useCallback(() => {
     const fullText = segmentsToMessageText(composerSegments);
     const trimmed = fullText.trim();
@@ -1202,8 +1206,8 @@ export function useComposerController({
       ...(chipNavigateMeta.length > 0 ? { chipNavigateMeta } : {}),
     };
 
-    if (shouldPromptGitBranchCheckoutBeforeSend({ isEmptySession, git: snapshot?.git })) {
-      const selectedBranch = snapshot?.git.selectedBranch ?? snapshot?.git.branch;
+    if (shouldPromptGitBranchCheckoutBeforeSend({ isEmptySession, git: composerGit })) {
+      const selectedBranch = composerGit?.selectedBranch ?? composerGit?.branch;
       if (selectedBranch) {
         pendingComposerSendRef.current = payload;
         setBranchCheckoutDialogOpen(true);
@@ -1218,19 +1222,19 @@ export function useComposerController({
     });
   }, [
     applyForkSlash,
+    composerLocalFileAttachments,
     composerSegments,
     isEmptySession,
-    isPaneIsolated,
     resetComposerAfterSend,
     runtime,
-    snapshot?.git,
+    composerGit,
     withPaneSessionPath,
   ]);
 
   const confirmBranchCheckoutAndSend = useCallback(() => {
     void (async () => {
       const pending = pendingComposerSendRef.current;
-      const selectedBranch = snapshot?.git.selectedBranch ?? snapshot?.git.branch;
+      const selectedBranch = composerGit?.selectedBranch ?? composerGit?.branch;
       if (!pending || !selectedBranch) {
         setBranchCheckoutDialogOpen(false);
         return;
@@ -1255,17 +1259,16 @@ export function useComposerController({
     })();
   }, [
     checkoutBranchForComposer,
-    isPaneIsolated,
     resetComposerAfterSend,
     runtime,
-    snapshot?.git,
+    composerGit,
     withPaneSessionPath,
   ]);
 
   const discardBranchChangesAndCheckoutSend = useCallback(() => {
     void (async () => {
       const pending = pendingComposerSendRef.current;
-      const selectedBranch = snapshot?.git.selectedBranch ?? snapshot?.git.branch;
+      const selectedBranch = composerGit?.selectedBranch ?? composerGit?.branch;
       if (!pending || !selectedBranch) {
         setBranchCheckoutDialogOpen(false);
         return;
@@ -1287,10 +1290,9 @@ export function useComposerController({
     })();
   }, [
     checkoutBranchForComposer,
-    isPaneIsolated,
     resetComposerAfterSend,
     runtime,
-    snapshot?.git,
+    composerGit,
     withPaneSessionPath,
   ]);
 
@@ -1358,12 +1360,12 @@ export function useComposerController({
         }
       }
 
-      const atReferenceActive = Boolean(fileReferenceSuggestions?.query);
+      const atReferenceActive = Boolean(fileReferenceSuggestionQuery);
       if (!atReferenceActive) {
         return;
       }
 
-      const rawQuery = fileReferenceSuggestions?.query.raw ?? "";
+      const rawQuery = fileReferenceSuggestionQuery?.raw ?? "";
       const needle = atReferenceNeedle(rawQuery);
       const menuItems = atReferenceMenuItems;
 
@@ -1405,7 +1407,6 @@ export function useComposerController({
           setDismissedFileReferenceKey(fileReferenceQueryKey);
           setFileReferenceSelectedIndex(-1);
           setFileReferenceMenuView("root");
-          setFileReferenceSuggestions(null);
           return;
         }
 
@@ -1427,7 +1428,6 @@ export function useComposerController({
         setDismissedFileReferenceKey(fileReferenceQueryKey);
         setFileReferenceSelectedIndex(-1);
         setFileReferenceMenuView("root");
-        setFileReferenceSuggestions(null);
       }
     },
     [
@@ -1438,7 +1438,7 @@ export function useComposerController({
       fileReferenceMenuView,
       fileReferenceQueryKey,
       fileReferenceSelectedIndex,
-      fileReferenceSuggestions?.query,
+      fileReferenceSuggestionQuery,
       slashQuery,
       slashSelectedIndex,
       slashSuggestions,
@@ -1533,7 +1533,6 @@ export function useComposerController({
     setDismissedFileReferenceKey(fileReferenceQueryKey);
     setFileReferenceSelectedIndex(-1);
     setFileReferenceMenuView("root");
-    setFileReferenceSuggestions(null);
   }, [fileReferenceQueryKey]);
 
   const dismissSlashSuggestions = useCallback(() => {

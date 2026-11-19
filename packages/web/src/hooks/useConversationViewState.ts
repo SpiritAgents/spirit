@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { TFunction } from "i18next";
 
@@ -138,7 +138,6 @@ export function useConversationViewState({
   approvalPreviewDemo,
   toolCardPreviewDemo,
   t,
-  language,
   useIsolatedPane = false,
   conversationAbortShortcutTargetRef,
 }: UseConversationViewStateOptions) {
@@ -151,7 +150,7 @@ export function useConversationViewState({
         snapshot?.workspaceBinding ?? "project",
         snapshot?.availableWorkspaces ?? [],
       ),
-    [snapshot?.availableWorkspaces, snapshot?.workspaceBinding, snapshot?.workspaceRoot, language],
+    [snapshot?.availableWorkspaces, snapshot?.workspaceBinding, snapshot?.workspaceRoot],
   );
   const includeWorkspaceDoodleVariants = workspaceDisplayLabel !== null;
   const doodleText = useMemo(() => {
@@ -169,7 +168,6 @@ export function useConversationViewState({
     runtime.navigationDoodleVariant,
     workspaceDisplayLabel,
     t,
-    language,
   ]);
 
   const sessionMessages = snapshot?.conversation.messages ?? [];
@@ -181,12 +179,13 @@ export function useConversationViewState({
         ? compactionDemo.messages
         : sessionMessages;
   // Every poll snapshot rebuilds all objects; structural sharing keeps "unchanged messages / unchanged array" reference-stable
-  const stableMessagesRef = useRef<readonly ConversationMessageSnapshot[]>([]);
+  const [stableMessages, setStableMessages] = useState<readonly ConversationMessageSnapshot[]>([]);
   const messages = useMemo(() => {
-    const stabilized = stabilizeConversationMessages(stableMessagesRef.current, rawMessages);
-    stableMessagesRef.current = stabilized;
-    return stabilized;
-  }, [rawMessages]);
+    return stabilizeConversationMessages(stableMessages, rawMessages);
+  }, [rawMessages, stableMessages]);
+  if (messages !== stableMessages) {
+    setStableMessages(messages);
+  }
   const conversationListScopeKey = resolveConversationListScopeKey({
     subagentViewActive,
     subagentToolCallId: subagentViewer.toolCallId,
@@ -209,27 +208,32 @@ export function useConversationViewState({
     : compactionDemo.active
       ? compactionDemo.pendingAuxState
       : snapshot?.conversation.pendingAuxState;
-  const stablePendingAuxRef = useRef<PendingAssistantAux | undefined>(undefined);
+  const [stablePendingAux, setStablePendingAux] = useState<PendingAssistantAux | undefined>();
   const conversationPendingAuxState = useMemo(() => {
-    const previous = stablePendingAuxRef.current;
-    const stabilized =
-      previous && rawPendingAuxState && jsonLikeEquals(previous, rawPendingAuxState)
-        ? previous
-        : rawPendingAuxState;
-    stablePendingAuxRef.current = stabilized;
-    return stabilized;
-  }, [rawPendingAuxState]);
+    return stablePendingAux &&
+      rawPendingAuxState &&
+      jsonLikeEquals(stablePendingAux, rawPendingAuxState)
+      ? stablePendingAux
+      : rawPendingAuxState;
+  }, [rawPendingAuxState, stablePendingAux]);
+  if (conversationPendingAuxState !== stablePendingAux) {
+    setStablePendingAux(conversationPendingAuxState);
+  }
 
-  const [conversationListRemountEpoch, setConversationListRemountEpoch] = useState(0);
-  const prevSessionMessageCountRef = useRef(sessionMessages.length);
-
-  useEffect(() => {
-    const count = sessionMessages.length;
-    if (count < prevSessionMessageCountRef.current) {
-      setConversationListRemountEpoch((epoch) => epoch + 1);
-    }
-    prevSessionMessageCountRef.current = count;
-  }, [sessionMessages.length]);
+  const [messageCountState, setMessageCountState] = useState({
+    count: sessionMessages.length,
+    remountEpoch: 0,
+  });
+  if (messageCountState.count !== sessionMessages.length) {
+    setMessageCountState({
+      count: sessionMessages.length,
+      remountEpoch:
+        sessionMessages.length < messageCountState.count
+          ? messageCountState.remountEpoch + 1
+          : messageCountState.remountEpoch,
+    });
+  }
+  const conversationListRemountEpoch = messageCountState.remountEpoch;
 
   const shouldPlayProcessSealAnimation = useProcessSealAnimationGate({
     conversationViewKey,
@@ -332,7 +336,9 @@ export function useConversationViewState({
     : Boolean(runtime.busyAction) || snapshot?.conversation.isBusy === true;
   const conversationAbortShortcutEligible = conversationInterruptible && !activeSessionReadOnly;
   const conversationAbortShortcutEligibleRef = useRef(false);
-  conversationAbortShortcutEligibleRef.current = conversationAbortShortcutEligible;
+  useLayoutEffect(() => {
+    conversationAbortShortcutEligibleRef.current = conversationAbortShortcutEligible;
+  }, [conversationAbortShortcutEligible]);
 
   useEffect(() => {
     if (!conversationAbortShortcutTargetRef) {

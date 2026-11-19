@@ -49,6 +49,17 @@ export function ComposerChipNavigateProvider({
   const split = useConversationSplit();
 
   const sourceSnapshot = baseSnapshot ?? snapshot;
+  const activeSessionPath = snapshot?.activeSession?.filePath;
+  const conversationMessages = snapshot?.conversation.messages;
+  const skillsList = snapshot?.skillsList;
+  const extensionSkills = snapshot?.extensionSkills;
+  const workspaceRoot = snapshot?.workspaceRoot;
+  const sourceActiveSessionPath = sourceSnapshot?.activeSession?.filePath;
+  const sourceConversationMessages = sourceSnapshot?.conversation.messages;
+  const sourcePaneSessions = sourceSnapshot?.paneSessions;
+  const sourceSkillsList = sourceSnapshot?.skillsList;
+  const sourceExtensionSkills = sourceSnapshot?.extensionSkills;
+  const sourceWorkspaceRoot = sourceSnapshot?.workspaceRoot;
 
   const env = useMemo(() => {
     const loadedMessageIdsBySessionPath = new Map<string, Set<number>>();
@@ -66,12 +77,12 @@ export function ComposerChipNavigateProvider({
       }
       loadedMessageIdsBySessionPath.set(key, ids);
     };
-    addMessages(snapshot?.activeSession?.filePath, snapshot?.conversation.messages);
-    addMessages(sourceSnapshot?.activeSession?.filePath, sourceSnapshot?.conversation.messages);
-    for (const [path, slice] of Object.entries(sourceSnapshot?.paneSessions ?? {})) {
+    addMessages(activeSessionPath, conversationMessages);
+    addMessages(sourceActiveSessionPath, sourceConversationMessages);
+    for (const [path, slice] of Object.entries(sourcePaneSessions ?? {})) {
       addMessages(path, slice.conversation.messages);
     }
-    addMessages(paneSessionPath, snapshot?.conversation.messages);
+    addMessages(paneSessionPath, conversationMessages);
 
     const knownSessionPathKeys = new Set<string>();
     for (const session of runtime.sessions) {
@@ -95,31 +106,31 @@ export function ComposerChipNavigateProvider({
         transcriptPath: session.transcriptPath,
       })),
       skills: [
-        ...(snapshot?.skillsList ?? sourceSnapshot?.skillsList ?? []),
-        ...(snapshot?.extensionSkills ?? sourceSnapshot?.extensionSkills ?? []),
+        ...(skillsList ?? sourceSkillsList ?? []),
+        ...(extensionSkills ?? sourceExtensionSkills ?? []),
       ].map((skill) => ({
         name: skill.name,
         path: skill.path,
       })),
-      workspaceRoot: snapshot?.workspaceRoot ?? sourceSnapshot?.workspaceRoot ?? "",
+      workspaceRoot: workspaceRoot ?? sourceWorkspaceRoot ?? "",
       followSessionPathAlias,
       loadedMessageIdsBySessionPath,
       knownSessionPathKeys,
     };
   }, [
     paneSessionPath,
+    activeSessionPath,
+    conversationMessages,
+    skillsList,
+    extensionSkills,
+    workspaceRoot,
+    sourceActiveSessionPath,
+    sourceConversationMessages,
+    sourcePaneSessions,
+    sourceSkillsList,
+    sourceExtensionSkills,
+    sourceWorkspaceRoot,
     runtime.sessions,
-    snapshot?.activeSession?.filePath,
-    snapshot?.conversation.messages,
-    snapshot?.skillsList,
-    snapshot?.extensionSkills,
-    snapshot?.workspaceRoot,
-    sourceSnapshot?.activeSession?.filePath,
-    sourceSnapshot?.conversation.messages,
-    sourceSnapshot?.paneSessions,
-    sourceSnapshot?.skillsList,
-    sourceSnapshot?.extensionSkills,
-    sourceSnapshot?.workspaceRoot,
     split.layout,
     workspaceTools.browserTabEnabled,
     workspaceTools.workspaceToolTabs,

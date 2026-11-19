@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 /** Tracks whether the user has left the desktop window (Electron main process truth). */
 export function useDesktopAppAway(): boolean {
@@ -45,8 +45,7 @@ export function useDesktopAppAway(): boolean {
 }
 
 export function useDesktopNotifyRefresh(onRefresh: () => void): void {
-  const onRefreshRef = useRef(onRefresh);
-  onRefreshRef.current = onRefresh;
+  const refresh = useEffectEvent(onRefresh);
 
   useEffect(() => {
     const bridge = window.spiritDesktop;
@@ -54,7 +53,7 @@ export function useDesktopNotifyRefresh(onRefresh: () => void): void {
       return;
     }
     return bridge.subscribeNotifyRefresh(() => {
-      onRefreshRef.current();
+      refresh();
     });
   }, []);
 }

@@ -70,7 +70,6 @@ import type { ConversationAbortShortcutTargetRef } from "@/lib/conversation-abor
 import {
   moveBackgroundShortcutTargetForMessages,
   type MoveBackgroundShortcutTarget,
-  type MoveBackgroundShortcutTargetRef,
 } from "@/lib/move-background-shortcut";
 import {
   registerSplitPaneShortcut,
@@ -398,7 +397,7 @@ export function ConversationSplitProvider({
   snapshot,
 
   conversationAbortShortcutTargetRef = null,
-  moveBackgroundShortcutTargetRef = null,
+  onMoveBackgroundShortcutTargetChange,
 
   onEnsureConversationSurface,
 
@@ -411,7 +410,7 @@ export function ConversationSplitProvider({
   snapshot: DesktopSnapshot | null;
 
   conversationAbortShortcutTargetRef?: ConversationAbortShortcutTargetRef | null;
-  moveBackgroundShortcutTargetRef?: MoveBackgroundShortcutTargetRef | null;
+  onMoveBackgroundShortcutTargetChange?: (target: MoveBackgroundShortcutTarget) => void;
 
   onEnsureConversationSurface?: () => void;
 
@@ -439,9 +438,8 @@ export function ConversationSplitProvider({
     );
   }, [focusedPaneId, layout, snapshot]);
   useEffect(() => {
-    if (!moveBackgroundShortcutTargetRef) return;
-    moveBackgroundShortcutTargetRef.current = moveBackgroundShortcutTarget;
-  }, [moveBackgroundShortcutTarget, moveBackgroundShortcutTargetRef]);
+    onMoveBackgroundShortcutTargetChange?.(moveBackgroundShortcutTarget);
+  }, [moveBackgroundShortcutTarget, onMoveBackgroundShortcutTargetChange]);
 
   const [paneDragActive, setPaneDragActive] = useState(false);
   const [paneDragSourcePaneId, setPaneDragSourcePaneId] = useState<string | null>(null);
@@ -553,12 +551,13 @@ export function ConversationSplitProvider({
   const visiblePathsSyncedRef = useRef<string>("");
 
   const layoutRef = useRef<SplitLayoutNode | null>(null);
-
-  layoutRef.current = layout;
-
   const focusedPaneIdRef = useRef<string | null>(null);
-
-  focusedPaneIdRef.current = focusedPaneId;
+  const runtimeRef = useRef(runtime);
+  useLayoutEffect(() => {
+    layoutRef.current = layout;
+    focusedPaneIdRef.current = focusedPaneId;
+    runtimeRef.current = runtime;
+  }, [focusedPaneId, layout, runtime]);
 
   const getFocusedPaneComposerInsert = useCallback((): FocusedPaneComposerInsertHandlers | null => {
     const focused = focusedPaneIdRef.current;
@@ -573,10 +572,6 @@ export function ConversationSplitProvider({
   const layoutResolveGenerationRef = useRef(0);
 
   const layoutNavigationLockRef = useRef(false);
-
-  const runtimeRef = useRef(runtime);
-
-  runtimeRef.current = runtime;
 
   const dragSourcePaneIdRef = useRef<string | null>(null);
 
@@ -713,42 +708,24 @@ export function ConversationSplitProvider({
     }
 
     setLayout(next);
-  }, [activeSessionPath]);
+  }, [activeSessionPath, snapshot, syncVisiblePaths]);
 
   useEffect(() => {
     runtime.setLayoutNavigationPending(layoutNavigationPending);
   }, [layoutNavigationPending, runtime]);
 
-  useEffect(() => {
-    if (!layout || !activeSessionPath) {
-      return;
-    }
-
+  if (layout) {
     const leaf = collectSplitLayoutLeaves(layout).find(
       (entry) =>
         normalizeSessionPathKey(entry.sessionPath) === normalizeSessionPathKey(activeSessionPath),
     );
-
-    if (leaf) {
-      setFocusedPaneId(leaf.paneId);
+    const focusedLeaf = focusedPaneId ? findLeafByPaneId(layout, focusedPaneId) : undefined;
+    const nextFocusedPaneId =
+      leaf?.paneId ?? focusedLeaf?.paneId ?? findWorkspaceToolsAnchorPaneId(layout);
+    if (nextFocusedPaneId !== focusedPaneId) {
+      setFocusedPaneId(nextFocusedPaneId);
     }
-  }, [activeSessionPath, layout]);
-
-  useEffect(() => {
-    if (!layout) {
-      return;
-    }
-
-    setFocusedPaneId((current) => {
-      if (current && findLeafByPaneId(layout, current)) {
-        return current;
-      }
-
-      const anchorPaneId = findWorkspaceToolsAnchorPaneId(layout);
-
-      return anchorPaneId;
-    });
-  }, [layout]);
+  }
 
   useEffect(() => {
     if (!layout || !runtime.apiReady || layoutNavigationLockRef.current) {
@@ -766,7 +743,7 @@ export function ConversationSplitProvider({
     visiblePathsSyncedRef.current = signature;
 
     void runtime.setVisiblePaneSessions(paths);
-  }, [layout, runtime, runtime.apiReady]);
+  }, [layout, runtime]);
 
   useEffect(() => {
     if (!layout || layoutNavigationLockRef.current || layoutNavigationPending) {
@@ -818,7 +795,7 @@ export function ConversationSplitProvider({
         duplicatePathsReconcilingRef.current = false;
       }
     })();
-  }, [layout, runtime, runtime.apiReady, syncVisiblePaths]);
+  }, [layout, runtime, syncVisiblePaths]);
 
   useEffect(() => {
     if (!layout || !snapshot?.paneSessions || countPanes(layout) <= 1) {
@@ -898,12 +875,14 @@ export function ConversationSplitProvider({
 
     runtime.reapplySessionPathAliases();
 
-    setLayout(nextLayout);
-
-    persistSessionSplitBinding(nextLayout);
-
-    void syncVisiblePaths(nextLayout);
-  }, [focusedPaneId, layout, runtime, snapshot, syncVisiblePaths]);
+    // Repointing is driven by external pane snapshots. Commit the reconciled layout in one
+    // follow-up update after the alias bookkeeping, rather than cascading synchronously here.
+    queueMicrotask(() => {
+      setLayout(nextLayout);
+      persistSessionSplitBinding(nextLayout);
+      void syncVisiblePaths(nextLayout);
+    });
+  }, [layout, runtime, snapshot, syncVisiblePaths]);
 
   const focusPane = useCallback(
     (paneId: string, sessionPath: string) => {
@@ -1295,7 +1274,7 @@ export function ConversationSplitProvider({
     setPaneDropTarget(null);
 
     setPaneDragActive(false);
-  }, []);
+  }, [setPaneDropTarget]);
 
   const completePaneDrop = useCallback(
     (targetPaneId: string, zone: PaneDropZone) => {
@@ -1334,7 +1313,7 @@ export function ConversationSplitProvider({
       repositionPaneById(sourcePaneId, targetPaneId, zone);
     },
 
-    [repositionPaneById],
+    [repositionPaneById, setPaneDropTarget],
   );
 
   const startSidebarSessionDrag = useCallback((payload: SidebarSessionDragPayload) => {
@@ -1683,6 +1662,18 @@ export function ConversationSplitProvider({
       setSplitResizeHighlight,
 
       moveBackgroundShortcutTarget,
+
+      paneCount,
+
+      registerPaneComposerInsert,
+
+      registerPaneComposerControls,
+
+      getFocusedPaneComposerInsert,
+
+      getFocusedPaneComposerControls,
+
+      conversationAbortShortcutTargetRef,
     ],
   );
 

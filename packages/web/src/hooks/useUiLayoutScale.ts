@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useState } from "react";
 
 import {
   applyUiLayoutScale,
@@ -9,10 +9,10 @@ import {
 } from "@/lib/ui-layout-scale";
 
 export function useUiLayoutScale() {
-  const scaleRef = useRef(getStoredUiLayoutScale());
+  const [scale, setScaleState] = useState(getStoredUiLayoutScale);
 
   const applyScale = useCallback((next: number) => {
-    scaleRef.current = next;
+    setScaleState(next);
     setStoredUiLayoutScale(next);
     applyUiLayoutScale(next);
   }, []);
@@ -25,16 +25,16 @@ export function useUiLayoutScale() {
   );
 
   const zoomIn = useCallback(() => {
-    applyScale(stepUiLayoutScale(scaleRef.current, "in"));
-  }, [applyScale]);
+    applyScale(stepUiLayoutScale(scale, "in"));
+  }, [applyScale, scale]);
 
   const zoomOut = useCallback(() => {
-    applyScale(stepUiLayoutScale(scaleRef.current, "out"));
-  }, [applyScale]);
+    applyScale(stepUiLayoutScale(scale, "out"));
+  }, [applyScale, scale]);
 
   const resetScale = useCallback(() => {
     applyScale(DEFAULT_UI_LAYOUT_SCALE);
   }, [applyScale]);
 
-  return { scale: scaleRef.current, setScale, zoomIn, zoomOut, resetScale };
+  return { scale, setScale, zoomIn, zoomOut, resetScale };
 }

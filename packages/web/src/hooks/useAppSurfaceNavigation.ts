@@ -1,5 +1,13 @@
 import { OPEN_EXTENSION_DETAILS_EVENT } from "@/lib/extension-navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from "react";
 import type { TFunction } from "i18next";
 
 import type { SessionSidebarChromeApi } from "@/contexts/session-sidebar-chrome-context";
@@ -57,7 +65,9 @@ export function useAppSurfaceNavigation({
 }: UseAppSurfaceNavigationOptions) {
   const [activeSurface, setActiveSurface] = useState<AppSurface>("conversation");
   const activeSurfaceRef = useRef(activeSurface);
-  activeSurfaceRef.current = activeSurface;
+  useLayoutEffect(() => {
+    activeSurfaceRef.current = activeSurface;
+  }, [activeSurface]);
 
   const [sessionNavTarget, setSessionNavTarget] = useState<PendingSessionNav | null>(null);
   const sessionNavTargetRef = useRef<PendingSessionNav | null>(null);
@@ -78,11 +88,12 @@ export function useAppSurfaceNavigation({
   // The intent is fulfilled once the snapshot shows the target session; clear it
   // so a later foreground change (new chat, delete-and-open-next) is not mistaken
   // for this navigation still being in flight.
-  useEffect(() => {
-    if (sessionNavTarget && !sessionNavPending) {
-      updateSessionNavTarget(null);
-    }
-  }, [sessionNavTarget, sessionNavPending, updateSessionNavTarget]);
+  if (sessionNavTarget && !sessionNavPending) {
+    setSessionNavTarget(null);
+  }
+  useLayoutEffect(() => {
+    sessionNavTargetRef.current = sessionNavTarget;
+  }, [sessionNavTarget]);
 
   const [marketplaceReveal, setMarketplaceReveal] = useState<{
     extensionId: string;

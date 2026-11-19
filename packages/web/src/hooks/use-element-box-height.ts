@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
 /**
  * Observe an element's border-box height (px, rounded up) for aligning overlays and scroll-area padding.
@@ -12,25 +12,30 @@ import { useCallback, useLayoutEffect, useState } from "react";
 export function useElementBoxHeight<T extends HTMLElement>(remeasureKey?: unknown) {
   const [element, setElement] = useState<T | null>(null);
   const [heightPx, setHeightPx] = useState(0);
+  const previousMeasurementRef = useRef<{ element: T | null; key: unknown } | null>(null);
   const ref = useCallback((node: T | null) => {
     setElement(node);
   }, []);
 
   useLayoutEffect(() => {
     if (!element) {
-      setHeightPx(0);
       return;
     }
 
+    const previous = previousMeasurementRef.current;
+    const shouldMeasure = previous?.element !== element || previous.key !== remeasureKey;
+    previousMeasurementRef.current = { element, key: remeasureKey };
     const syncHeight = () => {
       setHeightPx(Math.ceil(element.getBoundingClientRect().height));
     };
 
-    syncHeight();
+    if (shouldMeasure) {
+      syncHeight();
+    }
     const observer = new ResizeObserver(syncHeight);
     observer.observe(element);
     return () => observer.disconnect();
   }, [element, remeasureKey]);
 
-  return { ref, heightPx };
+  return { ref, heightPx: element ? heightPx : 0 };
 }

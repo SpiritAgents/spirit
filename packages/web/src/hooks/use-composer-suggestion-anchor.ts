@@ -15,7 +15,6 @@ export function useComposerSuggestionAnchor(
 
   useLayoutEffect(() => {
     if (plainTextOffset === null) {
-      setAnchor(null);
       return;
     }
 
@@ -40,5 +39,5 @@ export function useComposerSuggestionAnchor(
     return () => window.removeEventListener("resize", updateAnchor);
   }, [composerFallbackRef, plainTextOffset, richInputRef]);
 
-  return anchor;
+  return plainTextOffset === null ? null : anchor;
 }

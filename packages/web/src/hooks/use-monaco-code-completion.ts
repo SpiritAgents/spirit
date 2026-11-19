@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 
 import {
   codeCompletionOperationToInlineItemAtCursor,
@@ -88,8 +88,7 @@ export function useMonacoCodeCompletion(options: {
 }): void {
   const { editor, relativePath, enabled, readOnly, baselineText } = options;
   const { api } = useHostApi();
-  const relativePathRef = useRef(relativePath);
-  const baselineRef = useRef(baselineText);
+  const readFileState = useEffectEvent(() => ({ relativePath, baselineText }));
   const cacheRef = useRef<CompletionCache | null>(null);
   const deletePreviewRef = useRef<DeletePreviewState | null>(null);
   const deletePreviewActiveRef = useRef<monaco.editor.IContextKey<boolean> | null>(null);
@@ -100,9 +99,6 @@ export function useMonacoCodeCompletion(options: {
   const pendingFetchRef = useRef<PendingFetch | null>(null);
   const scheduledTargetRef = useRef<{ line: number; column: number } | null>(null);
   const lastContentChangeAtRef = useRef(0);
-
-  relativePathRef.current = relativePath;
-  baselineRef.current = baselineText;
 
   // The context key and Tab command are created once per editor instance: the context key belongs to
   // that editor's contextKeyService; caching across instances would write state to a destroyed editor,
@@ -203,7 +199,7 @@ export function useMonacoCodeCompletion(options: {
 
       try {
         const result = await api.requestCodeCompletion({
-          relativePath: relativePathRef.current,
+          relativePath,
           languageId,
           documentText: model.getValue(),
           cursorLine: requestPosition.lineNumber,
@@ -376,9 +372,10 @@ export function useMonacoCodeCompletion(options: {
         clearTimeout(journalTimer);
       }
       journalTimer = setTimeout(() => {
+        const current = readFileState();
         void api.recordCodeCompletionFileState({
-          relativePath: relativePathRef.current,
-          baselineText: baselineRef.current,
+          relativePath: current.relativePath,
+          baselineText: current.baselineText,
           currentText: editor.getValue(),
         });
       }, JOURNAL_DEBOUNCE_MS);

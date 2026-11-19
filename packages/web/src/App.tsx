@@ -148,6 +148,12 @@ export default function App() {
   const moveBackgroundShortcutTargetRef = useRef<MoveBackgroundShortcutTarget>({
     eligible: false,
   });
+  const handleMoveBackgroundShortcutTargetChange = useCallback(
+    (target: MoveBackgroundShortcutTarget) => {
+      moveBackgroundShortcutTargetRef.current = target;
+    },
+    [],
+  );
 
   // Hook order is intentional — do not reorder without checking cross-hook deps:
   // 1. surfaceNav — session surface routing; handleGenerateAutomation reads composerAutomationApiRef
@@ -521,7 +527,9 @@ export default function App() {
                           runtime={runtime}
                           snapshot={snapshot}
                           conversationAbortShortcutTargetRef={conversationAbortShortcutTargetRef}
-                          moveBackgroundShortcutTargetRef={moveBackgroundShortcutTargetRef}
+                          onMoveBackgroundShortcutTargetChange={
+                            handleMoveBackgroundShortcutTargetChange
+                          }
                           registerBeginSideChat={registerBeginSideChat}
                           onEnsureConversationSurface={() => {
                             surfaceNav.setLastNonSettingsSurface("conversation");

@@ -12,7 +12,6 @@ export function useSessionSidebarShellRightInsetPx(
 
   useLayoutEffect(() => {
     if (!enabled) {
-      setInsetPx(0);
       return;
     }
 
@@ -49,5 +48,5 @@ export function useSessionSidebarShellRightInsetPx(
     };
   }, [anchorRef, enabled]);
 
-  return insetPx;
+  return enabled ? insetPx : 0;
 }

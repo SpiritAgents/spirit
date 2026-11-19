@@ -73,6 +73,7 @@ export function useConversationStreamScrollTail({
   const [followingTail, setFollowingTail] = useState(true);
   const prevBusyRef = useRef(false);
   const prevContentSigRef = useRef("");
+  const previousLayoutRef = useRef<{ enabled: boolean; paddingPx: number } | null>(null);
 
   const setStickToBottom = useCallback((next: boolean) => {
     if (stickToBottomRef.current === next) {
@@ -296,7 +297,11 @@ export function useConversationStreamScrollTail({
   }, [contentSig, enabled, isBusy, scrollToTail]);
 
   useLayoutEffect(() => {
-    if (!enabled) {
+    const previous = previousLayoutRef.current;
+    const layoutChanged =
+      previous?.enabled !== enabled || previous.paddingPx !== scrollBedPaddingPx;
+    previousLayoutRef.current = { enabled, paddingPx: scrollBedPaddingPx };
+    if (!enabled || !layoutChanged) {
       return;
     }
     scrollToTail();

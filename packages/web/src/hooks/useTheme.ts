@@ -50,6 +50,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     (next: ThemePreference) => {
       setStoredTheme(next);
       setThemeState(next);
+      if (next === "system") {
+        setSystemDark(systemPrefersDark());
+      }
       applyThemeToDocument(next, {
         onSystemDarkResolved: next === "system" ? syncSystemDarkFromMain : undefined,
       });
@@ -66,8 +69,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setSystemDark(mq.matches);
       applySystemTheme();
     };
-    // The synchronous read may still lag behind the themeSource switch; the IPC resolve corrects resolvedDark via onSystemDarkResolved.
-    setSystemDark(systemPrefersDark());
     applySystemTheme();
     mq.addEventListener("change", onSystemChange);
     return () => {

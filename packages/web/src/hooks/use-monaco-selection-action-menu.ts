@@ -59,6 +59,16 @@ export function useMonacoSelectionActionMenu({
   const [selectionText, setSelectionText] = useState("");
   const [lineRange, setLineRange] = useState<{ lineStart: number; lineEnd: number } | null>(null);
   const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
+  const [previousEnabled, setPreviousEnabled] = useState(enabled);
+  if (previousEnabled !== enabled) {
+    setPreviousEnabled(enabled);
+    if (!enabled) {
+      setOpen(false);
+      setAnchor(null);
+      setSelectionText("");
+      setLineRange(null);
+    }
+  }
 
   const dismiss = useCallback(() => {
     setOpen(false);
@@ -93,7 +103,6 @@ export function useMonacoSelectionActionMenu({
 
   useEffect(() => {
     if (!enabled) {
-      dismiss();
       return;
     }
 

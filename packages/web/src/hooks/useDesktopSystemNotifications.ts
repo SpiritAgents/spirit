@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef } from "react";
 
 import {
   approvalNotificationBody,
@@ -163,10 +163,8 @@ export function useDesktopSystemNotifications(options: {
   const isWindowsRef = useRef(false);
   const taskCompleteAttentionRef = useRef(false);
   const lastAttentionSyncKeyRef = useRef("");
-  const snapshotRef = useRef(snapshot);
-  snapshotRef.current = snapshot;
-
-  const syncAttentionPending = (bridge: NotificationBridge, flags: AttentionFlags) => {
+  const readSnapshot = useEffectEvent(() => snapshot);
+  const syncAttentionPending = useCallback((bridge: NotificationBridge, flags: AttentionFlags) => {
     if (!bridge.syncAttentionPending) {
       return;
     }
@@ -176,12 +174,12 @@ export function useDesktopSystemNotifications(options: {
     }
     lastAttentionSyncKeyRef.current = key;
     void bridge.syncAttentionPending(flags);
-  };
+  }, []);
 
-  const markTaskCompleteAttention = (bridge: NotificationBridge) => {
+  const markTaskCompleteAttention = useEffectEvent((bridge: NotificationBridge) => {
     taskCompleteAttentionRef.current = true;
-    syncAttentionPending(bridge, buildAttentionFlags(snapshotRef.current, true));
-  };
+    syncAttentionPending(bridge, buildAttentionFlags(snapshot, true));
+  });
 
   useEffect(() => {
     isWindowsRef.current = window.spiritDesktop?.platform === "win32";
@@ -226,9 +224,9 @@ export function useDesktopSystemNotifications(options: {
         return;
       }
       taskCompleteAttentionRef.current = false;
-      syncAttentionPending(bridge, buildAttentionFlags(snapshotRef.current, false));
+      syncAttentionPending(bridge, buildAttentionFlags(readSnapshot(), false));
     });
-  }, [apiKind, enabled]);
+  }, [apiKind, enabled, syncAttentionPending]);
 
   useEffect(() => {
     if (!enabled || apiKind !== "electron" || !window.spiritDesktop?.showNotification) {
@@ -323,7 +321,7 @@ export function useDesktopSystemNotifications(options: {
       }
     }
     prevSessionsBusyRef.current = nextMap;
-  }, [apiKind, enabled, snapshot, sessions]);
+  }, [apiKind, enabled, snapshot, sessions, syncAttentionPending]);
 
   useEffect(() => {
     if (
