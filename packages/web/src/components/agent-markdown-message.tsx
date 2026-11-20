@@ -25,12 +25,10 @@ function isAnimateRehypePlugin(entry: Pluggable): boolean {
 
 type StreamBlockAnimateContextValue = {
   lastBlockIndex: number;
-  tailBlockLength: number;
 };
 
 const StreamBlockAnimateContext = createContext<StreamBlockAnimateContextValue>({
   lastBlockIndex: 0,
-  tailBlockLength: 0,
 });
 
 /**
@@ -86,14 +84,16 @@ export function parseStreamBlocksIncrementally(
 
 function StreamingAnimateBlock(props: BlockProps) {
   const { index, content, animatePlugin, rehypePlugins, ...rest } = props;
-  const { lastBlockIndex, tailBlockLength } = useContext(StreamBlockAnimateContext);
+  const { lastBlockIndex } = useContext(StreamBlockAnimateContext);
   const isTailBlock = index === lastBlockIndex;
   const committedCharCountRef = useRef(0);
   useLayoutEffect(() => {
     if (isTailBlock) {
-      committedCharCountRef.current = tailBlockLength;
+      // Streamdown may render its previous block array for one commit after the outer children
+      // change. Commit only what this Block actually rendered, or the next delta is marked old.
+      committedCharCountRef.current = content.length;
     }
-  }, [isTailBlock, tailBlockLength]);
+  }, [content, isTailBlock]);
 
   const blockRehypePlugins = useMemo(() => {
     if (isTailBlock || !rehypePlugins) return rehypePlugins;
@@ -170,12 +170,8 @@ function AgentMarkdownMessageImpl({
   const streamBlocks = nextStreamBlocksCache?.blocks ?? [];
 
   const lastBlockIndex = Math.max(0, streamBlocks.length - 1);
-  const tailBlockLength = motionActive ? (streamBlocks[lastBlockIndex]?.length ?? 0) : 0;
 
-  const streamBlockAnimateContext = useMemo(
-    () => ({ lastBlockIndex, tailBlockLength }),
-    [lastBlockIndex, tailBlockLength],
-  );
+  const streamBlockAnimateContext = useMemo(() => ({ lastBlockIndex }), [lastBlockIndex]);
 
   return (
     <StreamBlockAnimateContext.Provider value={streamBlockAnimateContext}>

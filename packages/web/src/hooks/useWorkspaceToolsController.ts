@@ -108,11 +108,12 @@ export function useWorkspaceToolsController({
     workspaceRoot: snapshot?.workspaceRoot ?? "",
     statHostTextFile: runtime.statHostTextFile,
   });
+  const recordOpenedFile = recentFilePool.recordOpenedFile;
 
   const revealEditorFile = useCallback(
     (navigation: ReturnType<typeof buildOpenEditorFileNavigation>) => {
       const target = navigation.reveal;
-      recentFilePool.recordOpenedFile(target);
+      recordOpenedFile(target);
       setWorkspaceToolsOpen(true);
       setWorkspaceToolTabs(navigation.tabs);
       setActiveWorkspaceToolTabId(navigation.activeTabId);
@@ -131,7 +132,7 @@ export function useWorkspaceToolsController({
       }
       setWorkspaceFileRevealNonce((value) => value + 1);
     },
-    [recentFilePool, setWorkspaceToolsOpen],
+    [recordOpenedFile, setWorkspaceToolsOpen],
   );
 
   const openEditorFile = useCallback(
@@ -342,10 +343,10 @@ export function useWorkspaceToolsController({
     [openBrowserUrlInNewTab, runtime.hostKind, setWorkspaceToolsOpen],
   );
 
+  const openExtensionLink = runtime.openExtensionLink;
   const openWorkspaceUrl = useCallback(
     (url: string, sourceTabId?: string) => {
-      void runtime
-        .openExtensionLink({ url, sourceTabId })
+      void openExtensionLink({ url, sourceTabId })
         .then((handled) => {
           if (handled) setWorkspaceToolsOpen(true);
           else focusOrOpenBrowserUrl(url);
@@ -354,7 +355,7 @@ export function useWorkspaceToolsController({
           toast.error(error instanceof Error ? error.message : String(error)),
         );
     },
-    [runtime, focusOrOpenBrowserUrl, setWorkspaceToolsOpen],
+    [openExtensionLink, focusOrOpenBrowserUrl, setWorkspaceToolsOpen],
   );
 
   const openWorkspacePlan = useCallback(() => {
