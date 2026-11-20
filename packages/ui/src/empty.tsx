@@ -1,16 +1,40 @@
-// EmptyCard is a single outline card wrapping one
-// centered muted text line, built on DESKTOP_ITEM_CARD_SURFACE.
+import type { ComponentProps, ReactNode } from "react";
 
-import type { ComponentProps } from "react";
-
-import { DESKTOP_ITEM_CARD_SURFACE } from "./chrome.js";
 import { cn } from "./cn.js";
 
-/** Full-width outline card with a centered muted line, shown when a list has no items. */
-export function EmptyCard({ className, children, ...props }: ComponentProps<"div">) {
+type EmptyCardProps = Omit<ComponentProps<"div">, "title"> & {
+  icon?: ReactNode;
+  title?: ReactNode;
+  description?: ReactNode;
+};
+
+/** Transparent empty state with optional icon, title, description, and supplemental content. */
+export function EmptyCard({
+  icon,
+  title,
+  description,
+  className,
+  children,
+  ...props
+}: EmptyCardProps) {
   return (
-    <div className={cn(DESKTOP_ITEM_CARD_SURFACE, className)} {...props}>
-      <p className="px-4 py-10 text-center text-sm text-muted-foreground">{children}</p>
+    <div className={cn("px-4 py-10 text-center", className)} {...props}>
+      {icon ? (
+        <div aria-hidden className="mb-3 flex justify-center text-muted-foreground [&_svg]:size-6">
+          {icon}
+        </div>
+      ) : null}
+      {title ? <p className="text-base font-medium text-foreground">{title}</p> : null}
+      {description ? (
+        <p className={cn("text-sm text-muted-foreground", title && "mt-1")}>{description}</p>
+      ) : null}
+      {children ? (
+        <div
+          className={cn("text-sm text-muted-foreground", (icon || title || description) && "mt-3")}
+        >
+          {children}
+        </div>
+      ) : null}
     </div>
   );
 }

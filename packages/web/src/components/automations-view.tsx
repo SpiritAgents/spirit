@@ -159,7 +159,7 @@ export function AutomationsView({
             onRequestDelete={handleContextMenuDelete}
           >
             {items.length === 0 ? (
-              <EmptyCard>{t("automations.empty")}</EmptyCard>
+              <EmptyCard description={t("automations.empty")} />
             ) : (
               <RovingFocusGroup asChild orientation="vertical">
                 <div

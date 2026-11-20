@@ -749,9 +749,10 @@ export function MarketplaceView({
                   // the docked search header, which carries no bottom gap of its
                   // own — like the toggle row, the card brings its own top
                   // whitespace instead.
-                  <EmptyCard className={showAll ? undefined : "mt-4"}>
-                    {t("marketplace.empty")}
-                  </EmptyCard>
+                  <EmptyCard
+                    className={showAll ? undefined : "mt-4"}
+                    description={t("marketplace.empty")}
+                  />
                 ) : (
                   <p className="text-sm text-muted-foreground">{t("marketplace.noMatches")}</p>
                 )

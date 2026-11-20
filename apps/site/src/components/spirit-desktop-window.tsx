@@ -449,7 +449,7 @@ function PreviewSurfacePlaceholder({
       <div
         className={cn("mx-auto flex min-h-full w-full items-center px-3 py-12", CONVERSATION_MAX_W)}
       >
-        <EmptyCard className="w-full">{title}</EmptyCard>
+        <EmptyCard className="w-full" description={title} />
       </div>
     </ScrollArea>
   );
