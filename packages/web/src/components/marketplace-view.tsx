@@ -745,13 +745,12 @@ export function MarketplaceView({
 
               {listEmpty ? (
                 catalog.length === 0 ? (
-                  // With the tab bar hidden the card becomes the first content below
-                  // the docked search header, which carries no bottom gap of its
-                  // own — like the toggle row, the card brings its own top
-                  // whitespace instead.
+                  // Center the true empty state against the whole marketplace viewport.
                   <EmptyCard
-                    className={showAll ? undefined : "mt-4"}
-                    description={t("marketplace.empty")}
+                    className="absolute inset-0 flex flex-col items-center justify-center"
+                    icon={<Blocks strokeWidth={1.75} />}
+                    title={t("marketplace.empty")}
+                    description={t("marketplace.emptyDescription")}
                   />
                 ) : (
                   <p className="text-sm text-muted-foreground">{t("marketplace.noMatches")}</p>

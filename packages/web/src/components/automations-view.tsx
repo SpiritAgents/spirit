@@ -7,7 +7,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { Sparkles, Trash2 } from "lucide-react";
+import { Clock, Sparkles, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -118,8 +118,12 @@ export function AutomationsView({
           CONVERSATION_MESSAGE_LIST_MAX_W,
         )}
       >
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <div
+          className={
+            items.length === 0 ? "relative min-h-0 flex-1" : "flex min-h-0 flex-1 flex-col gap-4"
+          }
+        >
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0 flex-1 space-y-1">
               <h1 className={DESKTOP_PAGE_TITLE_CLASS}>{t("automations.title")}</h1>
               <p className="text-sm text-muted-foreground">{t("automations.subtitle")}</p>
@@ -157,9 +161,17 @@ export function AutomationsView({
             onAutomationContextMenuCapture={handleAutomationContextMenuCapture}
             onContextMenuOpenChange={handleContextMenuOpenChange}
             onRequestDelete={handleContextMenuDelete}
+            className={
+              items.length === 0 ? "absolute inset-0 flex items-center justify-center" : undefined
+            }
           >
             {items.length === 0 ? (
-              <EmptyCard description={t("automations.empty")} />
+              <EmptyCard
+                className="w-full"
+                icon={<Clock strokeWidth={1.75} />}
+                title={t("automations.empty")}
+                description={t("automations.emptyDescription")}
+              />
             ) : (
               <RovingFocusGroup asChild orientation="vertical">
                 <div
@@ -217,6 +229,7 @@ type AutomationListNavProps = {
   onAutomationContextMenuCapture(event: MouseEvent<HTMLElement>): void;
   onContextMenuOpenChange(open: boolean): void;
   onRequestDelete(automation: DesktopAutomationListItem): void;
+  className?: string;
   children: ReactNode;
 };
 
@@ -228,12 +241,16 @@ function AutomationListNav({
   onAutomationContextMenuCapture,
   onContextMenuOpenChange,
   onRequestDelete,
+  className,
   children,
 }: AutomationListNavProps) {
   const { t } = useTranslation();
 
   const list = (
-    <div onContextMenuCapture={canDeleteAutomation ? onAutomationContextMenuCapture : undefined}>
+    <div
+      className={className}
+      onContextMenuCapture={canDeleteAutomation ? onAutomationContextMenuCapture : undefined}
+    >
       {children}
     </div>
   );

@@ -20,11 +20,11 @@ import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 import {
   Bot,
   ArrowLeft,
+  Blocks,
   FolderClosed,
   FolderOpen,
   Layers,
   MoonStar,
-  Package,
   Palette,
   Plug,
   SlidersHorizontal,
@@ -779,7 +779,7 @@ function SessionSidebarInner({
         {
           id: "extensions" as const,
           label: messages.desktop.sessionSidebar.extensions,
-          icon: Package,
+          icon: Blocks,
         },
         { id: "mcps" as const, label: messages.desktop.sessionSidebar.mcps, icon: Plug },
         {
@@ -1117,7 +1117,7 @@ function SessionSidebarInner({
             disabled={disabled}
             onClick={onOpenMarketplace}
           >
-            <Package className="size-3.5" aria-hidden strokeWidth={1.75} />
+            <Blocks className="size-3.5" aria-hidden strokeWidth={1.75} />
             <span className={cn(narrow && "sr-only")}>{t("sidebar.extensions")}</span>
           </Button>
           {onOpenAutomations ? (

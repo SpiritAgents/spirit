@@ -5,8 +5,11 @@ import {
   useRef,
   useState,
   type Dispatch,
+  type ReactNode,
   type SetStateAction,
 } from "react";
+
+import { Blocks, Settings } from "lucide-react";
 
 import { DesktopMacTrafficLights } from "@/components/desktop-mac-traffic-lights";
 import { DesktopConversationPreview } from "@/components/desktop-conversation-preview";
@@ -84,8 +87,6 @@ type WorkspacePreviewState = {
 
 const SITE_WORKSPACE_ROOT = "D:\\spiritagent.app";
 const DESKTOP_WORKSPACE_ROOT = "D:\\spiritagent.app\\SPIRIT\\desktop";
-
-const CONVERSATION_MAX_W = "max-w-[min(84vw,38rem)]";
 
 const MOCK_MODELS: ModelProfileSnapshot[] = [
   {
@@ -434,24 +435,22 @@ function createSession(workspaceRoot: string, label: string): SessionListItem {
 }
 
 function PreviewSurfacePlaceholder({
+  icon,
   title,
   baseToneClassName,
 }: {
+  icon: ReactNode;
   title: string;
   baseToneClassName?: string;
 }) {
   return (
-    <ScrollArea
-      className={cn("min-h-0 flex-1", baseToneClassName ?? "bg-background")}
-      type="hover"
-      scrollHideDelay={450}
-    >
-      <div
-        className={cn("mx-auto flex min-h-full w-full items-center px-3 py-12", CONVERSATION_MAX_W)}
-      >
-        <EmptyCard className="w-full" description={title} />
-      </div>
-    </ScrollArea>
+    <div className={cn("relative min-h-0 flex-1", baseToneClassName ?? "bg-background")}>
+      <EmptyCard
+        className="absolute inset-0 flex flex-col items-center justify-center"
+        icon={icon}
+        title={title}
+      />
+    </div>
   );
 }
 
@@ -1002,12 +1001,14 @@ function SpiritDesktopWindowBody({
                     </div>
                   ) : (
                     <PreviewSurfacePlaceholder
+                      icon={<Settings strokeWidth={1.75} />}
                       title={messages.desktop.window.settingsPlaceholderTitle}
                       baseToneClassName={contentBaseToneClassName}
                     />
                   )
                 ) : (
                   <PreviewSurfacePlaceholder
+                    icon={<Blocks strokeWidth={1.75} />}
                     title={messages.desktop.window.marketplacePlaceholderTitle}
                     baseToneClassName={contentBaseToneClassName}
                   />
