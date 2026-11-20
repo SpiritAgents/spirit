@@ -180,6 +180,18 @@ test("the Native PR list renders its existing tabs and search controls", async (
   expect(screen.getByRole("tab", { name: /0 Closed/ })).toBeTruthy();
   expect(screen.getByPlaceholderText("Search pull requests")).toBeTruthy();
 });
+
+test("the Native PR list localizes open and closed tab labels", async () => {
+  try {
+    await act(() => i18n.changeLanguage("zh-CN"));
+    render(wrap(<WorkspacePrTab {...prProps()} />));
+    await waitFor(() => expect(screen.getByRole("tab", { name: "0 开放" })).toBeTruthy());
+    expect(screen.getByRole("tab", { name: "0 已关闭" })).toBeTruthy();
+  } finally {
+    await act(() => i18n.changeLanguage("en"));
+  }
+});
+
 test("an unauthenticated PR page offers the extension authorization entry point", async () => {
   const props = prProps(false);
   render(wrap(<WorkspacePrTab {...props} />));

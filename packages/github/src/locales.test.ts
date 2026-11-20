@@ -98,6 +98,25 @@ test("Pull Request open statuses use canonical localized terminology", () => {
   );
 });
 
+test("Pull Request list tabs are localized in every catalog", () => {
+  const expected = {
+    en: ["{{count}} Open", "{{count}} Closed"],
+    "zh-CN": ["{{count}} 开放", "{{count}} 已关闭"],
+    "zh-TW": ["{{count}} 開放", "{{count}} 已關閉"],
+    ja: ["{{count}} 件オープン", "{{count}} 件クローズ"],
+    ko: ["열림 {{count}}", "닫힘 {{count}}"],
+    de: ["{{count}} Offen", "{{count}} Geschlossen"],
+    fr: ["{{count}} Ouvertes", "{{count}} Fermées"],
+    es: ["{{count}} Abiertos", "{{count}} Cerrados"],
+    "pt-BR": ["{{count}} Abertos", "{{count}} Fechados"],
+    ru: ["{{count}} Открытые", "{{count}} Закрытые"],
+  } as const;
+  for (const [locale, labels] of Object.entries(expected)) {
+    const { workspace } = resources[locale as keyof typeof resources].translation;
+    assert.deepEqual([workspace.prListTabOpen, workspace.prListTabClosed], labels, locale);
+  }
+});
+
 function placeholders(catalog: Parameters<typeof flattenMessageCatalog>[0]) {
   return Object.fromEntries(
     Object.entries(flattenMessageCatalog(catalog)).map(([key, message]) => [
