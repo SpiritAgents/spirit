@@ -116,6 +116,10 @@
   --composer-edge-hover: color-mix(in oklab, var(--ring) 40%, transparent);
   /* Canvas outline/card fill under All-mode translucency; light /30 so white keeps presence */
   --content-translucent-fill: color-mix(in oklab, var(--background) 30%, transparent);
+  /* Settings cards stay borderless and low-contrast on the pure white / black canvas. */
+  --settings-card-fill: color-mix(in oklab, var(--foreground) 2%, transparent);
+  --settings-card-divider: color-mix(in oklab, var(--border) 35%, transparent);
+  --settings-card-control-hover: color-mix(in oklab, var(--foreground) 4%, transparent);
   --control-border: var(--outline-border);
   /* Canvas hover: 6% wash on normal page/sidebar surfaces; not for overlays */
   --canvas-hover: color-mix(in oklab, var(--foreground) 6%, transparent);
@@ -177,6 +181,9 @@ html.dark,
   --composer-edge-hover: color-mix(in oklab, white 8%, transparent);
   /* Dark already reads well at /10; do not match the light /30 bump */
   --content-translucent-fill: color-mix(in oklab, var(--background) 10%, transparent);
+  --settings-card-fill: color-mix(in oklab, white 4%, transparent);
+  --settings-card-divider: color-mix(in oklab, var(--border) 25%, transparent);
+  --settings-card-control-hover: color-mix(in oklab, white 3%, transparent);
   --control-border: var(--outline-border);
   --canvas-hover: color-mix(in oklab, white 6%, transparent);
   --overlay-hover: color-mix(in oklab, var(--foreground) 18%, var(--popover));
@@ -195,6 +202,12 @@ html.dark,
   --chrome-tertiary-label: #717171;
   --chrome-quaternary-label: #525252;
   --dialog-panel-border: #272727;
+}
+
+/* All-mode keeps the native material fill and the standard divider strength. */
+[data-spirit-content-translucency="true"] {
+  --settings-card-fill: var(--content-translucent-fill);
+  --settings-card-divider: color-mix(in oklab, var(--border) 35%, transparent);
 }
 
 @theme inline {
@@ -218,6 +231,8 @@ html.dark,
   --color-composer-edge: var(--composer-edge);
   --color-composer-edge-hover: var(--composer-edge-hover);
   --color-content-translucent-fill: var(--content-translucent-fill);
+  --color-settings-card-fill: var(--settings-card-fill);
+  --color-settings-card-divider: var(--settings-card-divider);
   --color-control-border: var(--control-border);
   --color-canvas-hover: var(--canvas-hover);
   --color-overlay-hover: var(--overlay-hover);

@@ -58,7 +58,11 @@ import { desktopModelPickerRuntime } from "@/lib/model-picker-runtime";
 import { runAfterRadixOverlayClose } from "@/lib/overlay-motion";
 import type { DesktopProviderConfigEntry } from "@/types";
 import { modelRefsEqual } from "@spiritagent/ui/model-picker";
-import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
+import {
+  DESKTOP_SETTINGS_CARD_SURFACE,
+  DESKTOP_SETTINGS_INSET_DIVIDER,
+  DESKTOP_SETTINGS_INSET_DIVIDERS,
+} from "@/lib/desktop-chrome";
 import {
   DESKTOP_LIST_ITEM_PRIMARY_CLASS,
   DESKTOP_PAGE_TITLE_CLASS,
@@ -459,7 +463,7 @@ export function ModelsSettingsPanel({
 
       <div className="space-y-3">
         {configProviders.length === 0 ? (
-          <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "px-4 py-10 text-center")}>
+          <div className={cn(DESKTOP_SETTINGS_CARD_SURFACE, "px-4 py-10 text-center")}>
             <p className="text-sm text-muted-foreground">{t("settings.noSavedModels")}</p>
           </div>
         ) : (
@@ -471,9 +475,14 @@ export function ModelsSettingsPanel({
               return (
                 <div
                   key={providerEntry.id}
-                  className={cn(DESKTOP_CANVAS_CARD_SURFACE, "overflow-hidden")}
+                  className={cn(DESKTOP_SETTINGS_CARD_SURFACE, "overflow-hidden")}
                 >
-                  <div className="flex items-center justify-between gap-3 border-b border-border/35 px-4 py-3">
+                  <div
+                    className={cn(
+                      DESKTOP_SETTINGS_INSET_DIVIDER,
+                      "flex items-center justify-between gap-3 px-4 py-3 sm:px-5",
+                    )}
+                  >
                     <div className="flex min-w-0 items-center gap-2">
                       <span className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}>{groupLabel}</span>
                       {groupHasKey ? (
@@ -494,7 +503,7 @@ export function ModelsSettingsPanel({
                     </Button>
                   </div>
                   {groupModels.length === 0 ? (
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5">
                       <p className="text-xs leading-5 text-muted-foreground">
                         {providerEntry.id === "modal"
                           ? t("settings.modalProviderCatalogEmpty")
@@ -519,7 +528,7 @@ export function ModelsSettingsPanel({
                       disableHoverableContent
                     >
                       <RovingFocusGroup asChild orientation="vertical">
-                        <Tooltip.Zone className="divide-y divide-border/35">
+                        <Tooltip.Zone className={DESKTOP_SETTINGS_INSET_DIVIDERS}>
                           {groupModels.map((model) => {
                             const modelRef = settingsModelRef(model);
                             const supportedDefaultRoles = getSupportedModelDefaultRoles(
@@ -608,7 +617,7 @@ export function ModelsSettingsPanel({
                     </Tooltip>
                   ) : (
                     <RovingFocusGroup asChild orientation="vertical">
-                      <div className="divide-y divide-border/35">
+                      <div className={DESKTOP_SETTINGS_INSET_DIVIDERS}>
                         {groupModels.map((model) => {
                           const modelRef = settingsModelRef(model);
                           const supportedDefaultRoles = getSupportedModelDefaultRoles(

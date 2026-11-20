@@ -90,7 +90,7 @@ test("settings keeps a connected provider visible when its catalog is empty", ()
   );
 
   expect(screen.getByText("Mistral")).toBeTruthy();
-  expect(screen.getByText("0 models")).toBeTruthy();
+  expect(screen.queryByText("0 models")).toBeNull();
   const disconnectButton = screen.getByRole("button", { name: "Disconnect" });
   expect(disconnectButton.getAttribute("data-variant")).toBe("secondary");
   fireEvent.click(disconnectButton);

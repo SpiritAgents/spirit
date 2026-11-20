@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
+import { DESKTOP_SETTINGS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { desktopShellPlatform } from "@/lib/desktop-shell";
 import { cn } from "@/lib/utils";
 import {
@@ -37,7 +37,12 @@ export function GeneralSettingsPanel({
 }: Pick<SettingsViewProps, "settings" | "onSavePatch">) {
   const { t } = useTranslation();
   return (
-    <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
+    <div
+      className={cn(
+        DESKTOP_SETTINGS_CARD_SURFACE,
+        "divide-y divide-settings-card-divider px-4 sm:px-5",
+      )}
+    >
       <SettingsRow
         label={t("settings.uiLocale")}
         description={t("settings.uiLocaleDescription")}

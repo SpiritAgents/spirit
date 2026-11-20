@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { TextLink } from "@/components/ui/link";
 import { Switch } from "@/components/ui/switch";
-import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
+import { DESKTOP_SETTINGS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import {
   DESKTOP_LIST_ITEM_PRIMARY_CLASS,
   DESKTOP_SETTINGS_LABEL_CLASS,
@@ -76,7 +76,12 @@ export function AgentsSettingsPanel({
 
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">{t("settings.contextSection")}</p>
-        <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
+        <div
+          className={cn(
+            DESKTOP_SETTINGS_CARD_SURFACE,
+            "divide-y divide-settings-card-divider px-4 sm:px-5",
+          )}
+        >
           <AgentsSettingsRow
             label={t("settings.providerTools")}
             description={
@@ -130,7 +135,12 @@ export function AgentsSettingsPanel({
 
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">{t("settings.lspSection")}</p>
-        <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
+        <div
+          className={cn(
+            DESKTOP_SETTINGS_CARD_SURFACE,
+            "divide-y divide-settings-card-divider px-4 sm:px-5",
+          )}
+        >
           <AgentsSettingsRow
             label={t("settings.lspEnabled")}
             description={t("settings.lspEnabledDescription")}
@@ -175,7 +185,12 @@ export function AgentsSettingsPanel({
 
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">{t("settings.attributionSection")}</p>
-        <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
+        <div
+          className={cn(
+            DESKTOP_SETTINGS_CARD_SURFACE,
+            "divide-y divide-settings-card-divider px-4 sm:px-5",
+          )}
+        >
           <AgentsSettingsRow
             label={t("settings.commitAttribution")}
             description={t("settings.commitAttributionDescription")}

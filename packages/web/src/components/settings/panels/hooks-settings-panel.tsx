@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
+import { DESKTOP_SETTINGS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { cn } from "@/lib/utils";
 import { DESKTOP_EDITOR_TAB_CLASS, DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
 import type {
@@ -192,7 +192,7 @@ export function HooksSettingsPanel({
 
       <RovingFocusGroup
         orientation="vertical"
-        className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}
+        className={cn(DESKTOP_SETTINGS_CARD_SURFACE, "divide-y divide-settings-card-divider")}
       >
         {items.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">

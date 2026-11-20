@@ -11,6 +11,12 @@ import {
 import { cn } from "@/lib/utils";
 
 export {
+  DESKTOP_SETTINGS_CARD_SURFACE,
+  DESKTOP_SETTINGS_INSET_DIVIDER,
+  DESKTOP_SETTINGS_INSET_DIVIDERS,
+} from "@spiritagent/ui/chrome";
+
+export {
   DESKTOP_COMPOSER_EDGE,
   DESKTOP_COMPOSER_EDGE_HOVER,
   DESKTOP_COMPOSER_SURFACE_BACKDROP,

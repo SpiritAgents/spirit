@@ -40,6 +40,28 @@ export const DESKTOP_CANVAS_CARD_SURFACE = cn(
   DESKTOP_CONTENT_TRANSLUCENT_FILL,
 );
 
+/** Borderless settings card with contextual control fills on both solid and translucent canvases. */
+export const DESKTOP_SETTINGS_CARD_SURFACE = cn(
+  "rounded-lg border-0 bg-settings-card-fill",
+  "[--canvas-hover:var(--settings-card-control-hover)]",
+  "[&_[data-slot=select-trigger]]:bg-content-translucent-fill",
+);
+
+/** Settings-row divider aligned to the content gutter rather than the card edge. */
+export const DESKTOP_SETTINGS_INSET_DIVIDER = cn(
+  "relative after:pointer-events-none after:absolute after:right-4 after:bottom-0 after:left-4",
+  "after:border-b after:border-settings-card-divider sm:after:right-5 sm:after:left-5",
+);
+
+/** Inset dividers between direct children without shrinking their hover/focus surfaces. */
+export const DESKTOP_SETTINGS_INSET_DIVIDERS = cn(
+  "[&>*:not(:last-child)]:relative",
+  "[&>*:not(:last-child)]:after:pointer-events-none [&>*:not(:last-child)]:after:absolute",
+  "[&>*:not(:last-child)]:after:right-4 [&>*:not(:last-child)]:after:bottom-0 [&>*:not(:last-child)]:after:left-4",
+  "sm:[&>*:not(:last-child)]:after:right-5 sm:[&>*:not(:last-child)]:after:left-5",
+  "[&>*:not(:last-child)]:after:border-b [&>*:not(:last-child)]:after:border-settings-card-divider",
+);
+
 export const DESKTOP_OVERLAY_SHADOW = "shadow-[0_2px_20px_-4px_rgb(0_0_0/0.06)] dark:shadow-md";
 
 export const DESKTOP_OVERLAY_SHADOW_LG = "shadow-[0_2px_20px_-4px_rgb(0_0_0/0.06)] dark:shadow-lg";

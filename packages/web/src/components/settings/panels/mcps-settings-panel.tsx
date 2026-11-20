@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { DesktopFormInput, DesktopFormTextarea } from "@/components/ui/desktop-form-field";
 import { Label } from "@/components/ui/label";
-import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
+import { DESKTOP_SETTINGS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { formatMcpCapabilityCounts } from "@/lib/mcp-capability-counts";
 import { cn } from "@/lib/utils";
 import i18n from "@/lib/i18n";
@@ -248,7 +248,7 @@ export function McpsSettingsPanel({
 
       <RovingFocusGroup
         orientation="vertical"
-        className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}
+        className={cn(DESKTOP_SETTINGS_CARD_SURFACE, "divide-y divide-settings-card-divider")}
       >
         {items.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">

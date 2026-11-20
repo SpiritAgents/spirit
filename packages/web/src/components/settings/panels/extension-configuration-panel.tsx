@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { DesktopExtensionListItem, UpdateExtensionSettingsRequest } from "@/types";
-import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
+import { DESKTOP_SETTINGS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
 import { cn } from "@/lib/utils";
 
@@ -68,14 +68,19 @@ export function ExtensionConfigurationPanel({
       {!hasSettings ? (
         <div
           className={cn(
-            DESKTOP_CANVAS_CARD_SURFACE,
+            DESKTOP_SETTINGS_CARD_SURFACE,
             "px-4 py-10 text-center text-sm text-muted-foreground",
           )}
         >
           {t("settings.noExtensionSettings")}
         </div>
       ) : (
-        <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
+        <div
+          className={cn(
+            DESKTOP_SETTINGS_CARD_SURFACE,
+            "divide-y divide-settings-card-divider px-4 sm:px-5",
+          )}
+        >
           {item.settingsSchema?.map((setting) => {
             const fieldKey = settingDraftKey(item.id, setting.key);
             const currentText = currentSettingText(item, setting.key, setting.defaultValue);

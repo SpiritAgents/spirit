@@ -117,6 +117,34 @@ test("model rows form one vertical keyboard list per provider", async () => {
   expect(modelB.tabIndex).toBe(0);
 });
 
+test("provider and model rows use content-inset dividers", () => {
+  render(
+    <ModelsSettingsPanel
+      settings={modelSettings}
+      snapshot={modelSnapshot as never}
+      modelsBusy={false}
+      modelsPreviewBusy={false}
+      onSavePatch={vi.fn()}
+      onAddModel={vi.fn()}
+      onAddProviderModels={vi.fn()}
+      onPreviewModels={vi.fn()}
+      onRemoveModel={vi.fn()}
+      onDisconnectProvider={vi.fn()}
+    />,
+  );
+
+  const providerLabel = screen.getByText("Provider A");
+  const providerHeader = providerLabel.parentElement?.parentElement as HTMLElement;
+  expect(providerHeader.className).toContain("after:left-4");
+  expect(providerHeader.className).toContain("sm:after:left-5");
+  expect(providerHeader.className).not.toContain("border-b border-border/35");
+
+  const modelList = screen.getByRole("button", { name: /Model A/ }).parentElement as HTMLElement;
+  expect(modelList.className).toContain("[&>*:not(:last-child)]:after:left-4");
+  expect(modelList.className).toContain("sm:[&>*:not(:last-child)]:after:left-5");
+  expect(modelList.className).not.toContain("divide-y");
+});
+
 function marketplaceItem(id: string, displayName: string): DesktopMarketplaceCatalogEntry {
   return {
     id: `built-in/${id}`,

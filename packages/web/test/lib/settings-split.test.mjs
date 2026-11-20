@@ -37,6 +37,17 @@ for (const [exportName, relativePath] of PANEL_FILES) {
   });
 }
 
+test("every settings panel uses the shared settings card surface", async () => {
+  for (const [, relativePath] of PANEL_FILES) {
+    if (relativePath === "settings-view.tsx") {
+      continue;
+    }
+    const source = await readFile(join(srcRoot, relativePath), "utf8");
+    assert.match(source, /DESKTOP_SETTINGS_CARD_SURFACE/, relativePath);
+    assert.doesNotMatch(source, /DESKTOP_CANVAS_CARD_SURFACE/, relativePath);
+  }
+});
+
 test("settings barrel re-exports SettingsView and settings types", async () => {
   const barrel = await readFile(join(__dirname, "../../src/components/settings-view.tsx"), "utf8");
   assert.match(barrel, /export \{ SettingsView \} from "@\/components\/settings\/settings-view"/);
@@ -100,6 +111,8 @@ test("AgentsSettingsPanel places the Context group with web tool toggles above L
 
 test("AppearanceSettingsPanel groups Theme, Motion, and Typography without UI locale", async () => {
   const source = await readFile(join(srcRoot, "panels/appearance-settings-panel.tsx"), "utf8");
+  assert.doesNotMatch(source, /settings\.translucency === "all"/);
+  assert.doesNotMatch(source, /appearanceOpaqueCard|appearanceCardControl/);
   assert.doesNotMatch(source, /settings\.themeSection/);
   assert.match(source, /settings\.motionSection/);
   assert.match(source, /settings\.reduceMotion/);

@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button";
 import { RovingFocusGroup, RovingFocusItem } from "@/components/ui/roving-focus-group";
 import { DesktopFormInput } from "@/components/ui/desktop-form-field";
 import { Switch } from "@/components/ui/switch";
-import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
+import {
+  DESKTOP_SETTINGS_CARD_SURFACE,
+  DESKTOP_SETTINGS_INSET_DIVIDERS,
+} from "@/lib/desktop-chrome";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import {
   DESKTOP_LIST_ITEM_PRIMARY_CLASS,
@@ -125,7 +128,12 @@ export function RemoteControlPanel({
         </Button>
       </div>
 
-      <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
+      <div
+        className={cn(
+          DESKTOP_SETTINGS_CARD_SURFACE,
+          "divide-y divide-settings-card-divider px-4 sm:px-5",
+        )}
+      >
         <SettingsRow
           label={t("settings.remoteControl")}
           description={t("settings.remoteControlDescription")}
@@ -185,10 +193,10 @@ export function RemoteControlPanel({
         </p>
         <RovingFocusGroup
           orientation="vertical"
-          className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}
+          className={cn(DESKTOP_SETTINGS_CARD_SURFACE, DESKTOP_SETTINGS_INSET_DIVIDERS)}
         >
           {devices.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground sm:px-5">
               {t("settings.noDevices")}
             </p>
           ) : (
@@ -203,7 +211,7 @@ export function RemoteControlPanel({
               return (
                 <div
                   key={device.id}
-                  className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-3">
                     <Icon

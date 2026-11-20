@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { DesktopFormInput, DesktopFormTextarea } from "@/components/ui/desktop-form-field";
 import { Label } from "@/components/ui/label";
-import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
+import { DESKTOP_SETTINGS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { workspaceFileDirname } from "@/lib/file-picker-path";
 import { markdownToPlainText } from "@/lib/markdown-plain-text";
 import { cn } from "@/lib/utils";
@@ -141,7 +141,7 @@ export function SkillsSettingsPanel({
 
       <RovingFocusGroup
         orientation="vertical"
-        className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}
+        className={cn(DESKTOP_SETTINGS_CARD_SURFACE, "divide-y divide-settings-card-divider")}
       >
         {items.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">

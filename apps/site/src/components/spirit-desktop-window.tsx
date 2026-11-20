@@ -836,6 +836,7 @@ function SpiritDesktopWindowBody({
     <div
       ref={setWindowRootElement}
       data-spirit-preview-shell="darwin"
+      data-spirit-content-translucency={useTranslucency ? "true" : "false"}
       {...(nestedPreview ? { "data-nested-preview": true } : {})}
       className={cn(
         "relative isolate overflow-hidden rounded-[10px] border border-border shadow-[0_24px_64px_-16px_rgba(0,0,0,0.18)] ring-0 dark:border-white/12 dark:shadow-[0_34px_96px_rgba(0,0,0,0.54)] dark:ring-1 dark:ring-black/35",

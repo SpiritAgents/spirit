@@ -44,6 +44,14 @@ test("renders simplified settings and the device list without legacy remote stat
               lastUserAgent: "Example Browser",
               status: "offline",
             },
+            {
+              id: "device-b",
+              name: "Phone",
+              createdAt: "2026-01-02T03:04:05.000Z",
+              lastConnectedAt: "2026-01-02T03:04:05.000Z",
+              lastUserAgent: "Example Browser",
+              status: "offline",
+            },
           ],
         },
       },
@@ -54,7 +62,14 @@ test("renders simplified settings and the device list without legacy remote stat
   assert.match(html, /Remote Control/);
   assert.match(html, /Devices/);
   assert.match(html, /Mac \/ Edge/);
-  assert.match(html, /Revoke Access/);
+  assert.match(html, /Phone/);
+  assert.equal(html.match(/Revoke Access/g)?.length, 2);
   assert.doesNotMatch(html, /Remote Status/);
   assert.doesNotMatch(html, /Web Remote Control/);
+
+  const deviceListTag = html.match(/<div\b[^>]*\bdata-orientation="vertical"[^>]*>/)?.[0];
+  assert.ok(deviceListTag);
+  assert.match(deviceListTag, /after:left-4/);
+  assert.match(deviceListTag, /after:border-settings-card-divider/);
+  assert.doesNotMatch(deviceListTag, /divide-y/);
 });

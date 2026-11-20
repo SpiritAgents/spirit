@@ -20,7 +20,7 @@ export function SettingsRow({
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 border-b border-border/35 py-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between sm:gap-6",
+        "flex flex-col gap-3 border-b border-settings-card-divider py-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between sm:gap-6",
         className,
       )}
     >

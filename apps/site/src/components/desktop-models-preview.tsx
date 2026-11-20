@@ -1,6 +1,10 @@
 import { Search } from "@spiritagent/icons/search";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles } from "lucide-react";
+import {
+  DESKTOP_SETTINGS_CARD_SURFACE,
+  DESKTOP_SETTINGS_INSET_DIVIDERS,
+} from "@spiritagent/ui/chrome";
 import { FONT_WEIGHT_MEDIUM, FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
 import { Badge } from "@/components/ui/badge";
@@ -346,13 +350,13 @@ export function DesktopModelsPreview({
         </Button>
       </div>
 
-      <div className="divide-y divide-dialog-panel-border rounded-lg border border-dialog-panel-border bg-card/80">
+      <div className={cn(DESKTOP_SETTINGS_CARD_SURFACE, DESKTOP_SETTINGS_INSET_DIVIDERS)}>
         {PREVIEW_MODELS.map((model) => {
           const isActive = model.name === activeModel;
           return (
             <div
               key={model.name}
-              className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+              className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5"
             >
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
