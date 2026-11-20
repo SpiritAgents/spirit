@@ -400,7 +400,7 @@ function MessageCardImpl({
           )
         ) : null}
         {!isUser && message.aux?.finishTaskNotice ? (
-          <p className="text-xs leading-relaxed text-muted-foreground">
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
             {message.aux.finishTaskNotice}
           </p>
         ) : null}

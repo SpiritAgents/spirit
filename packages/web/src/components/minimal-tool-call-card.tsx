@@ -109,7 +109,7 @@ function MoveToBackgroundButton({
   );
 }
 
-const summaryClass = "text-xs leading-relaxed text-muted-foreground";
+const summaryClass = "text-[13px] leading-relaxed text-muted-foreground";
 
 const toolCallDetailScrollAreaClass =
   "w-full rounded-md border border-border/20 bg-muted/15 pr-2 [&>[data-radix-scroll-area-viewport]]:max-h-96 [&>[data-radix-scroll-area-viewport]]:overscroll-contain";
@@ -261,7 +261,7 @@ export function MinimalToolSummary({
   return (
     <span
       className={cn(
-        "min-w-0 text-xs leading-relaxed",
+        "min-w-0 text-[13px] leading-relaxed",
         truncateSummary ? cn("block truncate", toolCardFileNameDetailClass) : "break-words",
       )}
     >
@@ -324,7 +324,7 @@ function ProviderToolExpandedBody({
           <ToolCallDetailScrollPre>{output}</ToolCallDetailScrollPre>
         </div>
       ) : shimmerActive ? (
-        <p className="text-xs leading-relaxed text-muted-foreground/70 spirit-thinking-shimmer-text">
+        <p className="text-[13px] leading-relaxed text-muted-foreground/70 spirit-thinking-shimmer-text">
           Waiting for output…
         </p>
       ) : null}
@@ -370,7 +370,7 @@ function GenericToolExpandedBody({
           <AskQuestionsAnswerGroups groups={askQuestionsGroups} />
         </div>
         {detailLines.length > 0 ? (
-          <ul className="list-disc space-y-0.5 pl-3.5 text-xs leading-relaxed text-muted-foreground">
+          <ul className="list-disc space-y-0.5 pl-3.5 text-[13px] leading-relaxed text-muted-foreground">
             {detailLines.map((line, index) => (
               <li key={`${index}:${line}`}>{line}</li>
             ))}
@@ -389,7 +389,7 @@ function GenericToolExpandedBody({
           <TodoItemsList items={todoSnapshotTodos} />
         </div>
         {detailLines.length > 0 ? (
-          <ul className="list-disc space-y-0.5 pl-3.5 text-xs leading-relaxed text-muted-foreground">
+          <ul className="list-disc space-y-0.5 pl-3.5 text-[13px] leading-relaxed text-muted-foreground">
             {detailLines.map((line, index) => (
               <li key={`${index}:${line}`}>{line}</li>
             ))}
@@ -426,7 +426,7 @@ function GenericToolExpandedBody({
           </div>
         ) : null}
         {detailLines.length > 0 ? (
-          <ul className="list-disc space-y-0.5 pl-3.5 text-xs leading-relaxed text-muted-foreground">
+          <ul className="list-disc space-y-0.5 pl-3.5 text-[13px] leading-relaxed text-muted-foreground">
             {detailLines.map((line, index) => (
               <li key={`${index}:${line}`}>{line}</li>
             ))}
@@ -456,7 +456,7 @@ function GenericToolExpandedBody({
         </pre>
       ) : null}
       {detailLines.length > 0 ? (
-        <ul className="list-disc space-y-0.5 pl-3.5 text-xs leading-relaxed text-muted-foreground">
+        <ul className="list-disc space-y-0.5 pl-3.5 text-[13px] leading-relaxed text-muted-foreground">
           {detailLines.map((line, index) => (
             <li key={`${index}:${line}`}>{line}</li>
           ))}
@@ -578,7 +578,7 @@ function FileToolDiffExpandedBody({ tool, open }: { tool: ToolBlockSnapshot; ope
   if (diffResult === "truncated") {
     return (
       <div className="space-y-2">
-        <p className="text-xs leading-relaxed text-muted-foreground">
+        <p className="text-[13px] leading-relaxed text-muted-foreground">
           {t("tool.diffArgsTruncated")}
         </p>
         <GenericToolExpandedBody tool={tool} />
@@ -588,7 +588,9 @@ function FileToolDiffExpandedBody({ tool, open }: { tool: ToolBlockSnapshot; ope
 
   if (diffResult === "too-large") {
     return (
-      <p className="text-xs leading-relaxed text-muted-foreground">{t("tool.diffFileTooLarge")}</p>
+      <p className="text-[13px] leading-relaxed text-muted-foreground">
+        {t("tool.diffFileTooLarge")}
+      </p>
     );
   }
 
@@ -679,7 +681,7 @@ function ShellToolExpandedBody({
   return (
     <div className="space-y-2">
       {displayedOutputError ? (
-        <p role="status" className="text-xs text-destructive">
+        <p role="status" className="text-[13px] text-destructive">
           {t("tool.backgroundOutputUnavailable", {
             error: displayedOutputError,
           })}
@@ -728,14 +730,14 @@ function ShellToolExpandedBody({
             ) : null}
           </div>
           {shellOutput?.truncated ? (
-            <p className="text-xs leading-relaxed text-muted-foreground/70">
+            <p className="text-[13px] leading-relaxed text-muted-foreground/70">
               {t("tool.shellOutputTruncated")}
             </p>
           ) : null}
         </div>
       ) : null}
       {detailLines.length > 0 ? (
-        <ul className="list-disc space-y-0.5 pl-3.5 text-xs leading-relaxed text-muted-foreground">
+        <ul className="list-disc space-y-0.5 pl-3.5 text-[13px] leading-relaxed text-muted-foreground">
           {detailLines.map((line, index) => (
             <li key={`${index}:${line}`}>{line}</li>
           ))}

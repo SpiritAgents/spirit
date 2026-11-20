@@ -36,7 +36,7 @@ export function ReasoningLabelWithShimmer({
   return (
     <span
       className={cn(
-        "shrink-0 text-xs font-normal tracking-wide",
+        "shrink-0 text-[13px] font-normal tracking-wide",
         active ? "spirit-thinking-shimmer-text" : "text-muted-foreground",
       )}
     >
