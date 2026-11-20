@@ -9,6 +9,7 @@ const RENDERER_ONLY_PACKAGES = new Set([
   "@spiritagent/ui",
   "@spiritagent/web",
 ]);
+const EXTENSION_BUILD_PACKAGES = ["@spiritagent/github", "@spiritagent/vercel"];
 
 /**
  * Follow only runtime dependencies. Renderer packages are source-served by
@@ -39,6 +40,53 @@ export function developmentRestartWatchDirs(desktopRoot, repoRoot) {
       path.join(repoRoot, "packages", name.slice(SPIRIT_SCOPE.length), "dist"),
     ),
   ];
+}
+
+/** Packages whose development builds feed either Electron or built-in extensions. */
+export function developmentWatchPackageNames(repoRoot) {
+  return [
+    ...new Set([...workbenchRuntimePackageNames(repoRoot), ...EXTENSION_BUILD_PACKAGES]),
+  ].sort();
+}
+
+/**
+ * Development rebuilds do not need Turbo's transitive invalidation: runtime
+ * dependants load the fresh dependency on the next reload. Build only edited
+ * packages, but keep simultaneous edits in dependency order so their typecheck
+ * sees the new declarations.
+ */
+export function developmentPackageBuildOrder(repoRoot) {
+  const names = new Set(developmentWatchPackageNames(repoRoot));
+  const ordered = [];
+  const visited = new Set();
+  const visiting = new Set();
+
+  function visit(name) {
+    if (visited.has(name) || visiting.has(name)) return;
+    visiting.add(name);
+    if (name === "@spiritagent/extensions") {
+      for (const dependency of EXTENSION_BUILD_PACKAGES) visit(dependency);
+    }
+    const packageDir = path.join(repoRoot, "packages", name.slice(SPIRIT_SCOPE.length));
+    const manifest = JSON.parse(fs.readFileSync(path.join(packageDir, "package.json"), "utf8"));
+    for (const dependency of Object.keys(manifest.dependencies ?? {})) {
+      if (names.has(dependency)) visit(dependency);
+    }
+    visiting.delete(name);
+    visited.add(name);
+    ordered.push(name);
+  }
+
+  for (const name of names) visit(name);
+  return ordered;
+}
+
+export function developmentBuildClosure(changedPackages) {
+  const changed = new Set(changedPackages);
+  if (EXTENSION_BUILD_PACKAGES.some((name) => changed.has(name))) {
+    changed.add("@spiritagent/extensions");
+  }
+  return changed;
 }
 
 function isRuntimeBuildMetadata(file) {

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { product, PRODUCT_BUILD_ID } from "@spiritagent/product";
 
@@ -14,6 +14,32 @@ export function renderProductHtml(html: string): string {
   return html
     .replaceAll("{{product.name}}", () => name)
     .replaceAll("{{productBuildId}}", () => PRODUCT_BUILD_ID);
+}
+
+export function localeFromSourceFile(file: string): string | undefined {
+  const localesRoot = path.resolve(__dirname, "../../packages/i18n/src/locales");
+  const relative = path.relative(localesRoot, file);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) return undefined;
+  if (!/^[^/\\]+\.json$/u.test(relative)) return undefined;
+  return path.basename(relative, ".json");
+}
+
+/** Locale edits update i18next in place instead of reloading React or Electron. */
+export function i18nHotReload(): Plugin {
+  return {
+    name: "spirit-i18n-hot-reload",
+    handleHotUpdate({ file, server }) {
+      const locale = localeFromSourceFile(file);
+      if (!locale) return undefined;
+      const translation = JSON.parse(fs.readFileSync(file, "utf8"));
+      server.ws.send({
+        type: "custom",
+        event: "spirit:i18n-locale",
+        data: { locale, translation },
+      });
+      return [];
+    },
+  };
 }
 
 /**
@@ -80,6 +106,7 @@ export default defineConfig(({ command }) => ({
   base: "./",
   plugins: [
     { name: "product-html", transformIndexHtml: renderProductHtml },
+    i18nHotReload(),
     react(),
     tailwindcss(),
   ],

@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -7,9 +6,12 @@ import { fileURLToPath } from "node:url";
 import { afterEach, test } from "vitest";
 
 import {
+  developmentBuildClosure,
   developmentNativeSources,
+  developmentPackageBuildOrder,
   developmentRuntimeFingerprint,
   developmentRestartWatchDirs,
+  developmentWatchPackageNames,
   workbenchRuntimePackageNames,
 } from "../scripts/dev-reload-graph.mjs";
 
@@ -73,20 +75,28 @@ test("runtime restart watches cover the Workbench domain graph", () => {
 test("development package watching does not rebuild the production renderer", () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(desktopRoot, "package.json"), "utf8"));
   const script = manifest.scripts["watch:packages"];
-  assert.match(script, /--filter=@spiritagent\/workbench\.\.\./u);
-  assert.match(script, /--filter=!@spiritagent\/web(?:\s|$)/u);
-  assert.match(script, /--only(?:\s|$)/u);
+  assert.equal(script, "node scripts/watch-packages.mjs");
 
-  const dryRunScript = script.replace("turbo watch build", "turbo run build");
-  const output = execFileSync(`${dryRunScript} --dry=json`, {
-    cwd: repoRoot,
-    encoding: "utf8",
-    shell: true,
-  });
-  const report = JSON.parse(output.slice(output.indexOf("{")));
-  const packages = report.tasks.map((task) => task.package);
+  const packages = developmentWatchPackageNames(repoRoot);
   assert.ok(packages.includes("@spiritagent/workbench"));
+  assert.ok(packages.includes("@spiritagent/github"));
+  assert.ok(packages.includes("@spiritagent/vercel"));
   assert.ok(!packages.includes("@spiritagent/web"));
+  assert.ok(!packages.includes("@spiritagent/ui"));
+});
+
+test("development builds order simultaneous edits and refresh packed extensions", () => {
+  const order = developmentPackageBuildOrder(repoRoot);
+  assert.ok(order.indexOf("@spiritagent/product") < order.indexOf("@spiritagent/i18n"));
+  assert.ok(order.indexOf("@spiritagent/i18n") < order.indexOf("@spiritagent/workbench"));
+  assert.ok(order.indexOf("@spiritagent/github") < order.indexOf("@spiritagent/extensions"));
+  assert.ok(order.indexOf("@spiritagent/vercel") < order.indexOf("@spiritagent/extensions"));
+  assert.ok(order.indexOf("@spiritagent/extensions") < order.indexOf("@spiritagent/workbench"));
+
+  assert.deepEqual([...developmentBuildClosure(["@spiritagent/github"])].sort(), [
+    "@spiritagent/extensions",
+    "@spiritagent/github",
+  ]);
 });
 
 test("development restart fingerprints only settled runtime changes", () => {

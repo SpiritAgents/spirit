@@ -16,4 +16,18 @@ instance.init({
   },
 });
 
+const developmentLocalesDirectory =
+  typeof process !== "undefined" && process.versions?.node
+    ? process.env.SPIRIT_DEV_I18N_LOCALES_DIR
+    : undefined;
+if (developmentLocalesDirectory) {
+  // This host entry is also imported by a few browser-safe modules. Keep the
+  // Node-only watcher out of their Vite module graph; production hosts resolve
+  // the compiled helper only when the development directory is explicitly set.
+  const developmentLocalesModule = "./development-locales.js";
+  void import(/* @vite-ignore */ developmentLocalesModule).then(({ watchDevelopmentLocales }) =>
+    watchDevelopmentLocales(instance, developmentLocalesDirectory),
+  );
+}
+
 export default instance;

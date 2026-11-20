@@ -6,6 +6,7 @@ import { resources } from "@spiritagent/i18n/resources";
 import {
   FALLBACK_LANGUAGE,
   isLanguagePreference,
+  isValidLanguage,
   resolveUiLocalePreference,
   SYSTEM_LANGUAGE,
   type LanguagePreference,
@@ -80,6 +81,18 @@ i18n.use(initReactI18next).init({
     defaultVariables: { product },
   },
 });
+
+if (import.meta.hot) {
+  import.meta.hot.on(
+    "spirit:i18n-locale",
+    ({ locale, translation }: { locale: string; translation: Record<string, unknown> }) => {
+      if (!isValidLanguage(locale)) return;
+      i18n.removeResourceBundle(locale, "translation");
+      i18n.addResourceBundle(locale, "translation", translation);
+      i18n.emit("languageChanged", i18n.language);
+    },
+  );
+}
 
 if (typeof window !== "undefined") {
   window.addEventListener("languagechange", () => {

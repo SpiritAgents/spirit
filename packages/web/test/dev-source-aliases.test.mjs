@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "vitest";
 
-import { workspaceSourceAliases } from "../vite.config.ts";
+import { i18nHotReload, localeFromSourceFile, workspaceSourceAliases } from "../vite.config.ts";
 
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = path.resolve(webRoot, "..", "..");
@@ -71,4 +71,26 @@ test("renderer workspace imports stay on source HMR or explicit static packages"
     assert.ok(resolved, `${importee} must have a development source alias`);
     assert.ok(sourceExists(resolved), `${importee} must resolve to an existing source file`);
   }
+});
+
+test("locale JSON uses a custom HMR event instead of a module reload", () => {
+  const file = path.join(repoRoot, "packages", "i18n", "src", "locales", "en.json");
+  assert.equal(localeFromSourceFile(file), "en");
+  assert.equal(
+    localeFromSourceFile(path.join(repoRoot, "packages", "i18n", "src", "resources.ts")),
+    undefined,
+  );
+
+  const messages = [];
+  const plugin = i18nHotReload();
+  const result = plugin.handleHotUpdate({
+    file,
+    server: { ws: { send: (message) => messages.push(message) } },
+  });
+  assert.deepEqual(result, []);
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].type, "custom");
+  assert.equal(messages[0].event, "spirit:i18n-locale");
+  assert.equal(messages[0].data.locale, "en");
+  assert.equal(typeof messages[0].data.translation, "object");
 });

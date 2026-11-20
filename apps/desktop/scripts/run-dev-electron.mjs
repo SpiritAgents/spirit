@@ -12,16 +12,18 @@ import {
   developmentRestartWatchDirs,
   developmentRuntimeFingerprint,
 } from "./dev-reload-graph.mjs";
+import { developmentReloadSignalPath } from "./watch-packages.mjs";
 import { resolveSpiritDataDir } from "../../../packages/config/dist/data-paths.js";
 
 const desktopRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = path.resolve(desktopRoot, "..", "..");
 
 /**
- * The main process has no HMR. The dev loop rebuilds dist-electron
- * (tsc --watch) and the main-process packages (turbo watch); restart the app
- * when their outputs change. Renderer-only packages (ui/icons/brand) are
- * deliberately excluded: the Vite dev server serves their sources directly.
+ * The main process has no HMR. dist-electron still reloads after tsc emits.
+ * Workspace packages use a separate build queue and signal only after the
+ * whole affected batch succeeds, so Electron never starts against a package
+ * whose dependency build is still pending. Renderer-only packages and locale
+ * JSON stay on their live-update paths and do not restart the app.
  */
 const RESTART_WATCH_DIRS = developmentRestartWatchDirs(desktopRoot, repoRoot);
 const NATIVE_SOURCES = developmentNativeSources(desktopRoot);
@@ -52,7 +54,14 @@ let runningFingerprint;
 
 function spawnElectron(fingerprint) {
   runningFingerprint = fingerprint;
-  child = spawn(electron, electronArgs, { stdio: "inherit", windowsHide: false });
+  child = spawn(electron, electronArgs, {
+    stdio: "inherit",
+    windowsHide: false,
+    env: {
+      ...process.env,
+      SPIRIT_DEV_I18N_LOCALES_DIR: path.join(repoRoot, "packages", "i18n", "src", "locales"),
+    },
+  });
   child.on("close", (code, signal) => {
     if (restarting) {
       void (async () => {
@@ -123,16 +132,22 @@ function scheduleRestart(file) {
   scheduleFingerprintCheck(RESTART_DEBOUNCE_MS);
 }
 
-for (const dir of RESTART_WATCH_DIRS) {
-  if (!fs.existsSync(dir)) {
-    continue;
-  }
-  fs.watch(dir, { recursive: true }, (_event, filename) => {
+const electronOutput = path.join(desktopRoot, "dist-electron");
+if (fs.existsSync(electronOutput)) {
+  fs.watch(electronOutput, { recursive: true }, (_event, filename) => {
     if (filename) {
-      scheduleRestart(path.join(dir, filename));
+      scheduleRestart(path.join(electronOutput, filename));
     }
   });
 }
+
+const reloadSignal = developmentReloadSignalPath(desktopRoot);
+fs.mkdirSync(path.dirname(reloadSignal), { recursive: true });
+fs.watch(path.dirname(reloadSignal), (_event, filename) => {
+  if (filename?.toString() === path.basename(reloadSignal)) {
+    scheduleRestart(reloadSignal);
+  }
+});
 
 spawnElectron(developmentRuntimeFingerprint(RESTART_WATCH_DIRS, NATIVE_SOURCES));
 
