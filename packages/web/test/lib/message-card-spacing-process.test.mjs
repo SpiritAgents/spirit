@@ -3,12 +3,13 @@ import { test } from "vitest";
 
 import {
   conversationRenderItemGapBeforePx,
+  shouldTightenBodyAfterProcessGroup,
   shouldTightenAfterPreviousMetaMessage,
   shouldTightenAfterPreviousRenderItem,
-  shouldUseDefaultSpacingAfterAbortedThought,
 } from "../../src/lib/message-card-spacing.ts";
+import { conversationRenderItemGapBeforePxAt } from "../../src/lib/conversation-virtual-row-size.ts";
 
-test("shouldTightenAfterPreviousRenderItem tightens body text after process group", () => {
+test("process groups tighten both gray cards and body text", () => {
   const messages = [
     { id: 1, role: "user", content: "hi", pending: false },
     {
@@ -37,10 +38,21 @@ test("shouldTightenAfterPreviousRenderItem tightens body text after process grou
       other: 0,
     },
   };
-  assert.equal(shouldTightenAfterPreviousRenderItem(previousItem, messages[2], messages), true);
+  assert.equal(shouldTightenAfterPreviousRenderItem(previousItem, messages[2], messages), false);
+  assert.equal(shouldTightenBodyAfterProcessGroup(previousItem, messages[2]), true);
+
+  const thought = {
+    id: 4,
+    role: "assistant",
+    content: "",
+    pending: false,
+    aux: { thinking: "Checking the result." },
+  };
+  assert.equal(shouldTightenAfterPreviousRenderItem(previousItem, thought, messages), true);
+  assert.equal(shouldTightenBodyAfterProcessGroup(previousItem, thought), false);
 });
 
-test("shouldUseDefaultSpacingAfterAbortedThought keeps list rhythm for continue streaming row", () => {
+test("shouldTightenAfterPreviousMetaMessage packs continued Thought rows", () => {
   const messages = [
     { id: 1, role: "user", content: "nih", pending: false },
     {
@@ -59,23 +71,16 @@ test("shouldUseDefaultSpacingAfterAbortedThought keeps list rhythm for continue 
     },
   ];
 
-  assert.equal(
-    shouldUseDefaultSpacingAfterAbortedThought(messages[1], messages[2], messages, 2),
-    true,
-  );
-  assert.equal(shouldTightenAfterPreviousMetaMessage(messages[1], messages[2], messages, 2), false);
+  assert.equal(shouldTightenAfterPreviousMetaMessage(messages[1], messages[2]), true);
 
   const currentWithBody = {
     ...messages[2],
     content: "Hello",
   };
-  assert.equal(
-    shouldTightenAfterPreviousMetaMessage(messages[1], currentWithBody, messages, 2),
-    false,
-  );
+  assert.equal(shouldTightenAfterPreviousMetaMessage(messages[1], currentWithBody), false);
 });
 
-test("shouldTightenAfterPreviousMetaMessage keeps meta tighten for tool-turn Thought→Thinking", () => {
+test("shouldTightenAfterPreviousMetaMessage packs tool-turn Thought→Thinking", () => {
   const messages = [
     { id: 1, role: "user", content: "hi", pending: false },
     {
@@ -101,11 +106,60 @@ test("shouldTightenAfterPreviousMetaMessage keeps meta tighten for tool-turn Tho
     },
   ];
 
-  assert.equal(
-    shouldUseDefaultSpacingAfterAbortedThought(messages[2], messages[3], messages, 3),
-    false,
+  assert.equal(shouldTightenAfterPreviousMetaMessage(messages[2], messages[3]), true);
+});
+
+test("gray card spacing includes tools, notifications, and finish_task notices", () => {
+  const messages = [
+    {
+      id: 1,
+      role: "assistant",
+      content: "",
+      pending: false,
+      aux: { thinking: "Planning." },
+    },
+    {
+      id: 2,
+      role: "assistant",
+      content: "",
+      pending: false,
+      tool: { toolName: "read_file", phase: "succeeded", headline: "Read", detailLines: [] },
+    },
+    {
+      id: 3,
+      role: "assistant",
+      content: "",
+      pending: false,
+      tool: {
+        toolName: "shell",
+        phase: "succeeded",
+        headline: "Ran",
+        detailLines: [],
+        taskNotification: { restored: false },
+      },
+    },
+    {
+      id: 4,
+      role: "assistant",
+      content: "",
+      pending: false,
+      aux: { finishTaskNotice: "Task complete." },
+    },
+    {
+      id: 5,
+      role: "assistant",
+      content: "",
+      pending: false,
+      aux: { compaction: "Compacted." },
+    },
+    { id: 6, role: "assistant", content: "Answer", pending: false },
+  ];
+  const items = messages.map((_, messageIndex) => ({ kind: "message", messageIndex }));
+
+  assert.deepEqual(
+    items.map((_, index) => conversationRenderItemGapBeforePxAt(index, items, messages)),
+    [0, 12, 12, 12, 12, 12],
   );
-  assert.equal(shouldTightenAfterPreviousMetaMessage(messages[2], messages[3], messages, 3), true);
 });
 
 test("conversationRenderItemGapBeforePx maps virtual row spacing", () => {
@@ -114,6 +168,7 @@ test("conversationRenderItemGapBeforePx maps virtual row spacing", () => {
       isFirst: true,
       compactAfterPrevious: false,
       tightenAfterPreviousMeta: false,
+      tightenBodyAfterProcessGroup: false,
     }),
     0,
   );
@@ -122,6 +177,7 @@ test("conversationRenderItemGapBeforePx maps virtual row spacing", () => {
       isFirst: false,
       compactAfterPrevious: false,
       tightenAfterPreviousMeta: false,
+      tightenBodyAfterProcessGroup: false,
     }),
     24,
   );
@@ -130,14 +186,25 @@ test("conversationRenderItemGapBeforePx maps virtual row spacing", () => {
       isFirst: false,
       compactAfterPrevious: true,
       tightenAfterPreviousMeta: false,
+      tightenBodyAfterProcessGroup: false,
     }),
-    8,
+    12,
   );
   assert.equal(
     conversationRenderItemGapBeforePx({
       isFirst: false,
       compactAfterPrevious: false,
       tightenAfterPreviousMeta: true,
+      tightenBodyAfterProcessGroup: false,
+    }),
+    12,
+  );
+  assert.equal(
+    conversationRenderItemGapBeforePx({
+      isFirst: false,
+      compactAfterPrevious: false,
+      tightenAfterPreviousMeta: false,
+      tightenBodyAfterProcessGroup: true,
     }),
     12,
   );

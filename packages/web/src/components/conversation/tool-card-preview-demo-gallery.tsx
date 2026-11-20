@@ -57,7 +57,7 @@ export function ToolCardPreviewDemoGallery({ tools }: { tools: readonly ToolBloc
       data-spirit-surface="tool-card-preview-demo-gallery"
       className={cn("mx-auto w-full py-6", CONVERSATION_GUTTER_X, CONVERSATION_MAX_W)}
     >
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-3">
         {tools.map((tool) => (
           <ToolCallCollapsible
             key={tool.toolCallId}

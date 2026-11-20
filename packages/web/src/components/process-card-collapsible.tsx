@@ -142,7 +142,7 @@ export function ProcessCardCollapsible({
         ) : null}
       </AnimatedCollapseTrigger>
       <AnimatedCollapseContent className="min-w-0">
-        <div className="space-y-3 pt-6">
+        <div className="space-y-3 pt-3">
           {messageIndices.map((messageIndex) => {
             const message = messages[messageIndex];
             if (!message) {
@@ -170,27 +170,19 @@ export function ProcessCardCollapsible({
             const standaloneThinking = !message.tool && !message.content.trim() && thinkingNode;
 
             if (standaloneThinking) {
-              return (
-                <div key={`${groupId}-${messageIndex}-aux`} className="pb-3 last:pb-0">
-                  {thinkingNode}
-                </div>
-              );
+              return <div key={`${groupId}-${messageIndex}-aux`}>{thinkingNode}</div>;
             }
 
             if (message.tool) {
               return (
-                <div key={`${groupId}-${messageIndex}-tool`} className="pb-3 last:pb-0">
+                <div key={`${groupId}-${messageIndex}-tool`}>
                   {renderToolBlock(message, messageIndex)}
                 </div>
               );
             }
 
             if (thinkingNode) {
-              return (
-                <div key={`${groupId}-${messageIndex}-inline-aux`} className="pb-3 last:pb-0">
-                  {thinkingNode}
-                </div>
-              );
+              return <div key={`${groupId}-${messageIndex}-inline-aux`}>{thinkingNode}</div>;
             }
 
             return null;

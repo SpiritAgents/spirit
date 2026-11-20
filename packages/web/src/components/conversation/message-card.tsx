@@ -263,8 +263,7 @@ function MessageCardImpl({
       className={cn(
         "scroll-mt-4 flex w-full",
         externalRowGap ? "pb-0" : "pb-3 last:pb-0",
-        !externalRowGap && compactAfterPrevious && "-mt-4",
-        !externalRowGap && tightenAfterPreviousMeta && "-mt-3",
+        !externalRowGap && (compactAfterPrevious || tightenAfterPreviousMeta) && "-mt-3",
         isUser ? "justify-end" : "justify-start",
         rewindSelected && "relative z-40",
       )}
@@ -272,7 +271,8 @@ function MessageCardImpl({
       <div
         data-spirit-surface={isUser ? "message-user" : "message-assistant"}
         className={cn(
-          "min-w-0 space-y-2",
+          "min-w-0",
+          isUser ? "space-y-2" : "space-y-3",
           isUser
             ? rewindSelected
               ? "ml-auto w-full max-w-[min(100%,36rem)]"

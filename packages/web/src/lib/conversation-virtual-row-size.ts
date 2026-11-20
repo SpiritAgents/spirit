@@ -2,6 +2,7 @@ import type { ConversationRenderItem } from "@/lib/conversation-process-groups";
 import {
   conversationRenderItemGapBeforePx,
   shouldCompactAfterPreviousRenderItem,
+  shouldTightenBodyAfterProcessGroup,
   shouldTightenAfterPreviousRenderItem,
 } from "@/lib/message-card-spacing";
 import type { ConversationMessageSnapshot } from "@/types";
@@ -34,12 +35,8 @@ function gapBeforePxForRenderIndex(
   return conversationRenderItemGapBeforePx({
     isFirst: index === 0,
     compactAfterPrevious: shouldCompactAfterPreviousRenderItem(previousItem, message, messages),
-    tightenAfterPreviousMeta: shouldTightenAfterPreviousRenderItem(
-      previousItem,
-      message,
-      messages,
-      messageIndex,
-    ),
+    tightenAfterPreviousMeta: shouldTightenAfterPreviousRenderItem(previousItem, message, messages),
+    tightenBodyAfterProcessGroup: shouldTightenBodyAfterProcessGroup(previousItem, message),
   });
 }
 
