@@ -1094,7 +1094,7 @@
     "loopChipLabel": "ループ",
     "planChipLabel": "計画",
     "askChipLabel": "質問する",
-    "placeholderEmptySession": "文章、/コマンド、@コンテキストで開始",
+    "placeholderEmptySession": "何でもどうぞ",
     "placeholderWithPlanChip": "計画内容を記述",
     "placeholderWithAskChip": "何でも質問",
     "placeholderWithDebugChip": "バグや再現手順を記述",

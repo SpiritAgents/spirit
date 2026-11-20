@@ -1094,7 +1094,7 @@
     "loopChipLabel": "Loop",
     "planChipLabel": "Plan",
     "askChipLabel": "Fragen",
-    "placeholderEmptySession": "Beginne mit einer Zeile, / für Befehl, @ für Kontext",
+    "placeholderEmptySession": "Alles, was du willst",
     "placeholderWithPlanChip": "Beschreibe, was geplant werden soll",
     "placeholderWithAskChip": "Stelle eine Frage",
     "placeholderWithDebugChip": "Beschreibe den Fehler oder die Reproduktion",

@@ -1094,7 +1094,7 @@
     "loopChipLabel": "Boucle",
     "planChipLabel": "Plan",
     "askChipLabel": "Demander",
-    "placeholderEmptySession": "Commencez par une ligne, / pour commande, @ pour le contexte",
+    "placeholderEmptySession": "Tout ce que vous voulez",
     "placeholderWithPlanChip": "Décrivez ce qu'il faut planifier",
     "placeholderWithAskChip": "Demandez n'importe quoi",
     "placeholderWithDebugChip": "Décrivez le bug ou les étapes de reproduction",

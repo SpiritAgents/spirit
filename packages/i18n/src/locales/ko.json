@@ -1094,7 +1094,7 @@
     "loopChipLabel": "루프",
     "planChipLabel": "계획",
     "askChipLabel": "질문하기",
-    "placeholderEmptySession": "텍스트, / 명령, @ 컨텍스트로 시작하세요",
+    "placeholderEmptySession": "무엇이든 해보세요",
     "placeholderWithPlanChip": "계획할 내용을 설명하세요",
     "placeholderWithAskChip": "무엇이든 물어보세요",
     "placeholderWithDebugChip": "버그 또는 재현 방법을 설명하세요",
