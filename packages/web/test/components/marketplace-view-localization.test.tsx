@@ -71,6 +71,8 @@ test("localized categories participate in search and update on language changes"
         translation: {
           marketplace: {
             searchPlaceholder: "Search extensions",
+            noMatchesTitle: "No results for “{{query}}”",
+            noMatchesDescription: "Check the spelling or try a new search term.",
             categories: { development: "Development", other: "Other" },
           },
         },
@@ -79,6 +81,8 @@ test("localized categories participate in search and update on language changes"
         translation: {
           marketplace: {
             searchPlaceholder: "搜索扩展",
+            noMatchesTitle: "未找到“{{query}}”的相关结果",
+            noMatchesDescription: "检查拼写或尝试新搜索词。",
             categories: { development: "开发", other: "其他" },
           },
         },
@@ -115,6 +119,8 @@ test("localized categories participate in search and update on language changes"
   expect(view.getByText("GitHub")).toBeTruthy();
   fireEvent.change(view.getByPlaceholderText("搜索扩展"), { target: { value: "不存在" } });
   expect(view.queryByText("GitHub")).toBeNull();
+  expect(view.getByText("未找到“不存在”的相关结果")).toBeTruthy();
+  expect(view.getByText("检查拼写或尝试新搜索词。")).toBeTruthy();
   fireEvent.change(view.getByPlaceholderText("搜索扩展"), { target: { value: "" } });
 
   await act(() => i18n.changeLanguage("en"));

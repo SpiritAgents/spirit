@@ -753,7 +753,12 @@ export function MarketplaceView({
                     description={t("marketplace.emptyDescription")}
                   />
                 ) : (
-                  <p className="text-sm text-muted-foreground">{t("marketplace.noMatches")}</p>
+                  <EmptyCard
+                    className="absolute inset-0 flex flex-col items-center justify-center"
+                    icon={<Search strokeWidth={1.75} />}
+                    title={t("marketplace.noMatchesTitle", { query: searchText.trim() })}
+                    description={t("marketplace.noMatchesDescription")}
+                  />
                 )
               ) : isFiltering ? (
                 // Search flattens to a single list: no sections, and zero
