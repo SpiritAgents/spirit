@@ -102,9 +102,14 @@ export function ActionPickerDialog({
   // and skips its internal select-first path while value is truthy. Re-bind to first item.
   if (open) {
     const visibleIds = new Set(items.map((item) => actionPaletteItemValue(item)));
-    if (!commandValue || !visibleIds.has(commandValue)) {
-      const first = items[0];
-      setCommandValue(first ? actionPaletteItemValue(first) : "");
+    const first = items[0];
+    const nextCommandValue = visibleIds.has(commandValue)
+      ? commandValue
+      : first
+        ? actionPaletteItemValue(first)
+        : "";
+    if (nextCommandValue !== commandValue) {
+      setCommandValue(nextCommandValue);
     }
   }
 
