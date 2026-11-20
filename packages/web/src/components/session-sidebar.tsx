@@ -1957,27 +1957,6 @@ function SessionSidebarInner({
               </span>
             )}
           </Button>
-          <Button
-            type="button"
-            variant={sidebarNavButtonVariant(translucency, marketplaceActive)}
-            size={narrow ? "icon" : "sm"}
-            title={narrow ? t("sidebar.extensions") : undefined}
-            aria-current={marketplaceActive ? "page" : undefined}
-            className={cn(
-              "text-xs",
-              sidebarItemDefaultTextClass,
-              sidebarInteractionMotionClass,
-              marketplaceActive
-                ? sidebarItemSelectedClass(translucency)
-                : sidebarItemHoverClass(translucency),
-              narrow ? "size-8 shrink-0" : "h-8 w-full justify-start gap-2",
-            )}
-            disabled={disabled}
-            onClick={onOpenMarketplace}
-          >
-            <Blocks className="size-3.5" aria-hidden strokeWidth={1.75} />
-            <span className={cn(narrow && "sr-only")}>{t("sidebar.extensions")}</span>
-          </Button>
           {onOpenAutomations ? (
             <Button
               type="button"
@@ -2001,6 +1980,27 @@ function SessionSidebarInner({
               <span className={cn(narrow && "sr-only")}>{t("sidebar.automations")}</span>
             </Button>
           ) : null}
+          <Button
+            type="button"
+            variant={sidebarNavButtonVariant(translucency, marketplaceActive)}
+            size={narrow ? "icon" : "sm"}
+            title={narrow ? t("sidebar.extensions") : undefined}
+            aria-current={marketplaceActive ? "page" : undefined}
+            className={cn(
+              "text-xs",
+              sidebarItemDefaultTextClass,
+              sidebarInteractionMotionClass,
+              marketplaceActive
+                ? sidebarItemSelectedClass(translucency)
+                : sidebarItemHoverClass(translucency),
+              narrow ? "size-8 shrink-0" : "h-8 w-full justify-start gap-2",
+            )}
+            disabled={disabled}
+            onClick={onOpenMarketplace}
+          >
+            <Blocks className="size-3.5" aria-hidden strokeWidth={1.75} />
+            <span className={cn(narrow && "sr-only")}>{t("sidebar.extensions")}</span>
+          </Button>
         </div>
       )}
 
