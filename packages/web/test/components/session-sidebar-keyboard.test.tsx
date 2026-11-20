@@ -54,6 +54,12 @@ function renderSidebar(sessions: SessionListItem[]) {
   );
 }
 
+test("the sidebar scrollbar keeps a small gutter from the main pane", () => {
+  const { container } = renderSidebar(makeSessions(2));
+  const scrollArea = container.querySelector('[data-slot="scroll-area"]') as HTMLElement;
+  expect(scrollArea.className).toContain("[&>[data-slot=scroll-area-scrollbar]]:mr-px");
+});
+
 test("workspace and session rows keep their inline actions reachable with full inset rings", async () => {
   renderSidebar(makeSessions(11));
   const workspace = screen.getByRole("button", { name: "workspace" });

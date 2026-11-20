@@ -2013,7 +2013,7 @@ function SessionSidebarInner({
         aria-hidden={!settingsMode && narrow}
       >
         <ScrollArea
-          className="h-full min-h-0"
+          className="h-full min-h-0 [&>[data-slot=scroll-area-scrollbar]]:mr-px"
           type="hover"
           scrollHideDelay={450}
           style={sidebarScrollAreaMaskStyle(scrollEdgeFades.top, scrollEdgeFades.bottom)}
