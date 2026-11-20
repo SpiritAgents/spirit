@@ -1,6 +1,7 @@
 import { ChevronLeft } from "@spiritagent/icons/chevron-left";
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
+import { X } from "@spiritagent/icons/x";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -42,7 +43,7 @@ const questionOptionClass = cn(
 );
 
 const questionInputRowClass = cn(
-  "grid grid-cols-[1.125rem_minmax(0,1fr)] items-center gap-x-1",
+  "grid grid-cols-[1.125rem_minmax(0,1fr)_auto] items-center gap-x-1",
   questionRowBleedClass,
 );
 
@@ -138,7 +139,7 @@ export function PendingQuestionsCard({
         desktopComposerSurfaceBackdropClass(useTranslucency),
       )}
     >
-      <CardHeader className="px-3 py-2.5">
+      <CardHeader className="px-3 pb-[4.75px] pt-2.5">
         <div className="flex items-center gap-2">
           <CardTitle className="min-w-0 flex-1 truncate text-sm leading-tight">
             {question.title}
@@ -174,10 +175,25 @@ export function PendingQuestionsCard({
               <ChevronRight strokeWidth={1.75} />
               <span className="sr-only">{t("app.nextQuestion")}</span>
             </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className={cn(
+                DESKTOP_CHROME_TOGGLE_ICON_BTN,
+                "text-muted-foreground",
+                questionOverlayHoverClass,
+              )}
+              disabled={questionsBusy}
+              onClick={() => onSkipQuestions()}
+            >
+              <X strokeWidth={1.75} />
+              <span className="sr-only">{t("app.skip")}</span>
+            </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="grid gap-1 px-3 pb-2 pt-0">
+      <CardContent className="grid gap-1 px-3 pb-4 pt-0">
         {question.options.length > 0 ? (
           <div className="grid gap-1">
             {question.options.map((option, optionIndex) => {
@@ -222,27 +238,21 @@ export function PendingQuestionsCard({
                 customText: event.target.value,
               }))
             }
+            onKeyDown={(event) => {
+              if (
+                event.key !== "Enter" ||
+                question.allowMultiple ||
+                event.nativeEvent.isComposing
+              ) {
+                return;
+              }
+              event.preventDefault();
+              handleContinue();
+            }}
             placeholder={t("app.customAnswerPlaceholder")}
             className={questionInputInnerClass}
             disabled={questionsBusy}
           />
-        </div>
-
-        <div className="mt-4 flex items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "px-2 text-muted-foreground",
-              questionOverlayHoverClass,
-              instantHoverMotionClass,
-            )}
-            disabled={questionsBusy}
-            onClick={() => onSkipQuestions()}
-          >
-            {t("app.skip")}
-          </Button>
           <Button
             type="button"
             size="sm"
