@@ -476,9 +476,6 @@ export function ModelsSettingsPanel({
                   <div className="flex items-center justify-between gap-3 border-b border-border/35 px-4 py-3">
                     <div className="flex min-w-0 items-center gap-2">
                       <span className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}>{groupLabel}</span>
-                      <Badge variant="secondary" className="text-muted-foreground shrink-0">
-                        {groupModels.length} {t("settings.modelsCount")}
-                      </Badge>
                       {groupHasKey ? (
                         <Badge variant="secondary" className="text-muted-foreground shrink-0">
                           {t("settings.keySaved")}
@@ -525,13 +522,6 @@ export function ModelsSettingsPanel({
                         <Tooltip.Zone className="divide-y divide-border/35">
                           {groupModels.map((model) => {
                             const modelRef = settingsModelRef(model);
-                            const isActive = modelRefsEqual(modelRef, activeModel);
-                            const isImageDefault =
-                              imageGenerationModel !== undefined &&
-                              modelRefsEqual(modelRef, imageGenerationModel);
-                            const isSecondaryDefault =
-                              secondaryLanguageModel !== undefined &&
-                              modelRefsEqual(modelRef, secondaryLanguageModel);
                             const supportedDefaultRoles = getSupportedModelDefaultRoles(
                               model,
                               activeModel,
@@ -556,9 +546,6 @@ export function ModelsSettingsPanel({
                                   key={modelRefKey(modelRef)}
                                   model={model}
                                   displayTitle={displayTitle}
-                                  isActive={isActive}
-                                  isImageDefault={isImageDefault}
-                                  isSecondaryDefault={isSecondaryDefault}
                                   defaultActionLabel={defaultActionLabel}
                                   disabled={rowDisabled}
                                   onDefaultAction={() => handleModelDefaultAction(model)}
@@ -571,9 +558,6 @@ export function ModelsSettingsPanel({
                                 key={model.name}
                                 model={model}
                                 displayTitle={displayTitle}
-                                isActive={isActive}
-                                isImageDefault={isImageDefault}
-                                isSecondaryDefault={isSecondaryDefault}
                                 defaultActionLabel={defaultActionLabel}
                                 disabled={rowDisabled}
                                 onDefaultAction={() => handleModelDefaultAction(model)}
@@ -606,6 +590,17 @@ export function ModelsSettingsPanel({
                               model={row}
                               catalogEntry={catalogEntry}
                               providerLabel={groupLabel}
+                              additionalBadges={
+                                secondaryLanguageModel !== undefined &&
+                                modelRefsEqual(settingsModelRef(row), secondaryLanguageModel) ? (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px] text-secondary-foreground"
+                                  >
+                                    {t("settings.secondary")}
+                                  </Badge>
+                                ) : undefined
+                              }
                             />
                           );
                         }}
@@ -616,13 +611,6 @@ export function ModelsSettingsPanel({
                       <div className="divide-y divide-border/35">
                         {groupModels.map((model) => {
                           const modelRef = settingsModelRef(model);
-                          const isActive = modelRefsEqual(modelRef, activeModel);
-                          const isImageDefault =
-                            imageGenerationModel !== undefined &&
-                            modelRefsEqual(modelRef, imageGenerationModel);
-                          const isSecondaryDefault =
-                            secondaryLanguageModel !== undefined &&
-                            modelRefsEqual(modelRef, secondaryLanguageModel);
                           const supportedDefaultRoles = getSupportedModelDefaultRoles(
                             model,
                             activeModel,
@@ -640,9 +628,6 @@ export function ModelsSettingsPanel({
                               key={modelRefKey(modelRef)}
                               model={model}
                               displayTitle={displayTitle}
-                              isActive={isActive}
-                              isImageDefault={isImageDefault}
-                              isSecondaryDefault={isSecondaryDefault}
                               defaultActionLabel={defaultActionLabel}
                               disabled={modelsBusy || modelsPreviewBusy}
                               onDefaultAction={() => handleModelDefaultAction(model)}

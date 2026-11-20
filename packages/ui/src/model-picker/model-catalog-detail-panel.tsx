@@ -18,6 +18,7 @@ type ModelCatalogDetailPanelProps = {
   model: ModelPickerModelProfile;
   catalogEntry?: ModelCatalogEntry;
   providerLabel: string;
+  additionalBadges?: ReactNode;
   density?: "default" | "list";
   children?: ReactNode;
 };
@@ -51,6 +52,7 @@ export function ModelCatalogDetailPanel({
   model,
   catalogEntry,
   providerLabel,
+  additionalBadges,
   density = "default",
   children,
 }: ModelCatalogDetailPanelProps) {
@@ -107,8 +109,11 @@ export function ModelCatalogDetailPanel({
         >
           {providerLabel}
         </p>
-        {(capabilities && capabilities.length > 0) || model.hasProviderTools === true ? (
+        {additionalBadges ||
+        (capabilities && capabilities.length > 0) ||
+        model.hasProviderTools === true ? (
           <div className={cn("flex flex-wrap gap-1.5", isList ? "mt-1.5" : "mt-2")}>
+            {additionalBadges}
             {(capabilities ?? []).map((capability) => (
               <Badge
                 key={capability}

@@ -1,10 +1,6 @@
-import { useTranslation } from "react-i18next";
-
-import { Badge } from "@/components/ui/badge";
 import { TooltipItem, useTooltipTriggerProps } from "@/components/ui/tooltip";
 import { RovingFocusItem } from "@/components/ui/roving-focus-group";
 import { modelSettingsRowAriaLabel } from "@spiritagent/ui/model-picker";
-import { modelCapabilityLabel } from "@/lib/model-capability-label";
 import { cn } from "@/lib/utils";
 import type { SettingsModelProfile } from "./model-defaults";
 import { modelRefKey, settingsModelRef } from "./model-defaults";
@@ -13,9 +9,6 @@ import { DESKTOP_LIST_ITEM_PRIMARY_CLASS } from "@/lib/desktop-typography";
 export function ModelSettingsRowButton({
   model,
   displayTitle,
-  isActive,
-  isImageDefault,
-  isSecondaryDefault,
   defaultActionLabel,
   disabled,
   isHighlighted = false,
@@ -25,9 +18,6 @@ export function ModelSettingsRowButton({
 }: {
   model: SettingsModelProfile;
   displayTitle: string;
-  isActive: boolean;
-  isImageDefault: boolean;
-  isSecondaryDefault: boolean;
   defaultActionLabel: string;
   disabled: boolean;
   isHighlighted?: boolean;
@@ -36,7 +26,6 @@ export function ModelSettingsRowButton({
   onPointerEnter?: () => void;
   onDefaultAction: () => void;
 }) {
-  const { t } = useTranslation();
   const rowAriaLabel = modelSettingsRowAriaLabel(defaultActionLabel, model.name, displayTitle);
 
   return (
@@ -54,29 +43,7 @@ export function ModelSettingsRowButton({
         onClick={onDefaultAction}
       >
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}>{displayTitle}</span>
-            {isActive ? (
-              <Badge variant="secondary" className="text-muted-foreground">
-                {t("settings.currentLanguageModel")}
-              </Badge>
-            ) : null}
-            {isImageDefault ? (
-              <Badge variant="secondary" className="text-muted-foreground">
-                {t("settings.currentImageGen")}
-              </Badge>
-            ) : null}
-            {isSecondaryDefault ? (
-              <Badge variant="secondary" className="text-muted-foreground">
-                {t("settings.currentSecondaryLanguageModel")}
-              </Badge>
-            ) : null}
-            {model.capabilities?.map((capability) => (
-              <Badge key={capability} variant="outline" className="text-muted-foreground">
-                {modelCapabilityLabel(capability)}
-              </Badge>
-            ))}
-          </div>
+          <span className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}>{displayTitle}</span>
         </div>
       </button>
     </RovingFocusItem>
@@ -86,18 +53,12 @@ export function ModelSettingsRowButton({
 export function ModelSettingsRowWithHover({
   model,
   displayTitle,
-  isActive,
-  isImageDefault,
-  isSecondaryDefault,
   defaultActionLabel,
   disabled,
   onDefaultAction,
 }: {
   model: SettingsModelProfile;
   displayTitle: string;
-  isActive: boolean;
-  isImageDefault: boolean;
-  isSecondaryDefault: boolean;
   defaultActionLabel: string;
   disabled: boolean;
   onDefaultAction: () => void;
@@ -109,9 +70,6 @@ export function ModelSettingsRowWithHover({
       <ModelSettingsRowButton
         model={model}
         displayTitle={displayTitle}
-        isActive={isActive}
-        isImageDefault={isImageDefault}
-        isSecondaryDefault={isSecondaryDefault}
         defaultActionLabel={defaultActionLabel}
         disabled={disabled}
         isHighlighted={isHighlighted}
