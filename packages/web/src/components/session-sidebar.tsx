@@ -28,6 +28,7 @@ import {
   Blocks,
   BookText,
   Bot,
+  Clock,
   ArrowLeft,
   FolderClosed,
   FolderOpen,
@@ -1996,7 +1997,7 @@ function SessionSidebarInner({
               disabled={disabled}
               onClick={onOpenAutomations}
             >
-              <Bot className="size-3.5" aria-hidden strokeWidth={1.75} />
+              <Clock className="size-3.5" aria-hidden strokeWidth={1.75} />
               <span className={cn(narrow && "sr-only")}>{t("sidebar.automations")}</span>
             </Button>
           ) : null}
