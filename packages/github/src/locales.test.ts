@@ -70,10 +70,32 @@ test("translated GitHub catalogs omit English and legacy Pull Request terms", ()
   }
 });
 
-test("Simplified Chinese uses the same open status in the empty state and badge", () => {
-  const { workspace } = resources["zh-CN"].translation;
-  assert.equal(workspace.prOpen, "进行中");
-  assert.ok(workspace.prNoOpenPullRequest.includes("进行中的拉取请求"));
+test("Pull Request open statuses use canonical localized terminology", () => {
+  const expected = {
+    en: "Open",
+    "zh-CN": "开放",
+    "zh-TW": "開放",
+    ja: "オープン",
+    ko: "열림",
+    de: "Offen",
+    fr: "Ouverte",
+    es: "Abierta",
+    "pt-BR": "Aberta",
+    ru: "Открыт",
+  } as const;
+  for (const [locale, label] of Object.entries(expected)) {
+    assert.equal(
+      resources[locale as keyof typeof resources].translation.workspace.prOpen,
+      label,
+      locale,
+    );
+  }
+  assert.ok(
+    resources["zh-CN"].translation.workspace.prNoOpenPullRequest.includes("开放的拉取请求"),
+  );
+  assert.ok(
+    resources["zh-TW"].translation.workspace.prNoOpenPullRequest.includes("開放的拉取請求"),
+  );
 });
 
 function placeholders(catalog: Parameters<typeof flattenMessageCatalog>[0]) {
