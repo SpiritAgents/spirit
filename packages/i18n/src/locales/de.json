@@ -1294,6 +1294,7 @@
   "crashPage": {
     "title": "{{product.name}} ist abgestürzt",
     "description": "Der Renderer-Prozess wurde unerwartet beendet. Das folgende Protokoll kann bei der Diagnose der Ursache helfen.",
+    "rendererErrorDescription": "Beim Renderer ist ein nicht behebbarer Fehler aufgetreten. Das folgende Protokoll kann bei der Diagnose der Ursache helfen.",
     "reportOnGitHub": "Auf GitHub melden"
   },
   "rules": {

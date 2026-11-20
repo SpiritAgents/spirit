@@ -1294,6 +1294,7 @@
   "crashPage": {
     "title": "{{product.name}} a planté",
     "description": "Le processus de rendu s'est terminé de manière inattendue. Le journal ci-dessous peut aider à en diagnostiquer la cause.",
+    "rendererErrorDescription": "Le moteur de rendu a rencontré une erreur irrécupérable. Le journal ci-dessous peut aider à en diagnostiquer la cause.",
     "reportOnGitHub": "Signaler sur GitHub"
   },
   "rules": {

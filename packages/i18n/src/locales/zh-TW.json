@@ -1294,6 +1294,7 @@
   "crashPage": {
     "title": "{{product.name}} 已當機",
     "description": "轉譯程序意外終止。以下記錄可能有助於找出原因。",
+    "rendererErrorDescription": "轉譯器發生無法復原的錯誤。以下記錄可能有助於找出原因。",
     "reportOnGitHub": "在 GitHub 上回報"
   },
   "rules": {

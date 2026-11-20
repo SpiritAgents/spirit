@@ -1302,6 +1302,7 @@
   "crashPage": {
     "title": "{{product.name}} 已崩溃",
     "description": "渲染进程意外终止。以下日志可能有助于定位原因。",
+    "rendererErrorDescription": "渲染器遇到无法恢复的错误。以下日志可能有助于定位原因。",
     "reportOnGitHub": "在 GitHub 上报告"
   },
   "rules": {

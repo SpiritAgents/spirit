@@ -1294,6 +1294,7 @@
   "crashPage": {
     "title": "{{product.name}}가 충돌했습니다",
     "description": "렌더러 프로세스가 예기치 않게 종료되었습니다. 아래 로그가 원인 파악에 도움이 될 수 있습니다.",
+    "rendererErrorDescription": "렌더러에서 복구할 수 없는 오류가 발생했습니다. 아래 로그가 원인 파악에 도움이 될 수 있습니다.",
     "reportOnGitHub": "GitHub에서 보고"
   },
   "rules": {

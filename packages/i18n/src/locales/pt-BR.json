@@ -1294,6 +1294,7 @@
   "crashPage": {
     "title": "{{product.name}} travou",
     "description": "O processo de renderização foi encerrado inesperadamente. O registro abaixo pode ajudar a diagnosticar a causa.",
+    "rendererErrorDescription": "O renderizador encontrou um erro irrecuperável. O registro abaixo pode ajudar a diagnosticar a causa.",
     "reportOnGitHub": "Relatar no GitHub"
   },
   "rules": {

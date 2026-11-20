@@ -61,6 +61,22 @@ test("buildCrashLogText omits exit code when absent (unresponsive)", () => {
   assert.match(text, /Trigger: unresponsive/);
 });
 
+test("buildCrashLogText describes fatal React errors without a process exit", () => {
+  clearCrashSceneBuffer();
+  recordRendererError({
+    kind: "error",
+    message: "Too many re-renders",
+    stack: "Error: Too many re-renders\n    at ActionPickerDialog",
+    fatal: true,
+  });
+  const text = buildCrashLogText({ trigger: "renderer-error", reason: "react-render-error" });
+  assert.match(text, /Trigger: renderer-error/);
+  assert.match(text, /Reason: react-render-error/);
+  assert.match(text, /Too many re-renders/);
+  assert.match(text, /at ActionPickerDialog/);
+  assert.doesNotMatch(text, /Exit code:/);
+});
+
 test("recordCrashLog drops empty entries and truncates long lines", () => {
   clearCrashSceneBuffer();
   recordCrashLog("main", "   \n  ");

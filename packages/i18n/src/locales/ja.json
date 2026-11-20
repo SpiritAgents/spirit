@@ -1294,6 +1294,7 @@
   "crashPage": {
     "title": "{{product.name}} がクラッシュしました",
     "description": "レンダラープロセスが予期せず終了しました。以下のログが原因の特定に役立つ可能性があります。",
+    "rendererErrorDescription": "レンダラーで回復不能なエラーが発生しました。以下のログが原因の特定に役立つ可能性があります。",
     "reportOnGitHub": "GitHub で報告"
   },
   "rules": {

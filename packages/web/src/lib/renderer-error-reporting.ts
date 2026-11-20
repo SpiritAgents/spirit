@@ -12,12 +12,23 @@ function reportRendererError(report: {
   kind: "error" | "unhandledrejection";
   message: string;
   stack?: string;
+  fatal?: boolean;
 }): void {
   try {
     window.spiritDesktop?.reportRendererError(report);
   } catch {
     // Never let crash reporting break the page.
   }
+}
+
+export function reportFatalRendererError(error: Error, componentStack?: string): void {
+  const stack = error.stack ?? error.message;
+  reportRendererError({
+    kind: "error",
+    message: error.message,
+    stack: componentStack ? `${stack}\n\nComponent stack:${componentStack}` : stack,
+    fatal: true,
+  });
 }
 
 if (typeof window !== "undefined") {

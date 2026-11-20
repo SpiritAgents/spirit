@@ -1327,6 +1327,7 @@
   "crashPage": {
     "title": "{{product.name}} has Crashed",
     "description": "The renderer process terminated unexpectedly. The log below may help diagnose the cause.",
+    "rendererErrorDescription": "The renderer encountered an unrecoverable error. The log below may help diagnose the cause.",
     "reportOnGitHub": "Report on GitHub"
   },
   "rules": {

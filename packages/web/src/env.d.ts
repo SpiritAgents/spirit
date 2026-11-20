@@ -58,6 +58,7 @@ declare global {
       kind: "error" | "unhandledrejection";
       message: string;
       stack?: string;
+      fatal?: boolean;
     }): void;
     /** Synchronously reads on-disk `translucency` (`off` / `sidebar` / `all`); aligns with the Electron window material before the first snapshot is ready. */
     readTranslucency(): import("./lib/translucency").TranslucencyPreference;

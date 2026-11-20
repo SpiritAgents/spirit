@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 
 import "./lib/i18n";
 import App from "./App";
+import { RendererErrorBoundary } from "./components/renderer-error-boundary";
 import { UiPortalProvider } from "@spiritagent/ui/portal";
 import { installScrollHoverKeepalive } from "@spiritagent/ui/scroll-hover-keepalive";
 import { Toaster } from "@/components/ui/sonner";
@@ -79,4 +80,8 @@ function WorkbenchRoot() {
   );
 }
 
-createRoot(rootElement).render(<WorkbenchRoot />);
+createRoot(rootElement).render(
+  <RendererErrorBoundary>
+    <WorkbenchRoot />
+  </RendererErrorBoundary>,
+);

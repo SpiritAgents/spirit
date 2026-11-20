@@ -1294,6 +1294,7 @@
   "crashPage": {
     "title": "{{product.name}} se ha bloqueado",
     "description": "El proceso de renderizado finalizó inesperadamente. El registro siguiente puede ayudar a diagnosticar la causa.",
+    "rendererErrorDescription": "El renderizador encontró un error irrecuperable. El registro siguiente puede ayudar a diagnosticar la causa.",
     "reportOnGitHub": "Informar en GitHub"
   },
   "rules": {

@@ -966,7 +966,11 @@ function showRendererCrashPage(window: BrowserWindow, details: CrashSceneDetails
   const url = crashPageDataUrl(
     {
       title: i18nHost.t("crashPage.title"),
-      description: i18nHost.t("crashPage.description"),
+      description: i18nHost.t(
+        details.trigger === "renderer-error"
+          ? "crashPage.rendererErrorDescription"
+          : "crashPage.description",
+      ),
       reportLabel: i18nHost.t("crashPage.reportOnGitHub"),
       lang: i18nHost.language,
     },
@@ -1750,7 +1754,7 @@ if (gotSpiritSingleInstanceLock) {
     });
 
     // Preload forwards uncaught renderer errors/rejections (with stacks) for the crash page log.
-    ipcMain.on("desktop:renderer-error", (_event, report: RendererErrorReport) => {
+    ipcMain.on("desktop:renderer-error", (event, report: RendererErrorReport) => {
       if (!report || typeof report !== "object") {
         return;
       }
@@ -1759,6 +1763,15 @@ if (gotSpiritSingleInstanceLock) {
         message: String(report.message ?? ""),
         ...(typeof report.stack === "string" ? { stack: report.stack } : {}),
       });
+      if (report.fatal === true) {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        if (window) {
+          showRendererCrashPage(window, {
+            trigger: "renderer-error",
+            reason: "react-render-error",
+          });
+        }
+      }
     });
 
     ipcMain.handle("desktop:sync-language", async (_event, lang: string) => {

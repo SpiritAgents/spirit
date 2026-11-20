@@ -7,7 +7,7 @@
 
 import { product } from "@spiritagent/product";
 
-export type CrashPageTrigger = "render-process-gone" | "unresponsive";
+export type CrashPageTrigger = "render-process-gone" | "unresponsive" | "renderer-error";
 
 export interface CrashSceneDetails {
   trigger: CrashPageTrigger;
@@ -20,6 +20,8 @@ export interface RendererErrorReport {
   kind: "error" | "unhandledrejection";
   message: string;
   stack?: string;
+  /** React fatal render errors should immediately show the crash page while the process is alive. */
+  fatal?: boolean;
 }
 
 interface CrashLogEntry {
