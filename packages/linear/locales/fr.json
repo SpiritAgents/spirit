@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Linear",
+    "description": "Gérez tickets et projets.",
+    "keywords": {
+      "issues": "tickets",
+      "projects": "projets",
+      "cycles": "cycles"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "linear": {
+      "displayName": "Linear"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Linear"
+    }
+  },
+  "linear": {
+    "waiting": "En attente d'autorisation dans le navigateur",
+    "openAuthorizationPage": "Ouvrir la page d'autorisation Linear",
+    "connected": "Connecté à Linear",
+    "disconnect": "Déconnecter"
+  },
+  "common": {
+    "cancel": "Annuler"
+  }
+}

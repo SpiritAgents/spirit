@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Linear",
+    "description": "イシューとプロジェクトを扱います。",
+    "keywords": {
+      "issues": "イシュー",
+      "projects": "プロジェクト",
+      "cycles": "サイクル"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "linear": {
+      "displayName": "Linear"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Linear"
+    }
+  },
+  "linear": {
+    "waiting": "ブラウザでの認証を待機中",
+    "openAuthorizationPage": "Linear 認証ページを開く",
+    "connected": "Linear に接続済み",
+    "disconnect": "切断"
+  },
+  "common": {
+    "cancel": "キャンセル"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Linear",
+    "description": "處理議題與專案。",
+    "keywords": {
+      "issues": "議題",
+      "projects": "專案",
+      "cycles": "週期"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "linear": {
+      "displayName": "Linear"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Linear"
+    }
+  },
+  "linear": {
+    "waiting": "等待瀏覽器授權",
+    "openAuthorizationPage": "開啟 Linear 授權頁面",
+    "connected": "已連接 Linear",
+    "disconnect": "中斷連接"
+  },
+  "common": {
+    "cancel": "取消"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Linear",
+    "description": "处理议题与项目。",
+    "keywords": {
+      "issues": "议题",
+      "projects": "项目",
+      "cycles": "周期"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "linear": {
+      "displayName": "Linear"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Linear"
+    }
+  },
+  "linear": {
+    "waiting": "等待浏览器授权",
+    "openAuthorizationPage": "打开 Linear 授权页面",
+    "connected": "已连接 Linear",
+    "disconnect": "断开连接"
+  },
+  "common": {
+    "cancel": "取消"
+  }
+}
