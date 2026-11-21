@@ -364,9 +364,12 @@ export const WorkspacePrListView = forwardRef<WorkspacePrListViewHandle, Workspa
           {t("workspace.prListLoading")}
         </div>
       ) : !loading && items.length === 0 && debouncedQuery ? (
-        <div className="px-3 py-3 text-xs text-muted-foreground">
-          {t("workspace.prListSearchEmpty")}
-        </div>
+        <EmptyCard
+          className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"
+          icon={<Search strokeWidth={1.75} />}
+          title={t("workspace.prListSearchEmpty", { query: debouncedQuery })}
+          description={t("workspace.prListSearchEmptyDescription")}
+        />
       ) : !loading && items.length === 0 ? (
         <EmptyCard
           className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"
