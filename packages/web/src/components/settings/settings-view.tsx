@@ -87,7 +87,7 @@ export function SettingsView({
     : undefined;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="relative flex min-h-0 flex-1 flex-col">
       <ScrollArea className="min-h-0 flex-1" type="hover" scrollHideDelay={450}>
         <div className="flex min-h-full flex-col justify-center">
           {/* Shares the conversation message list's max width and gutter: full width up to

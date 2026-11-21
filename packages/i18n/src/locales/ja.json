@@ -286,7 +286,7 @@
     "generateSkillTooltip": "メインチャット領域に移動し、/create-skill をプリフィルして、要件を自然言語で記述します",
     "generateSkill": "スキルを生成",
     "newSkill": "新規スキル",
-    "noSkillsFound": "スキルが見つかりません",
+    "skillsEmpty": "スキルなし",
     "skillUserDirShort": "ユーザー",
     "skillUserDirHint": "{{product.name}} ユーザーディレクトリ skills/",
     "skillWorkspaceSpiritHint": "ワークスペース {{product.workspaceDataFolderName}}/skills/",

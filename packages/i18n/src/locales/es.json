@@ -286,7 +286,7 @@
     "generateSkillTooltip": "Ir al área de chat principal, prellenar /create-skill y describir requisitos en lenguaje natural",
     "generateSkill": "Generar Skill",
     "newSkill": "Nuevo Skill",
-    "noSkillsFound": "No se encontraron Skills",
+    "skillsEmpty": "Sin skills",
     "skillUserDirShort": "Usuario",
     "skillUserDirHint": "Directorio de usuario de {{product.name}} skills/",
     "skillWorkspaceSpiritHint": "Workspace {{product.workspaceDataFolderName}}/skills/",

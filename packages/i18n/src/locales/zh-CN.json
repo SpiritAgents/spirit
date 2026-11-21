@@ -286,7 +286,7 @@
     "generateSkillTooltip": "进入主对话区，预填 /create-skill，并直接用自然语言描述需求",
     "generateSkill": "生成技能",
     "newSkill": "新建技能",
-    "noSkillsFound": "未发现技能",
+    "skillsEmpty": "无技能",
     "skillUserDirShort": "用户",
     "skillUserDirHint": "{{product.name}} 用户目录 skills/",
     "skillWorkspaceSpiritHint": "工作区 {{product.workspaceDataFolderName}}/skills/",

@@ -286,7 +286,7 @@
     "generateSkillTooltip": "메인 채팅 영역으로 이동하여 /create-skill을 입력하고 자연어로 요구사항을 설명합니다",
     "generateSkill": "스킬 생성",
     "newSkill": "새 스킬",
-    "noSkillsFound": "스킬을 찾을 수 없음",
+    "skillsEmpty": "스킬 없음",
     "skillUserDirShort": "사용자",
     "skillUserDirHint": "{{product.name}} 사용자 디렉터리 skills/",
     "skillWorkspaceSpiritHint": "작업공간 {{product.workspaceDataFolderName}}/skills/",

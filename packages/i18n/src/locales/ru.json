@@ -292,7 +292,7 @@
     "generateSkillTooltip": "Перейти в основную область чата, ввести /create-skill и описать требования на естественном языке",
     "generateSkill": "Создать навык",
     "newSkill": "Новый навык",
-    "noSkillsFound": "Навыки не найдены",
+    "skillsEmpty": "Нет навыков",
     "skillUserDirShort": "Пользователь",
     "skillUserDirHint": "Пользовательская папка {{product.name}} skills/",
     "skillWorkspaceSpiritHint": "Рабочая область {{product.workspaceDataFolderName}}/skills/",
