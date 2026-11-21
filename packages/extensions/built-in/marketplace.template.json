@@ -16,6 +16,13 @@
       "defaultInstalled": false
     },
     {
+      "name": "linear",
+      "source": "./extensions/linear",
+      "icon": "./extensions/linear/icon.svg",
+      "reviewStatus": "verified",
+      "defaultInstalled": false
+    },
+    {
       "name": "vercel",
       "source": "./extensions/vercel",
       "icon": "./extensions/vercel/icon.svg",

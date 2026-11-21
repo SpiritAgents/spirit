@@ -939,6 +939,9 @@ importers:
       '@spiritagent/github':
         specifier: workspace:*
         version: link:../github
+      '@spiritagent/linear':
+        specifier: workspace:*
+        version: link:../linear
       '@spiritagent/vercel':
         specifier: workspace:*
         version: link:../vercel

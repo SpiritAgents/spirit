@@ -9,7 +9,11 @@ const RENDERER_ONLY_PACKAGES = new Set([
   "@spiritagent/ui",
   "@spiritagent/web",
 ]);
-const EXTENSION_BUILD_PACKAGES = ["@spiritagent/github", "@spiritagent/vercel"];
+const EXTENSION_BUILD_PACKAGES = [
+  "@spiritagent/github",
+  "@spiritagent/linear",
+  "@spiritagent/vercel",
+];
 
 /**
  * Follow only runtime dependencies. Renderer packages are source-served by

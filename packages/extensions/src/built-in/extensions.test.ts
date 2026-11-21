@@ -128,6 +128,44 @@ test("GitHub is available for manual installation but is not installed by defaul
   }
 });
 
+test("Linear is an opt-in built-in that contributes only its authorized MCP server", async () => {
+  const index = await readBuiltInMarketplaceIndex();
+  const linear = index.extensions.find((entry) => entry.name === "linear");
+  assert.ok(linear);
+  assert.equal(linear.defaultInstalled, false);
+  assert.equal(linear.icon, "extensions/linear/icon.svg");
+  assert.equal(readExtensionMessage(linear, linear.description, "zh-CN"), "处理议题与项目。");
+  assert.deepEqual(Object.keys(linear.manifest.contributes ?? {}).sort(), [
+    "authorizations",
+    "desktop",
+    "mcp",
+  ]);
+  assert.ok(existsSync(join(resolveBuiltInRegistryRoot(), "extensions/linear/mcp.json")));
+
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-linear-opt-in-"));
+  try {
+    const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
+    const seeded = await ensureBuiltInExtensions({ spiritDataDir, hostKind: "desktop", manager });
+    assert.equal(
+      seeded.some((item) => item.id === "built-in/linear"),
+      false,
+    );
+    const installed = await installBuiltInExtension({
+      spiritDataDir,
+      hostKind: "desktop",
+      extensionId: "built-in/linear",
+    });
+    assert.equal(installed.id, "built-in/linear");
+    const listed = (await manager.list()).find((item) => item.id === "built-in/linear");
+    assert.deepEqual(
+      listed?.manifest.contributes?.authorizations?.map(({ id, action }) => ({ id, action })),
+      [{ id: "oauth", action: "authorize" }],
+    );
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+  }
+});
+
 test("Vercel is an opt-in built-in that contributes only its authorized MCP server", async () => {
   const index = await readBuiltInMarketplaceIndex();
   const vercel = index.extensions.find((entry) => entry.name === "vercel");
