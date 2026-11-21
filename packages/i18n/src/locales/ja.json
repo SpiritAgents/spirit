@@ -311,7 +311,7 @@
     "skillContentPlaceholder": "スキルの本文を記述: 手順、例、エッジケース、相対パス参照",
     "settingsPage": "設定ページ",
     "addMcp": "MCPを追加",
-    "noMcpsConfigured": "設定されたMCPサーバーはありません",
+    "mcpsEmpty": "MCPなし",
     "deleteMcp": "MCPを削除",
     "mcpScopeWorkspace": "{{product.workspaceDataFolderName}}",
     "mcpUserDirHint": "{{product.name}}ユーザーデータディレクトリ内のmcp.json、ワークスペース間で共有",

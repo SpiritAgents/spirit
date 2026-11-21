@@ -311,7 +311,7 @@
     "skillContentPlaceholder": "Rédigez le corps de la Skill : étapes, exemples, cas limites et références de chemin relatif",
     "settingsPage": "Page de paramètres",
     "addMcp": "Ajouter un serveur MCP",
-    "noMcpsConfigured": "Aucun serveur MCP configuré",
+    "mcpsEmpty": "Aucun MCP",
     "deleteMcp": "Supprimer le serveur MCP",
     "mcpScopeWorkspace": "{{product.workspaceDataFolderName}}",
     "mcpUserDirHint": "mcp.json dans le répertoire de données utilisateur {{product.name}}, partagé entre les espaces de travail",

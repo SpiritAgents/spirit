@@ -311,7 +311,7 @@
     "skillContentPlaceholder": "撰寫技能主體：步驟、範例、邊界情況與相對路徑參考",
     "settingsPage": "設定頁面",
     "addMcp": "新增 MCP",
-    "noMcpsConfigured": "未設定任何 MCP 伺服器",
+    "mcpsEmpty": "無MCP",
     "deleteMcp": "刪除 MCP",
     "mcpScopeWorkspace": "{{product.workspaceDataFolderName}}",
     "mcpUserDirHint": "{{product.name}} 使用者資料目錄中的 mcp.json，跨工作區共用",

@@ -317,7 +317,7 @@
     "skillContentPlaceholder": "Напишите тело навыка: шаги, примеры, граничные случаи и относительные пути",
     "settingsPage": "Страница настроек",
     "addMcp": "Добавить MCP",
-    "noMcpsConfigured": "Серверы MCP не настроены",
+    "mcpsEmpty": "Нет MCP",
     "deleteMcp": "Удалить MCP",
     "mcpScopeWorkspace": "{{product.workspaceDataFolderName}}",
     "mcpUserDirHint": "mcp.json в каталоге пользовательских данных {{product.name}}, общий для всех рабочих областей",

@@ -321,7 +321,7 @@
     "skillContentPlaceholder": "Write the skill body: steps, examples, edge cases, and relative path references",
     "settingsPage": "Settings Page",
     "addMcp": "Add MCP",
-    "noMcpsConfigured": "No MCP servers configured",
+    "mcpsEmpty": "No MCPs",
     "deleteMcp": "Delete MCP",
     "mcpScopeWorkspace": "{{product.workspaceDataFolderName}}",
     "mcpUserDirHint": "mcp.json in {{product.name}} user data directory, shared across workspaces",

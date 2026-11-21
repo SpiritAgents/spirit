@@ -311,7 +311,7 @@
     "skillContentPlaceholder": "Escreva o corpo da Skill: passos, exemplos, casos de borda e referências de caminho relativo",
     "settingsPage": "Página de Configurações",
     "addMcp": "Adicionar MCP",
-    "noMcpsConfigured": "Nenhum servidor MCP configurado",
+    "mcpsEmpty": "Sem MCPs",
     "deleteMcp": "Excluir MCP",
     "mcpScopeWorkspace": "{{product.workspaceDataFolderName}}",
     "mcpUserDirHint": "mcp.json no diretório de dados do usuário do {{product.name}}, compartilhado entre workspaces",

@@ -311,7 +311,7 @@
     "skillContentPlaceholder": "스킬 본문 작성: 단계, 예제, 엣지 케이스 및 상대 경로 참조",
     "settingsPage": "설정 페이지",
     "addMcp": "MCP 추가",
-    "noMcpsConfigured": "구성된 MCP 서버가 없습니다",
+    "mcpsEmpty": "MCP 없음",
     "deleteMcp": "MCP 삭제",
     "mcpScopeWorkspace": "{{product.workspaceDataFolderName}}",
     "mcpUserDirHint": "{{product.name}} 사용자 데이터 디렉토리의 mcp.json, 워크스페이스 간 공유",

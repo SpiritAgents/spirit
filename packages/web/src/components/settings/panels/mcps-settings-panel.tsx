@@ -8,7 +8,9 @@ import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catal
 import { SettingsListItemHeading } from "@/components/settings/settings-list-item-heading";
 import type { SettingsViewProps } from "@/components/settings/types";
 import { Spinner } from "@/components/ui/spinner";
+import { EmptyCard } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
+import { Plug } from "lucide-react";
 import { RovingFocusGroup, RovingFocusItem } from "@/components/ui/roving-focus-group";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
@@ -246,16 +248,18 @@ export function McpsSettingsPanel({
         </Button>
       </div>
 
-      <RovingFocusGroup
-        orientation="vertical"
-        className={cn(DESKTOP_SETTINGS_CARD_SURFACE, "divide-y divide-settings-card-divider")}
-      >
-        {items.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-            {t("settings.noMcpsConfigured")}
-          </p>
-        ) : (
-          items.map((item) => {
+      {items.length === 0 ? (
+        <EmptyCard
+          className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"
+          icon={<Plug strokeWidth={1.75} />}
+          title={t("settings.mcpsEmpty")}
+        />
+      ) : (
+        <RovingFocusGroup
+          orientation="vertical"
+          className={cn(DESKTOP_SETTINGS_CARD_SURFACE, "divide-y divide-settings-card-divider")}
+        >
+          {items.map((item) => {
             const runtimeKey = `${item.scope}:${item.name}`;
             const runtime = runtimeInfo[runtimeKey];
             const countsSummary = mcpCountsSummary(runtime);
@@ -313,9 +317,9 @@ export function McpsSettingsPanel({
                 </RovingFocusItem>
               </div>
             );
-          })
-        )}
-      </RovingFocusGroup>
+          })}
+        </RovingFocusGroup>
+      )}
 
       <AlertDialog
         open={deleteTarget !== null}

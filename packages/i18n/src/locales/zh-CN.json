@@ -311,7 +311,7 @@
     "skillContentPlaceholder": "编写技能正文：步骤、示例、边界条件与相对路径引用",
     "settingsPage": "设置页",
     "addMcp": "添加 MCP",
-    "noMcpsConfigured": "未配置 MCP server",
+    "mcpsEmpty": "无MCP",
     "deleteMcp": "删除 MCP",
     "mcpScopeWorkspace": "{{product.workspaceDataFolderName}}",
     "mcpUserDirHint": "{{product.name}} 用户目录下的 mcp.json，跨工作区共享",
