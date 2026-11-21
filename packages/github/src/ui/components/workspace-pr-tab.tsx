@@ -4,8 +4,9 @@ import { useTranslation } from "react-i18next";
 import { appendPullRequestChecksPages } from "../../pull-request-checks-pages.js";
 import { appendPullRequestConversationPages } from "../../pull-request-conversation-pages.js";
 
+import { GitPullRequest } from "lucide-react";
 import { Button } from "@spiritagent/ui/button";
-import { GitHubSignInPrompt } from "./github-sign-in-prompt.js";
+import { EmptyCard } from "@spiritagent/ui/empty";
 import { WorkspacePrDetailSkeleton } from "./workspace-pr-detail-skeleton.js";
 import { WorkspacePrDetailView } from "./workspace-pr-detail-view.js";
 import { WorkspacePrListView, type WorkspacePrListViewHandle } from "./workspace-pr-list-view.js";
@@ -758,8 +759,14 @@ export function WorkspacePrTab({
       ) : null}
 
       {!authStatus.connected && !authCheckPending ? (
-        <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-8">
-          <GitHubSignInPrompt onSignIn={() => onAuthorize?.()} />
+        <div className="flex min-h-0 flex-1 items-center justify-center">
+          <EmptyCard
+            className="w-full"
+            icon={<GitPullRequest strokeWidth={1.75} />}
+            title={t("workspace.prUnauthorized")}
+            description={t("workspace.prAuthorizationDescription")}
+            action={{ label: t("workspace.prAuthorize"), onClick: () => onAuthorize?.() }}
+          />
         </div>
       ) : null}
 

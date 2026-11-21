@@ -7,7 +7,6 @@ import { resources } from "../locales.js";
 import type { ReactNode } from "react";
 import type { SpiritDesktopTabPageContext } from "@spiritagent/extension-toolkit/desktop-ui";
 import { GitHubAuthorizationView } from "./components/github-authorization-view.js";
-import { GitHubSignInPrompt } from "./components/github-sign-in-prompt.js";
 import { WorkspacePrTab, type WorkspacePrTabProps } from "./components/workspace-pr-tab.js";
 import { GitHubPageProvider } from "./page-context.js";
 import { GitHubLayoutProvider } from "./lib/layout-prefs.js";
@@ -195,35 +194,8 @@ test("the Native PR list localizes open and closed tab labels", async () => {
 test("an unauthenticated PR page offers the extension authorization entry point", async () => {
   const props = prProps(false);
   render(wrap(<WorkspacePrTab {...props} />));
-  const button = await screen.findByRole("button", { name: "Authorize GitHub" });
-  expect(button.parentElement?.textContent).toBe("Authorize GitHub to use Pull Requests");
-  expect(button.classList.contains("underline")).toBe(true);
+  const button = await screen.findByRole("button", { name: "Authorize" });
   fireEvent.click(button);
   expect(props.onAuthorize).toHaveBeenCalledOnce();
   expect(props.listGitHubPullRequests).not.toHaveBeenCalled();
-});
-
-test("the PR authorization hint follows live language changes without changing navigation", async () => {
-  const localized = i18next.createInstance();
-  await localized.init({
-    resources,
-    lng: "en",
-    fallbackLng: "en",
-    interpolation: { escapeValue: false },
-  });
-  const onSignIn = vi.fn();
-  render(
-    <I18nextProvider i18n={localized}>
-      <GitHubSignInPrompt onSignIn={onSignIn} />
-    </I18nextProvider>,
-  );
-  expect(screen.getByRole("button", { name: "Authorize GitHub" })).toBeTruthy();
-  await act(async () => {
-    await localized.changeLanguage("zh-CN");
-  });
-  const link = screen.getByRole("button", { name: "授权 GitHub" });
-  expect(link.parentElement?.textContent).toBe("授权 GitHub 以使用拉取请求");
-  expect(link.classList.contains("underline")).toBe(true);
-  fireEvent.click(link);
-  expect(onSignIn).toHaveBeenCalledOnce();
 });

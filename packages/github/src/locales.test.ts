@@ -21,12 +21,12 @@ test("GitHub locale messages preserve interpolation and rich-text placeholders",
   }
 });
 
-test("PR authorization hints localize the complete sentence and preserve its navigation link", () => {
+test("PR authorization copy localizes title, description, and action", () => {
   for (const [locale, { translation }] of Object.entries(resources)) {
-    const message = translation.workspace.prGitHubAuthorizationRequired;
-    assert.equal(message.match(/<authorize>/g)?.length, 1, locale);
-    assert.equal(message.match(/<\/authorize>/g)?.length, 1, locale);
-    assert.match(message, /<authorize>[^<]*GitHub[^<]*<\/authorize>/, locale);
+    const { prUnauthorized, prAuthorizationDescription, prAuthorize } = translation.workspace;
+    assert.ok(prUnauthorized.length > 0, locale);
+    assert.match(prAuthorizationDescription, /GitHub/u, locale);
+    assert.ok(prAuthorize.length > 0, locale);
   }
 });
 
