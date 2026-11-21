@@ -46,6 +46,7 @@
   "devDependencies": {
     "@spiritagent/agent-core": "workspace:*",
     "@spiritagent/automations": "workspace:*",
+    "@spiritagent/cloudflare": "workspace:*",
     "@spiritagent/config": "workspace:*",
     "@spiritagent/extension-toolkit": "workspace:*",
     "@spiritagent/github": "workspace:*",

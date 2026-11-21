@@ -128,6 +128,52 @@ test("GitHub is available for manual installation but is not installed by defaul
   }
 });
 
+test("Cloudflare is an opt-in built-in that contributes only its authorized eager MCP server", async () => {
+  const index = await readBuiltInMarketplaceIndex();
+  const cloudflare = index.extensions.find((entry) => entry.name === "cloudflare");
+  assert.ok(cloudflare);
+  assert.equal(cloudflare.defaultInstalled, false);
+  assert.equal(cloudflare.icon, "extensions/cloudflare/icon.svg");
+  assert.equal(
+    readExtensionMessage(cloudflare, cloudflare.description, "zh-CN"),
+    "处理 Workers、DNS 与域名。",
+  );
+  assert.deepEqual(Object.keys(cloudflare.manifest.contributes ?? {}).sort(), [
+    "authorizations",
+    "desktop",
+    "mcp",
+  ]);
+  const mcpPath = join(resolveBuiltInRegistryRoot(), "extensions/cloudflare/mcp.json");
+  assert.ok(existsSync(mcpPath));
+  const mcpConfig = JSON.parse(await readFile(mcpPath, "utf8")) as {
+    servers: { cloudflare?: { lazyTools?: boolean } };
+  };
+  assert.equal(mcpConfig.servers.cloudflare?.lazyTools, false);
+
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-cloudflare-opt-in-"));
+  try {
+    const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
+    const seeded = await ensureBuiltInExtensions({ spiritDataDir, hostKind: "desktop", manager });
+    assert.equal(
+      seeded.some((item) => item.id === "built-in/cloudflare"),
+      false,
+    );
+    const installed = await installBuiltInExtension({
+      spiritDataDir,
+      hostKind: "desktop",
+      extensionId: "built-in/cloudflare",
+    });
+    assert.equal(installed.id, "built-in/cloudflare");
+    const listed = (await manager.list()).find((item) => item.id === "built-in/cloudflare");
+    assert.deepEqual(
+      listed?.manifest.contributes?.authorizations?.map(({ id, action }) => ({ id, action })),
+      [{ id: "oauth", action: "authorize" }],
+    );
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+  }
+});
+
 test("Vercel is an opt-in built-in that contributes only its authorized MCP server", async () => {
   const index = await readBuiltInMarketplaceIndex();
   const vercel = index.extensions.find((entry) => entry.name === "vercel");

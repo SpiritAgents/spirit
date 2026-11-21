@@ -1015,6 +1015,9 @@ importers:
         specifier: 7.5.22
         version: 7.5.22
     devDependencies:
+      '@spiritagent/cloudflare':
+        specifier: workspace:*
+        version: link:../cloudflare
       '@spiritagent/github':
         specifier: workspace:*
         version: link:../github
