@@ -1,18 +1,26 @@
 import type { ComponentProps, ReactNode } from "react";
 
+import { Button } from "./button.js";
 import { cn } from "./cn.js";
+
+export type EmptyCardAction = {
+  label: ReactNode;
+  onClick: () => void;
+};
 
 type EmptyCardProps = Omit<ComponentProps<"div">, "title"> & {
   icon?: ReactNode;
   title?: ReactNode;
   description?: ReactNode;
+  action?: EmptyCardAction;
 };
 
-/** Transparent empty state with optional icon, title, description, and supplemental content. */
+/** Transparent empty state with optional icon, title, description, supplemental content, and action button. */
 export function EmptyCard({
   icon,
   title,
   description,
+  action,
   className,
   children,
   ...props
@@ -33,6 +41,18 @@ export function EmptyCard({
           className={cn("text-sm text-muted-foreground", (icon || title || description) && "mt-3")}
         >
           {children}
+        </div>
+      ) : null}
+      {action ? (
+        <div
+          className={cn(
+            "flex justify-center",
+            (icon || title || description || children) && "mt-3",
+          )}
+        >
+          <Button type="button" onClick={action.onClick}>
+            {action.label}
+          </Button>
         </div>
       ) : null}
     </div>
