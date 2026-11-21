@@ -30,7 +30,9 @@ import {
   providerPickerLabel,
 } from "@/components/settings/models/provider-picker-rows";
 import type { SettingsFormState, SettingsViewProps } from "@/components/settings/types";
+import { Layers } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { EmptyCard } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog } from "@/components/ui/alert-dialog";
@@ -463,9 +465,12 @@ export function ModelsSettingsPanel({
 
       <div className="space-y-3">
         {configProviders.length === 0 ? (
-          <div className={cn(DESKTOP_SETTINGS_CARD_SURFACE, "px-4 py-10 text-center")}>
-            <p className="text-sm text-muted-foreground">{t("settings.noSavedModels")}</p>
-          </div>
+          <EmptyCard
+            className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"
+            icon={<Layers strokeWidth={1.75} />}
+            title={t("settings.modelsEmpty")}
+            description={t("settings.modelsEmptyDescription")}
+          />
         ) : (
           <>
             {configProviders.map((providerEntry) => {
