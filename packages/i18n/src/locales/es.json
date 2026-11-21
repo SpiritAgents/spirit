@@ -180,7 +180,7 @@
     "uiLocaleDescription": "Selecciona el idioma de visualización de la interfaz.",
     "remoteControl": "Control remoto",
     "devices": "Dispositivos",
-    "noDevices": "Aún no hay dispositivos emparejados.",
+    "noDevices": "Sin dispositivos emparejados",
     "remoteControlDescription": "Permitir que dispositivos externos controlen Spirit",
     "deviceLastUsed": "Usado {{time}}",
     "deviceNeverUsed": "Aún sin uso",

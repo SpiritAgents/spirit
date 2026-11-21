@@ -180,7 +180,7 @@
     "uiLocaleDescription": "Wähle die Anzeigesprache der Benutzeroberfläche.",
     "remoteControl": "Remote-Steuerung",
     "devices": "Geräte",
-    "noDevices": "Keine gekoppelten Geräte.",
+    "noDevices": "Keine gekoppelten Geräte",
     "remoteControlDescription": "Spirit für externe Geräte steuern lassen",
     "deviceLastUsed": "Verwendet {{time}}",
     "deviceNeverUsed": "Noch nicht verwendet",

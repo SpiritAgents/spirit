@@ -180,7 +180,7 @@
     "uiLocaleDescription": "Выберите язык отображения интерфейса.",
     "remoteControl": "Удалённое управление",
     "devices": "Устройства",
-    "noDevices": "Пока нет сопряжённых устройств.",
+    "noDevices": "Нет сопряжённых устройств",
     "remoteControlDescription": "Разрешить внешним устройствам управлять Spirit",
     "deviceLastUsed": "Использовалось {{time}}",
     "deviceNeverUsed": "Ещё не использовалось",

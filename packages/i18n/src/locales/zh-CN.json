@@ -180,7 +180,7 @@
     "uiLocaleDescription": "选择界面显示语言。",
     "remoteControl": "远程控制",
     "devices": "设备",
-    "noDevices": "暂无已配对设备",
+    "noDevices": "无配对设备",
     "remoteControlDescription": "允许外部设备控制 Spirit",
     "deviceLastUsed": "{{time}}使用",
     "deviceNeverUsed": "尚未使用",

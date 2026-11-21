@@ -181,7 +181,7 @@
     "uiLocaleDescription": "Select the interface display language.",
     "remoteControl": "Remote Control",
     "devices": "Devices",
-    "noDevices": "No paired devices yet.",
+    "noDevices": "No Paired Devices",
     "remoteControlDescription": "Allow external devices to control Spirit",
     "deviceLastUsed": "Used {{time}}",
     "deviceNeverUsed": "Not used yet",

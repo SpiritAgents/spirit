@@ -180,7 +180,7 @@
     "uiLocaleDescription": "インターフェースの表示言語を選択します。",
     "remoteControl": "リモートコントロール",
     "devices": "デバイス",
-    "noDevices": "ペアリング済みデバイスはありません",
+    "noDevices": "ペアリング済みデバイスなし",
     "remoteControlDescription": "Spirit を外部デバイスから操作できるようにします",
     "deviceLastUsed": "{{time}}に使用",
     "deviceNeverUsed": "未使用",
