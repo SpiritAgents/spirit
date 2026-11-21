@@ -67,10 +67,7 @@ test("the built-in GitHub metadata localizes its description and contributions",
   const index = await readBuiltInMarketplaceIndex();
   const github = index.extensions.find((entry) => entry.name === "github");
   assert.ok(github);
-  assert.equal(
-    readExtensionMessage(github, github.description, "zh-CN"),
-    "在 Spirit 中处理拉取请求和自动化。",
-  );
+  assert.equal(readExtensionMessage(github, github.description, "zh-CN"), "处理拉取请求与自动化。");
   const triggers = github.manifest.contributes?.automationTriggers;
   assert.ok(Array.isArray(triggers));
   const trigger = triggers[0] as { description: { message: string } };

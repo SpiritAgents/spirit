@@ -1,7 +1,7 @@
 {
   "metadata": {
     "displayName": "GitHub",
-    "description": "Solicitudes de incorporación y automatizaciones, directamente en Spirit.",
+    "description": "Gestiona solicitudes de incorporación y automatizaciones.",
     "keywords": {
       "pullRequests": "solicitudes de incorporación",
       "repositories": "repositorios",

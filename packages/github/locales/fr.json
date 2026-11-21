@@ -1,7 +1,7 @@
 {
   "metadata": {
     "displayName": "GitHub",
-    "description": "Demandes de tirage et automatisations, directement dans Spirit.",
+    "description": "Gérez demandes de tirage et automatisations.",
     "keywords": {
       "pullRequests": "demandes de tirage",
       "repositories": "dépôts",

@@ -1,7 +1,7 @@
 {
   "metadata": {
     "displayName": "GitHub",
-    "description": "在 Spirit 中處理拉取請求與自動化。",
+    "description": "處理拉取請求與自動化。",
     "keywords": {
       "pullRequests": "拉取請求",
       "repositories": "存放庫",

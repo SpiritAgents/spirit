@@ -1,7 +1,7 @@
 {
   "metadata": {
     "displayName": "GitHub",
-    "description": "Spirit에서 끌어오기 요청과 자동화를 처리하세요.",
+    "description": "끌어오기 요청과 자동화를 다루세요.",
     "keywords": {
       "pullRequests": "끌어오기 요청",
       "repositories": "리포지터리",

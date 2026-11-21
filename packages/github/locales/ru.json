@@ -1,7 +1,7 @@
 {
   "metadata": {
     "displayName": "GitHub",
-    "description": "Запросы на слияние и автоматизация прямо в Spirit.",
+    "description": "Работайте с запросами на слияние и автоматизациями.",
     "keywords": {
       "pullRequests": "запросы на слияние",
       "repositories": "репозитории",

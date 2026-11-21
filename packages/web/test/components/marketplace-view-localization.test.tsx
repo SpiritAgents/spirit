@@ -38,7 +38,7 @@ const item = {
   sourceName: "built-in",
   name: "github",
   displayName: "GitHub",
-  description: "在 Spirit 中处理拉取请求和自动化。",
+  description: "处理拉取请求与自动化。",
   keywords: ["拉取请求"],
   category: "development",
   version: "1.0.0",

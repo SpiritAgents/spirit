@@ -1,7 +1,7 @@
 {
   "metadata": {
     "displayName": "GitHub",
-    "description": "プルリクエストと自動化を Spirit で。",
+    "description": "プルリクエストと自動化を扱います。",
     "keywords": {
       "pullRequests": "プルリクエスト",
       "repositories": "リポジトリ",
