@@ -516,7 +516,7 @@ export function ModelsSettingsPanel({
                       </p>
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         disabled={modelsBusy || modelsPreviewBusy}
                         onClick={() => startConnect(providerEntry.id)}
