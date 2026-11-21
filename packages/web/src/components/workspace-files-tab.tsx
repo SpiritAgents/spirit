@@ -741,7 +741,10 @@ export function WorkspaceFilesTab({
   }, [api, selectedPath, savedText, draftText]);
 
   const planRevealKey = `${planRevealEnabled}\u0000${autoRevealPlanNonce}`;
-  const [previousPlanRevealKey, setPreviousPlanRevealKey] = useState(planRevealKey);
+  const [previousPlanRevealKey, setPreviousPlanRevealKey] = useState<string | null>(
+    planRevealEnabled && autoRevealPlanNonce > 0 ? null : planRevealKey,
+  );
+  // A reveal pending at mount (restored/new tab) counts as a transition, like the old effect.
   if (previousPlanRevealKey !== planRevealKey) {
     setPreviousPlanRevealKey(planRevealKey);
     if (planRevealEnabled && autoRevealPlanNonce > 0) {
@@ -761,8 +764,9 @@ export function WorkspaceFilesTab({
     fileRevealScope,
     fileRevealViewMode,
   ]);
-  const [previousFileRevealRequestKey, setPreviousFileRevealRequestKey] =
-    useState(fileRevealRequestKey);
+  const [previousFileRevealRequestKey, setPreviousFileRevealRequestKey] = useState<string | null>(
+    fileRevealEnabled && autoRevealFileNonce > 0 ? null : fileRevealRequestKey,
+  );
   if (previousFileRevealRequestKey !== fileRevealRequestKey) {
     setPreviousFileRevealRequestKey(fileRevealRequestKey);
     if (fileRevealEnabled && autoRevealFileNonce > 0) {

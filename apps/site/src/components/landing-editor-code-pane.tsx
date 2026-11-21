@@ -97,6 +97,14 @@ export function LandingEditorCodePane({
     }
   }
 
+  // Back at the base state, the tail highlight is discarded; the "already highlighted" ref must
+  // be invalidated too, or the next loop never re-highlights and the fade-out shows nothing.
+  useEffect(() => {
+    if (isBaseState) {
+      resetTailTextRef.current = "";
+    }
+  }, [isBaseState]);
+
   useEffect(() => {
     if (!resetFading) {
       return;

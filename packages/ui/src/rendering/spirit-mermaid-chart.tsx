@@ -218,6 +218,7 @@ export function SpiritMermaidChart({
 }) {
   const plugin = useMemo(() => createSpiritMermaidPlugin(resolvedDark), [resolvedDark]);
   const chartId = useId().replace(/:/g, "");
+  const renderSeqRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const [shouldRender, setShouldRender] = useState(eager || fullscreen);
   const [svg, setSvg] = useState("");
@@ -256,7 +257,10 @@ export function SpiritMermaidChart({
       setError(null);
       try {
         const mermaid = plugin.getMermaid(mermaidConfig);
-        const id = `spirit-mermaid-${Math.abs(hashChart(chart))}-${chartId}-${retryKey}`;
+        // Unique per invocation: mermaid.render reuses its temp DOM by id, so overlapping
+        // renders of one chart (e.g. a config change mid-flight) must not share an id.
+        renderSeqRef.current += 1;
+        const id = `spirit-mermaid-${Math.abs(hashChart(chart))}-${chartId}-${retryKey}-${renderSeqRef.current}`;
         const { svg: rendered } = await mermaid.render(id, chart);
         if (!cancelled) {
           setSvg(rendered);

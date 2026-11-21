@@ -179,14 +179,19 @@ function PreviewToolExpandedBody({ tool }: { tool: ToolBlockSnapshot }) {
 function PreviewToolCallCard({ tool }: { tool: ToolBlockSnapshot }) {
   const shimmerActive = toolCallPhaseShowsShimmer(tool.phase);
   const expandable = previewToolHasExpandableContent(tool);
-  const [open, setOpen] = useState(false);
-  const [previousShimmer, setPreviousShimmer] = useState(shimmerActive);
-  if (shimmerActive && expandable && !open) {
-    setOpen(true);
-  }
-  if (previousShimmer !== shimmerActive) {
-    setPreviousShimmer(shimmerActive);
-    if (previousShimmer && !shimmerActive) {
+  const [open, setOpen] = useState(() => shimmerActive && expandable);
+  // Auto-open/close only on shimmer transitions; a running card must stay collapsed once the
+  // user closes it.
+  const [previousTransition, setPreviousTransition] = useState<[boolean, boolean]>([
+    shimmerActive,
+    expandable,
+  ]);
+  if (previousTransition[0] !== shimmerActive || previousTransition[1] !== expandable) {
+    const wasShimmering = previousTransition[0];
+    setPreviousTransition([shimmerActive, expandable]);
+    if (shimmerActive && expandable) {
+      setOpen(true);
+    } else if (wasShimmering && !shimmerActive) {
       setOpen(false);
     }
   }

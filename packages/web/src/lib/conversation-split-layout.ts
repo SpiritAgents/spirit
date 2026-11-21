@@ -125,13 +125,14 @@ export function updateLeafSessionPath(
   sessionPath: string,
 ): SplitLayoutNode {
   if (node.kind === "leaf") {
-    return node.paneId === paneId ? { ...node, sessionPath } : node;
+    if (node.paneId !== paneId) {
+      return node;
+    }
+    return node.sessionPath === sessionPath ? node : { ...node, sessionPath };
   }
-  return {
-    ...node,
-    first: updateLeafSessionPath(node.first, paneId, sessionPath),
-    second: updateLeafSessionPath(node.second, paneId, sessionPath),
-  };
+  const first = updateLeafSessionPath(node.first, paneId, sessionPath);
+  const second = updateLeafSessionPath(node.second, paneId, sessionPath);
+  return first === node.first && second === node.second ? node : { ...node, first, second };
 }
 
 export function replaceSessionPathInLayout(

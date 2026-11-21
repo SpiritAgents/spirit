@@ -149,7 +149,9 @@ export function MarketplaceView({
   const [uninstallDialogOpen, setUninstallDialogOpen] = useState(false);
   /** null = list; non-null = that extension's detail page */
   const [detailExtensionId, setDetailExtensionId] = useState<string | null>(null);
-  if (revealRequest && detailExtensionId !== revealRequest.extensionId) {
+  const [handledRevealNonce, setHandledRevealNonce] = useState<number | null>(null);
+  if (revealRequest && revealRequest.nonce !== handledRevealNonce) {
+    setHandledRevealNonce(revealRequest.nonce);
     setDetailExtensionId(revealRequest.extensionId);
   }
   const [addSourceOpen, setAddSourceOpen] = useState(false);

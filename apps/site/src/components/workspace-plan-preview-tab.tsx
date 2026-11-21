@@ -30,7 +30,8 @@ export function WorkspacePlanPreviewTab({
   hideFileTree = false,
 }: WorkspacePlanPreviewTabProps) {
   const { messages } = useI18n();
-  const [selectedPlanState, setSelectedPlan] = useState(false);
+  // A mount that already carries a reveal (e.g. restored while revealed) selects the plan.
+  const [selectedPlanState, setSelectedPlan] = useState(autoRevealPlanNonce > 0);
   const [previousRevealNonce, setPreviousRevealNonce] = useState(autoRevealPlanNonce);
   if (previousRevealNonce !== autoRevealPlanNonce) {
     setPreviousRevealNonce(autoRevealPlanNonce);

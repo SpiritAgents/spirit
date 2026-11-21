@@ -32,20 +32,24 @@ export function VideoGenerationToolCard({
   const cachedPreview = previewSourcePath
     ? readCachedLocalFilePreviewDataUrl(previewSourcePath)
     : null;
-  const [previewStatePath, setPreviewStatePath] = useState(previewSourcePath);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(cachedPreview ?? null);
-  const [previewState, setPreviewState] = useState<"idle" | "loading" | "ready" | "unavailable">(
-    previewSourcePath ? (cachedPreview ? "ready" : "loading") : "unavailable",
-  );
-  if (previewStatePath !== previewSourcePath) {
-    setPreviewStatePath(previewSourcePath);
-    setPreviewUrl(cachedPreview ?? null);
-    setPreviewState(previewSourcePath ? (cachedPreview ? "ready" : "loading") : "unavailable");
-  }
+  const [ownPreview, setOwnPreview] = useState<{
+    path: string;
+    status: "ready" | "unavailable";
+    url: string | null;
+  } | null>(null);
+  // Cache-first: a sibling consumer filling the shared preview cache mid-flight must surface
+  // here at the next render instead of leaving this card stuck in its own cancelled fetch.
+  const ownPreviewForPath = ownPreview?.path === previewSourcePath ? ownPreview : null;
+  const previewUrl = cachedPreview ?? ownPreviewForPath?.url ?? null;
+  const previewState = !previewSourcePath
+    ? ("unavailable" as const)
+    : cachedPreview
+      ? ("ready" as const)
+      : (ownPreviewForPath?.status ?? "loading");
 
   useEffect(() => {
     let cancelled = false;
-    if (!previewSourcePath || cachedPreview) {
+    if (!previewSourcePath || readCachedLocalFilePreviewDataUrl(previewSourcePath)) {
       return;
     }
 
@@ -61,19 +65,26 @@ export function VideoGenerationToolCard({
         if (url) {
           rememberLocalFilePreviewDataUrl(previewSourcePath, url);
         }
-        setPreviewUrl(url);
-        setPreviewState(url ? "ready" : "unavailable");
+        setOwnPreview({
+          path: previewSourcePath,
+          status: url ? "ready" : "unavailable",
+          url,
+        });
       })
       .catch(() => {
         if (!cancelled) {
-          setPreviewState("unavailable");
+          setOwnPreview({
+            path: previewSourcePath,
+            status: "unavailable",
+            url: null,
+          });
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [cachedPreview, previewSourcePath, readLocalVideoPreviewUrl, readManagedVideoPreviewUrl]);
+  }, [previewSourcePath, readLocalVideoPreviewUrl, readManagedVideoPreviewUrl]);
 
   const loading =
     tool.phase === "preview" || tool.phase === "running" || previewState === "loading";

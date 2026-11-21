@@ -74,6 +74,10 @@ export function ProcessCardCollapsible({
     },
     [manualOpenControlled, onManualOpenChange],
   );
+  const setManualOpenValueRef = useRef(setManualOpenValue);
+  useLayoutEffect(() => {
+    setManualOpenValueRef.current = setManualOpenValue;
+  });
   const sealGroupIdRef = useRef(groupId);
   const sealKey = `${groupId}\u0000${playSealAnimation}`;
   const [previousSealKey, setPreviousSealKey] = useState(sealKey);
@@ -82,12 +86,14 @@ export function ProcessCardCollapsible({
     setAutoExpanded(playSealAnimation);
   }
 
+  // Keyed to the seal edge only: the manual-open callback identity churns with every parent
+  // render, and depending on it would rewind the collapse and undo user clicks mid-stream.
   useLayoutEffect(() => {
     sealGroupIdRef.current = groupId;
     if (!playSealAnimation) {
       return;
     }
-    queueMicrotask(() => setManualOpenValue(false));
+    queueMicrotask(() => setManualOpenValueRef.current(false));
     const collapseTimer = window.setTimeout(() => {
       if (sealGroupIdRef.current === groupId) {
         setAutoExpanded(false);
@@ -96,7 +102,7 @@ export function ProcessCardCollapsible({
     return () => {
       window.clearTimeout(collapseTimer);
     };
-  }, [groupId, playSealAnimation, setManualOpenValue]);
+  }, [groupId, playSealAnimation]);
 
   const expanded = manualOpenValue || autoExpanded;
   const interactive = true;

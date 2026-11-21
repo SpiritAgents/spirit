@@ -409,9 +409,11 @@ export function ConversationView({
   const dropHostRef = useRef<HTMLDivElement | null>(null);
   const [visibleDropZones, setVisibleDropZones] =
     useState<readonly PaneDropZone[]>(PANE_DROP_ZONE_ORDER);
-  const [wasDropTargetActive, setWasDropTargetActive] = useState(showDropTargets);
-  if (showDropTargets !== wasDropTargetActive) {
-    setWasDropTargetActive(showDropTargets);
+  // Real zones need the pane DOM, computable only post-commit; keep the overlay hidden until
+  // resolved so the fallback 4-zone grid never paints.
+  const [dropOverlaySync, setDropOverlaySync] = useState({ active: showDropTargets, ready: false });
+  if (showDropTargets !== dropOverlaySync.active) {
+    setDropOverlaySync({ active: showDropTargets, ready: false });
     if (showDropTargets) {
       setVisibleDropZones(PANE_DROP_ZONE_ORDER);
     }
@@ -437,6 +439,7 @@ export function ConversationView({
     }
     queueMicrotask(() => {
       setVisibleDropZones(resolveVisibleDropZones());
+      setDropOverlaySync((current) => (current.active ? { ...current, ready: true } : current));
     });
   }, [resolveVisibleDropZones, showDropTargets]);
   const handleComposerDockRef = useCallback(
@@ -563,7 +566,7 @@ export function ConversationView({
           sessionPinned={sessionPinned}
           onTogglePinSession={onTogglePinSession}
         />
-        {showDropTargets ? (
+        {showDropTargets && dropOverlaySync.ready ? (
           <div
             className={cn(
               "absolute inset-0 z-30 grid cursor-crosshair",

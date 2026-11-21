@@ -70,18 +70,25 @@ const DREAM_GRAPH_LOGO_Y = 108;
 const DREAM_GRAPH_LOGO_SIZE_PX = 112;
 const DREAM_GRAPH_DEFAULT_ANCHOR_CENTER_Y = DREAM_GRAPH_LOGO_Y + DREAM_GRAPH_LOGO_SIZE_PX / 2;
 
-function deriveWorkspaceLabel(workspaceRoot?: string): string {
+function deriveWorkspaceLabel(currentWorkspaceLabel: string, workspaceRoot?: string): string {
   const trimmed = workspaceRoot?.trim();
   if (!trimmed) {
-    return i18n.t("sidebar.currentWorkspace");
+    return currentWorkspaceLabel;
   }
   const normalized = trimmed.replace(/\\/g, "/").replace(/\/+$/g, "");
   const lastSlash = normalized.lastIndexOf("/");
   return lastSlash >= 0 ? normalized.slice(lastSlash + 1) || normalized : normalized;
 }
 
-function buildDreamSubtitle(workspaceRoot?: string, gitBranch?: string): string {
-  const parts = [deriveWorkspaceLabel(workspaceRoot), gitBranch?.trim()].filter(Boolean);
+function buildDreamSubtitle(
+  currentWorkspaceLabel: string,
+  workspaceRoot?: string,
+  gitBranch?: string,
+): string {
+  const parts = [
+    deriveWorkspaceLabel(currentWorkspaceLabel, workspaceRoot),
+    gitBranch?.trim(),
+  ].filter(Boolean);
   return parts.join(" · ");
 }
 
@@ -302,6 +309,7 @@ const nodeTypes: NodeTypes = {
 function buildGraph(
   items: DesktopDreamOverviewItem[],
   iconSrc: string,
+  labels: { currentWorkspace: string; scopeCollecting: string },
   workspaceRoot?: string,
   gitBranch?: string,
 ) {
@@ -315,8 +323,8 @@ function buildGraph(
       position: { x: 28, y: anchorCenterY - DREAM_GRAPH_CONTEXT_ESTIMATED_HEIGHT_PX / 2 },
       draggable: true,
       data: {
-        label: i18n.t("dreams.scopeCollecting"),
-        subtitle: buildDreamSubtitle(workspaceRoot, gitBranch),
+        label: labels.scopeCollecting,
+        subtitle: buildDreamSubtitle(labels.currentWorkspace, workspaceRoot, gitBranch),
       },
     },
     {
@@ -337,7 +345,7 @@ function buildGraph(
       draggable: true,
       data: {
         label: item.title,
-        subtitle: buildDreamSubtitle(item.workspaceRoot, item.gitBranch),
+        subtitle: buildDreamSubtitle(labels.currentWorkspace, item.workspaceRoot, item.gitBranch),
         dream: item,
         interactive: true,
       },
@@ -450,6 +458,7 @@ function DreamGraphCanvas({
   workspaceRoot?: string;
   gitBranch?: string;
 }) {
+  const { t } = useTranslation();
   const [selectedDreamId, setSelectedDreamId] = useState<string | null>(null);
   const [pinnedNodeIds, setPinnedNodeIds] = useState<string[]>([]);
   const iconSrc = spiritAgentBrandIconSrc(theme !== "light");
@@ -488,9 +497,19 @@ function DreamGraphCanvas({
     setPinnedNodeIds(visiblePinnedNodeIds);
   }
 
+  // Localized strings reach the graph memo as real inputs, so a locale switch rebuilds labels.
+  const currentWorkspaceLabel = t("sidebar.currentWorkspace");
+  const scopeCollectingLabel = t("dreams.scopeCollecting");
   const graph = useMemo(
-    () => buildGraph(items, iconSrc, workspaceRoot, gitBranch),
-    [gitBranch, iconSrc, items, workspaceRoot],
+    () =>
+      buildGraph(
+        items,
+        iconSrc,
+        { currentWorkspace: currentWorkspaceLabel, scopeCollecting: scopeCollectingLabel },
+        workspaceRoot,
+        gitBranch,
+      ),
+    [currentWorkspaceLabel, scopeCollectingLabel, gitBranch, iconSrc, items, workspaceRoot],
   );
   const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges);

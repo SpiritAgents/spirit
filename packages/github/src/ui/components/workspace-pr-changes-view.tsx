@@ -398,6 +398,13 @@ export function WorkspacePrChangesView({
   const { readPrChangesTreeWidthPx, writePrChangesTreeWidthPx } = useGitHubLayoutPreferences();
   const { t } = useTranslation();
   const splitContainerRef = useRef<HTMLDivElement>(null);
+  // The view mounts while files load, when the split container is not rendered yet; the
+  // callback ref + state lets the width observer attach when it appears.
+  const [splitContainer, setSplitContainer] = useState<HTMLDivElement | null>(null);
+  const setSplitContainerRef = useCallback((node: HTMLDivElement | null) => {
+    splitContainerRef.current = node;
+    setSplitContainer(node);
+  }, []);
   const cardsScrollRef = useRef<ComponentRef<typeof ScrollArea>>(null);
   const [cardsScrollRoot, setCardsScrollRoot] = useState<ComponentRef<typeof ScrollArea> | null>(
     null,
@@ -508,18 +515,17 @@ export function WorkspacePrChangesView({
   );
 
   useEffect(() => {
-    const container = splitContainerRef.current;
-    if (!container) {
+    if (!splitContainer) {
       return;
     }
     const syncContainerWidth = () => {
-      setContainerWidthPx(container.clientWidth);
+      setContainerWidthPx(splitContainer.clientWidth);
     };
     syncContainerWidth();
     const observer = new ResizeObserver(syncContainerWidth);
-    observer.observe(container);
+    observer.observe(splitContainer);
     return () => observer.disconnect();
-  }, []);
+  }, [splitContainer]);
 
   if (treeWidthPx > maxTreeWidthPx) {
     setTreeWidthPx(clampTreeWidth(treeWidthPx));
@@ -610,7 +616,7 @@ export function WorkspacePrChangesView({
 
   return (
     <div
-      ref={splitContainerRef}
+      ref={setSplitContainerRef}
       className={cn(
         "flex h-full min-h-0 min-w-0 flex-1 flex-row items-stretch overflow-hidden",
         isResizingTree && "select-none",

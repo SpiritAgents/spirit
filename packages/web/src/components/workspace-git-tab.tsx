@@ -94,6 +94,9 @@ export function WorkspaceGitTab({
     latestChangesPaneHeightPxRef.current = changesPaneHeightPx;
   }, [changesPaneHeightPx]);
   const [splitContainerHeightPx, setSplitContainerHeightPx] = useState(0);
+  // The working-tree and history effects each track activation on their own ref, so
+  // neither consumes the other's activation edge.
+  const workingTreeTabActiveRef = useRef(false);
   const lastWorkingTreeRevisionRef = useRef<number | undefined>(undefined);
   const [isResizingSplit, setIsResizingSplit] = useState(false);
   const splitDragRef = useRef<{ startY: number; startHeight: number } | null>(null);
@@ -298,20 +301,21 @@ export function WorkspaceGitTab({
 
   useEffect(() => {
     if (!isActive) {
-      prevTabActiveRef.current = false;
+      workingTreeTabActiveRef.current = false;
       return;
     }
     const revision = gitSnapshot?.revision;
-    if (prevTabActiveRef.current && lastWorkingTreeRevisionRef.current === revision) {
+    if (workingTreeTabActiveRef.current && lastWorkingTreeRevisionRef.current === revision) {
       return;
     }
-    prevTabActiveRef.current = true;
+    workingTreeTabActiveRef.current = true;
     lastWorkingTreeRevisionRef.current = revision;
     queueMicrotask(() => void loadWorkingTree());
   }, [isActive, loadWorkingTree, gitSnapshot?.revision]);
 
   useEffect(() => {
     if (!isActive) {
+      prevTabActiveRef.current = false;
       return;
     }
 

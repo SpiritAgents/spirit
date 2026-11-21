@@ -89,7 +89,7 @@ export function ExtensionTabHost({
     [tabInstanceKey],
   );
   const previousAttemptRef = useRef(attempt);
-  const closedAttemptRef = useRef<number | null>(null);
+  const closedAttemptRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (status !== "loading") {
@@ -300,17 +300,25 @@ export function ExtensionTabHost({
     });
   }, [subscribeEvents, tab]);
 
+  // Value-based deps: the daemon echoes the tab snapshot back with fresh object identities on
+  // every sync; depending on `tab` would post a spurious close into the live iframe.
   useEffect(() => {
     const iframe = iframeRef.current;
-    const identity = { ...tab };
+    const identity = {
+      extensionId: tab.extensionId,
+      contributionId: tab.contributionId,
+      instanceId: tab.instanceId,
+      channelId: tab.channelId,
+    };
+    const closedKey = `${tab.instanceId} ${attempt}`;
     return () => {
-      if (closedAttemptRef.current === attempt) {
+      if (closedAttemptRef.current === closedKey) {
         return;
       }
-      closedAttemptRef.current = attempt;
+      closedAttemptRef.current = closedKey;
       iframe?.contentWindow?.postMessage({ type: SPIRIT_EXTENSION_TAB_CLOSED, ...identity }, "*");
     };
-  }, [attempt, tab]);
+  }, [attempt, tab.extensionId, tab.contributionId, tab.instanceId, tab.channelId]);
 
   return (
     <div

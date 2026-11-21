@@ -286,6 +286,9 @@ export function WorkspaceTerminalTab({ workspaceRoot }: WorkspaceTerminalTabProp
           return;
         }
 
+        // A later effect run may recreate the terminal under the same session key (locale or
+        // bridge change); drop the stale failure overlay when recreation succeeds.
+        setEmbedErrorResult({ key: terminalSessionKey, message: null });
         ptyId = created.id;
         activePtyIdRef.current = created.id;
         terminal.onData((data) => {

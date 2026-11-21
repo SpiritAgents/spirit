@@ -707,23 +707,36 @@ export function ConversationSplitProvider({
       return;
     }
 
-    setLayout(next);
+    if (current !== next) {
+      setLayout(next);
+    }
   }, [activeSessionPath, snapshot, syncVisiblePaths]);
 
   useEffect(() => {
     runtime.setLayoutNavigationPending(layoutNavigationPending);
   }, [layoutNavigationPending, runtime]);
 
-  if (layout) {
-    const leaf = collectSplitLayoutLeaves(layout).find(
-      (entry) =>
-        normalizeSessionPathKey(entry.sessionPath) === normalizeSessionPathKey(activeSessionPath),
-    );
-    const focusedLeaf = focusedPaneId ? findLeafByPaneId(layout, focusedPaneId) : undefined;
-    const nextFocusedPaneId =
-      leaf?.paneId ?? focusedLeaf?.paneId ?? findWorkspaceToolsAnchorPaneId(layout);
-    if (nextFocusedPaneId !== focusedPaneId) {
-      setFocusedPaneId(nextFocusedPaneId);
+  // Renormalize focus only on layout/session transitions; focusPane owns mid-transition clicks.
+  const [focusLayoutSync, setFocusLayoutSync] = useState<{
+    layout: SplitLayoutNode | null;
+    activeSessionPath: string;
+  } | null>(null);
+  if (
+    focusLayoutSync?.layout !== layout ||
+    focusLayoutSync.activeSessionPath !== activeSessionPath
+  ) {
+    setFocusLayoutSync({ layout, activeSessionPath });
+    if (layout) {
+      const leaf = collectSplitLayoutLeaves(layout).find(
+        (entry) =>
+          normalizeSessionPathKey(entry.sessionPath) === normalizeSessionPathKey(activeSessionPath),
+      );
+      const focusedLeaf = focusedPaneId ? findLeafByPaneId(layout, focusedPaneId) : undefined;
+      const nextFocusedPaneId =
+        leaf?.paneId ?? focusedLeaf?.paneId ?? findWorkspaceToolsAnchorPaneId(layout);
+      if (nextFocusedPaneId !== focusedPaneId) {
+        setFocusedPaneId(nextFocusedPaneId);
+      }
     }
   }
 

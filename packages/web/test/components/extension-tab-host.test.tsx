@@ -474,3 +474,22 @@ test("Composer attachments require capability and an active page; host binds the
   attach();
   expect(onAttachment).toHaveBeenCalledOnce();
 });
+
+test("a fresh tab-object identity does not post a spurious close into the iframe", () => {
+  const { container, rerender, unmount } = render(
+    <ExtensionTabHost tab={tab} contribution={contribution} active />,
+  );
+  const iframe = container.querySelector("iframe")!;
+  const posted: string[] = [];
+  vi.spyOn(iframe.contentWindow!, "postMessage").mockImplementation((message: unknown) => {
+    posted.push((message as { type?: string }).type ?? "<?>");
+  });
+
+  // The daemon echoes tab snapshots back with fresh object identities on every sync.
+  rerender(<ExtensionTabHost tab={{ ...tab }} contribution={contribution} active />);
+
+  expect(posted).not.toContain(SPIRIT_EXTENSION_TAB_CLOSED);
+
+  unmount();
+  expect(posted.filter((type) => type === SPIRIT_EXTENSION_TAB_CLOSED)).toHaveLength(1);
+});

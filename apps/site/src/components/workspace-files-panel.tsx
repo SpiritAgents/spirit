@@ -163,12 +163,19 @@ export function WorkspaceFilesPanel({
     [listExplorerChildren],
   );
 
-  const [previousWorkspaceRoot, setPreviousWorkspaceRoot] = useState(workspaceRoot);
-  if (previousWorkspaceRoot !== workspaceRoot) {
-    setPreviousWorkspaceRoot(workspaceRoot);
+  // The loader identity tracks the data source (and locale); stale directory listings must
+  // not survive it.
+  const [previousLoadSource, setPreviousLoadSource] = useState({ workspaceRoot, loadDir });
+  if (
+    previousLoadSource.workspaceRoot !== workspaceRoot ||
+    previousLoadSource.loadDir !== loadDir
+  ) {
+    setPreviousLoadSource({ workspaceRoot, loadDir });
     setCache({});
-    setExpanded({});
-    setRootOpen(true);
+    if (previousLoadSource.workspaceRoot !== workspaceRoot) {
+      setExpanded({});
+      setRootOpen(true);
+    }
   }
   useEffect(() => {
     if (workspaceRoot.trim()) {
