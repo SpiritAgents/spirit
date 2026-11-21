@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Cloudflare",
+    "description": "Работайте с Workers, DNS и доменами.",
+    "keywords": {
+      "workers": "Workers",
+      "dns": "DNS",
+      "domains": "домены"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "cloudflare": {
+      "displayName": "Cloudflare"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Cloudflare"
+    }
+  },
+  "cloudflare": {
+    "waiting": "Ожидание авторизации в браузере",
+    "openAuthorizationPage": "Открыть страницу авторизации Cloudflare",
+    "connected": "Подключено к Cloudflare",
+    "disconnect": "Отключить"
+  },
+  "common": {
+    "cancel": "Отмена"
+  }
+}

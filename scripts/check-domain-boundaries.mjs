@@ -90,6 +90,7 @@ const nodeDomains = new Set([
   "workspace",
 ]);
 const reactPresentationPaths = [
+  /^packages\/cloudflare\/src\/ui\//u,
   /^packages\/github\/src\/ui\//u,
   /^packages\/vercel\/src\/ui\//u,
   /^packages\/extensions\/src\/extension-ui-kit\//u,

@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Cloudflare",
+    "description": "处理 Workers、DNS 与域名。",
+    "keywords": {
+      "workers": "Workers",
+      "dns": "DNS",
+      "domains": "域名"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "cloudflare": {
+      "displayName": "Cloudflare"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Cloudflare"
+    }
+  },
+  "cloudflare": {
+    "waiting": "等待浏览器授权",
+    "openAuthorizationPage": "打开 Cloudflare 授权页面",
+    "connected": "已连接 Cloudflare",
+    "disconnect": "断开连接"
+  },
+  "common": {
+    "cancel": "取消"
+  }
+}
