@@ -942,6 +942,9 @@ importers:
       '@spiritagent/linear':
         specifier: workspace:*
         version: link:../linear
+      '@spiritagent/notion':
+        specifier: workspace:*
+        version: link:../notion
       '@spiritagent/vercel':
         specifier: workspace:*
         version: link:../vercel
