@@ -78,6 +78,7 @@ const nodeDomains = new Set([
   "linear",
   "lsp",
   "mcp",
+  "notion",
   "permissions",
   "process",
   "remote-control",
