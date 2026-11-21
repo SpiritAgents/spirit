@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import {
   authorizeLazyToolGatewayRequest,
+  authorizeMcpToolRequest,
   mcpToolCallSkipsApproval,
   resolveMcpToolCallApprovalAnnotations,
 } from "./authorize.js";
@@ -181,4 +182,44 @@ test("resolveMcpToolCallApprovalAnnotations looks up MCP tool_call only", () => 
     ),
     undefined,
   );
+});
+
+test("authorizeMcpToolRequest mirrors lazy gateway approval rules for direct MCP calls", () => {
+  const request = {
+    kind: "mcpTool" as const,
+    name: "edge/execute",
+    server: "edge",
+    displayName: "Edge",
+    toolName: "execute",
+    arguments: { code: "return 1;" },
+  };
+
+  assert.equal(authorizeMcpToolRequest(request, "bypass-approval").kind, "allowed");
+  assert.equal(
+    authorizeMcpToolRequest(request, "default", { readOnlyHint: true, openWorldHint: false }).kind,
+    "allowed",
+  );
+
+  const decision = authorizeMcpToolRequest(request, "default");
+  assert.equal(decision.kind, "need-approval");
+  if (decision.kind === "need-approval") {
+    assert.deepEqual(decision.approval, {
+      kind: "lazy_tool_call",
+      provider: "mcp",
+      server: "edge",
+      tool: "execute",
+      arguments: { code: "return 1;" },
+    });
+  }
+
+  const noArgsDecision = authorizeMcpToolRequest({ ...request, arguments: null }, "auto-approval");
+  assert.equal(noArgsDecision.kind, "need-approval");
+  if (noArgsDecision.kind === "need-approval") {
+    assert.deepEqual(noArgsDecision.approval, {
+      kind: "lazy_tool_call",
+      provider: "mcp",
+      server: "edge",
+      tool: "execute",
+    });
+  }
 });

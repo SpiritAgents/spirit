@@ -57,30 +57,38 @@ export function buildMcpToolCatalogSnapshot(
   registry: McpRegistry,
   resolvedServers: Record<string, ResolvedMcpServerConfig>,
 ): ToolAgentMcpToolCatalogSnapshot {
+  const enabledServers = Object.values(resolvedServers).filter((server) => server.enabled);
+  const enabledServerNames = new Set(enabledServers.map((server) => server.name));
+  const enabledLazyServerNames = new Set(
+    enabledServers.filter((server) => server.lazyTools !== false).map((server) => server.name),
+  );
+  const lazyIndexEntries = indexEntries.filter((entry) => enabledLazyServerNames.has(entry.server));
   const groupedTools = new Map<string, McpToolIndexEntry[]>();
-  for (const entry of indexEntries) {
+  for (const entry of lazyIndexEntries) {
     const current = groupedTools.get(entry.server) ?? [];
     current.push(entry);
     groupedTools.set(entry.server, current);
   }
 
+  const enabledResourceEntries = resourceEntries.filter((entry) =>
+    enabledServerNames.has(entry.server),
+  );
   const groupedResources = new Map<string, McpResourceIndexEntry[]>();
-  for (const entry of resourceEntries) {
+  for (const entry of enabledResourceEntries) {
     const current = groupedResources.get(entry.server) ?? [];
     current.push(entry);
     groupedResources.set(entry.server, current);
   }
 
-  const totalToolCount = indexEntries.length;
+  const totalToolCount = lazyIndexEntries.length;
   const truncated = totalToolCount > MCP_CATALOG_TOOL_LIMIT;
   let remainingTools = MCP_CATALOG_TOOL_LIMIT;
 
-  const totalResourceCount = resourceEntries.length;
+  const totalResourceCount = enabledResourceEntries.length;
   const resourcesTruncated = totalResourceCount > MCP_CATALOG_RESOURCE_LIMIT;
   let remainingResources = MCP_CATALOG_RESOURCE_LIMIT;
 
-  const servers = Object.values(resolvedServers)
-    .filter((server) => server.enabled)
+  const servers = enabledServers
     .sort((left, right) => left.name.localeCompare(right.name))
     .map((server) => {
       const status = registry.get(server.name);

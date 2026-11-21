@@ -5,6 +5,8 @@ import {
   findMcpServerNameConflict,
   mcpServerScopesFromFiles,
   mergeMcpConfigFiles,
+  normalizeMcpServerConfig,
+  parseMcpConfigFile,
 } from "./config.js";
 import type { McpConfigFile } from "./types.js";
 
@@ -69,4 +71,33 @@ test("mergeMcpConfigFiles with empty workspace yields user-only servers", () => 
   const merged = mergeMcpConfigFiles(user, { servers: {} });
   assert.deepEqual(Object.keys(merged.servers), ["github"]);
   assert.deepEqual(mcpServerScopesFromFiles(user, { servers: {} }), { github: "user" });
+});
+
+test("parseMcpConfigFile and normalizeMcpServerConfig handle lazyTools opt-out", () => {
+  const parsed = parseMcpConfigFile({
+    servers: {
+      defaultLazy: {
+        transport: { type: "http", url: "https://example.invalid/default" },
+      },
+      camelEager: {
+        lazyTools: false,
+        transport: { type: "http", url: "https://example.invalid/camel" },
+      },
+      snakeEager: {
+        lazy_tools: false,
+        transport: { type: "http", url: "https://example.invalid/snake" },
+      },
+    },
+  });
+
+  assert.equal(parsed.servers.defaultLazy?.lazyTools, undefined);
+  assert.equal(parsed.servers.camelEager?.lazyTools, false);
+  assert.equal(parsed.servers.snakeEager?.lazyTools, false);
+
+  assert.equal(
+    normalizeMcpServerConfig("defaultLazy", parsed.servers.defaultLazy!).lazyTools,
+    true,
+  );
+  assert.equal(normalizeMcpServerConfig("camelEager", parsed.servers.camelEager!).lazyTools, false);
+  assert.equal(normalizeMcpServerConfig("snakeEager", parsed.servers.snakeEager!).lazyTools, false);
 });

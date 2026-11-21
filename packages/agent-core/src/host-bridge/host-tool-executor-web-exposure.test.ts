@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type { LlmTransportConfig } from "../provider-config.js";
+import { McpService } from "../mcp/service.js";
+import type { McpToolIndexEntry, ResolvedMcpServerConfig } from "../mcp/types.js";
 import { toolNamesFromDefinitions } from "../unknown-tool-error.js";
 import { JsonRpcPeer } from "./framing.js";
 import { HostToolExecutorProxy, type LocalHostToolService } from "./host-tool-executor.js";
@@ -90,4 +92,87 @@ test("Plan edit guidance follows live transport changes", async () => {
   assert.ok(!toolNamesFromDefinitions(executor.toolDefinitionsJson()).includes("edit_file"));
   executor.setTransportConfigForToolDefinitions({ apiKey: "fixture", model: "fixture-model" });
   assert.match(JSON.stringify(executor.toolDefinitionsJson()), /revise this plan with edit_file/);
+});
+
+test("HostToolExecutorProxy refreshes eager MCP tools on catalog revision changes and enforces approval parity", async () => {
+  const peer = {
+    call: async () => ({}),
+    notify: () => {},
+  } as unknown as JsonRpcPeer;
+  let lazyTools = false;
+  const mcp = new McpService(process.cwd(), false, {
+    configSource: {
+      scopeKey: "host-proxy-eager-test",
+      read: () => ({
+        user: {
+          servers: {
+            edge: {
+              displayName: "Edge",
+              lazyTools,
+              transport: { type: "http", url: "https://example.invalid/mcp" },
+            },
+          },
+        },
+        workspace: { servers: {} },
+      }),
+    },
+  });
+  await mcp.refreshConfig();
+
+  const internal = mcp as unknown as {
+    toolIndexStore: McpToolIndexEntry[];
+    catalogRevisionStore: number;
+    toolingCacheInitialized: boolean;
+    loadedConfigStore: { resolved: Record<string, ResolvedMcpServerConfig> };
+  };
+  internal.toolingCacheInitialized = true;
+
+  const executor = new HostToolExecutorProxy(peer, mcp);
+  executor.setLocalHostService({
+    toolDefinitionEnvironment: () => TOOL_DEFINITION_ENVIRONMENT,
+  } as unknown as LocalHostToolService);
+  await executor.refreshCaches();
+
+  assert.ok(!toolNamesFromDefinitions(executor.toolDefinitionsJson()).includes("mcp__edge__run"));
+
+  internal.toolIndexStore = [
+    {
+      server: "edge",
+      displayName: "Edge",
+      toolName: "run",
+      description: "Run operation",
+      inputSchema: { type: "object", properties: { script: { type: "string" } } },
+    },
+  ];
+  internal.catalogRevisionStore += 1;
+
+  const updatedNames = toolNamesFromDefinitions(executor.toolDefinitionsJson());
+  assert.ok(updatedNames.includes("mcp__edge__run"));
+  assert.ok(!updatedNames.includes("tool_call"));
+
+  const request = await executor.requestFromFunctionCall(
+    "mcp__edge__run",
+    JSON.stringify({ script: "status" }),
+  );
+  const decision = await executor.authorize(request);
+  assert.equal(decision.kind, "need-approval");
+  if (decision.kind === "need-approval") {
+    assert.deepEqual(decision.approval, {
+      kind: "lazy_tool_call",
+      provider: "mcp",
+      server: "edge",
+      tool: "run",
+      arguments: { script: "status" },
+    });
+  }
+
+  executor.setApprovalLevel("bypass-approval");
+  assert.equal((await executor.authorize(request)).kind, "allowed");
+
+  lazyTools = true;
+  await mcp.refreshConfig();
+  const lazyNames = toolNamesFromDefinitions(executor.toolDefinitionsJson());
+  assert.ok(!lazyNames.includes("mcp__edge__run"));
+  assert.ok(lazyNames.includes("tool_describe"));
+  assert.ok(lazyNames.includes("tool_call"));
 });

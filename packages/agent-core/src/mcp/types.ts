@@ -26,6 +26,7 @@ export type McpTransportConfig = McpStdioTransportConfig | McpHttpTransportConfi
 export interface McpServerConfig {
   displayName?: string;
   enabled?: boolean;
+  lazyTools?: boolean;
   capabilities?: Partial<McpCapabilityToggles>;
   transport: McpTransportConfig;
 }
@@ -59,8 +60,19 @@ export interface ResolvedMcpServerConfig {
   name: string;
   displayName: string;
   enabled: boolean;
+  lazyTools: boolean;
   capabilities: McpCapabilityToggles;
   transport: ResolvedMcpTransportConfig;
+}
+
+export interface McpToolRequest {
+  [key: string]: import("../ports.js").JsonValue;
+  kind: "mcpTool";
+  name: string;
+  server: string;
+  displayName: string;
+  toolName: string;
+  arguments: import("../ports.js").JsonValue;
 }
 
 export type McpServerRuntimeState = "disabled" | "idle" | "loading" | "ready" | "error";

@@ -9,6 +9,13 @@
   },
   "extensions": [
     {
+      "name": "cloudflare",
+      "source": "./extensions/cloudflare",
+      "icon": "./extensions/cloudflare/icon.svg",
+      "reviewStatus": "verified",
+      "defaultInstalled": false
+    },
+    {
       "name": "github",
       "source": "./extensions/github",
       "icon": "./extensions/github/icon.svg",

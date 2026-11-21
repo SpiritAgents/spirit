@@ -52,6 +52,7 @@ test("runtime restart watches cover the Workbench domain graph", () => {
   }
 
   for (const name of [
+    "@spiritagent/cloudflare",
     "@spiritagent/github",
     "@spiritagent/brand",
     "@spiritagent/icons",
@@ -79,6 +80,7 @@ test("development package watching does not rebuild the production renderer", ()
 
   const packages = developmentWatchPackageNames(repoRoot);
   assert.ok(packages.includes("@spiritagent/workbench"));
+  assert.ok(packages.includes("@spiritagent/cloudflare"));
   assert.ok(packages.includes("@spiritagent/github"));
   assert.ok(packages.includes("@spiritagent/vercel"));
   assert.ok(!packages.includes("@spiritagent/web"));
@@ -89,6 +91,7 @@ test("development builds order simultaneous edits and refresh packed extensions"
   const order = developmentPackageBuildOrder(repoRoot);
   assert.ok(order.indexOf("@spiritagent/product") < order.indexOf("@spiritagent/i18n"));
   assert.ok(order.indexOf("@spiritagent/i18n") < order.indexOf("@spiritagent/workbench"));
+  assert.ok(order.indexOf("@spiritagent/cloudflare") < order.indexOf("@spiritagent/extensions"));
   assert.ok(order.indexOf("@spiritagent/github") < order.indexOf("@spiritagent/extensions"));
   assert.ok(order.indexOf("@spiritagent/vercel") < order.indexOf("@spiritagent/extensions"));
   assert.ok(order.indexOf("@spiritagent/extensions") < order.indexOf("@spiritagent/workbench"));

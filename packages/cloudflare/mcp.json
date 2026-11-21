@@ -1,0 +1,15 @@
+{
+  "servers": {
+    "cloudflare": {
+      "displayName": "Cloudflare",
+      "lazyTools": false,
+      "transport": {
+        "type": "http",
+        "url": "https://mcp.cloudflare.com/mcp",
+        "headers": {
+          "Authorization": "Bearer ${extension-secret:oauthCredentials:accessToken}"
+        }
+      }
+    }
+  }
+}

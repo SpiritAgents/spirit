@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Cloudflare",
+    "description": "Workers, DNS, 도메인을 다루세요.",
+    "keywords": {
+      "workers": "Workers",
+      "dns": "DNS",
+      "domains": "도메인"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "cloudflare": {
+      "displayName": "Cloudflare"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Cloudflare"
+    }
+  },
+  "cloudflare": {
+    "waiting": "브라우저 인증 대기 중",
+    "openAuthorizationPage": "Cloudflare 인증 페이지 열기",
+    "connected": "Cloudflare에 연결됨",
+    "disconnect": "연결 해제"
+  },
+  "common": {
+    "cancel": "취소"
+  }
+}

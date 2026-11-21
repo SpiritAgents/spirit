@@ -31,6 +31,7 @@ import {
   TOOL_CALL_TOOL_NAME,
   isLazyToolGatewayToolName,
   authorizeLazyToolGatewayRequest,
+  authorizeMcpToolRequest,
   resolveMcpToolCallApprovalAnnotations,
   buildLazyToolGatewayDefinitions,
   createBuiltInLazyToolGatewayBackendWithCall,
@@ -357,8 +358,13 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
       return this.authorizeLazyToolGateway(request as unknown as LazyToolGatewayToolRequest);
     }
     if (this.mcp.isToolRequest(request as JsonValue)) {
-      await this.mcp.authorizeToolRequest(request as unknown as McpToolRequest);
-      return { kind: "allowed" };
+      const mcpRequest = request as unknown as McpToolRequest;
+      await this.mcp.authorizeToolRequest(mcpRequest);
+      return authorizeMcpToolRequest(
+        mcpRequest,
+        this.approvalLevel,
+        this.mcp.lookupToolApprovalAnnotations(mcpRequest.server, mcpRequest.toolName),
+      );
     }
     if (isLspDiagnosticsToolRequest(request as JsonValue)) {
       return { kind: "allowed" };

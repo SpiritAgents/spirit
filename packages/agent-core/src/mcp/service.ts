@@ -45,6 +45,7 @@ import type {
   McpResourceIndexEntry,
   McpToolApprovalAnnotations,
   McpToolIndexEntry,
+  McpToolRequest,
   ResolvedMcpServerConfig,
   ResolvedMcpTransportConfig,
   ToolAgentMcpToolCatalogSnapshot,
@@ -71,15 +72,7 @@ interface McpPromptCatalogEntry {
   }>;
 }
 
-export interface McpToolRequest {
-  [key: string]: JsonValue;
-  kind: "mcpTool";
-  name: string;
-  server: string;
-  displayName: string;
-  toolName: string;
-  arguments: JsonValue;
-}
+export type { McpToolRequest };
 
 interface LoadedMcpConfig {
   raw: McpConfigFile;
@@ -159,8 +152,27 @@ export class McpService {
 
   toolDefinitionsJson(): JsonValue[] {
     const definitions: JsonValue[] = [];
-    if (this.toolIndexStore.length > 0) {
+    const resolved = this.loadedConfigStore.resolved;
+    const hasResolvedConfig = Object.keys(resolved).length > 0;
+    const hasLazyTools = this.toolIndexStore.some((entry) => {
+      if (!hasResolvedConfig) {
+        return true;
+      }
+      const server = resolved[entry.server];
+      return server?.enabled === true && server.lazyTools !== false;
+    });
+    if (hasLazyTools) {
       definitions.push(...buildLazyToolGatewayDefinitions());
+    }
+    for (const { name, entry } of buildEagerMcpToolEntries(this.toolIndexStore, resolved)) {
+      definitions.push({
+        type: "function",
+        function: {
+          name,
+          description: entry.description,
+          parameters: entry.inputSchema,
+        },
+      });
     }
     if (this.resourceIndexStore.length > 0) {
       definitions.push(buildFetchMcpResourceDefinition());
@@ -306,9 +318,28 @@ export class McpService {
         resolved: Object.fromEntries(resolvedEntries),
         serverScopes,
       };
+      const enabledServers = new Set(
+        Object.values(this.loadedConfigStore.resolved)
+          .filter((server) => server.enabled)
+          .map((server) => server.name),
+      );
+      const retainedTools = this.toolIndexStore.filter((entry) => enabledServers.has(entry.server));
+      const retainedResources = this.resourceIndexStore.filter((entry) =>
+        enabledServers.has(entry.server),
+      );
+      const toolsChanged =
+        retainedTools.length !== this.toolIndexStore.length ||
+        retainedResources.length !== this.resourceIndexStore.length;
+      if (toolsChanged) {
+        this.toolIndexStore = retainedTools;
+        this.resourceIndexStore = retainedResources;
+      }
       if (configChanged) {
         this.configDigestStore = nextDigest;
         this.toolingCacheInitialized = false;
+      }
+      if (configChanged || toolsChanged) {
+        this.catalogRevisionStore += 1;
       }
       this.loadErrorStore = undefined;
     } catch (error) {
@@ -358,6 +389,7 @@ export class McpService {
         server: string;
         uri: string;
       }
+    | McpToolRequest
     | undefined
   > {
     if (isFetchMcpResourceToolName(name)) {
@@ -369,14 +401,30 @@ export class McpService {
       };
     }
 
-    if (!isLazyToolGatewayToolName(name)) {
+    if (isLazyToolGatewayToolName(name)) {
+      return {
+        kind: "lazyToolGateway",
+        name,
+        argumentsJson,
+      };
+    }
+
+    const eagerMatch = buildEagerMcpToolEntries(
+      this.toolIndexStore,
+      this.loadedConfigStore.resolved,
+    ).find((candidate) => candidate.name === name);
+    if (!eagerMatch) {
       return undefined;
     }
 
+    const server = this.loadedConfigStore.resolved[eagerMatch.entry.server];
     return {
-      kind: "lazyToolGateway",
-      name,
-      argumentsJson,
+      kind: "mcpTool",
+      name: `${eagerMatch.entry.server}/${eagerMatch.entry.toolName}`,
+      server: eagerMatch.entry.server,
+      displayName: server?.displayName ?? eagerMatch.entry.displayName,
+      toolName: eagerMatch.entry.toolName,
+      arguments: parseOptionalJsonValue(argumentsJson),
     };
   }
 
@@ -1026,7 +1074,7 @@ export class McpService {
       const nextDigest = mcpConfigDigest(raw);
       this.loadedConfigStore = {
         raw,
-        resolved: {},
+        resolved: this.loadedConfigStore.resolved,
         serverScopes,
       };
       if (nextDigest !== this.configDigestStore) {
@@ -1499,4 +1547,68 @@ function findToolIndexEntry(
   toolName: string,
 ): McpToolIndexEntry | undefined {
   return entries.find((entry) => entry.server === serverName && entry.toolName === toolName);
+}
+
+const MAX_EAGER_MCP_TOOL_NAME_LENGTH = 64;
+const EAGER_MCP_TOOL_HASH_LENGTH = 8;
+
+function sanitizeEagerMcpToolSegment(value: string, fallback: string): string {
+  const sanitized = value.replace(/[^a-zA-Z0-9_-]/gu, "_");
+  return sanitized.length > 0 ? sanitized : fallback;
+}
+
+function hashEagerMcpToolIdentity(server: string, toolName: string): string {
+  return createHash("sha256").update(`${server}\0${toolName}`).digest("hex");
+}
+
+function buildHashedEagerMcpToolName(base: string, hashHex: string, suffix = ""): string {
+  const hashSegment = `_${hashHex.slice(0, EAGER_MCP_TOOL_HASH_LENGTH)}${suffix}`;
+  const prefixMaxLength = Math.max(1, MAX_EAGER_MCP_TOOL_NAME_LENGTH - hashSegment.length);
+  return `${base.slice(0, prefixMaxLength)}${hashSegment}`;
+}
+
+export function buildEagerMcpToolEntries(
+  entries: readonly McpToolIndexEntry[],
+  resolvedServers: Record<string, ResolvedMcpServerConfig>,
+): Array<{ name: string; entry: McpToolIndexEntry }> {
+  const eagerEntries = entries.filter((entry) => {
+    const server = resolvedServers[entry.server];
+    return server?.enabled === true && server.lazyTools === false;
+  });
+  if (eagerEntries.length === 0) {
+    return [];
+  }
+
+  const baseCandidates = eagerEntries.map((entry) => {
+    const serverPart = sanitizeEagerMcpToolSegment(entry.server, "server");
+    const toolPart = sanitizeEagerMcpToolSegment(entry.toolName, "tool");
+    const base = `mcp__${serverPart}__${toolPart}`;
+    const candidate =
+      base.length <= MAX_EAGER_MCP_TOOL_NAME_LENGTH
+        ? base
+        : buildHashedEagerMcpToolName(base, hashEagerMcpToolIdentity(entry.server, entry.toolName));
+    return { entry, base, candidate };
+  });
+
+  const candidateCounts = new Map<string, number>();
+  for (const item of baseCandidates) {
+    candidateCounts.set(item.candidate, (candidateCounts.get(item.candidate) ?? 0) + 1);
+  }
+
+  const usedNames = new Set<string>();
+  return baseCandidates.map(({ entry, base, candidate }) => {
+    const needsHash = (candidateCounts.get(candidate) ?? 0) > 1 || usedNames.has(candidate);
+    let finalName = candidate;
+    if (needsHash) {
+      const hashHex = hashEagerMcpToolIdentity(entry.server, entry.toolName);
+      finalName = buildHashedEagerMcpToolName(base, hashHex);
+      let attempt = 1;
+      while (usedNames.has(finalName)) {
+        finalName = buildHashedEagerMcpToolName(base, hashHex, `_${attempt}`);
+        attempt += 1;
+      }
+    }
+    usedNames.add(finalName);
+    return { name: finalName, entry };
+  });
 }

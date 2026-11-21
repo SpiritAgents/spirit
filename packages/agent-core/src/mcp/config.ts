@@ -123,6 +123,7 @@ export function normalizeMcpServerConfig(
     name: trimmedName,
     displayName: server.displayName?.trim() || trimmedName,
     enabled: server.enabled ?? true,
+    lazyTools: server.lazyTools ?? true,
     capabilities: normalizeCapabilityToggles(server.capabilities),
     transport: normalizeTransportConfig(server.transport),
   };
@@ -254,11 +255,13 @@ function parseMcpServerConfig(name: string, raw: unknown): McpServerConfig {
   const record = asRecord(raw, `MCP server ${name} config must be a JSON object`);
   const nestedTransport = asRecordOrUndefined(record.transport);
   const displayName = readOptionalString(record, ["displayName", "display_name"]);
+  const lazyTools = readOptionalBoolean(record, ["lazyTools", "lazy_tools"]);
   const capabilities = parseCapabilityToggles(record.capabilities);
 
   return {
     ...(displayName === undefined ? {} : { displayName }),
     ...(typeof record.enabled === "boolean" ? { enabled: record.enabled } : {}),
+    ...(lazyTools === undefined ? {} : { lazyTools }),
     ...(capabilities === undefined ? {} : { capabilities }),
     transport: parseTransportConfigForConfig(name, nestedTransport ?? record),
   };
@@ -377,6 +380,11 @@ function readRequiredString(
 function readOptionalNumber(record: Record<string, unknown>, keys: string[]): number | undefined {
   const value = firstDefined(record, keys);
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function readOptionalBoolean(record: Record<string, unknown>, keys: string[]): boolean | undefined {
+  const value = firstDefined(record, keys);
+  return typeof value === "boolean" ? value : undefined;
 }
 
 function readOptionalStringArray(

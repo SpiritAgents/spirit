@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Cloudflare",
+    "description": "Work with Workers, DNS, and domains.",
+    "keywords": {
+      "workers": "workers",
+      "dns": "dns",
+      "domains": "domains"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "cloudflare": {
+      "displayName": "Cloudflare"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Cloudflare"
+    }
+  },
+  "cloudflare": {
+    "waiting": "Waiting for browser authorization",
+    "openAuthorizationPage": "Open Cloudflare Authorization Page",
+    "connected": "Connected to Cloudflare",
+    "disconnect": "Disconnect"
+  },
+  "common": {
+    "cancel": "Cancel"
+  }
+}

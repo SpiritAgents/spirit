@@ -1679,6 +1679,7 @@ pub(crate) fn to_config(
         McpServerConfig {
             display_name: Some(server_name),
             enabled: true,
+            lazy_tools: true,
             capabilities: McpCapabilityToggles::default(),
             transport,
         },
