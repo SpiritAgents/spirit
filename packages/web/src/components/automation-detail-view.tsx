@@ -56,7 +56,7 @@ function AutomationDetailTabs({
   const { t } = useTranslation();
 
   return (
-    <div className="space-y-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-y-4">
       <RovingFocusGroup asChild orientation="horizontal" loop defaultCurrentTabStopId={activeTab}>
         <div
           className="flex flex-wrap gap-1 pt-0.5"
@@ -153,12 +153,12 @@ export function AutomationDetailView({
           the cap, then proportional side margins on narrower windows. */}
       <div
         className={cn(
-          "mx-auto flex w-full min-h-0 flex-1 flex-col py-8",
+          "relative mx-auto flex w-full min-h-0 flex-1 flex-col py-8",
           CONVERSATION_GUTTER_X,
           CONVERSATION_MESSAGE_LIST_MAX_W,
         )}
       >
-        <div className="space-y-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-y-4">
           <nav className="flex flex-wrap items-center gap-1 text-sm">
             <button
               type="button"
@@ -179,7 +179,7 @@ export function AutomationDetailView({
 
           <AutomationDetailTabs activeTab={activeTab} onTabChange={setActiveTab}>
             {activeTab === "history" ? (
-              <div className={cn(loading && "opacity-70")}>
+              <div className={cn("flex min-h-0 flex-1", loading && "opacity-70")}>
                 <AutomationHistoryTable runs={detail?.runs ?? []} onOpenSession={onOpenSession} />
               </div>
             ) : null}

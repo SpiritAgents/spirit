@@ -617,7 +617,8 @@
       "completed": "Завершено",
       "failed": "Ошибка"
     },
-    "noRuns": "Запусков пока нет",
+    "noRuns": "Нет запусков",
+    "noRunsDescription": "Прошлые запуски будут отображаться здесь.",
     "openChat": "Открыть чат",
     "listActions": "Действия автоматизации",
     "deleteAutomation": "Удалить автоматизацию",
@@ -657,7 +658,6 @@
     "searchPlaceholder": "Поиск расширений",
     "noMatchesTitle": "По запросу «{{query}}» ничего не найдено",
     "noMatchesDescription": "Проверьте правописание или попробуйте другой поисковый запрос.",
-    "extensionNotFound": "Расширение не найдено. Вернитесь к списку.",
     "install": "Установить",
     "authorize": "Авторизовать",
     "httpLocalSourceInstallUnsupported": "HTTP-каталоги не поддерживают установку расширений с локальным путём",

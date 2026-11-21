@@ -640,7 +640,8 @@
       "completed": "Completed",
       "failed": "Failed"
     },
-    "noRuns": "No runs yet",
+    "noRuns": "No Runs",
+    "noRunsDescription": "Past runs will appear here.",
     "openChat": "Open Chat",
     "listActions": "Automation actions",
     "deleteAutomation": "Delete automation",
@@ -680,7 +681,6 @@
     "searchPlaceholder": "Search extensions",
     "noMatchesTitle": "No results for “{{query}}”",
     "noMatchesDescription": "Check the spelling or try a new search term.",
-    "extensionNotFound": "Extension not found. Please return to the list.",
     "install": "Install",
     "authorize": "Authorize",
     "httpLocalSourceInstallUnsupported": "HTTP marketplaces can't install extensions that use a local path source",

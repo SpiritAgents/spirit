@@ -6,7 +6,9 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useTranslation } from "react-i18next";
+import { History } from "lucide-react";
 
+import { EmptyCard } from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -71,7 +73,12 @@ export function AutomationHistoryTable({ runs, onOpenSession }: AutomationHistor
 
   if (sortedRuns.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">{t("automations.noRuns")}</p>
+      <EmptyCard
+        className="absolute inset-0 flex flex-col items-center justify-center"
+        icon={<History strokeWidth={1.75} />}
+        title={t("automations.noRuns")}
+        description={t("automations.noRunsDescription")}
+      />
     );
   }
 

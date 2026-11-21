@@ -615,7 +615,8 @@
       "completed": "已完成",
       "failed": "失败"
     },
-    "noRuns": "暂无运行记录",
+    "noRuns": "无运行记录",
+    "noRunsDescription": "历次运行将在此处显示。",
     "openChat": "打开对话",
     "listActions": "自动化操作",
     "deleteAutomation": "删除自动化",
@@ -655,7 +656,6 @@
     "searchPlaceholder": "搜索扩展",
     "noMatchesTitle": "未找到“{{query}}”的相关结果",
     "noMatchesDescription": "检查拼写或尝试新搜索词。",
-    "extensionNotFound": "找不到该扩展，请返回列表。",
     "install": "安装",
     "authorize": "授权",
     "httpLocalSourceInstallUnsupported": "HTTP 市场不支持安装本地路径源的扩展",

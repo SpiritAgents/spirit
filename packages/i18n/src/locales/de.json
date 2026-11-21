@@ -607,7 +607,8 @@
       "completed": "Abgeschlossen",
       "failed": "Fehlgeschlagen"
     },
-    "noRuns": "Noch keine Durchläufe",
+    "noRuns": "Keine Durchläufe",
+    "noRunsDescription": "Bisherige Durchläufe werden hier angezeigt.",
     "openChat": "Chat öffnen",
     "listActions": "Automationsaktionen",
     "deleteAutomation": "Automation löschen",
@@ -647,7 +648,6 @@
     "searchPlaceholder": "Erweiterungen suchen",
     "noMatchesTitle": "Keine Ergebnisse für „{{query}}“",
     "noMatchesDescription": "Überprüfe die Schreibweise oder versuche einen anderen Suchbegriff.",
-    "extensionNotFound": "Erweiterung nicht gefunden. Bitte zurück zur Liste.",
     "install": "Installieren",
     "authorize": "Autorisieren",
     "httpLocalSourceInstallUnsupported": "HTTP-Marktplätze können Erweiterungen mit lokalem Pfad nicht installieren",

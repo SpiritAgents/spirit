@@ -608,6 +608,7 @@
       "failed": "Échoué"
     },
     "noRuns": "Aucune exécution",
+    "noRunsDescription": "Les exécutions passées s’affichent ici.",
     "openChat": "Ouvrir la discussion",
     "listActions": "Actions d'automatisation",
     "deleteAutomation": "Supprimer l'automatisation",
@@ -647,7 +648,6 @@
     "searchPlaceholder": "Rechercher des extensions",
     "noMatchesTitle": "Aucun résultat pour « {{query}} »",
     "noMatchesDescription": "Vérifiez l’orthographe ou essayez un autre terme de recherche.",
-    "extensionNotFound": "Extension introuvable. Veuillez revenir à la liste.",
     "install": "Installer",
     "authorize": "Autoriser",
     "httpLocalSourceInstallUnsupported": "Les marchés HTTP ne permettent pas d'installer les extensions utilisant un chemin local",

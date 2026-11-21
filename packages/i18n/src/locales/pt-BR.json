@@ -607,7 +607,8 @@
       "completed": "Concluído",
       "failed": "Falhou"
     },
-    "noRuns": "Nenhuma execução ainda",
+    "noRuns": "Sem execuções",
+    "noRunsDescription": "As execuções anteriores aparecerão aqui.",
     "openChat": "Abrir conversa",
     "listActions": "Ações da automação",
     "deleteAutomation": "Excluir automação",
@@ -647,7 +648,6 @@
     "searchPlaceholder": "Pesquisar extensões",
     "noMatchesTitle": "Nenhum resultado para “{{query}}”",
     "noMatchesDescription": "Verifique a ortografia ou tente um novo termo de pesquisa.",
-    "extensionNotFound": "Extensão não encontrada. Volte para a lista.",
     "install": "Instalar",
     "authorize": "Autorizar",
     "httpLocalSourceInstallUnsupported": "Mercados HTTP não podem instalar extensões que usam um caminho de origem local",

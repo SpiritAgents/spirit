@@ -607,7 +607,8 @@
       "completed": "已完成",
       "failed": "失敗"
     },
-    "noRuns": "尚無執行記錄",
+    "noRuns": "無執行記錄",
+    "noRunsDescription": "歷次執行將在此處顯示。",
     "openChat": "開啟對話",
     "listActions": "自動化操作",
     "deleteAutomation": "刪除自動化",
@@ -647,7 +648,6 @@
     "searchPlaceholder": "搜尋擴充功能",
     "noMatchesTitle": "未找到「{{query}}」的相關結果",
     "noMatchesDescription": "檢查拼字或嘗試新的搜尋字詞。",
-    "extensionNotFound": "找不到擴充功能。請返回列表。",
     "install": "安裝",
     "authorize": "授權",
     "httpLocalSourceInstallUnsupported": "HTTP 市場不支援安裝本機路徑來源的擴充功能",

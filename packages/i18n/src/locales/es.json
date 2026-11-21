@@ -607,7 +607,8 @@
       "completed": "Completada",
       "failed": "Fallida"
     },
-    "noRuns": "Aún sin ejecuciones",
+    "noRuns": "Sin ejecuciones",
+    "noRunsDescription": "Las ejecuciones anteriores aparecerán aquí.",
     "openChat": "Abrir chat",
     "listActions": "Acciones de automatización",
     "deleteAutomation": "Eliminar automatización",
@@ -647,7 +648,6 @@
     "searchPlaceholder": "Buscar extensiones",
     "noMatchesTitle": "No hay resultados para «{{query}}»",
     "noMatchesDescription": "Comprueba la ortografía o prueba con otro término de búsqueda.",
-    "extensionNotFound": "Extensión no encontrada. Regresa a la lista.",
     "install": "Instalar",
     "authorize": "Autorizar",
     "httpLocalSourceInstallUnsupported": "Los mercados HTTP no permiten instalar extensiones con una ruta de origen local",

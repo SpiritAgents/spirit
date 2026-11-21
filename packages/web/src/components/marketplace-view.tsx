@@ -5,7 +5,7 @@ import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ArrowLeft, Blocks, Folder, Sparkles, Store } from "lucide-react";
+import { Blocks, Folder, Sparkles, Store } from "lucide-react";
 
 import { MarketplaceAddSourceDialog } from "@/components/marketplace-add-source-dialog";
 import { MarketplaceCatalogSection } from "@/components/marketplace-catalog-section";
@@ -38,9 +38,7 @@ import { scrollAreaViewport, useStickyHeaderPinned } from "@/hooks/use-sticky-he
 import {
   DESKTOP_FORM_INPUT_INNER,
   DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL,
-  instantHoverMotionClass,
 } from "@/lib/desktop-chrome";
-import { desktopTranslucencyTintInnerClass } from "@/lib/desktop-translucency-surface";
 import {
   CONVERSATION_GUTTER_X,
   CONVERSATION_MESSAGE_LIST_MAX_W,
@@ -147,7 +145,7 @@ export function MarketplaceView({
     null,
   );
   const [uninstallDialogOpen, setUninstallDialogOpen] = useState(false);
-  /** null = list; non-null = that extension's detail page */
+  /** null = list; non-null = that extension's detail page once a catalog lists it */
   const [detailExtensionId, setDetailExtensionId] = useState<string | null>(null);
   const [handledRevealNonce, setHandledRevealNonce] = useState<number | null>(null);
   if (revealRequest && revealRequest.nonce !== handledRevealNonce) {
@@ -204,15 +202,44 @@ export function MarketplaceView({
     () => scrollAreaViewport(listScrollRoot),
     [listScrollRoot],
   );
+  const sources = useMemo(() => snapshot?.marketplaceSources ?? [], [snapshot?.marketplaceSources]);
+  const catalogs = snapshot?.marketplaceCatalogs ?? {};
+  // Internal-source tabs hide while their catalog is empty; the All tab shows
+  // exactly when any tab shows, so an all-empty marketplace hides the tab bar.
+  const visibleSources = filterVisibleMarketplaceSources(sources, catalogs);
+  const showAll = visibleSources.length > 0;
+  const activeTabVisible =
+    activeSourceId === "all"
+      ? showAll
+      : visibleSources.some((source) => source.id === activeSourceId);
+  const resolvedActiveSourceId = activeTabVisible ? activeSourceId : "all";
+  // Per-source catalogs and the merged All catalog arrive display-name sorted
+  // from the host; the view never re-sorts. Each entry keeps its
+  // <sourceId>/<name> identity.
+  const catalog =
+    resolvedActiveSourceId === "all"
+      ? (snapshot?.marketplaceCatalogAll ?? [])
+      : (catalogs[resolvedActiveSourceId] ?? []);
+  // HTTP registries cannot serve directory content, so local-path artifacts are
+  // listed but not installable there; the CLI surfaces the same rule as an
+  // install-time error.
+  const isInstallUnsupported = (item: DesktopMarketplaceCatalogEntry) =>
+    item.artifactKind === "local" &&
+    sources.find((source) => source.id === item.sourceId)?.kind === "http-index";
+  const detailItem = detailExtensionId
+    ? (catalog.find((item) => item.id === detailExtensionId) ??
+      Object.values(catalogs)
+        .flat()
+        .find((item) => item.id === detailExtensionId))
+    : undefined;
+  // A reveal can name an extension no catalog lists (or lists yet); the list stays up until
+  // it appears.
+  const detailOpen = detailItem !== undefined;
   // Pin detection via sentinel + IntersectionObserver: the callback runs inside the
   // rendering steps with the latest (compositor-driven) scroll offset, so the pinned
   // styling commits in the same frame as the crossing scroll position (same pattern as
   // the PR changes view). A scroll-event listener would commit one frame late.
-  const headerPinned = useStickyHeaderPinned(
-    stickySentinelRef,
-    getListScrollViewport,
-    detailExtensionId === null,
-  );
+  const headerPinned = useStickyHeaderPinned(stickySentinelRef, getListScrollViewport, !detailOpen);
   const [titleElement, setTitleElement] = useState<HTMLDivElement | null>(null);
   const [titleHeight, setTitleHeight] = useState(0);
 
@@ -261,7 +288,7 @@ export function MarketplaceView({
   const headerDockOffset = MARKETPLACE_HEADER_TOP_GAP_PX + measuredTitleHeight;
   useLayoutEffect(() => {
     const header = headerElementRef.current;
-    if (detailExtensionId !== null || !header || !listScrollRoot) {
+    if (detailOpen || !header || !listScrollRoot) {
       return;
     }
     const viewport = scrollAreaViewport(listScrollRoot);
@@ -286,38 +313,7 @@ export function MarketplaceView({
     syncHeaderDock();
     viewport.addEventListener("scroll", syncHeaderDock, { passive: true });
     return () => viewport.removeEventListener("scroll", syncHeaderDock);
-  }, [detailExtensionId, headerDockOffset, listScrollRoot]);
-
-  const sources = useMemo(() => snapshot?.marketplaceSources ?? [], [snapshot?.marketplaceSources]);
-  const catalogs = snapshot?.marketplaceCatalogs ?? {};
-  // Internal-source tabs hide while their catalog is empty; the All tab shows
-  // exactly when any tab shows, so an all-empty marketplace hides the tab bar.
-  const visibleSources = filterVisibleMarketplaceSources(sources, catalogs);
-  const showAll = visibleSources.length > 0;
-  const activeTabVisible =
-    activeSourceId === "all"
-      ? showAll
-      : visibleSources.some((source) => source.id === activeSourceId);
-  const resolvedActiveSourceId = activeTabVisible ? activeSourceId : "all";
-  // Per-source catalogs and the merged All catalog arrive display-name sorted
-  // from the host; the view never re-sorts. Each entry keeps its
-  // <sourceId>/<name> identity.
-  const catalog =
-    resolvedActiveSourceId === "all"
-      ? (snapshot?.marketplaceCatalogAll ?? [])
-      : (catalogs[resolvedActiveSourceId] ?? []);
-  // HTTP registries cannot serve directory content, so local-path artifacts are
-  // listed but not installable there; the CLI surfaces the same rule as an
-  // install-time error.
-  const isInstallUnsupported = (item: DesktopMarketplaceCatalogEntry) =>
-    item.artifactKind === "local" &&
-    sources.find((source) => source.id === item.sourceId)?.kind === "http-index";
-  const detailItem = detailExtensionId
-    ? (catalog.find((item) => item.id === detailExtensionId) ??
-      Object.values(catalogs)
-        .flat()
-        .find((item) => item.id === detailExtensionId))
-    : undefined;
+  }, [detailOpen, headerDockOffset, listScrollRoot]);
 
   const filteredExtensions = catalog.filter((item) => {
     const query = searchText.trim().toLocaleLowerCase(i18n.language);
@@ -656,7 +652,7 @@ export function MarketplaceView({
         }}
       />
 
-      {detailExtensionId === null ? (
+      {detailItem === undefined ? (
         <>
           <ScrollArea
             ref={setListScrollRoot}
@@ -911,7 +907,7 @@ export function MarketplaceView({
             </div>
           </div>
         </>
-      ) : detailItem ? (
+      ) : (
         <MarketplaceDetailView
           item={detailItem}
           onBack={closeDetail}
@@ -924,29 +920,6 @@ export function MarketplaceView({
           onAuthorize={handleAuthorize}
           useTranslucency={useTranslucency}
         />
-      ) : (
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className={cn("shrink-0", desktopTranslucencyTintInnerClass(useTranslucency))}>
-            <div className="mx-auto flex items-center px-3 py-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "-ml-2 h-8 gap-1 text-muted-foreground hover:text-chrome-emphasis",
-                  instantHoverMotionClass,
-                )}
-                onClick={closeDetail}
-              >
-                <ArrowLeft className="size-4" aria-hidden strokeWidth={1.75} />
-                {t("common.back")}
-              </Button>
-            </div>
-          </div>
-          <div className="flex flex-1 items-center justify-center px-6 text-sm text-muted-foreground">
-            {t("marketplace.extensionNotFound")}
-          </div>
-        </div>
       )}
 
       <MarketplaceAddSourceDialog

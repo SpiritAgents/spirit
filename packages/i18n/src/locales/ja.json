@@ -607,7 +607,8 @@
       "completed": "完了",
       "failed": "失敗"
     },
-    "noRuns": "まだ実行されていません",
+    "noRuns": "実行履歴なし",
+    "noRunsDescription": "これまでの実行がここに表示されます。",
     "openChat": "チャットを開く",
     "listActions": "オートメーションアクション",
     "deleteAutomation": "オートメーションを削除",
@@ -647,7 +648,6 @@
     "searchPlaceholder": "拡張機能を検索",
     "noMatchesTitle": "「{{query}}」に一致する結果はありません",
     "noMatchesDescription": "スペルを確認するか、別の検索語をお試しください。",
-    "extensionNotFound": "拡張機能が見つかりません。リストに戻ってください。",
     "install": "インストール",
     "authorize": "認可",
     "httpLocalSourceInstallUnsupported": "HTTP マーケットプレイスではローカルパスソースの拡張機能をインストールできません",
