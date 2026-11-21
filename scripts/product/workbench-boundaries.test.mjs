@@ -16,6 +16,7 @@ const domains = [
   "http",
   "i18n",
   "instructions",
+  "linear",
   "lsp",
   "mcp",
   "permissions",

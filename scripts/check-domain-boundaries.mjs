@@ -75,6 +75,7 @@ const nodeDomains = new Set([
   "hooks",
   "http",
   "instructions",
+  "linear",
   "lsp",
   "mcp",
   "permissions",
