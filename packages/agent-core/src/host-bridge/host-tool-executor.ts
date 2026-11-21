@@ -45,6 +45,7 @@ import type { McpUiOpener } from "../mcp/spirit-ui.js";
 import { TOOL_CALL_TOOL_NAME } from "../tool-gateway/definitions.js";
 import {
   authorizeLazyToolGatewayRequest,
+  authorizeMcpToolRequest,
   resolveMcpToolCallApprovalAnnotations,
   type LazyToolGatewayApprovalLevel,
 } from "../tool-gateway/authorize.js";
@@ -94,6 +95,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
   private backgroundTasksEnabled = false;
   private subagentEnabled = true;
   private toolDefinitionsCache: JsonValue = [];
+  private lastMcpCatalogRevision = -1;
   private readonly requestMetadata = new WeakMap<object, HostToolRequestMetadata>();
   private readonly mcp: McpService;
   private lspBindings: LspHostBindings | undefined;
@@ -256,6 +258,9 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
 
   toolDefinitionsJson(): JsonValue {
     this.refreshSubagentLanguageModelSelectors();
+    if (this.mcp.catalogRevision() !== this.lastMcpCatalogRevision) {
+      this.refreshMergedToolDefinitions();
+    }
     return this.toolDefinitionsCache;
   }
 
@@ -313,7 +318,11 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
     }
     if (this.mcp.isToolRequest(request)) {
       await this.mcp.authorizeToolRequest(request);
-      return { kind: "allowed" };
+      return authorizeMcpToolRequest(
+        request,
+        this.approvalLevel,
+        this.mcp.lookupToolApprovalAnnotations(request.server, request.toolName),
+      );
     }
 
     if (isLspDiagnosticsToolRequest(request)) {
@@ -659,6 +668,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
   }
 
   private refreshMergedToolDefinitions(): void {
+    this.lastMcpCatalogRevision = this.mcp.catalogRevision();
     if (this.dreamOnlyToolSurface) {
       this.toolDefinitionsCache = applyHostToolDescriptionHints(
         [...this.dreamToolDefinitionsCache],

@@ -34,6 +34,8 @@ pub struct McpServerConfig {
     pub display_name: Option<String>,
     #[serde(default = "default_true")]
     pub enabled: bool,
+    #[serde(default = "default_true")]
+    pub lazy_tools: bool,
     #[serde(default)]
     pub capabilities: McpCapabilityToggles,
     #[serde(flatten)]
@@ -148,6 +150,9 @@ pub fn parse_shared_config(
             if let Some(display_name) = server.remove("displayName") {
                 server.insert("display_name".to_string(), display_name);
             }
+            if let Some(lazy_tools) = server.remove("lazyTools") {
+                server.insert("lazy_tools".to_string(), lazy_tools);
+            }
             if let Some(transport) = server
                 .remove("transport")
                 .and_then(|value| value.as_object().cloned())
@@ -211,6 +216,7 @@ fn github_preset_config() -> McpServerConfig {
     McpServerConfig {
         display_name: Some("GitHub MCP".to_string()),
         enabled: true,
+        lazy_tools: true,
         capabilities: McpCapabilityToggles::default(),
         transport: McpTransportConfig::Stdio {
             command: "npx".to_string(),
@@ -222,5 +228,40 @@ fn github_preset_config() -> McpServerConfig {
             cwd: None,
             timeout_ms: Some(20_000),
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn parse_shared_config_defaults_lazy_tools_to_true_and_remaps_camel_case() {
+        let parsed = parse_shared_config(json!({
+            "servers": {
+                "default_lazy": {
+                    "transport": { "type": "http", "url": "https://example.invalid/default" }
+                },
+                "camel_eager": {
+                    "displayName": "Camel Eager",
+                    "lazyTools": false,
+                    "transport": { "type": "http", "url": "https://example.invalid/camel" }
+                },
+                "snake_eager": {
+                    "lazy_tools": false,
+                    "transport": { "type": "http", "url": "https://example.invalid/snake" }
+                }
+            }
+        }))
+        .expect("parse shared MCP config");
+
+        assert!(parsed.servers["default_lazy"].lazy_tools);
+        assert!(!parsed.servers["camel_eager"].lazy_tools);
+        assert_eq!(
+            parsed.servers["camel_eager"].display_name.as_deref(),
+            Some("Camel Eager")
+        );
+        assert!(!parsed.servers["snake_eager"].lazy_tools);
     }
 }

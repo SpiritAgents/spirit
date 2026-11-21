@@ -33,6 +33,7 @@ export { createCompositeLazyToolGatewayBackend } from "./composite-backend.js";
 export { parseLazyToolGatewayArguments } from "./parse.js";
 export {
   authorizeLazyToolGatewayRequest,
+  authorizeMcpToolRequest,
   mcpToolCallSkipsApproval,
   resolveMcpToolCallApprovalAnnotations,
   type LazyToolGatewayApprovalLevel,

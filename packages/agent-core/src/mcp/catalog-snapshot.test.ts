@@ -36,6 +36,7 @@ test("buildMcpToolCatalogSnapshot truncates resources independently", () => {
       name: "demo",
       displayName: "Demo",
       enabled: true,
+      lazyTools: true,
       capabilities: { tools: true, resources: true, prompts: true },
       transport: { type: "stdio", command: "demo", args: [], env: {}, stderr: "pipe" },
     },
@@ -70,6 +71,7 @@ test("buildMcpToolCatalogSnapshot includes servers with resources only", () => {
       name: "docs",
       displayName: "Docs",
       enabled: true,
+      lazyTools: true,
       capabilities: { tools: false, resources: true, prompts: false },
       transport: { type: "stdio", command: "docs", args: [], env: {}, stderr: "pipe" },
     },
@@ -88,4 +90,140 @@ test("buildMcpToolCatalogSnapshot includes servers with resources only", () => {
     name: "readme",
     mimeTypes: ["text/markdown"],
   });
+});
+
+test("buildMcpToolCatalogSnapshot excludes eager server tools while keeping resources and errors", () => {
+  const registry = new McpRegistry();
+  registry.replaceConfig({
+    servers: {
+      eagerOnly: {
+        enabled: true,
+        lazyTools: false,
+        transport: { type: "http", url: "https://example.invalid/eager" },
+      },
+      eagerWithResource: {
+        enabled: true,
+        lazyTools: false,
+        transport: { type: "http", url: "https://example.invalid/resource" },
+      },
+      eagerErrored: {
+        enabled: true,
+        lazyTools: false,
+        transport: { type: "http", url: "https://example.invalid/error" },
+      },
+      lazyServer: {
+        enabled: true,
+        lazyTools: true,
+        transport: { type: "http", url: "https://example.invalid/lazy" },
+      },
+    },
+  });
+  registry.setServerState("eagerOnly", "ready", { cachedTools: 1 });
+  registry.setServerState("eagerWithResource", "ready", { cachedTools: 1 });
+  registry.setServerState("eagerErrored", "error", { cachedTools: 0, lastError: "unauthorized" });
+  registry.setServerState("lazyServer", "ready", { cachedTools: 1 });
+
+  const resolved: Record<string, ResolvedMcpServerConfig> = {
+    eagerOnly: {
+      name: "eagerOnly",
+      displayName: "Eager Only",
+      enabled: true,
+      lazyTools: false,
+      capabilities: { tools: true, resources: false, prompts: false },
+      transport: { type: "http", url: "https://example.invalid/eager", headers: {} },
+    },
+    eagerWithResource: {
+      name: "eagerWithResource",
+      displayName: "Eager Resource",
+      enabled: true,
+      lazyTools: false,
+      capabilities: { tools: true, resources: true, prompts: false },
+      transport: { type: "http", url: "https://example.invalid/resource", headers: {} },
+    },
+    eagerErrored: {
+      name: "eagerErrored",
+      displayName: "Eager Errored",
+      enabled: true,
+      lazyTools: false,
+      capabilities: { tools: true, resources: false, prompts: false },
+      transport: { type: "http", url: "https://example.invalid/error", headers: {} },
+    },
+    lazyServer: {
+      name: "lazyServer",
+      displayName: "Lazy Server",
+      enabled: true,
+      lazyTools: true,
+      capabilities: { tools: true, resources: false, prompts: false },
+      transport: { type: "http", url: "https://example.invalid/lazy", headers: {} },
+    },
+  };
+
+  const snapshot = buildMcpToolCatalogSnapshot(
+    [
+      {
+        server: "eagerOnly",
+        displayName: "Eager Only",
+        toolName: "search",
+        description: "Search",
+        inputSchema: { type: "object" },
+      },
+      {
+        server: "eagerWithResource",
+        displayName: "Eager Resource",
+        toolName: "execute",
+        description: "Execute",
+        inputSchema: { type: "object" },
+      },
+      {
+        server: "lazyServer",
+        displayName: "Lazy Server",
+        toolName: "list",
+        description: "List",
+        inputSchema: { type: "object" },
+      },
+    ],
+    [{ server: "eagerWithResource", uri: "mcp://doc", name: "doc" }],
+    registry,
+    resolved,
+  );
+
+  assert.equal(snapshot.totalToolCount, 1);
+  assert.equal(snapshot.truncated, false);
+  assert.deepEqual(
+    snapshot.servers.map((server) => server.name),
+    ["eagerErrored", "eagerWithResource", "lazyServer"],
+  );
+  assert.deepEqual(
+    snapshot.servers.find((server) => server.name === "eagerWithResource")?.tools,
+    [],
+  );
+  assert.equal(
+    snapshot.servers.find((server) => server.name === "eagerWithResource")?.resources.length,
+    1,
+  );
+  assert.equal(
+    snapshot.servers.find((server) => server.name === "eagerErrored")?.lastError,
+    "unauthorized",
+  );
+});
+
+test("buildMcpToolCatalogSnapshot ignores stale entries for removed or disabled servers", () => {
+  const registry = new McpRegistry();
+  const snapshot = buildMcpToolCatalogSnapshot(
+    [
+      {
+        server: "removed",
+        displayName: "Removed",
+        toolName: "search",
+        description: "Search",
+        inputSchema: { type: "object" },
+      },
+    ],
+    [{ server: "removed", uri: "mcp://doc", name: "doc" }],
+    registry,
+    {},
+  );
+  assert.equal(snapshot.totalToolCount, 0);
+  assert.equal(snapshot.totalResourceCount, 0);
+  assert.deepEqual(snapshot.servers, []);
 });

@@ -1,4 +1,4 @@
-import type { McpToolApprovalAnnotations } from "../mcp/types.js";
+import type { McpToolApprovalAnnotations, McpToolRequest } from "../mcp/types.js";
 import type { AuthorizationDecision } from "../ports.js";
 import { TOOL_CALL_TOOL_NAME, TOOL_DESCRIBE_TOOL_NAME } from "./definitions.js";
 import { parseLazyToolGatewayArguments } from "./parse.js";
@@ -64,6 +64,31 @@ export function authorizeLazyToolGatewayRequest(
       server: parsed.server,
       tool: parsed.tool,
       ...(parsed.arguments !== undefined ? { arguments: parsed.arguments } : {}),
+    },
+  };
+}
+
+export function authorizeMcpToolRequest(
+  request: McpToolRequest,
+  approvalLevel: LazyToolGatewayApprovalLevel,
+  mcpAnnotations?: McpToolApprovalAnnotations,
+): AuthorizationDecision {
+  if (approvalLevel === "bypass-approval") {
+    return { kind: "allowed" };
+  }
+  if (mcpToolCallSkipsApproval(mcpAnnotations)) {
+    return { kind: "allowed" };
+  }
+  return {
+    kind: "need-approval",
+    approval: {
+      kind: "lazy_tool_call",
+      provider: LAZY_TOOL_PROVIDER_MCP,
+      server: request.server,
+      tool: request.toolName,
+      ...(request.arguments !== undefined && request.arguments !== null
+        ? { arguments: request.arguments }
+        : {}),
     },
   };
 }

@@ -72,3 +72,70 @@ test("DesktopToolExecutor hides built-in create_automation in plan mode", () => 
   assert.ok(!toolNames.includes("tool_call"));
   assert.equal(toolExecutor.mcpToolCatalogSnapshot().builtInToolCount ?? 0, 0);
 });
+
+test("DesktopToolExecutor exposes eager MCP tools directly and enforces approval parity", async () => {
+  const mcp = new McpService(process.cwd(), false, {
+    configSource: {
+      scopeKey: "eager-test",
+      read: () => ({
+        user: {
+          servers: {
+            edge: {
+              displayName: "Edge",
+              lazyTools: false,
+              transport: { type: "http", url: "https://example.invalid/mcp" },
+            },
+          },
+        },
+        workspace: { servers: {} },
+      }),
+    },
+  });
+  await mcp.refreshConfig();
+  mcp.toolIndexStore = [
+    {
+      server: "edge",
+      displayName: "Edge",
+      toolName: "search",
+      description: "Search docs",
+      inputSchema: { type: "object", properties: { query: { type: "string" } } },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    {
+      server: "edge",
+      displayName: "Edge",
+      toolName: "execute",
+      description: "Execute code",
+      inputSchema: { type: "object", properties: { code: { type: "string" } } },
+    },
+  ];
+
+  const toolExecutor = new DesktopToolExecutor(process.cwd(), { mcp });
+  const toolNames = functionToolNames(toolExecutor.toolDefinitionsJson());
+  assert.ok(toolNames.includes("mcp__edge__search"));
+  assert.ok(toolNames.includes("mcp__edge__execute"));
+  assert.ok(!toolNames.includes("tool_describe"));
+  assert.ok(!toolNames.includes("tool_call"));
+
+  const readOnlyRequest = await toolExecutor.requestFromFunctionCall(
+    "mcp__edge__search",
+    JSON.stringify({ query: "dns" }),
+  );
+  assert.equal((await toolExecutor.authorize(readOnlyRequest)).kind, "allowed");
+
+  const execRequest = await toolExecutor.requestFromFunctionCall(
+    "mcp__edge__execute",
+    JSON.stringify({ code: "1 + 1" }),
+  );
+  const decision = await toolExecutor.authorize(execRequest);
+  assert.equal(decision.kind, "need-approval");
+  if (decision.kind === "need-approval") {
+    assert.deepEqual(decision.approval, {
+      kind: "lazy_tool_call",
+      provider: "mcp",
+      server: "edge",
+      tool: "execute",
+      arguments: { code: "1 + 1" },
+    });
+  }
+});

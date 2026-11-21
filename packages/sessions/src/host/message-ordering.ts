@@ -232,6 +232,16 @@ export function toolCallSummaryCopyForRequest(
   const ctx = phase ? phaseToVerbContext(phase) : undefined;
   const tOpts = ctx ? { context: ctx } : {};
 
+  if (record.kind === "mcpTool") {
+    const server = typeof record.server === "string" ? record.server.trim() : "";
+    const tool = typeof record.toolName === "string" ? record.toolName.trim() : "";
+    const detail = formatLazyToolCallDetail("mcp", server, tool);
+    return {
+      headline: i18n.t("tool.lazyCall", tOpts),
+      ...(detail ? { headlineDetail: truncateSummaryDetail(detail) } : {}),
+    };
+  }
+
   switch (toolName) {
     case "shell": {
       const reason = reasonForShellTool(toolName, request);
@@ -462,8 +472,12 @@ export function toolCallSummaryCopyForRequest(
       }
       return { headline: extensionToolName };
     }
-    default:
+    default: {
+      if (toolName.startsWith("mcp__")) {
+        return { headline: i18n.t("tool.lazyCall", tOpts) };
+      }
       return undefined;
+    }
   }
 }
 
@@ -1267,12 +1281,12 @@ export function toolCallSummaryForStreamingPreview(
     };
   }
 
-  if (toolName === "tool_call" || toolName === "tool_describe") {
+  if (toolName === "tool_call" || toolName === "tool_describe" || toolName.startsWith("mcp__")) {
     const tOpts = { context: "running" as const };
     return {
       headline: hasBlockingToolAheadOfSameTurnPreview(messages, toolCallId)
         ? i18n.t("tool.queued", { toolName })
-        : i18n.t(toolName === "tool_call" ? "tool.lazyCall" : "tool.lazyToolDescribe", tOpts),
+        : i18n.t(toolName === "tool_describe" ? "tool.lazyToolDescribe" : "tool.lazyCall", tOpts),
     };
   }
 

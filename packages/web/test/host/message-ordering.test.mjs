@@ -299,6 +299,33 @@ test("toolCallSummaryForPhase: built-in create_automation preserves automation c
   });
 });
 
+test("toolCallSummaryForPhase: eager mcpTool uses MCP call headline and formatted server/tool detail", () => {
+  const mcpRequest = {
+    kind: "mcpTool",
+    name: "edge/list_zones",
+    server: "edge",
+    displayName: "Edge",
+    toolName: "list_zones",
+    arguments: {},
+  };
+  assert.deepEqual(toolCallSummaryForPhase("running", "mcp__edge__list_zones", mcpRequest), {
+    headline: toolHeadline("tool.lazyCall", "running"),
+    headlineDetail: "Edge List Zones",
+  });
+  assert.deepEqual(
+    toolCallSummaryForStreamingPreview([], "call_mcp_1", "mcp__edge__list_zones", undefined),
+    {
+      headline: toolHeadline("tool.lazyCall", "running"),
+    },
+  );
+  assert.deepEqual(
+    toolCallSummaryForStreamingPreview([], "call_mcp_2", "mcp__edge__list_zones", { page: 1 }),
+    {
+      headline: toolHeadline("tool.lazyCall", "running"),
+    },
+  );
+});
+
 test("toolCallSummaryForStreamingPreview: built-in create_automation uses progressive streaming JSON", () => {
   const partialGateway =
     '{"provider":"built-in","server":"desktop","tool":"create_automation","arguments":{"title":"AI news digest","trigger":{"kind":"time","schedule":{"kind":"daily","hour":8,"minute":0}}}}';
