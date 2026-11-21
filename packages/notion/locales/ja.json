@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Notion",
+    "description": "ページやデータベースを扱います。",
+    "keywords": {
+      "pages": "ページ",
+      "databases": "データベース",
+      "docs": "ドキュメント"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "notion": {
+      "displayName": "Notion"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Notion"
+    }
+  },
+  "notion": {
+    "waiting": "ブラウザでの認証を待機中",
+    "openAuthorizationPage": "Notion 認証ページを開く",
+    "connected": "Notion に接続済み",
+    "disconnect": "切断"
+  },
+  "common": {
+    "cancel": "キャンセル"
+  }
+}

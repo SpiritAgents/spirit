@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Notion",
+    "description": "Работайте со страницами и базами данных.",
+    "keywords": {
+      "pages": "страницы",
+      "databases": "базы данных",
+      "docs": "документы"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "notion": {
+      "displayName": "Notion"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Notion"
+    }
+  },
+  "notion": {
+    "waiting": "Ожидание авторизации в браузере",
+    "openAuthorizationPage": "Открыть страницу авторизации Notion",
+    "connected": "Подключено к Notion",
+    "disconnect": "Отключить"
+  },
+  "common": {
+    "cancel": "Отмена"
+  }
+}

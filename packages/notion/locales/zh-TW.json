@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Notion",
+    "description": "處理頁面與資料庫。",
+    "keywords": {
+      "pages": "頁面",
+      "databases": "資料庫",
+      "docs": "文件"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "notion": {
+      "displayName": "Notion"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Notion"
+    }
+  },
+  "notion": {
+    "waiting": "等待瀏覽器授權",
+    "openAuthorizationPage": "開啟 Notion 授權頁面",
+    "connected": "已連接 Notion",
+    "disconnect": "中斷連接"
+  },
+  "common": {
+    "cancel": "取消"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Notion",
+    "description": "페이지와 데이터베이스를 다루세요.",
+    "keywords": {
+      "pages": "페이지",
+      "databases": "데이터베이스",
+      "docs": "문서"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "notion": {
+      "displayName": "Notion"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Notion"
+    }
+  },
+  "notion": {
+    "waiting": "브라우저 인증 대기 중",
+    "openAuthorizationPage": "Notion 인증 페이지 열기",
+    "connected": "Notion에 연결됨",
+    "disconnect": "연결 해제"
+  },
+  "common": {
+    "cancel": "취소"
+  }
+}
