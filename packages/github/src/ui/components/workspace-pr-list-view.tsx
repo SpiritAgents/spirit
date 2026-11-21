@@ -1,3 +1,4 @@
+import { GitPullRequest } from "lucide-react";
 import { Search } from "@spiritagent/icons/search";
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import {
@@ -12,6 +13,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@spiritagent/ui/button";
+import { EmptyCard } from "@spiritagent/ui/empty";
 import { DetailPageTabs } from "@spiritagent/ui/rendering/detail-page-tabs";
 import { Input } from "@spiritagent/ui/input";
 import { ScrollArea } from "@spiritagent/ui/scroll-area";
@@ -361,10 +363,19 @@ export const WorkspacePrListView = forwardRef<WorkspacePrListViewHandle, Workspa
         <div className="px-3 py-3 text-xs text-muted-foreground">
           {t("workspace.prListLoading")}
         </div>
-      ) : !loading && items.length === 0 ? (
+      ) : !loading && items.length === 0 && debouncedQuery ? (
         <div className="px-3 py-3 text-xs text-muted-foreground">
-          {debouncedQuery ? t("workspace.prListSearchEmpty") : t("workspace.prListEmpty")}
+          {t("workspace.prListSearchEmpty")}
         </div>
+      ) : !loading && items.length === 0 ? (
+        <EmptyCard
+          className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"
+          icon={<GitPullRequest strokeWidth={1.75} />}
+          title={t("workspace.prListEmpty")}
+          description={t("workspace.prListEmptyDescription", {
+            state: t(activeTab === "open" ? "workspace.prStateOpen" : "workspace.prStateClosed"),
+          })}
+        />
       ) : (
         <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1" type="auto">
           <div ref={listRef}>
@@ -403,7 +414,9 @@ export const WorkspacePrListView = forwardRef<WorkspacePrListViewHandle, Workspa
       );
 
     return (
-      <div className={cn("flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden", className)}>
+      <div
+        className={cn("relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden", className)}
+      >
         <div ref={searchBarRef} className="electron-no-drag shrink-0 px-1.5 py-1.5">
           <div className="relative min-w-0">
             <Search
