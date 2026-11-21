@@ -125,7 +125,7 @@
     "deleteHook": "フックを削除",
     "hooksConfigPath": "設定ファイル",
     "hooksDescription": "コマンドフックは、Agent のライフサイクルポイントでホストプロセスの権限でスクリプトを実行します。",
-    "hooksEmpty": "まだフックエントリがありません。",
+    "hooksEmpty": "フックなし",
     "hooksEvent": "イベント",
     "hooksCommand": "コマンド",
     "hooksTimeout": "タイムアウト（秒）",

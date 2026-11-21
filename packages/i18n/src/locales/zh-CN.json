@@ -125,7 +125,7 @@
     "deleteHook": "删除挂钩",
     "hooksConfigPath": "配置文件",
     "hooksDescription": "命令挂钩在 Agent 生命周期节点执行脚本；脚本以宿主进程权限运行。",
-    "hooksEmpty": "暂无挂钩条目。",
+    "hooksEmpty": "无挂钩",
     "hooksEvent": "事件",
     "hooksCommand": "命令",
     "hooksTimeout": "超时（秒）",

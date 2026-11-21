@@ -125,7 +125,7 @@
     "deleteHook": "Hook löschen",
     "hooksConfigPath": "Konfigurationsdatei",
     "hooksDescription": "Befehls-Hooks führen Skripte zu bestimmten Zeitpunkten im Agent-Lebenszyklus mit Host-Prozessrechten aus.",
-    "hooksEmpty": "Noch keine Hook-Einträge.",
+    "hooksEmpty": "Keine Hooks",
     "hooksEvent": "Ereignis",
     "hooksCommand": "Befehl",
     "hooksTimeout": "Zeitüberschreitung (Sekunden)",

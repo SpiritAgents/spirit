@@ -1,10 +1,11 @@
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Sparkles } from "lucide-react";
+import { Code2, Sparkles } from "lucide-react";
 import { product } from "@spiritagent/product";
 
 import { SettingsListItemHeading } from "@/components/settings/settings-list-item-heading";
+import { EmptyCard } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
 import { RovingFocusGroup, RovingFocusItem } from "@/components/ui/roving-focus-group";
 import { AlertDialog } from "@/components/ui/alert-dialog";
@@ -190,16 +191,18 @@ export function HooksSettingsPanel({
         </div>
       </div>
 
-      <RovingFocusGroup
-        orientation="vertical"
-        className={cn(DESKTOP_SETTINGS_CARD_SURFACE, "divide-y divide-settings-card-divider")}
-      >
-        {items.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-            {t("settings.hooksEmpty")}
-          </p>
-        ) : (
-          items.map((item) => (
+      {items.length === 0 ? (
+        <EmptyCard
+          className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"
+          icon={<Code2 strokeWidth={1.75} />}
+          title={t("settings.hooksEmpty")}
+        />
+      ) : (
+        <RovingFocusGroup
+          orientation="vertical"
+          className={cn(DESKTOP_SETTINGS_CARD_SURFACE, "divide-y divide-settings-card-divider")}
+        >
+          {items.map((item) => (
             <div
               key={item.id}
               className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
@@ -230,9 +233,9 @@ export function HooksSettingsPanel({
                 </Button>
               </RovingFocusItem>
             </div>
-          ))
-        )}
-      </RovingFocusGroup>
+          ))}
+        </RovingFocusGroup>
+      )}
 
       <AlertDialog
         open={deleteTarget !== null}

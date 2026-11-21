@@ -126,7 +126,7 @@
     "deleteHook": "Delete hook",
     "hooksConfigPath": "Config file",
     "hooksDescription": "Command hooks run scripts at Agent lifecycle points with host process privileges.",
-    "hooksEmpty": "No hook entries yet.",
+    "hooksEmpty": "No Hooks",
     "hooksEvent": "Event",
     "hooksCommand": "Command",
     "hooksTimeout": "Timeout (seconds)",

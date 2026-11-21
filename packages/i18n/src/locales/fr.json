@@ -125,7 +125,7 @@
     "deleteHook": "Supprimer le Hook",
     "hooksConfigPath": "Fichier de configuration",
     "hooksDescription": "Les Hooks de commande exécutent des scripts à des points du cycle de vie de l'Agent avec les privilèges du processus hôte.",
-    "hooksEmpty": "Aucune entrée de Hook pour l'instant.",
+    "hooksEmpty": "Aucun hook",
     "hooksEvent": "Événement",
     "hooksCommand": "Commande",
     "hooksTimeout": "Délai d'attente (secondes)",

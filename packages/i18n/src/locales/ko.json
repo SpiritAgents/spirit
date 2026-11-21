@@ -125,7 +125,7 @@
     "deleteHook": "훅 삭제",
     "hooksConfigPath": "설정 파일",
     "hooksDescription": "명령 훅은 Agent 라이프사이클 지점에서 호스트 프로세스 권한으로 스크립트를 실행합니다.",
-    "hooksEmpty": "아직 훅 항목이 없습니다.",
+    "hooksEmpty": "훅 없음",
     "hooksEvent": "이벤트",
     "hooksCommand": "명령",
     "hooksTimeout": "타임아웃(초)",

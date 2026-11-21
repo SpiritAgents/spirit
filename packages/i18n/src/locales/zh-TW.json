@@ -125,7 +125,7 @@
     "deleteHook": "刪除掛鉤",
     "hooksConfigPath": "設定檔",
     "hooksDescription": "命令掛鉤在 Agent 生命週期點以主機行程權限執行腳本。",
-    "hooksEmpty": "尚無掛鉤條目。",
+    "hooksEmpty": "無掛鉤",
     "hooksEvent": "事件",
     "hooksCommand": "命令",
     "hooksTimeout": "逾時 (秒)",
