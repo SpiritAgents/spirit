@@ -68,6 +68,7 @@ for (const name of packages.keys()) visit(name, [name]);
 const nodeDomains = new Set([
   "api",
   "automations",
+  "cloudflare",
   "code-completion",
   "config",
   "extensions",

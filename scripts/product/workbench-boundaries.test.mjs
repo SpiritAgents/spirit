@@ -8,6 +8,7 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 const domains = [
   "api",
   "automations",
+  "cloudflare",
   "code-completion",
   "config",
   "extensions",
