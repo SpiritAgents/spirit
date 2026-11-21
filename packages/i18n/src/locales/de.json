@@ -298,7 +298,7 @@
     "generateRuleTooltip": "Gehe zum Haupt-Chatbereich, gib /create-rule ein und beschreibe die Anforderungen in natürlicher Sprache",
     "generateRule": "Regel generieren",
     "newRule": "Neue Regel",
-    "noRulesFound": "Keine Regelplätze gefunden",
+    "rulesEmpty": "Keine Regeln",
     "ruleNotCreated": "Nicht erstellt",
     "deleteRule": "Regel löschen",
     "ruleDescPlaceholder": "Beschreibe kurz die durchzusetzenden Code-Einschränkungen",

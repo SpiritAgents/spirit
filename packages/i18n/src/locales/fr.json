@@ -298,7 +298,7 @@
     "generateRuleTooltip": "Aller dans la zone de chat principale, pré-remplir /create-rule et décrire les besoins en langage naturel",
     "generateRule": "Générer une règle",
     "newRule": "Nouvelle règle",
-    "noRulesFound": "Aucun emplacement de règle trouvé",
+    "rulesEmpty": "Aucune règle",
     "ruleNotCreated": "Non créée",
     "deleteRule": "Supprimer la règle",
     "ruleDescPlaceholder": "Décrivez brièvement les contraintes de codage à appliquer",

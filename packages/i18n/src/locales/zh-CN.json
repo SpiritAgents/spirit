@@ -298,7 +298,7 @@
     "generateRuleTooltip": "进入主对话区，预填 /create-rule，并直接用自然语言描述需求",
     "generateRule": "生成规则",
     "newRule": "新建规则",
-    "noRulesFound": "未发现规则槽位",
+    "rulesEmpty": "无规则",
     "ruleNotCreated": "未创建",
     "deleteRule": "删除规则",
     "ruleDescPlaceholder": "简要说明要约束的编码行为",

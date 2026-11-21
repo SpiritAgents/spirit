@@ -308,7 +308,7 @@
     "generateRuleTooltip": "Go to main chat area, prefill /create-rule, and describe requirements in natural language",
     "generateRule": "Generate Rule",
     "newRule": "New Rule",
-    "noRulesFound": "No rule slots found",
+    "rulesEmpty": "No Rules",
     "ruleNotCreated": "Not created",
     "deleteRule": "Delete Rule",
     "ruleDescPlaceholder": "Briefly describe the coding constraints to enforce",

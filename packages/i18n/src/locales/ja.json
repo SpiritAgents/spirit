@@ -298,7 +298,7 @@
     "generateRuleTooltip": "メインチャットエリアに移動し、/create-rule を入力して要件を自然言語で記述します",
     "generateRule": "ルールを生成",
     "newRule": "新規ルール",
-    "noRulesFound": "ルールスロットが見つかりません",
+    "rulesEmpty": "ルールなし",
     "ruleNotCreated": "未作成",
     "deleteRule": "ルールを削除",
     "ruleDescPlaceholder": "適用するコーディング制約を簡単に説明",
