@@ -1,6 +1,29 @@
 {
   "models": [
     {
+      "match": "gemini-4-neon(?:$|[-_.])",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh"],
+        "serviceTiers": {
+          "default": { "body": { "serviceTier": "standard" } },
+          "priority": { "body": { "serviceTier": "priority" } }
+        }
+      },
+      "note": "Gemini 4 Neon supports thinkingLevel low/medium/high/xhigh (neither minimal nor none). Flex inference is not listed as supported; standard and priority tiers are declared."
+    },
+    {
+      "match": "gemini-4-hydrogen(?:$|[-_.])",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh"],
+        "serviceTiers": {
+          "default": { "body": { "serviceTier": "standard" } },
+          "flex": { "body": { "serviceTier": "flex" } },
+          "priority": { "body": { "serviceTier": "priority" } }
+        }
+      },
+      "note": "Gemini 4 Hydrogen supports thinkingLevel low/medium/high/xhigh (neither minimal nor none) across standard, flex, and priority tiers."
+    },
+    {
       "match": "gemini-3\\.[78]\\S*flash",
       "declare": {
         "supportedReasoningEfforts": ["low", "medium", "high"],
@@ -49,7 +72,7 @@
       "note": "Gemini 2.5 Pro rejects thinkingBudget 0, so `none` is withheld; 2.5 Flash ids (lookahead) keep it."
     },
     {
-      "match": "gemini-",
+      "match": "gemini-(?!(?:omni|decision)(?:$|[-_.]))",
       "declare": {
         "supportedReasoningEfforts": ["none", "low", "medium", "high"],
         "serviceTiers": {
@@ -58,7 +81,7 @@
           "priority": { "body": { "serviceTier": "priority" } }
         }
       },
-      "note": "thinkingBudget-era Gemini (2.5 Flash, 2.0, …): none maps to thinkingBudget 0. The literal serviceTiers carry the Gemini serviceTier vocabulary (default maps to standard on the wire)."
+      "note": "thinkingBudget-era Gemini (2.5 Flash, 2.0, …): none maps to thinkingBudget 0. The literal serviceTiers carry the Gemini serviceTier vocabulary (default maps to standard on the wire). Non-chat Interactions/Decisions models (gemini-omni-*, gemini-decision-*) are excluded."
     }
   ]
 }

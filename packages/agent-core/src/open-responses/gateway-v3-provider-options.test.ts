@@ -164,6 +164,10 @@ test("google routes map the declared effort to the era's thinkingConfig", () => 
     { google: { thinkingConfig: { thinkingLevel: "low", includeThoughts: true } } },
   );
   assert.deepEqual(
+    buildGatewayV3ProviderOptions({ model: "google/gemini-4-neon", reasoningEffort: "xhigh" }),
+    { google: { thinkingConfig: { thinkingLevel: "xhigh", includeThoughts: true } } },
+  );
+  assert.deepEqual(
     buildGatewayV3ProviderOptions({ model: "google/gemini-2.5-flash", reasoningEffort: "none" }),
     { google: { thinkingConfig: { thinkingBudget: 0 } } },
   );

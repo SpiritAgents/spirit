@@ -116,6 +116,45 @@ test("Google Gemini 3 models map reasoning effort to thinkingLevel", async () =>
   }
 });
 
+test("Google Gemini 4 Neon maps xhigh reasoning effort to thinkingLevel xhigh", async () => {
+  let capturedBody: Record<string, unknown> | undefined;
+  setLlmFetchTransportOverrideForTests(async (_input, init) => {
+    capturedBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return new Response(JSON.stringify(googleGenerateContentResponse("GEMINI4_XHIGH_OK")), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  });
+
+  const transport = new AiSdkOpenAiCompatibleTransport();
+  try {
+    const result = await transport.startToolAgentRound(
+      {
+        apiKey: "test-key",
+        model: "gemini-4-neon",
+        baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+        sdk: "@ai-sdk/google",
+        reasoningEffort: "xhigh",
+        workspaceRoot: process.cwd(),
+      },
+      { messages: [{ role: "user", content: "hello" }], steps: 0 },
+      [],
+    );
+
+    assert.equal(result.kind, "success");
+    const generationConfig = capturedBody?.generationConfig;
+    assert.ok(
+      generationConfig && typeof generationConfig === "object" && !Array.isArray(generationConfig),
+    );
+    assert.deepEqual((generationConfig as Record<string, unknown>).thinkingConfig, {
+      thinkingLevel: "xhigh",
+      includeThoughts: true,
+    });
+  } finally {
+    setLlmFetchTransportOverrideForTests(undefined);
+  }
+});
+
 test("Google code-completion profile sends thinkingBudget 0 for Gemini 2.5", async () => {
   let capturedBody: Record<string, unknown> | undefined;
   setLlmFetchTransportOverrideForTests(async (_input, init) => {

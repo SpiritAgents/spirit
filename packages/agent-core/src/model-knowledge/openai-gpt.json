@@ -5,6 +5,20 @@
   },
   "models": [
     {
+      "match": "gpt-6\\.2-(?:astra|sol)(?:$|[-_])",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "supportedReasoningModes": ["standard", "pro"],
+        "serviceTiers": ["auto", "default", "fast", "ultrafast"]
+      },
+      "note": "GPT-6.2 Astra and Sol reject reasoning effort `none`, do not support Flex processing, and offer Fast and Ultrafast tiers. The Bedrock Mantle `openai.` form is deliberately not matched here, so Mantle ids fall through to the generic gpt-5.6+ record."
+    },
+    {
+      "match": "gpt-6-cyber(?:$|[-_])",
+      "declare": {},
+      "note": "GPT-6 Cyber (Daybreak Red gated access) shadows the generic gpt-5.6+ record so unconfirmed `none` effort and Flex/Fast tiers are not materialized; it keeps family default `applyPatch`."
+    },
+    {
       "match": "gpt-6-astra(?:$|[-_])",
       "declare": {
         "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],

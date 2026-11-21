@@ -9,35 +9,42 @@ test("meta parser enriches the sparse Muse catalog and excludes non-selector rol
     object: "list",
     data: [
       { id: "muse-wonder-1.0", object: "model", created: 1, owned_by: "meta" },
-      { id: "muse-spark-1.3", object: "model", created: 2, owned_by: "meta" },
+      { id: "muse-ember-1.0", object: "model", created: 2, owned_by: "meta" },
       {
-        id: "muse-spark-1.3-contributor",
+        id: "muse-ember-1.0-contributor",
         object: "model",
         created: 3,
         owned_by: "meta",
       },
-      { id: "muse-spark-1.2", object: "model", created: 4, owned_by: "meta" },
+      { id: "muse-spark-1.3", object: "model", created: 4, owned_by: "meta" },
       {
-        id: "muse-spark-1.2-contributor",
+        id: "muse-spark-1.3-contributor",
         object: "model",
         created: 5,
         owned_by: "meta",
       },
-      { id: "muse-spark-1.1", object: "model", created: 6, owned_by: "meta" },
+      { id: "muse-spark-1.2", object: "model", created: 6, owned_by: "meta" },
       {
-        id: "muse-spark-1.1-contributor",
+        id: "muse-spark-1.2-contributor",
         object: "model",
         created: 7,
         owned_by: "meta",
       },
-      { id: "muse-image-1.0", object: "model", created: 8, owned_by: "meta" },
+      { id: "muse-spark-1.1", object: "model", created: 8, owned_by: "meta" },
       {
-        id: "muse-voice-transcribe-1.0",
+        id: "muse-spark-1.1-contributor",
         object: "model",
         created: 9,
         owned_by: "meta",
       },
-      { id: "sam-3.1", object: "model", created: 10, owned_by: "meta" },
+      { id: "muse-image-1.0", object: "model", created: 10, owned_by: "meta" },
+      {
+        id: "muse-voice-transcribe-1.0",
+        object: "model",
+        created: 11,
+        owned_by: "meta",
+      },
+      { id: "sam-3.1", object: "model", created: 12, owned_by: "meta" },
     ],
   });
 
@@ -45,6 +52,7 @@ test("meta parser enriches the sparse Muse catalog and excludes non-selector rol
     entries.map((entry) => entry.id),
     [
       "muse-wonder-1.0",
+      "muse-ember-1.0",
       "muse-spark-1.3",
       "muse-spark-1.3-contributor",
       "muse-spark-1.2",
@@ -71,7 +79,25 @@ test("meta parser enriches the sparse Muse catalog and excludes non-selector rol
     "max",
   ]);
 
-  const spark = entries[1]!;
+  const ember = entries[1]!;
+  assert.equal(ember.displayName, "Muse Ember 1.0");
+  assert.equal(ember.contextLength, 1_048_576);
+  assert.equal(ember.supportsImageInput, true);
+  assert.equal(ember.supportsAudioInput, true);
+  assert.equal(ember.supportsDocumentInput, true);
+  assert.equal(ember.supportsVideoInput, true);
+  assert.equal(ember.supportsThinkingSwitch, false);
+  assert.equal(ember.dataPolicy, "standard");
+  assert.deepEqual(ember.supportedReasoningEfforts, [
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+  ]);
+
+  const spark = entries[2]!;
   assert.equal(spark.audioInputSupport, "partial");
   assert.deepEqual(spark.supportedReasoningEfforts, [
     "minimal",
@@ -81,7 +107,7 @@ test("meta parser enriches the sparse Muse catalog and excludes non-selector rol
     "xhigh",
     "max",
   ]);
-  const contributor = entries[2]!;
+  const contributor = entries[3]!;
   assert.equal(contributor.dataPolicy, "contributor");
   assert.equal(contributor.audioInputSupport, "partial");
   assert.deepEqual(contributor.supportedReasoningEfforts, [
@@ -91,8 +117,8 @@ test("meta parser enriches the sparse Muse catalog and excludes non-selector rol
     "high",
     "xhigh",
   ]);
-  assert.equal(entries[5]!.audioInputSupport, undefined);
-  assert.deepEqual(entries[5]!.supportedReasoningEfforts, [
+  assert.equal(entries[6]!.audioInputSupport, undefined);
+  assert.deepEqual(entries[6]!.supportedReasoningEfforts, [
     "minimal",
     "low",
     "medium",
@@ -100,13 +126,13 @@ test("meta parser enriches the sparse Muse catalog and excludes non-selector rol
     "xhigh",
   ]);
 
-  assert.deepEqual(entries[6], {
+  assert.deepEqual(entries[7], {
     id: "muse-image-1.0",
     displayName: "Muse Image 1.0",
     supportsImageGeneration: true,
   });
-  assert.equal(entries[6] && "description" in entries[6], false);
-  assert.equal(entries[6] && "pricing" in entries[6], false);
+  assert.equal(entries[7] && "description" in entries[7], false);
+  assert.equal(entries[7] && "pricing" in entries[7], false);
 });
 
 test("meta parser tolerates empty and malformed sparse listings", () => {

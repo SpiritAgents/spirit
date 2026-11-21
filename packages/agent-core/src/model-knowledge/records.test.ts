@@ -206,7 +206,15 @@ test("claude fable/mythos 5 are always-on thinking without a switch", () => {
     },
   };
   expectClaudeDeclaration(lookupModelKnowledge("claude-fable-5"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("claude-fable-5-1"), expected);
   expectClaudeDeclaration(lookupModelKnowledge("anthropic/claude-mythos-5"), expected);
+
+  // 5.2 adds native Fast mode while keeping the same always-on adaptive thinking contract.
+  const expected52 = { ...expected, serviceTiers: ["fast"] };
+  expectClaudeDeclaration(lookupModelKnowledge("claude-fable-5-2"), expected52);
+  expectClaudeDeclaration(lookupModelKnowledge("anthropic/claude-fable-5.2"), expected52);
+  expectClaudeDeclaration(lookupModelKnowledge("claude-mythos-5-2"), expected52);
+  expectClaudeDeclaration(lookupModelKnowledge("us.anthropic.claude-mythos-5-2-v1"), expected52);
 });
 
 test("claude opus 4.8/4.7 beat the legacy opus-4 record (record order priority)", () => {
@@ -591,6 +599,22 @@ test("gpt-6-astra rejects none and offers ultrafast; gpt-6.1-sol keeps none", ()
   });
 });
 
+test("gpt-6.2 astra/sol reject none and flex while offering fast and ultrafast", () => {
+  const expected = {
+    supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+    supportedReasoningModes: GPT56_MODES,
+    serviceTiers: ["auto", "default", "fast", "ultrafast"],
+  };
+  expectOpenAIDeclaration(lookupModelKnowledge("gpt-6.2-astra"), expected);
+  expectOpenAIDeclaration(lookupModelKnowledge("openai/gpt-6.2-sol"), expected);
+  expectOpenAIDeclaration(lookupModelKnowledge("gpt-6.2-sol-2026-11-17"), expected);
+});
+
+test("gpt-6-cyber shadows the generic gpt-5.6+ fallback without fabricating efforts or tiers", () => {
+  expectOpenAIDeclaration(lookupModelKnowledge("gpt-6-cyber"), {});
+  expectOpenAIDeclaration(lookupModelKnowledge("openai/gpt-6-cyber"), {});
+});
+
 test("bedrock mantle gpt ids hit the generic gpt-5.6+ record without astra/ultrafast specifics", () => {
   const expected = {
     supportedReasoningEfforts: GPT56_EFFORTS,
@@ -598,6 +622,7 @@ test("bedrock mantle gpt ids hit the generic gpt-5.6+ record without astra/ultra
     serviceTiers: ["auto", "default", "flex", "fast"],
   };
   expectOpenAIDeclaration(lookupModelKnowledge("openai.gpt-6-astra"), expected);
+  expectOpenAIDeclaration(lookupModelKnowledge("openai.gpt-6.2-astra"), expected);
   expectOpenAIDeclaration(lookupModelKnowledge("openai.gpt-5.6"), expected);
 });
 
@@ -634,6 +659,25 @@ test("gemini 3+ flash accepts minimal except 3.7/3.8 (record order priority)", (
   expectClaudeDeclaration(lookupModelKnowledge("google/gemini-3.8-flash-batch"), levelOnly);
   expectClaudeDeclaration(lookupModelKnowledge("google/gemini-3.1-pro-preview"), levelOnly);
   expectClaudeDeclaration(lookupModelKnowledge("google/gemini-4-argon"), levelOnly);
+  expectClaudeDeclaration(lookupModelKnowledge("google/gemini-4-carbon"), levelOnly);
+});
+
+test("gemini 4 neon and hydrogen expose xhigh; omni and decision ids do not hit the gemini fallback", () => {
+  expectClaudeDeclaration(lookupModelKnowledge("gemini-4-neon"), {
+    supportedReasoningEfforts: ["low", "medium", "high", "xhigh"],
+    serviceTiers: {
+      default: { body: { serviceTier: "standard" } },
+      priority: { body: { serviceTier: "priority" } },
+    },
+  });
+  expectClaudeDeclaration(lookupModelKnowledge("google/gemini-4-hydrogen"), {
+    supportedReasoningEfforts: ["low", "medium", "high", "xhigh"],
+    serviceTiers: GEMINI_SERVICE_TIERS,
+  });
+  assert.equal(lookupModelKnowledge("gemini-omni-1.2-flash"), undefined);
+  assert.equal(lookupModelKnowledge("google/gemini-omni-1.2-flash"), undefined);
+  assert.equal(lookupModelKnowledge("gemini-decision-1"), undefined);
+  assert.equal(lookupModelKnowledge("google/gemini-decision-1"), undefined);
 });
 
 test("muse spark 1.3 has max while 1.3-contributor and earlier sparks omit it", () => {
@@ -649,11 +693,13 @@ test("muse spark 1.3 has max while 1.3-contributor and earlier sparks omit it", 
   assert.equal(lookupModelKnowledge("meta/llama-4-scout"), undefined);
 });
 
-test("muse wonder always has max, including contributor builds", () => {
+test("muse wonder and ember include max across versions", () => {
   const withMax = { supportedReasoningEfforts: MUSE_EFFORTS_WITH_MAX };
   expectClaudeDeclaration(lookupModelKnowledge("muse-wonder-1.0"), withMax);
   expectClaudeDeclaration(lookupModelKnowledge("meta/muse-wonder-1.0"), withMax);
   expectClaudeDeclaration(lookupModelKnowledge("muse-wonder-1.0-contributor"), withMax);
+  expectClaudeDeclaration(lookupModelKnowledge("muse-ember-1.0"), withMax);
+  expectClaudeDeclaration(lookupModelKnowledge("meta/muse-ember-1.0"), withMax);
 });
 
 test("kimi k3 and k3.1 pro are thinking-only with fixed low/high/max efforts", () => {

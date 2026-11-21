@@ -1,6 +1,31 @@
 {
   "models": [
     {
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-(?:fable|mythos)-5[.-]2(?:$|[-_.])",
+      "declare": {
+        "effortSemantics": "output",
+        "supportedEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "high",
+        "thinkingCapabilities": {
+          "supported": true,
+          "types": { "adaptive": true, "betweenTools": false, "disabled": false, "enabled": false }
+        },
+        "supportsThinkingType": "only",
+        "supportsThinkingSwitch": false,
+        "serviceTiers": ["fast"],
+        "thinkingSwitch": {
+          "defaultState": "on",
+          "on": {
+            "body": { "thinking": { "type": "adaptive", "display": "summarized" } },
+            "providerOptions": {
+              "anthropic": { "thinking": { "type": "adaptive", "display": "summarized" } }
+            }
+          }
+        }
+      },
+      "note": "Fable/Mythos 5.2: five effort levels with high default; always-on adaptive thinking, summarized opt-in display, no off encoding, and native Fast mode."
+    },
+    {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-(?:fable|mythos)-5(?:$|[-_.])",
       "declare": {
         "effortSemantics": "output",

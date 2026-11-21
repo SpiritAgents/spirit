@@ -22,6 +22,7 @@ export function buildGeminiThinkingConfigForEffort(
       case "low":
       case "medium":
       case "high":
+      case "xhigh":
         return { thinkingLevel: effort, includeThoughts: true };
       default:
         return undefined;

@@ -330,10 +330,12 @@ function metaMuseLanguageModelEntry(
   const contributor = listed.id.endsWith("-contributor");
   const baseId = contributor ? listed.id.slice(0, -"-contributor".length) : listed.id;
   const wonder = baseId === "muse-wonder-1.0";
+  const ember = !contributor && baseId === "muse-ember-1.0";
   const sparkMatch = /^muse-spark-(\d+\.\d+)$/.exec(baseId);
   const sparkVersion = sparkMatch?.[1];
   if (
     !wonder &&
+    !ember &&
     (sparkVersion === undefined ||
       !META_MUSE_SPARK_VERSIONS.has(sparkVersion) ||
       (contributor && !META_MUSE_CONTRIBUTOR_VERSIONS.has(sparkVersion)))
@@ -341,14 +343,16 @@ function metaMuseLanguageModelEntry(
     return undefined;
   }
 
-  const family = wonder ? "Muse Wonder" : "Muse Spark";
-  const version = wonder ? "1.0" : sparkVersion!;
+  const family = wonder ? "Muse Wonder" : ember ? "Muse Ember" : "Muse Spark";
+  const version = wonder || ember ? "1.0" : sparkVersion!;
   return {
     ...listed,
     displayName: `${family} ${version}${contributor ? " Contributor" : ""}`,
     description: wonder
       ? "Meta's flagship Muse model for complex reasoning and multimodal understanding."
-      : "A fast Muse model for general reasoning and multimodal understanding.",
+      : ember
+        ? "A high-efficiency Muse model for reasoning and multimodal understanding."
+        : "A fast Muse model for general reasoning and multimodal understanding.",
     contextLength: 1_048_576,
     supportsImageInput: true,
     supportsAudioInput: true,
