@@ -175,15 +175,17 @@ jobs:
         with:
           components: clippy
 
-      - name: Cache Cargo
-        uses: actions/cache@v4
+      - name: Restore Cargo cache
+        id: cargo-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
+            ${{ runner.os }}-cargo-clippy-
             ${{ runner.os }}-cargo-
 
       - name: Install dependencies
@@ -191,6 +193,16 @@ jobs:
 
       - name: Clippy CLI (deny warnings)
         run: cargo clippy --all-targets -p spirit -- -D warnings
+
+      - name: Save Cargo cache
+        if: github.ref == 'refs/heads/main' && steps.cargo-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('Cargo.lock') }}
 
   rust-build-test:
     name: Rust Build and Test
@@ -215,15 +227,17 @@ jobs:
         with:
           components: rustfmt
 
-      - name: Cache Cargo
-        uses: actions/cache@v4
+      - name: Restore Cargo cache
+        id: cargo-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
+            ${{ runner.os }}-cargo-build-
             ${{ runner.os }}-cargo-
 
       - name: Install dependencies
@@ -248,3 +262,13 @@ jobs:
 
       - name: Test CLI
         run: cargo test -p spirit
+
+      - name: Save Cargo cache
+        if: github.ref == 'refs/heads/main' && steps.cargo-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('Cargo.lock') }}
