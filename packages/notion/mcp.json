@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "notion": {
+      "displayName": "Notion",
+      "transport": {
+        "type": "http",
+        "url": "https://mcp.notion.com/mcp",
+        "headers": {
+          "Authorization": "Bearer ${extension-secret:oauthCredentials:accessToken}"
+        }
+      }
+    }
+  }
+}

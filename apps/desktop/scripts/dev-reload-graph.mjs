@@ -12,6 +12,7 @@ const RENDERER_ONLY_PACKAGES = new Set([
 const EXTENSION_BUILD_PACKAGES = [
   "@spiritagent/github",
   "@spiritagent/linear",
+  "@spiritagent/notion",
   "@spiritagent/vercel",
 ];
 

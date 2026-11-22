@@ -78,6 +78,7 @@ const nodeDomains = new Set([
   "linear",
   "lsp",
   "mcp",
+  "notion",
   "permissions",
   "process",
   "remote-control",
@@ -92,6 +93,7 @@ const nodeDomains = new Set([
 const reactPresentationPaths = [
   /^packages\/github\/src\/ui\//u,
   /^packages\/linear\/src\/ui\//u,
+  /^packages\/notion\/src\/ui\//u,
   /^packages\/vercel\/src\/ui\//u,
   /^packages\/extensions\/src\/extension-ui-kit\//u,
   /^packages\/sessions\/src\/lib\//u,

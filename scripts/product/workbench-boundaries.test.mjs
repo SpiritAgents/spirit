@@ -19,6 +19,7 @@ const domains = [
   "linear",
   "lsp",
   "mcp",
+  "notion",
   "permissions",
   "process",
   "remote-control",

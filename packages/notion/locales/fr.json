@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Notion",
+    "description": "Travaillez avec vos pages et bases de données.",
+    "keywords": {
+      "pages": "pages",
+      "databases": "bases de données",
+      "docs": "documents"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "notion": {
+      "displayName": "Notion"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Notion"
+    }
+  },
+  "notion": {
+    "waiting": "En attente d'autorisation dans le navigateur",
+    "openAuthorizationPage": "Ouvrir la page d'autorisation Notion",
+    "connected": "Connecté à Notion",
+    "disconnect": "Déconnecter"
+  },
+  "common": {
+    "cancel": "Annuler"
+  }
+}

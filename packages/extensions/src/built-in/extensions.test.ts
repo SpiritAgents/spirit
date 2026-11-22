@@ -166,6 +166,44 @@ test("Linear is an opt-in built-in that contributes only its authorized MCP serv
   }
 });
 
+test("Notion is an opt-in built-in that contributes only its authorized MCP server", async () => {
+  const index = await readBuiltInMarketplaceIndex();
+  const notion = index.extensions.find((entry) => entry.name === "notion");
+  assert.ok(notion);
+  assert.equal(notion.defaultInstalled, false);
+  assert.equal(notion.icon, "extensions/notion/icon.svg");
+  assert.equal(readExtensionMessage(notion, notion.description, "zh-CN"), "处理页面与数据库。");
+  assert.deepEqual(Object.keys(notion.manifest.contributes ?? {}).sort(), [
+    "authorizations",
+    "desktop",
+    "mcp",
+  ]);
+  assert.ok(existsSync(join(resolveBuiltInRegistryRoot(), "extensions/notion/mcp.json")));
+
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-notion-opt-in-"));
+  try {
+    const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
+    const seeded = await ensureBuiltInExtensions({ spiritDataDir, hostKind: "desktop", manager });
+    assert.equal(
+      seeded.some((item) => item.id === "built-in/notion"),
+      false,
+    );
+    const installed = await installBuiltInExtension({
+      spiritDataDir,
+      hostKind: "desktop",
+      extensionId: "built-in/notion",
+    });
+    assert.equal(installed.id, "built-in/notion");
+    const listed = (await manager.list()).find((item) => item.id === "built-in/notion");
+    assert.deepEqual(
+      listed?.manifest.contributes?.authorizations?.map(({ id, action }) => ({ id, action })),
+      [{ id: "oauth", action: "authorize" }],
+    );
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+  }
+});
+
 test("Vercel is an opt-in built-in that contributes only its authorized MCP server", async () => {
   const index = await readBuiltInMarketplaceIndex();
   const vercel = index.extensions.find((entry) => entry.name === "vercel");

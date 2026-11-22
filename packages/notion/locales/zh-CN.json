@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Notion",
+    "description": "处理页面与数据库。",
+    "keywords": {
+      "pages": "页面",
+      "databases": "数据库",
+      "docs": "文档"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "notion": {
+      "displayName": "Notion"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Notion"
+    }
+  },
+  "notion": {
+    "waiting": "等待浏览器授权",
+    "openAuthorizationPage": "打开 Notion 授权页面",
+    "connected": "已连接 Notion",
+    "disconnect": "断开连接"
+  },
+  "common": {
+    "cancel": "取消"
+  }
+}

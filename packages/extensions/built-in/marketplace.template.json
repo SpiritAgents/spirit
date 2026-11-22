@@ -23,6 +23,13 @@
       "defaultInstalled": false
     },
     {
+      "name": "notion",
+      "source": "./extensions/notion",
+      "icon": "./extensions/notion/icon.svg",
+      "reviewStatus": "verified",
+      "defaultInstalled": false
+    },
+    {
       "name": "vercel",
       "source": "./extensions/vercel",
       "icon": "./extensions/vercel/icon.svg",
