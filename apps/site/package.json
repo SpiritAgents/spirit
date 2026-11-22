@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node ../../packages/product/scripts/run-quality.mjs dev pnpm run dev:run",
     "dev:run": "pnpm exec turbo run build --filter=\"@spiritagent/site^...\" && node scripts/generate-brand-assets.mjs && node scripts/generate-oauth-client.mjs && node scripts/dev.mjs",
-    "build": "pnpm --filter \"@spiritagent/site^...\" run build && node ../../scripts/product/generate-content.mjs --scope site && node scripts/generate-brand-assets.mjs && node scripts/generate-oauth-client.mjs && node scripts/generate-notice.mjs && node scripts/generate-install-scripts.mjs && tsx scripts/generate-markdown-companions.mjs && next build",
+    "build": "node ../../scripts/product/generate-content.mjs --scope site && node scripts/generate-brand-assets.mjs && node scripts/generate-oauth-client.mjs && node scripts/generate-notice.mjs && node scripts/generate-install-scripts.mjs && tsx scripts/generate-markdown-companions.mjs && next build",
+    "build:vercel": "pnpm --filter \"@spiritagent/site^...\" run build && pnpm run build",
     "start": "next start",
     "test": "node ../../scripts/product/generate-content.mjs --scope site && tsx --test scripts/*.test.ts",
     "test:og": "node scripts/og-route-smoke.mjs",
