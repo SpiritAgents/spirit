@@ -38,7 +38,7 @@
     "build:electron": "tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.cjs.json && node ./scripts/rename-preload-to-cjs.mjs && node ./scripts/build-native-appkit.mjs",
     "dist": "node scripts/gen-brand-assets.mjs && node scripts/ensure-packaged-ripgrep.mjs && pnpm run build:app && electron-builder --config electron-builder.config.mjs",
     "dist:dir": "node scripts/gen-brand-assets.mjs && node scripts/ensure-packaged-ripgrep.mjs && pnpm run build:app && electron-builder --config electron-builder.config.mjs --dir",
-    "test": "pnpm run test:lib && pnpm run test:host",
+    "test": "vitest run --config vitest.native.config.ts",
     "test:host": "pnpm --filter @spiritagent/web test",
     "test:lib": "pnpm run build:electron && vitest run --config vitest.native.config.ts",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
