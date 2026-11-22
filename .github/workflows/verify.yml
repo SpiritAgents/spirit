@@ -37,20 +37,50 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Restore Turbo cache
+        id: turbo-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .turbo/cache
+          key: ${{ runner.os }}-turbo-v1-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-v1-
+
       - name: Build TypeScript packages, Desktop, and site
-        run: pnpm turbo run build
+        run: |
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            pnpm turbo run build --summarize
+          else
+            pnpm turbo run build
+          fi
 
       - name: Run boundary checks and non-Vitest package tests
         run: pnpm run test:checks
 
       - name: Typecheck TypeScript packages (includes test files)
-        run: pnpm turbo run typecheck
+        run: |
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            pnpm turbo run typecheck --summarize
+          else
+            pnpm turbo run typecheck
+          fi
 
       - name: Lint TypeScript (Oxlint)
         run: pnpm exec oxlint --deny-warnings packages apps/desktop apps/site
 
       - name: Check TypeScript formatting (Oxfmt)
         run: pnpm exec oxfmt --check packages apps/desktop apps/site
+
+      - name: Prune Turbo cache
+        if: github.ref == 'refs/heads/main' && steps.turbo-cache.outputs.cache-hit != 'true'
+        run: node scripts/ci/prune-turbo-cache.mjs
+
+      - name: Save Turbo cache
+        if: github.ref == 'refs/heads/main' && steps.turbo-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .turbo/cache
+          key: ${{ runner.os }}-turbo-v1-${{ github.sha }}
 
   typescript-test-packages:
     name: TypeScript Tests (Packages)
@@ -72,6 +102,14 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Restore Turbo cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .turbo/cache
+          key: ${{ runner.os }}-turbo-v1-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-v1-
 
       - name: Build workspace packages and Desktop
         run: pnpm turbo run build --filter=!@spiritagent/site
@@ -99,6 +137,14 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Restore Turbo cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .turbo/cache
+          key: ${{ runner.os }}-turbo-v1-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-v1-
 
       - name: Build workspace packages and Desktop
         run: pnpm turbo run build --filter=!@spiritagent/site
@@ -129,15 +175,17 @@ jobs:
         with:
           components: clippy
 
-      - name: Cache Cargo
-        uses: actions/cache@v4
+      - name: Restore Cargo cache
+        id: cargo-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
+            ${{ runner.os }}-cargo-clippy-
             ${{ runner.os }}-cargo-
 
       - name: Install dependencies
@@ -145,6 +193,16 @@ jobs:
 
       - name: Clippy CLI (deny warnings)
         run: cargo clippy --all-targets -p spirit -- -D warnings
+
+      - name: Save Cargo cache
+        if: github.ref == 'refs/heads/main' && steps.cargo-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('Cargo.lock') }}
 
   rust-build-test:
     name: Rust Build and Test
@@ -169,19 +227,29 @@ jobs:
         with:
           components: rustfmt
 
-      - name: Cache Cargo
-        uses: actions/cache@v4
+      - name: Restore Cargo cache
+        id: cargo-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
+            ${{ runner.os }}-cargo-build-
             ${{ runner.os }}-cargo-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Restore Turbo cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .turbo/cache
+          key: ${{ runner.os }}-turbo-v1-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-v1-
 
       - name: Build Server and workspace dependencies
         run: pnpm turbo run build --filter=@spiritagent/server
@@ -194,3 +262,13 @@ jobs:
 
       - name: Test CLI
         run: cargo test -p spirit
+
+      - name: Save Cargo cache
+        if: github.ref == 'refs/heads/main' && steps.cargo-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('Cargo.lock') }}
