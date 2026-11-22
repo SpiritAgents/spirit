@@ -13,6 +13,7 @@
 /apps/desktop/build/icon.png
 /apps/desktop/build/icon.ico
 /apps/desktop/build/icon.icns
+/apps/desktop/build/.brand-assets-stamp.json
 /apps/desktop/.dev-electron/
 /apps/desktop/native/appkit/build/
 /apps/desktop/build/background.png

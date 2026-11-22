@@ -17,7 +17,8 @@
   "type": "module",
   "scripts": {
     "build:deps": "pnpm exec turbo run build --filter=\"@spiritagent/desktop^...\"",
-    "ensure:dev-built": "node scripts/gen-brand-assets.mjs && pnpm exec turbo run build:electron --filter=@spiritagent/desktop && node scripts/ensure-pty-spawn-helper.mjs && node scripts/ensure-dev-electron-bundle.mjs && pnpm run build:extension-ui",
+    "build:dev-deps": "node scripts/build-dev-deps.mjs",
+    "ensure:dev-built": "node scripts/gen-brand-assets.mjs && pnpm run build:dev-deps && pnpm run build:electron && node scripts/ensure-pty-spawn-helper.mjs && node scripts/ensure-dev-electron-bundle.mjs && pnpm run build:extension-ui",
     "postinstall": "node scripts/ensure-pty-spawn-helper.mjs",
     "dev": "node ../../packages/product/scripts/run-quality.mjs dev pnpm run dev:run",
     "dev:run": "pnpm run ensure:dev-built && concurrently -k --success command-electron -n electron,renderer,packages,tsc-electron,extension-ui \"pnpm run dev:electron:run\" \"pnpm run dev:renderer\" \"pnpm run watch:packages\" \"pnpm run watch:electron\" \"pnpm run dev:extension-ui\"",
