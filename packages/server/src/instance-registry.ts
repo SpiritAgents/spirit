@@ -97,7 +97,17 @@ export async function listInstances(
     if (!file.endsWith(".json")) {
       continue;
     }
-    const record = parseRecord(await readFile(join(instancesDir(dataDir), file), "utf8"));
+    let raw: string;
+    try {
+      raw = await readFile(join(instancesDir(dataDir), file), "utf8");
+    } catch (err) {
+      // A daemon shutting down concurrently may unregister its record between readdir and readFile.
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+        continue;
+      }
+      throw err;
+    }
+    const record = parseRecord(raw);
     if (!record) {
       continue;
     }
