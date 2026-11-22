@@ -10,6 +10,7 @@
  * matching the dmg comment in electron-builder.yml; adjust BG_BOTTOM_PAD when the design changes.
  */
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,10 +29,72 @@ const desktopRoot = path.resolve(__dirname, "..");
 const buildDir = path.join(desktopRoot, "build");
 const trayDir = path.join(buildDir, "tray");
 
-const brandAssetsDir = path.join(desktopRoot, "..", "..", "packages", "brand", "assets");
+const brandRoot = path.join(desktopRoot, "..", "..", "packages", "brand");
+const brandAssetsDir = path.join(brandRoot, "assets");
 const appIconSvg = path.join(brandAssetsDir, "logo-dark.svg");
 const appIconSvgSource = fs.readFileSync(appIconSvg, "utf8");
 const dmgBackgroundSvg = path.join(brandAssetsDir, "dmg-background.svg");
+const STAMP_FILE = path.join(buildDir, ".brand-assets-stamp.json");
+
+const BRAND_INPUT_FILES = [
+  appIconSvg,
+  dmgBackgroundSvg,
+  path.join(brandRoot, "src", "constants.js"),
+  path.join(brandRoot, "src", "optical-logo.js"),
+  fileURLToPath(import.meta.url),
+];
+
+export function expectedBrandAssetOutputs(rootDir = desktopRoot, platform = process.platform) {
+  const outBuildDir = path.join(rootDir, "build");
+  const outTrayDir = path.join(outBuildDir, "tray");
+  const outputs = [
+    path.join(outBuildDir, "icon.png"),
+    path.join(outBuildDir, "icon.ico"),
+    path.join(outTrayDir, "iconTemplate.png"),
+    path.join(outTrayDir, "iconTemplate@2x.png"),
+    path.join(outTrayDir, "iconTemplate-32.png"),
+    path.join(outBuildDir, "background.png"),
+    path.join(outBuildDir, "background@2x.png"),
+  ];
+  if (platform === "darwin") {
+    outputs.push(path.join(outBuildDir, "icon.icns"));
+  }
+  return outputs;
+}
+
+export function computeBrandAssetsStamp(
+  inputFiles = BRAND_INPUT_FILES,
+  platform = process.platform,
+) {
+  const hash = createHash("sha256");
+  hash.update(`platform:${platform}\0`);
+  for (const filePath of inputFiles) {
+    hash.update(path.basename(filePath));
+    hash.update("\0");
+    hash.update(fs.readFileSync(filePath));
+    hash.update("\0");
+  }
+  return { version: 1, platform, inputHash: hash.digest("hex") };
+}
+
+export function isBrandAssetsUpToDate({
+  stampFile = STAMP_FILE,
+  expectedOutputs = expectedBrandAssetOutputs(),
+  stamp = computeBrandAssetsStamp(),
+} = {}) {
+  if (!fs.existsSync(stampFile)) return false;
+  if (!expectedOutputs.every((filePath) => fs.existsSync(filePath))) return false;
+  try {
+    const previous = JSON.parse(fs.readFileSync(stampFile, "utf8"));
+    return (
+      previous?.version === stamp.version &&
+      previous?.platform === stamp.platform &&
+      previous?.inputHash === stamp.inputHash
+    );
+  } catch {
+    return false;
+  }
+}
 
 const ICO_SIZES = [16, 32, 48, 256];
 /** Apple iconset slots; keep the canvas square and opaque so Dock/Finder apply the system squircle. */
@@ -155,8 +218,20 @@ async function genDmgBackground() {
   }
 }
 
-fs.mkdirSync(buildDir, { recursive: true });
-await genPackagerIcons();
-await genMacIcns();
-await genTrayIcons();
-await genDmgBackground();
+async function main() {
+  const stamp = computeBrandAssetsStamp();
+  if (isBrandAssetsUpToDate({ stamp })) {
+    console.log("[brand-assets] already up to date");
+    return;
+  }
+  fs.mkdirSync(buildDir, { recursive: true });
+  await genPackagerIcons();
+  await genMacIcns();
+  await genTrayIcons();
+  await genDmgBackground();
+  fs.writeFileSync(STAMP_FILE, `${JSON.stringify(stamp, null, 2)}\n`);
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await main();
+}

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp } from "node:fs/promises";
+import { mkdir, mkdtemp, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "vitest";
@@ -79,6 +79,31 @@ describe("instance-registry", () => {
       instances.map((instance) => instance.instanceId),
       ["ok"],
     );
+  });
+
+  it("ignores records that vanish between readdir and readFile", async () => {
+    const dir = await freshDataDir();
+    await registerInstance(dir, record({ instanceId: "alive" }));
+    try {
+      // A dangling symlink is returned by readdir and fails readFile with ENOENT,
+      // deterministically reproducing a concurrent unregisterInstance race.
+      await symlink(join(dir, "missing-target.json"), instanceFilePath(dir, "vanished"));
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EPERM") {
+        throw err;
+      }
+    }
+    const instances = await listInstances(dir);
+    assert.deepEqual(
+      instances.map((instance) => instance.instanceId),
+      ["alive"],
+    );
+  });
+
+  it("propagates non-ENOENT read errors from record entries", async () => {
+    const dir = await freshDataDir();
+    await mkdir(instanceFilePath(dir, "unreadable-dir"), { recursive: true });
+    await assert.rejects(() => listInstances(dir), { code: "EISDIR" });
   });
 
   it("isProcessAlive detects self and rejects invalid pids", () => {

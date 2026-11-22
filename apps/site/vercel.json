@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
   "installCommand": "pnpm install --filter @spiritagent/site...",
-  "buildCommand": "pnpm run build"
+  "buildCommand": "pnpm run build:vercel"
 }

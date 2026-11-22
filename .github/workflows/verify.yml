@@ -13,8 +13,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  typescript:
-    name: TypeScript
+  typescript-build:
+    name: TypeScript Build and Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,17 +34,14 @@ jobs:
           node-version-file: ".nvmrc"
           cache: pnpm
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build TypeScript packages, Desktop, and site
         run: pnpm turbo run build
 
-      - name: Test TypeScript packages and Desktop (Vitest)
-        run: pnpm test
+      - name: Run boundary checks and non-Vitest package tests
+        run: pnpm run test:checks
 
       - name: Typecheck TypeScript packages (includes test files)
         run: pnpm turbo run typecheck
@@ -54,6 +51,60 @@ jobs:
 
       - name: Check TypeScript formatting (Oxfmt)
         run: pnpm exec oxfmt --check packages apps/desktop apps/site
+
+  typescript-test-packages:
+    name: TypeScript Tests (Packages)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages and Desktop
+        run: pnpm turbo run build --filter=!@spiritagent/site
+
+      - name: Test packages and Desktop (Vitest)
+        run: pnpm exec vitest run --project='!@spiritagent/web'
+
+  typescript-test-web:
+    name: TypeScript Tests (Web)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages and Desktop
+        run: pnpm turbo run build --filter=!@spiritagent/site
+
+      - name: Test Web renderer and host (Vitest)
+        run: pnpm exec vitest run --project=@spiritagent/web
 
   rust-clippy:
     name: Rust Clippy

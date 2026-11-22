@@ -81,10 +81,12 @@ pnpm run dev:web      # Browser UI + local web host
 Other useful scripts:
 
 ```bash
-pnpm run build        # Production renderer + Electron main/preload
+pnpm run build:app    # Production renderer + Electron main/preload (via Turbo)
+pnpm run build        # Electron main/preload only (used by Turbo ^build)
 pnpm run dist         # Build and package installers (electron-builder)
-pnpm run test:lib     # Renderer/unit tests
-pnpm run test:host    # Host service tests
+pnpm run test         # Electron shell tests (requires dist-electron)
+pnpm run test:lib     # Build Electron shell and run its tests
+pnpm run test:host    # Shared web renderer and host tests (@spiritagent/web)
 ```
 
 ## Project layout

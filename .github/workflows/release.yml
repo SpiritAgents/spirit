@@ -289,7 +289,7 @@ jobs:
         run: pnpm install --frozen-lockfile --cpu=x64 --cpu=arm64
 
       - name: Build Desktop
-        run: pnpm --filter @spiritagent/desktop run build
+        run: pnpm run build:desktop
 
       - name: Generate brand assets
         working-directory: apps/desktop
