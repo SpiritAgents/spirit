@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Linear",
+    "description": "Gestiona incidencias y proyectos.",
+    "keywords": {
+      "issues": "incidencias",
+      "projects": "proyectos",
+      "cycles": "ciclos"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "linear": {
+      "displayName": "Linear"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Linear"
+    }
+  },
+  "linear": {
+    "waiting": "Esperando la autorización en el navegador",
+    "openAuthorizationPage": "Abrir la página de autorización de Linear",
+    "connected": "Conectado a Linear",
+    "disconnect": "Desconectar"
+  },
+  "common": {
+    "cancel": "Cancelar"
+  }
+}

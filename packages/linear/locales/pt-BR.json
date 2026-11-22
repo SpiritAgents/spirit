@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Linear",
+    "description": "Gerencie issues e projetos.",
+    "keywords": {
+      "issues": "issues",
+      "projects": "projetos",
+      "cycles": "ciclos"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "linear": {
+      "displayName": "Linear"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Linear"
+    }
+  },
+  "linear": {
+    "waiting": "Aguardando autorização no navegador",
+    "openAuthorizationPage": "Abrir página de autorização do Linear",
+    "connected": "Conectado ao Linear",
+    "disconnect": "Desconectar"
+  },
+  "common": {
+    "cancel": "Cancelar"
+  }
+}

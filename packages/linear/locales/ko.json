@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Linear",
+    "description": "이슈와 프로젝트를 다루세요.",
+    "keywords": {
+      "issues": "이슈",
+      "projects": "프로젝트",
+      "cycles": "사이클"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "linear": {
+      "displayName": "Linear"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Linear"
+    }
+  },
+  "linear": {
+    "waiting": "브라우저 인증 대기 중",
+    "openAuthorizationPage": "Linear 인증 페이지 열기",
+    "connected": "Linear에 연결됨",
+    "disconnect": "연결 해제"
+  },
+  "common": {
+    "cancel": "취소"
+  }
+}

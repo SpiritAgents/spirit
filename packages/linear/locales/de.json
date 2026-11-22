@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Linear",
+    "description": "Mit Issues und Projekten arbeiten.",
+    "keywords": {
+      "issues": "Issues",
+      "projects": "Projekte",
+      "cycles": "Zyklen"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "linear": {
+      "displayName": "Linear"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Linear"
+    }
+  },
+  "linear": {
+    "waiting": "Warte auf Autorisierung im Browser",
+    "openAuthorizationPage": "Linear-Autorisierungsseite öffnen",
+    "connected": "Mit Linear verbunden",
+    "disconnect": "Trennen"
+  },
+  "common": {
+    "cancel": "Abbrechen"
+  }
+}

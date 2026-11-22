@@ -75,6 +75,7 @@ const nodeDomains = new Set([
   "hooks",
   "http",
   "instructions",
+  "linear",
   "lsp",
   "mcp",
   "permissions",
@@ -90,6 +91,7 @@ const nodeDomains = new Set([
 ]);
 const reactPresentationPaths = [
   /^packages\/github\/src\/ui\//u,
+  /^packages\/linear\/src\/ui\//u,
   /^packages\/vercel\/src\/ui\//u,
   /^packages\/extensions\/src\/extension-ui-kit\//u,
   /^packages\/sessions\/src\/lib\//u,

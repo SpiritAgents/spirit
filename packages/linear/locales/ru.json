@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Linear",
+    "description": "Работайте с задачами и проектами.",
+    "keywords": {
+      "issues": "задачи",
+      "projects": "проекты",
+      "cycles": "циклы"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "linear": {
+      "displayName": "Linear"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Linear"
+    }
+  },
+  "linear": {
+    "waiting": "Ожидание авторизации в браузере",
+    "openAuthorizationPage": "Открыть страницу авторизации Linear",
+    "connected": "Подключено к Linear",
+    "disconnect": "Отключить"
+  },
+  "common": {
+    "cancel": "Отмена"
+  }
+}
