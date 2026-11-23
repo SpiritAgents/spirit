@@ -1554,5 +1554,26 @@
       "pairingRequired": "Сначала завершите первоначальное сопряжение.",
       "invalidProvider": "Недопустимый аргумент поставщика."
     }
+  },
+  "mcpApp": {
+    "loading": "Загрузка приложения…",
+    "loadFailed": "Не удалось загрузить приложение",
+    "retry": "Повторить",
+    "sandboxUnavailable": "Песочница MCP App недоступна в этом хосте.",
+    "pictureInPicture": "Картинка в картинке",
+    "fullscreen": "На весь экран",
+    "returnInline": "Вернуть в поток",
+    "dockedInPip": "Закреплено в режиме «Картинка в картинке»",
+    "viewingInFullscreen": "Открыто на весь экран",
+    "draftConflictTitle": "В поле ввода есть черновик",
+    "draftConflictDescription": "{{app}} хочет подставить сообщение, но в поле ввода уже есть текст. Выберите действие.",
+    "appendDraft": "Добавить в конец",
+    "replaceDraft": "Заменить черновик",
+    "openExternalLinkTitle": "Открыть внешнюю ссылку",
+    "openExternalLinkDescription": "{{app}} пытается открыть ссылку за пределами объявленных доменов. Проверьте URL перед переходом.",
+    "openLink": "Открыть ссылку",
+    "toolApprovalTitle": "Подтвердить вызов инструмента MCP App",
+    "toolApprovalDescription": "{{app}} запрашивает выполнение {{tool}} на {{server}}. Проверьте аргументы перед продолжением.",
+    "toolApprovalAllow": "Запустить инструмент"
   }
 }

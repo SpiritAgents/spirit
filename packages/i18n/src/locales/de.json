@@ -1544,5 +1544,26 @@
       "pairingRequired": "Schließen Sie zuerst die Erstkoppelung ab.",
       "invalidProvider": "Ungültiges Anbieterargument."
     }
+  },
+  "mcpApp": {
+    "loading": "App wird geladen…",
+    "loadFailed": "App konnte nicht geladen werden",
+    "retry": "Erneut versuchen",
+    "sandboxUnavailable": "Die MCP-App-Sandbox ist in diesem Host nicht verfügbar.",
+    "pictureInPicture": "Bild-in-Bild",
+    "fullscreen": "Vollbild",
+    "returnInline": "Inline zurückkehren",
+    "dockedInPip": "Im Bild-in-Bild angedockt",
+    "viewingInFullscreen": "Vollbildansicht aktiv",
+    "draftConflictTitle": "Entwurf im Eingabefeld vorhanden",
+    "draftConflictDescription": "{{app}} möchte eine Nachricht vorausfüllen, aber das Eingabefeld enthält bereits Text. Wählen Sie, wie er übernommen werden soll.",
+    "appendDraft": "Anhängen",
+    "replaceDraft": "Entwurf ersetzen",
+    "openExternalLinkTitle": "Externen Link öffnen",
+    "openExternalLinkDescription": "{{app}} möchte einen Link außerhalb der deklarierten Ursprünge öffnen. Prüfen Sie die URL, bevor Sie fortfahren.",
+    "openLink": "Link öffnen",
+    "toolApprovalTitle": "MCP-App-Tool-Aufruf genehmigen",
+    "toolApprovalDescription": "{{app}} möchte {{tool}} auf {{server}} ausführen. Prüfen Sie die Argumente, bevor Sie fortfahren.",
+    "toolApprovalAllow": "Tool ausführen"
   }
 }

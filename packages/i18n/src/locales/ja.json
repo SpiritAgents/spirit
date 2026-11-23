@@ -1544,5 +1544,26 @@
       "pairingRequired": "最初のペアリングを完了してください。",
       "invalidProvider": "プロバイダーの引数が無効です。"
     }
+  },
+  "mcpApp": {
+    "loading": "アプリを読み込み中…",
+    "loadFailed": "アプリの読み込みに失敗しました",
+    "retry": "再試行",
+    "sandboxUnavailable": "このホストでは MCP App サンドボックスを利用できません。",
+    "pictureInPicture": "ピクチャ イン ピクチャ",
+    "fullscreen": "全画面表示",
+    "returnInline": "インラインに戻す",
+    "dockedInPip": "ピクチャ イン ピクチャで表示中",
+    "viewingInFullscreen": "全画面で表示中",
+    "draftConflictTitle": "入力欄に下書きがあります",
+    "draftConflictDescription": "{{app}} がメッセージを入力欄に設定しようとしていますが、すでにテキストがあります。適用方法を選択してください。",
+    "appendDraft": "追記",
+    "replaceDraft": "下書きを置換",
+    "openExternalLinkTitle": "外部リンクを開く",
+    "openExternalLinkDescription": "{{app}} が宣言されたオリジン外のリンクを開こうとしています。続行する前に URL を確認してください。",
+    "openLink": "リンクを開く",
+    "toolApprovalTitle": "MCP App ツール呼び出しを承認",
+    "toolApprovalDescription": "{{app}} が {{server}} 上で {{tool}} を実行しようとしています。続行する前に引数を確認してください。",
+    "toolApprovalAllow": "ツールを実行"
   }
 }

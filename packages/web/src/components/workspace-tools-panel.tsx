@@ -16,7 +16,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { FileText, GitBranch, Maximize2, Minimize2, Terminal } from "lucide-react";
+import { FileText, GitBranch, Maximize2, Minimize2, Plug, Terminal } from "lucide-react";
 import {
   NewToolTabShortcutKbd,
   WorkspaceToolsFullScreenShortcutKbd,
@@ -77,6 +77,7 @@ import {
   useWorkspaceToolsNewChatChrome,
 } from "@/contexts/workspace-tools-chrome-context";
 import { useSessionSidebarChrome } from "@/contexts/session-sidebar-chrome-context";
+import { useMcpAppWorkspaceTabBridge } from "@/contexts/mcp-app-contexts";
 import { setWorkspacePanelRegionActive } from "@/lib/desktop-keyboard-shortcut-eligibility";
 import { isDarwinElectronShell } from "@/lib/desktop-shell";
 
@@ -128,6 +129,23 @@ const TAB_KIND_META: Record<WorkspaceToolTabKind, { labelKey: string; icon: type
   browser: { labelKey: "workspace.browser", icon: Globe },
   task: { labelKey: "workspace.taskTab", icon: Terminal },
 };
+
+const McpAppWorkspaceTabHost = memo(function McpAppWorkspaceTabHost({
+  instanceKey,
+  appKey,
+}: {
+  instanceKey: string;
+  appKey: string;
+}) {
+  const bridge = useMcpAppWorkspaceTabBridge();
+  const handleRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      bridge?.setTabHostElement(instanceKey, node);
+    },
+    [bridge, instanceKey],
+  );
+  return <div ref={handleRef} data-spirit-mcp-app-tab-host={appKey} className="h-full w-full" />;
+});
 
 export type WorkspaceToolsDockProps = {
   /** Resolved workspace root path; empty string while not ready */
@@ -560,6 +578,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
 }: WorkspaceToolsDockContentProps) {
   const { t, i18n } = useTranslation();
   const { openTools, toggleFullScreen } = useWorkspaceToolsChromeActions();
+  const mcpAppTabBridge = useMcpAppWorkspaceTabBridge();
   const workspaceToolsOpen = useWorkspaceToolsChromeOpen();
   const workspaceToolsFullScreen = useWorkspaceToolsChromeFullScreen();
   const hasNewChatChrome = useWorkspaceToolsNewChatChrome();
@@ -669,6 +688,10 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
 
   const performCloseTab = useCallback(
     (closeId: string) => {
+      const closing = tabs.find((item) => item.id === closeId);
+      if (closing?.kind === "mcp-app") {
+        mcpAppTabBridge?.notifyTabClosedByUser(closing.instanceKey);
+      }
       const next = closeWorkspaceToolTab(tabs, activeTabId, closeId, {
         includeBrowser: browserTabEnabled,
       });
@@ -683,7 +706,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
         return updated;
       });
     },
-    [activeTabId, browserTabEnabled, onActiveTabIdChange, onTabsChange, tabs],
+    [activeTabId, browserTabEnabled, mcpAppTabBridge, onActiveTabIdChange, onTabsChange, tabs],
   );
 
   const handleCloseTab = useCallback(
@@ -833,6 +856,22 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
               className="flex items-center gap-1"
             >
               {tabs.map((item) => {
+                if (item.kind === "mcp-app") {
+                  if (!isWorkspaceToolTabVisibleInContext(item, { workspaceRoot, sessionKey })) {
+                    return null;
+                  }
+                  return (
+                    <WorkspaceToolTabChip
+                      key={item.id}
+                      tab={item}
+                      icon={Plug}
+                      label={item.tabTitle}
+                      selected={item.id === activeTabId}
+                      onSelect={onActiveTabIdChange}
+                      onClose={handleCloseTab}
+                    />
+                  );
+                }
                 if (item.kind === "extension") {
                   if (!isWorkspaceToolTabVisibleInContext(item, { workspaceRoot, sessionKey })) {
                     return null;
@@ -1023,6 +1062,28 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
         aria-live="polite"
       >
         {tabs.map((item) => {
+          if (item.kind === "mcp-app") {
+            const selected =
+              item.id === activeTabId &&
+              isWorkspaceToolTabVisibleInContext(item, { workspaceRoot, sessionKey });
+            return (
+              <div
+                key={item.id}
+                id={`workspace-tool-panel-${item.id}`}
+                role="tabpanel"
+                aria-labelledby={`workspace-tool-tab-${item.id}`}
+                data-spirit-mcp-app-tab-panel={item.appKey}
+                inert={!selected}
+                aria-hidden={!selected}
+                className={cn(
+                  "absolute inset-0 flex min-h-0 flex-col overflow-hidden bg-background",
+                  !selected && "pointer-events-none invisible",
+                )}
+              >
+                <McpAppWorkspaceTabHost instanceKey={item.instanceKey} appKey={item.appKey} />
+              </div>
+            );
+          }
           if (item.kind === "extension") {
             const entry = extensionContributions.find(
               (candidate) =>

@@ -92,9 +92,12 @@ function AnimatedCollapseTrigger({ className, children, ...props }: ComponentPro
 
 function AnimatedCollapseContent({
   className,
+  keepMounted = false,
   children,
 }: {
   className?: string;
+  /** Keep children mounted in the DOM while collapsed (e.g. live iframes whose state must survive collapse/expand). */
+  keepMounted?: boolean;
   children: ReactNode;
 }) {
   const { open, contentId } = useAnimatedCollapseContext("AnimatedCollapseContent");
@@ -111,12 +114,15 @@ function AnimatedCollapseContent({
   // Once settled, height is content-driven and nested animations propagate in the same frame through
   // pure layout.
   const [expandSettled, setExpandSettled] = useState(false);
-  const mounted = useCollapsibleChildMount(open);
+  const [collapseSettled, setCollapseSettled] = useState(!open);
+  const collapsibleMounted = useCollapsibleChildMount(open);
+  const mounted = keepMounted || collapsibleMounted;
 
   if (previousOpen !== open) {
     setPreviousOpen(open);
     setAllowAnimation(true);
     setExpandSettled(false);
+    setCollapseSettled(false);
   }
   if (open && !hasOpened) {
     setHasOpened(true);
@@ -185,9 +191,16 @@ function AnimatedCollapseContent({
       id={contentId}
       data-slot="animated-collapse-content"
       data-state={open ? "open" : "closed"}
+      inert={!open}
+      aria-hidden={!open}
       onAnimationEnd={(event) => {
-        if (open && event.target === outerRef.current) {
+        if (event.target !== outerRef.current) {
+          return;
+        }
+        if (open) {
           setExpandSettled(true);
+        } else {
+          setCollapseSettled(true);
         }
       }}
       className={cn(
@@ -198,12 +211,13 @@ function AnimatedCollapseContent({
           "animate-spirit-collapsible-down data-[state=open]:[animation-fill-mode:forwards]",
         shouldAnimate &&
           !open &&
+          !collapseSettled &&
           "animate-spirit-collapsible-up data-[state=closed]:[animation-fill-mode:forwards]",
-        !open && !shouldAnimate && "h-0 opacity-0",
+        !open && (!shouldAnimate || collapseSettled) && "h-0 opacity-0",
         className,
       )}
       style={
-        !open && !shouldAnimate
+        !open && (!shouldAnimate || collapseSettled)
           ? ({ "--spirit-collapsible-content-height": "0px" } as CSSProperties)
           : undefined
       }

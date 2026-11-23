@@ -1544,5 +1544,26 @@
       "pairingRequired": "需要先完成首次配對。",
       "invalidProvider": "無效的提供商參數。"
     }
+  },
+  "mcpApp": {
+    "loading": "正在載入應用程式…",
+    "loadFailed": "應用程式載入失敗",
+    "retry": "重試",
+    "sandboxUnavailable": "目前宿主未啟用 MCP App 沙箱。",
+    "pictureInPicture": "子母畫面",
+    "fullscreen": "全螢幕",
+    "returnInline": "返回行內",
+    "dockedInPip": "已停駐於子母畫面",
+    "viewingInFullscreen": "正在全螢幕檢視",
+    "draftConflictTitle": "輸入框已有草稿",
+    "draftConflictDescription": "{{app}} 希望預填訊息到輸入框，但目前輸入框已有內容。請選擇處理方式。",
+    "appendDraft": "附加",
+    "replaceDraft": "取代草稿",
+    "openExternalLinkTitle": "開啟外部連結",
+    "openExternalLinkDescription": "{{app}} 請求開啟其宣告來源之外的連結。繼續前請先確認網址。",
+    "openLink": "開啟連結",
+    "toolApprovalTitle": "核准 MCP App 工具呼叫",
+    "toolApprovalDescription": "{{app}} 請求在 {{server}} 上執行 {{tool}}。繼續前請先確認參數。",
+    "toolApprovalAllow": "執行工具"
   }
 }

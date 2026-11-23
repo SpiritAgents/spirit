@@ -35,6 +35,7 @@ type WorkspaceToolsChromeActions = {
   setOpen: (updater: boolean | ((current: boolean) => boolean)) => void;
   toggle(): void;
   openTools(): void;
+  enterFullScreen(): void;
   toggleFullScreen(): void;
   dismissForNewChat(): void;
   registerNewChatChrome(): () => void;
@@ -50,6 +51,7 @@ export type WorkspaceToolsChromeApi = {
   open: boolean;
   fullScreen: boolean;
   toggle(): void;
+  enterFullScreen(): void;
   toggleFullScreen(): void;
   setOpen: (updater: boolean | ((current: boolean) => boolean)) => void;
   dismissForNewChat(): void;
@@ -205,6 +207,9 @@ export function WorkspaceToolsChromeProvider({
   );
 
   const enterFullScreen = useCallback(() => {
+    if (fullScreenRef.current) {
+      return;
+    }
     const wasOpen = openRef.current;
     restoreOpenRef.current = wasOpen;
     writeWorkspaceToolsFullScreen(true);
@@ -306,11 +311,20 @@ export function WorkspaceToolsChromeProvider({
       setOpen,
       toggle,
       openTools,
+      enterFullScreen,
       toggleFullScreen,
       dismissForNewChat,
       registerNewChatChrome,
     }),
-    [dismissForNewChat, openTools, registerNewChatChrome, setOpen, toggle, toggleFullScreen],
+    [
+      dismissForNewChat,
+      enterFullScreen,
+      openTools,
+      registerNewChatChrome,
+      setOpen,
+      toggle,
+      toggleFullScreen,
+    ],
   );
 
   useEffect(() => {
@@ -319,12 +333,22 @@ export function WorkspaceToolsChromeProvider({
         open,
         fullScreen,
         toggle,
+        enterFullScreen,
         toggleFullScreen,
         setOpen,
         dismissForNewChat,
       };
     }
-  }, [apiRef, open, fullScreen, setOpen, toggle, toggleFullScreen, dismissForNewChat]);
+  }, [
+    apiRef,
+    open,
+    fullScreen,
+    setOpen,
+    toggle,
+    enterFullScreen,
+    toggleFullScreen,
+    dismissForNewChat,
+  ]);
 
   return (
     <WorkspaceToolsChromeActionsContext.Provider value={actions}>

@@ -1,4 +1,5 @@
 import { MinimalToolCallCard } from "@/components/minimal-tool-call-card";
+import { McpAppToolCard } from "@/components/mcp-app/mcp-app-tool-card";
 import { ImageGenerationToolCard } from "@/components/tool-call/image-generation-tool-card";
 import type {
   ReadLocalImagePreview,
@@ -59,6 +60,10 @@ export function ToolCallCollapsible({
         readManagedVideoPreviewUrl={readManagedVideoPreviewUrl}
       />
     );
+  }
+
+  if (tool.mcpApp) {
+    return <McpAppToolCard tool={tool} />;
   }
 
   return (

@@ -1578,5 +1578,26 @@
       "pairingRequired": "Complete the initial pairing first.",
       "invalidProvider": "Invalid provider argument."
     }
+  },
+  "mcpApp": {
+    "loading": "Loading app…",
+    "loadFailed": "Failed to load app",
+    "retry": "Retry",
+    "sandboxUnavailable": "MCP App sandbox is unavailable in this host.",
+    "pictureInPicture": "Picture in Picture",
+    "fullscreen": "Fullscreen",
+    "returnInline": "Return Inline",
+    "dockedInPip": "Docked in Picture in Picture",
+    "viewingInFullscreen": "Viewing in Fullscreen",
+    "draftConflictTitle": "Composer Draft Exists",
+    "draftConflictDescription": "{{app}} wants to prefill a message, but your composer already contains text. Choose how to apply it.",
+    "appendDraft": "Append",
+    "replaceDraft": "Replace Draft",
+    "openExternalLinkTitle": "Open External Link",
+    "openExternalLinkDescription": "{{app}} wants to open a link outside its declared origins. Verify the URL before continuing.",
+    "openLink": "Open Link",
+    "toolApprovalTitle": "Approve MCP App Tool Call",
+    "toolApprovalDescription": "{{app}} wants to run {{tool}} on {{server}}. Review the arguments before continuing.",
+    "toolApprovalAllow": "Run Tool"
   }
 }

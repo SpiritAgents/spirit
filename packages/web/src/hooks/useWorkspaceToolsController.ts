@@ -7,8 +7,14 @@ import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 import { normalizeBrowserUrl } from "@/lib/browser-url";
 import { readWorkspaceToolsWidthRatio } from "@/lib/layout-prefs";
 import {
+  buildRestoredMcpAppFullscreenTabs,
+  setActiveMcpAppFullscreenTabId,
+} from "@/lib/mcp-apps/window-state";
+import {
   addWorkspaceToolTab,
+  closeWorkspaceToolTab,
   createInitialWorkspaceToolsState,
+  createMcpAppWorkspaceToolTab,
   defaultActiveWorkspaceToolTabId,
   findWorkspaceToolTab,
   isWorkspaceToolTabKind,
@@ -16,6 +22,7 @@ import {
   focusFirstTabOfKind,
   normalizeWorkspaceToolTabsForHost,
   openBrowserUrlInWorkspaceTabs,
+  type WorkspaceMcpAppToolTab,
 } from "@/lib/workspace-tool-tabs";
 import {
   buildOpenEditorFileInNewTabNavigation,
@@ -41,8 +48,16 @@ export function useWorkspaceToolsController({
   runtime,
   snapshot,
 }: UseWorkspaceToolsControllerOptions) {
-  const { setOpen: setWorkspaceToolsOpen } = useWorkspaceToolsChromeActions();
-  const [initialWorkspaceTools] = useState(() => createInitialWorkspaceToolsState(false));
+  const { setOpen: setWorkspaceToolsOpen, enterFullScreen: enterWorkspaceToolsFullScreen } =
+    useWorkspaceToolsChromeActions();
+  const [initialWorkspaceTools] = useState(() => {
+    const base = createInitialWorkspaceToolsState(false);
+    const restored = buildRestoredMcpAppFullscreenTabs();
+    return {
+      tabs: [...base.tabs, ...restored.tabs],
+      activeTabId: restored.activeTabId ?? base.activeTabId,
+    };
+  });
   const [workspaceToolTabs, setWorkspaceToolTabs] = useState(() => initialWorkspaceTools.tabs);
   const [activeWorkspaceToolTabId, setActiveWorkspaceToolTabId] = useState(
     () => initialWorkspaceTools.activeTabId,
@@ -52,6 +67,9 @@ export function useWorkspaceToolsController({
   useLayoutEffect(() => {
     activeWorkspaceToolTabIdRef.current = activeWorkspaceToolTabId;
     workspaceToolTabsRef.current = workspaceToolTabs;
+    setActiveMcpAppFullscreenTabId(
+      activeWorkspaceToolTabId.startsWith("mcp-app:") ? activeWorkspaceToolTabId : null,
+    );
   }, [activeWorkspaceToolTabId, workspaceToolTabs]);
   const getWorkspaceToolTabs = useCallback(() => workspaceToolTabsRef.current, []);
   const getActiveWorkspaceToolTabId = useCallback(() => activeWorkspaceToolTabIdRef.current, []);
@@ -384,6 +402,54 @@ export function useWorkspaceToolsController({
     setWorkspaceFilesPlanRevealNonce((value) => value + 1);
   }, [setWorkspaceToolsOpen]);
 
+  const openMcpAppTab = useCallback(
+    (input: { instanceKey: string; appKey: string; sessionKey: string; tabTitle: string }) => {
+      const existing = workspaceToolTabsRef.current.find(
+        (tab): tab is WorkspaceMcpAppToolTab =>
+          tab.kind === "mcp-app" && tab.instanceKey === input.instanceKey,
+      );
+      if (existing) {
+        if (existing.tabTitle !== input.tabTitle || existing.sessionKey !== input.sessionKey) {
+          setWorkspaceToolTabs((prev) =>
+            prev.map((tab) =>
+              tab.kind === "mcp-app" && tab.instanceKey === input.instanceKey
+                ? { ...tab, tabTitle: input.tabTitle, sessionKey: input.sessionKey }
+                : tab,
+            ),
+          );
+        }
+        setActiveWorkspaceToolTabId(existing.id);
+      } else {
+        const created = createMcpAppWorkspaceToolTab(input);
+        setWorkspaceToolTabs((prev) => [...prev, created]);
+        setActiveWorkspaceToolTabId(created.id);
+      }
+      enterWorkspaceToolsFullScreen();
+    },
+    [enterWorkspaceToolsFullScreen],
+  );
+
+  const closeMcpAppTab = useCallback(
+    (instanceKey: string) => {
+      const existing = workspaceToolTabsRef.current.find(
+        (tab): tab is WorkspaceMcpAppToolTab =>
+          tab.kind === "mcp-app" && tab.instanceKey === instanceKey,
+      );
+      if (!existing) {
+        return;
+      }
+      const next = closeWorkspaceToolTab(
+        workspaceToolTabsRef.current,
+        activeWorkspaceToolTabIdRef.current,
+        existing.id,
+        { includeBrowser: browserTabEnabled },
+      );
+      setWorkspaceToolTabs(next.tabs);
+      setActiveWorkspaceToolTabId(next.activeId);
+    },
+    [browserTabEnabled],
+  );
+
   useEffect(() => {
     workspaceToolsHostReadyRef.current = false;
     workspaceToolsHostRevisionRef.current = -1;
@@ -400,8 +466,16 @@ export function useWorkspaceToolsController({
         tabs: snapshot.tabs,
         activeTabId: snapshot.activeTabId,
       });
-      setWorkspaceToolTabs(snapshot.tabs);
-      setActiveWorkspaceToolTabId(snapshot.activeTabId);
+      const currentMcpAppTabs = workspaceToolTabsRef.current.filter(
+        (tab): tab is WorkspaceMcpAppToolTab => tab.kind === "mcp-app",
+      );
+      const currentActiveIsMcpApp = currentMcpAppTabs.some(
+        (tab) => tab.id === activeWorkspaceToolTabIdRef.current,
+      );
+      setWorkspaceToolTabs([...snapshot.tabs, ...currentMcpAppTabs]);
+      setActiveWorkspaceToolTabId(
+        currentActiveIsMcpApp ? activeWorkspaceToolTabIdRef.current : snapshot.activeTabId,
+      );
       workspaceToolsHostReadyRef.current = true;
     };
     const unsubscribe = subscribeWorkspaceToolTabsUpdates(applySnapshot);
@@ -421,9 +495,15 @@ export function useWorkspaceToolsController({
     if (runtimeHostKind !== "electron" || !workspaceToolsHostReadyRef.current) {
       return;
     }
+    const persistableTabs = workspaceToolTabs.filter(
+      (tab): tab is import("@/types").DesktopWorkspaceToolTab => tab.kind !== "mcp-app",
+    );
+    const persistableActiveId = persistableTabs.some((tab) => tab.id === activeWorkspaceToolTabId)
+      ? activeWorkspaceToolTabId
+      : defaultActiveWorkspaceToolTabId(persistableTabs);
     const signature = JSON.stringify({
-      tabs: workspaceToolTabs,
-      activeTabId: activeWorkspaceToolTabId,
+      tabs: persistableTabs,
+      activeTabId: persistableActiveId,
     });
     if (signature === workspaceToolsHostSignatureRef.current) {
       return;
@@ -431,8 +511,8 @@ export function useWorkspaceToolsController({
     workspaceToolsHostSignatureRef.current = signature;
     void persistWorkspaceToolTabs({
       expectedRevision: workspaceToolsHostRevisionRef.current,
-      tabs: workspaceToolTabs,
-      activeTabId: activeWorkspaceToolTabId,
+      tabs: persistableTabs,
+      activeTabId: persistableActiveId,
     }).catch((error: unknown) => {
       workspaceToolsHostSignatureRef.current = "";
       console.error("[workspace-tabs] failed to persist Desktop tabs", error);
@@ -445,7 +525,8 @@ export function useWorkspaceToolsController({
     sessionKey: snapshot?.composerSessionKey ?? "",
   };
   if (
-    activeTab?.kind === "extension" &&
+    snapshot &&
+    (activeTab?.kind === "extension" || activeTab?.kind === "mcp-app") &&
     !isWorkspaceToolTabVisibleInContext(activeTab, tabVisibilityContext)
   ) {
     const visibleTabs = workspaceToolTabs.filter((tab) =>
@@ -572,5 +653,7 @@ export function useWorkspaceToolsController({
     openGitTab,
     openWorkspacePlan,
     openWorkspaceUrl,
+    openMcpAppTab,
+    closeMcpAppTab,
   };
 }
