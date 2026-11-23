@@ -32,6 +32,8 @@
     "@lexical/react": "0.53.0",
     "@lexical/rich-text": "0.53.0",
     "@lexical/utils": "0.53.0",
+    "@modelcontextprotocol/client": "2.4.0",
+    "@modelcontextprotocol/ext-apps": "2.1.0",
     "@radix-ui/react-scroll-area": "1.2.18",
     "@shikijs/monaco": "3.23.0",
     "@shikijs/themes": "3.23.0",
@@ -90,7 +92,8 @@
     "streamdown": "2.5.0",
     "tailwind-merge": "3.6.0",
     "tw-animate-css": "1.4.0",
-    "unified": "11.0.5"
+    "unified": "11.0.5",
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@spiritagent/agent-core": "workspace:*",

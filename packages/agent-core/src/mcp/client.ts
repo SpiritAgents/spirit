@@ -1,11 +1,14 @@
-import { Client } from "@modelcontextprotocol/sdk/client";
+import {
+  Client,
+  LATEST_PROTOCOL_VERSION,
+  StreamableHTTPClientTransport,
+  type Implementation,
+  type ServerCapabilities,
+} from "@modelcontextprotocol/client";
 import {
   StdioClientTransport,
   type StdioServerParameters,
-} from "@modelcontextprotocol/sdk/client/stdio.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import type { Implementation, ServerCapabilities } from "@modelcontextprotocol/sdk/types.js";
-import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
+} from "@modelcontextprotocol/client/stdio";
 
 import { DEFAULT_MCP_CLIENT_INFO } from "./config.js";
 import { McpConnectionError } from "./errors.js";
@@ -138,7 +141,8 @@ export class SdkMcpConnection {
 
     this.transportStore = transport;
     this.serverNameStore = server.name;
-    this.protocolVersionStore = resolveProtocolVersion(transport);
+    this.protocolVersionStore =
+      this.clientStore.getNegotiatedProtocolVersion() ?? resolveProtocolVersion(transport);
   }
 
   async close(): Promise<void> {
@@ -193,7 +197,6 @@ export class SdkMcpConnection {
         name,
         ...(args === undefined ? {} : { arguments: args }),
       },
-      undefined,
       this.requestOptions(options?.timeoutMs),
     );
   }
