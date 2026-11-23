@@ -19,6 +19,11 @@ export interface HostCommandDelegate {
   saveHookEntry(request: CommandPayloads["saveHookEntry"]["request"]): Promise<unknown>;
   deleteHookEntry(request: CommandPayloads["deleteHookEntry"]["request"]): Promise<unknown>;
   inspectMcpServer(name: string): Promise<unknown>;
+  mcpAppReadResource(request: CommandPayloads["mcpAppReadResource"]["request"]): Promise<unknown>;
+  mcpAppCallTool(request: CommandPayloads["mcpAppCallTool"]["request"]): Promise<unknown>;
+  mcpAppUpdateModelContext(
+    request: CommandPayloads["mcpAppUpdateModelContext"]["request"],
+  ): Promise<unknown>;
   importExtension(request: CommandPayloads["importExtension"]["request"]): Promise<unknown>;
   installBuiltInExtension(
     request: CommandPayloads["installBuiltInExtension"]["request"],
@@ -235,6 +240,9 @@ const hostCommandDispatch = {
   saveHookEntry: (host, payload) => host.saveHookEntry(payload.request),
   deleteHookEntry: (host, payload) => host.deleteHookEntry(payload.request),
   inspectMcpServer: (host, payload) => host.inspectMcpServer(payload.name),
+  mcpAppReadResource: (host, payload) => host.mcpAppReadResource(payload.request),
+  mcpAppCallTool: (host, payload) => host.mcpAppCallTool(payload.request),
+  mcpAppUpdateModelContext: (host, payload) => host.mcpAppUpdateModelContext(payload.request),
   importExtension: (host, payload) => host.importExtension(payload.request),
   installBuiltInExtension: (host, payload) => host.installBuiltInExtension(payload.request),
   addMarketplaceSource: (host, payload) => host.addMarketplaceSource(payload.request),

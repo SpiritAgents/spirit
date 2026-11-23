@@ -81,6 +81,12 @@ export const SESSION_CLEAR_PENDING_MCP_RESOURCES = "session.clearPendingMcpResou
 export const SESSION_APPLY_MCP_PROMPT = "session.applyMcpPrompt";
 /** RPC: MCP management/read pass-through (`action` selects the operation). */
 export const SESSION_MCP = "session.mcp";
+/** RPC: read a `ui://` MCP App HTML resource through the session's pooled MCP service. */
+export const SESSION_MCP_APP_READ_RESOURCE = "session.mcpAppReadResource";
+/** RPC: execute a server-scoped tool call requested by a mounted MCP App. */
+export const SESSION_MCP_APP_CALL_TOOL = "session.mcpAppCallTool";
+/** RPC: update pending `<mcp_app_context>` for the session's next user turn. */
+export const SESSION_MCP_APP_UPDATE_MODEL_CONTEXT = "session.mcpAppUpdateModelContext";
 /** RPC: manual tool command (`!command` / MCP tool run). */
 export const SESSION_START_MANUAL_TOOL_COMMAND = "session.startManualToolCommand";
 export const SESSION_CONTINUE_MANUAL_APPROVAL = "session.continuePendingManualToolApproval";

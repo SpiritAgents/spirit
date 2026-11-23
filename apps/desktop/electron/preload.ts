@@ -176,6 +176,15 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   inspectMcpServer(name: string) {
     return ipcRenderer.invoke("desktop:invoke", "inspectMcpServer", { name });
   },
+  mcpAppReadResource(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "mcpAppReadResource", { request });
+  },
+  mcpAppCallTool(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "mcpAppCallTool", { request });
+  },
+  mcpAppUpdateModelContext(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "mcpAppUpdateModelContext", { request });
+  },
   importExtension(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "importExtension", { request });
   },

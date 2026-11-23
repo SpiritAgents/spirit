@@ -888,6 +888,53 @@ export class RemoteDesktopRuntime {
     return this.snapshot.pendingMcpResources;
   }
 
+  async mcpAppReadResource(
+    server: string,
+    uri: string,
+  ): Promise<import("@spiritagent/agent-core").McpAppResourcePayload> {
+    return this.client.call<import("@spiritagent/agent-core").McpAppResourcePayload>(
+      "session.mcpAppReadResource",
+      {
+        sessionId: this.sessionId,
+        server,
+        uri,
+      },
+    );
+  }
+
+  async mcpAppCallTool(
+    server: string,
+    tool: string,
+    args?: Record<string, unknown>,
+    approved?: boolean,
+  ): Promise<import("@spiritagent/api/types").McpAppCallToolResponse> {
+    return this.client.call<import("@spiritagent/api/types").McpAppCallToolResponse>(
+      "session.mcpAppCallTool",
+      {
+        sessionId: this.sessionId,
+        server,
+        tool,
+        ...(args !== undefined ? { arguments: args } : {}),
+        ...(approved === true ? { approved: true } : {}),
+      },
+    );
+  }
+
+  async mcpAppUpdateModelContext(
+    entry: import("@spiritagent/agent-core").ToolAgentMcpAppContext,
+  ): Promise<void> {
+    await this.client.call("session.mcpAppUpdateModelContext", {
+      sessionId: this.sessionId,
+      appId: entry.appId,
+      server: entry.server,
+      ...(entry.toolName ? { toolName: entry.toolName } : {}),
+      ...(entry.text !== undefined ? { text: entry.text } : {}),
+      ...(entry.structuredContent !== undefined
+        ? { structuredContent: entry.structuredContent }
+        : {}),
+    });
+  }
+
   backgroundToolStatus(): string | undefined {
     return this.snapshot.backgroundToolStatus;
   }

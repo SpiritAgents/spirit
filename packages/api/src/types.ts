@@ -25,6 +25,7 @@ import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tie
 import type {
   BackgroundTaskRecord,
   BackgroundTaskOutputPreview,
+  McpAppResourcePayload,
   ToolExecutionHostUi,
   ToolExecutionMcpAppUi,
   LspWriteDiagnosticsUi,
@@ -1300,9 +1301,47 @@ export interface WriteHostTextFileRequest {
   text: string;
 }
 
+export interface McpAppReadResourceRequest {
+  server: string;
+  uri: string;
+  sessionPath?: string;
+}
+
+export type McpAppReadResourceResponse = McpAppResourcePayload;
+
+export interface McpAppCallToolRequest {
+  server: string;
+  tool: string;
+  arguments?: Record<string, unknown>;
+  sessionPath?: string;
+  approved?: boolean;
+}
+
+export type McpAppCallToolResponse =
+  | {
+      status: "ok";
+      result: unknown;
+    }
+  | {
+      status: "approval-required";
+      server: string;
+      tool: string;
+    };
+
+export interface McpAppUpdateModelContextRequest {
+  appId: string;
+  server: string;
+  toolName?: string;
+  text?: string;
+  structuredContent?: Record<string, unknown>;
+  sessionPath?: string;
+}
+
 export interface DesktopSnapshot {
   /** Monotonic host revision for sidebar session metadata and activity. */
   sessionListRevision: number;
+  /** Cross-origin sandbox proxy URL for mounting interactive MCP Apps (`io.modelcontextprotocol/ui`). */
+  mcpAppSandboxUrl?: string;
   workspaceRoot: string;
   /** User home directory; used by the sidebar to separate "no workspace" sessions from project workspace sessions. */
   userHomeDirectory: string;

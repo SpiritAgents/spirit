@@ -537,6 +537,26 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
     return this.mcp.callTool(server, toolName, argsJson, this.mcpCallToolOptions());
   }
 
+  async callMcpAppTool(
+    server: string,
+    toolName: string,
+    args?: Record<string, unknown>,
+    options?: { approved?: boolean },
+  ): Promise<JsonValue> {
+    return this.mcp.callAppTool(server, toolName, args, {
+      ...this.mcpCallToolOptions(),
+      approvalLevel: this.approvalLevel,
+      ...(options?.approved === true ? { approved: true } : {}),
+    });
+  }
+
+  async readMcpAppResource(
+    server: string,
+    uri: string,
+  ): Promise<import("../mcp/apps.js").McpAppResourcePayload> {
+    return this.mcp.readAppResource(server, uri);
+  }
+
   async listMcpServers(): Promise<JsonValue[]> {
     return this.mcp.listServers();
   }

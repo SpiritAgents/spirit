@@ -42,6 +42,7 @@ function isSettingsInstructionScope<T extends { source: { scope: string } }>(
 
 export interface BuildDesktopSnapshotInput {
   sessionListRevision: number;
+  mcpAppSandboxUrl?: string;
   workspaceRoot: string;
   config: DesktopConfigFile;
   git: DesktopGitSnapshot;
@@ -96,6 +97,7 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
 
   return {
     sessionListRevision: input.sessionListRevision,
+    ...(input.mcpAppSandboxUrl ? { mcpAppSandboxUrl: input.mcpAppSandboxUrl } : {}),
     workspaceRoot: input.workspaceRoot,
     userHomeDirectory: resolveDesktopHomeDirectory(),
     workspaceBinding: normalizeWorkspaceBinding(input.config.workspaceBinding),

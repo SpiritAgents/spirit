@@ -15,6 +15,11 @@ import type {
   DesktopDreamOverviewItem,
   DeleteSkillRequest,
   DesktopMcpServerInspection,
+  McpAppCallToolRequest,
+  McpAppCallToolResponse,
+  McpAppReadResourceRequest,
+  McpAppReadResourceResponse,
+  McpAppUpdateModelContextRequest,
   DesktopLiveUpdate,
   DesktopSnapshot,
   ImportExtensionRequest,
@@ -86,6 +91,9 @@ declare global {
     saveHookEntry(request: SaveHookEntryRequest): Promise<DesktopSnapshot>;
     deleteHookEntry(request: DeleteHookEntryRequest): Promise<DesktopSnapshot>;
     inspectMcpServer(name: string): Promise<DesktopMcpServerInspection>;
+    mcpAppReadResource(request: McpAppReadResourceRequest): Promise<McpAppReadResourceResponse>;
+    mcpAppCallTool(request: McpAppCallToolRequest): Promise<McpAppCallToolResponse>;
+    mcpAppUpdateModelContext(request: McpAppUpdateModelContextRequest): Promise<{ ok: true }>;
     importExtension(request: ImportExtensionRequest): Promise<DesktopSnapshot>;
     installBuiltInExtension(request: InstallBuiltInExtensionRequest): Promise<DesktopSnapshot>;
     addMarketplaceSource(request: AddMarketplaceSourceRequest): Promise<unknown>;

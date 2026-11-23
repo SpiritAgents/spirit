@@ -16,6 +16,7 @@ import {
   type RuntimeSubagentSessionArchiveEntry,
   type RuntimeSubagentSessionSummary,
   type AgentMode,
+  McpAppToolApprovalRequiredError,
   type SubagentSessionExecutionRequest,
   type SessionTaskContext,
   type SessionTaskResult,
@@ -1795,6 +1796,54 @@ export class SessionManager {
       default:
         throw new Error(`unknown mcp action: ${action}`);
     }
+  }
+
+  /** Read a `ui://` MCP App HTML resource through the session's pooled MCP service. */
+  async mcpAppReadResource(
+    sessionId: string,
+    server: string,
+    uri: string,
+  ): Promise<import("@spiritagent/agent-core").McpAppResourcePayload> {
+    const { toolExecutor } = this.requireSession(sessionId).runtimeResult;
+    return toolExecutor.readMcpAppResource(server, uri);
+  }
+
+  /** Proxy an app-initiated `tools/call` strictly scoped to the originating MCP server. */
+  async mcpAppCallTool(
+    sessionId: string,
+    server: string,
+    toolName: string,
+    args?: Record<string, unknown>,
+    approved?: boolean,
+  ): Promise<import("@spiritagent/api/types").McpAppCallToolResponse> {
+    const { toolExecutor } = this.requireSession(sessionId).runtimeResult;
+    try {
+      const result = await toolExecutor.callMcpAppTool(
+        server,
+        toolName,
+        args,
+        approved === true ? { approved: true } : undefined,
+      );
+      return { status: "ok", result };
+    } catch (error) {
+      if (error instanceof McpAppToolApprovalRequiredError) {
+        return {
+          status: "approval-required",
+          server: error.server,
+          tool: error.toolName,
+        };
+      }
+      throw error;
+    }
+  }
+
+  /** Record or overwrite per-app model context (`ui/update-model-context`) for the next user turn. */
+  mcpAppUpdateModelContext(
+    sessionId: string,
+    entry: import("@spiritagent/agent-core").ToolAgentMcpAppContext,
+  ): void {
+    const { runtime } = this.requireSession(sessionId).runtimeResult;
+    runtime.setMcpAppModelContext(entry);
   }
 
   // -------------------------------------------------------- manual tools

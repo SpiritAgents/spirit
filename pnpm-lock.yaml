@@ -261,6 +261,9 @@ importers:
       '@spiritagent/lsp':
         specifier: workspace:*
         version: link:../../packages/lsp
+      '@spiritagent/mcp':
+        specifier: workspace:*
+        version: link:../../packages/mcp
       '@spiritagent/process':
         specifier: workspace:*
         version: link:../../packages/process
@@ -1111,6 +1114,9 @@ importers:
       '@spiritagent/i18n':
         specifier: workspace:*
         version: link:../i18n
+      '@spiritagent/mcp':
+        specifier: workspace:*
+        version: link:../mcp
       '@spiritagent/product':
         specifier: workspace:*
         version: link:../product

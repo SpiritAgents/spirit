@@ -2113,6 +2113,42 @@ export function useDesktopRuntime() {
     [api],
   );
 
+  const mcpAppReadResource = useCallback(
+    async (
+      request: import("@spiritagent/api/types").McpAppReadResourceRequest,
+    ): Promise<import("@spiritagent/api/types").McpAppReadResourceResponse> => {
+      if (!api) {
+        throw new Error(i18n.t("error.hostNotReady"));
+      }
+      return api.mcpAppReadResource(request);
+    },
+    [api],
+  );
+
+  const mcpAppCallTool = useCallback(
+    async (
+      request: import("@spiritagent/api/types").McpAppCallToolRequest,
+    ): Promise<import("@spiritagent/api/types").McpAppCallToolResponse> => {
+      if (!api) {
+        throw new Error(i18n.t("error.hostNotReady"));
+      }
+      return api.mcpAppCallTool(request);
+    },
+    [api],
+  );
+
+  const mcpAppUpdateModelContext = useCallback(
+    async (
+      request: import("@spiritagent/api/types").McpAppUpdateModelContextRequest,
+    ): Promise<{ ok: true }> => {
+      if (!api) {
+        throw new Error(i18n.t("error.hostNotReady"));
+      }
+      return api.mcpAppUpdateModelContext(request);
+    },
+    [api],
+  );
+
   const importExtension = useCallback(
     async (request: ImportExtensionRequest) => {
       if (!api) {
@@ -4173,6 +4209,9 @@ export function useDesktopRuntime() {
     deleteSkill,
     deleteRule,
     inspectMcpServer,
+    mcpAppReadResource,
+    mcpAppCallTool,
+    mcpAppUpdateModelContext,
     abortConversation,
     abortShell,
     moveToBackground,

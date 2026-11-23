@@ -26,6 +26,7 @@
   "dependencies": {
     "@spiritagent/api": "workspace:*",
     "@spiritagent/i18n": "workspace:*",
+    "@spiritagent/mcp": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "@spiritagent/remote-control": "workspace:*",
     "@spiritagent/sessions": "workspace:*"
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@spiritagent/api": "workspace:*",
     "@spiritagent/i18n": "workspace:*",
+    "@spiritagent/mcp": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "@spiritagent/remote-control": "workspace:*",
     "@spiritagent/sessions": "workspace:*",

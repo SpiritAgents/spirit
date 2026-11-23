@@ -35,6 +35,7 @@ import {
   type PendingWorkspaceFile,
   type RuntimeToolExecution,
   type SpiritLlmTransport,
+  McpAppToolApprovalRequiredError,
   type LlmActiveSkill,
   type McpUiOpenRequest,
   type McpUiOpenResult,
@@ -710,6 +711,11 @@ export class DesktopHostService {
   private readonly workspaceToolTabs = new WorkspaceToolTabsStore(
     path.join(spiritDataDir(), "workspace-tool-tabs.json"),
   );
+  private mcpAppSandboxUrlProvider: (() => string | undefined) | undefined;
+  private readonly pendingMcpAppContextsBySessionKey = new Map<
+    string,
+    Map<string, import("@spiritagent/agent-core").ToolAgentMcpAppContext>
+  >();
   private state: HostState | undefined;
   private readonly sessionRegistry = new SessionRegistry((bundle) => {
     void closeRemoteDesktopRuntime(bundle.runtime);
@@ -1808,6 +1814,104 @@ export class DesktopHostService {
 
   async inspectMcpServer(name: string): Promise<DesktopMcpServerInspection> {
     return inspectMcpServerCommand(this.extensionCommandContext(), name);
+  }
+
+  setMcpAppSandboxUrlProvider(provider: (() => string | undefined) | undefined): void {
+    this.mcpAppSandboxUrlProvider = provider;
+  }
+
+  private resolveMcpAppTargetBundle(sessionPath?: string): SessionBundle {
+    const trimmed = sessionPath?.trim();
+    if (trimmed) {
+      const bundle =
+        this.sessionRegistry.findBySessionPath(trimmed) ??
+        this.sessionRegistry.findBySessionPath(path.resolve(trimmed));
+      if (!bundle) {
+        throw new Error(`Session not found: ${trimmed}`);
+      }
+      return bundle;
+    }
+    return this.activeBundle();
+  }
+
+  async mcpAppReadResource(
+    request: import("@spiritagent/api/types").McpAppReadResourceRequest,
+  ): Promise<import("@spiritagent/api/types").McpAppReadResourceResponse> {
+    await this.ensureInitialized();
+    const state = this.requireState();
+    const bundle = this.resolveMcpAppTargetBundle(request.sessionPath);
+    if (bundle.runtime) {
+      return bundle.runtime.mcpAppReadResource(request.server, request.uri);
+    }
+    const workspaceRoot = bundle.workspaceRoot || state.workspaceRoot;
+    const mcp = this.sharedMcpServiceForWorkspace(workspaceRoot, state.workspaceBinding);
+    return mcp.readAppResource(request.server, request.uri);
+  }
+
+  async mcpAppCallTool(
+    request: import("@spiritagent/api/types").McpAppCallToolRequest,
+  ): Promise<import("@spiritagent/api/types").McpAppCallToolResponse> {
+    await this.ensureInitialized();
+    const state = this.requireState();
+    const bundle = this.resolveMcpAppTargetBundle(request.sessionPath);
+    if (bundle.runtime) {
+      return bundle.runtime.mcpAppCallTool(
+        request.server,
+        request.tool,
+        request.arguments,
+        request.approved,
+      );
+    }
+    const workspaceRoot = bundle.workspaceRoot || state.workspaceRoot;
+    const mcp = this.sharedMcpServiceForWorkspace(workspaceRoot, state.workspaceBinding);
+    try {
+      const result = await mcp.callAppTool(request.server, request.tool, request.arguments ?? {}, {
+        approvalLevel: bundle.approvalLevel,
+        ...(request.approved === true ? { approved: true } : {}),
+      });
+      return { status: "ok", result };
+    } catch (error) {
+      if (error instanceof McpAppToolApprovalRequiredError) {
+        return {
+          status: "approval-required",
+          server: error.server,
+          tool: error.toolName,
+        };
+      }
+      throw error;
+    }
+  }
+
+  async mcpAppUpdateModelContext(
+    request: import("@spiritagent/api/types").McpAppUpdateModelContextRequest,
+  ): Promise<{ ok: true }> {
+    await this.ensureInitialized();
+    const bundle = this.resolveMcpAppTargetBundle(request.sessionPath);
+    const entry: import("@spiritagent/agent-core").ToolAgentMcpAppContext = {
+      appId: request.appId,
+      server: request.server,
+      ...(request.toolName ? { toolName: request.toolName } : {}),
+      ...(request.text !== undefined ? { text: request.text } : {}),
+      ...(request.structuredContent !== undefined
+        ? { structuredContent: request.structuredContent }
+        : {}),
+    };
+    if (bundle.runtime) {
+      await bundle.runtime.mcpAppUpdateModelContext(entry);
+      return { ok: true };
+    }
+    const sessionKey = bundle.activeSession?.filePath ?? bundle.id;
+    let entries = this.pendingMcpAppContextsBySessionKey.get(sessionKey);
+    if (!entries) {
+      entries = new Map();
+      this.pendingMcpAppContextsBySessionKey.set(sessionKey, entries);
+    }
+    if (!entry.text?.trim() && !entry.structuredContent) {
+      entries.delete(entry.appId);
+    } else {
+      entries.set(entry.appId, entry);
+    }
+    return { ok: true };
   }
 
   async importExtension(request: ImportExtensionRequest): Promise<DesktopSnapshot> {
@@ -3717,6 +3821,19 @@ export class DesktopHostService {
           : await createRemoteDesktopRuntime(remoteRuntimeInput);
       runtime.setLoopEnabled(bundle.loopEnabled);
       bundle.runtime = runtime;
+      const pendingContextKeys = [bundle.activeSession?.filePath, bundle.id].filter(
+        (value): value is string => Boolean(value),
+      );
+      for (const key of pendingContextKeys) {
+        const queued = this.pendingMcpAppContextsBySessionKey.get(key);
+        if (!queued) continue;
+        this.pendingMcpAppContextsBySessionKey.delete(key);
+        for (const entry of queued.values()) {
+          void runtime.mcpAppUpdateModelContext(entry).catch((error) => {
+            console.warn("[mcp-apps] failed to flush queued model context to runtime", error);
+          });
+        }
+      }
       const restoredPresentation = runtime.takeRestoredPresentation();
       if (restoredPresentation) {
         if (restoredPresentation.timeline) {
@@ -4895,8 +5012,10 @@ export class DesktopHostService {
       isBusy: conversationBusy,
     });
 
+    const mcpAppSandboxUrl = this.mcpAppSandboxUrlProvider?.();
     return buildDesktopSnapshot({
       sessionListRevision: this.sessionListRevision,
+      ...(mcpAppSandboxUrl ? { mcpAppSandboxUrl } : {}),
       workspaceRoot: state.workspaceRoot,
       config: state.config,
       git: this.buildClientGitSnapshot(),
@@ -6068,6 +6187,12 @@ export async function invokeDesktopHostCommand(
 
 export function publishDesktopSnapshot(): void {
   desktopHostService.publishSnapshot();
+}
+
+export function setDesktopMcpAppSandboxUrlProvider(
+  provider: (() => string | undefined) | undefined,
+): void {
+  desktopHostService.setMcpAppSandboxUrlProvider(provider);
 }
 
 export async function refreshDesktopRemoteControlConfig(): Promise<void> {

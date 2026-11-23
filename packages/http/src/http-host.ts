@@ -1,10 +1,15 @@
 import { product } from "@spiritagent/product";
 import { readFile, stat } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { isIP } from "node:net";
+import { isIP, type AddressInfo } from "node:net";
 import path from "node:path";
 
 import type { HostCommandName } from "@spiritagent/api/commands";
+import {
+  buildMcpAppSandboxOuterCsp,
+  buildMcpAppSandboxProxyHtml,
+  MCP_APP_SANDBOX_PATH,
+} from "@spiritagent/mcp";
 import type { RemoteControlAccessResult } from "@spiritagent/remote-control";
 import {
   closeAllDesktopWebHostDeviceConnections,
@@ -35,6 +40,7 @@ export interface DesktopHttpHostState {
   port: number;
   running: boolean;
   url?: string;
+  sandboxUrl?: string;
   error?: string;
 }
 
@@ -71,6 +77,9 @@ export interface DesktopHttpHost {
 export function createDesktopHttpHost(options: DesktopHttpHostOptions): DesktopHttpHost {
   const logger = options.logger ?? console;
   let server: Server | undefined;
+  let sandboxServer: Server | undefined;
+  let activeSandboxPort: number | undefined;
+  let activeMainPort: number | undefined;
   let state: DesktopHttpHostState = {
     host: options.host,
     port: options.port,
@@ -97,35 +106,51 @@ export function createDesktopHttpHost(options: DesktopHttpHostOptions): DesktopH
           subscribeHostUpdates: options.subscribeHostUpdates,
           auth: options.auth,
           static: options.static,
+          resolveSandboxUrl: (request) =>
+            activeSandboxPort !== undefined
+              ? resolveMcpAppSandboxUrlForRequest(request, options.host, activeSandboxPort)
+              : state.sandboxUrl,
         }),
       );
       server = nextServer;
 
-      try {
-        await new Promise<void>((resolve, reject) => {
-          const handleError = (error: Error) => {
-            nextServer.off("listening", handleListening);
-            reject(error);
-          };
-          const handleListening = () => {
-            nextServer.off("error", handleError);
-            resolve();
-          };
-
-          nextServer.once("error", handleError);
-          nextServer.once("listening", handleListening);
-          nextServer.listen(options.port, options.host);
+      const nextSandboxServer = createServer((request, response) => {
+        handleMcpAppSandboxRequest(request, response, {
+          bindHost: options.host,
+          mainPort: activeMainPort ?? options.port,
+          allowDevViteOrigin: !options.static,
         });
+      });
+      sandboxServer = nextSandboxServer;
+
+      try {
+        await listenServer(nextServer, options.port, options.host);
+        const mainAddr = nextServer.address() as AddressInfo | null;
+        const resolvedMainPort = mainAddr?.port ?? options.port;
+        activeMainPort = resolvedMainPort;
+
+        await listenServer(nextSandboxServer, 0, options.host);
+        const sandboxAddr = nextSandboxServer.address() as AddressInfo | null;
+        const resolvedSandboxPort = sandboxAddr?.port;
+        activeSandboxPort = resolvedSandboxPort;
+
+        const formattedHost = formatHostForUrl(options.host);
+        const sandboxUrl =
+          resolvedSandboxPort !== undefined
+            ? `http://${formattedHost}:${resolvedSandboxPort}${MCP_APP_SANDBOX_PATH}`
+            : undefined;
 
         state = {
           host: options.host,
-          port: options.port,
+          port: resolvedMainPort,
           running: true,
-          url: `http://${options.host}:${options.port}`,
+          url: `http://${formattedHost}:${resolvedMainPort}`,
+          ...(sandboxUrl ? { sandboxUrl } : {}),
         };
         logger.log(`${product.name} desktop web host listening on ${state.url}`);
         return { ...state };
       } catch (error) {
+        await Promise.allSettled([closeServer(nextSandboxServer), closeServer(nextServer)]);
         const message = error instanceof Error ? error.message : String(error);
         state = {
           host: options.host,
@@ -134,33 +159,41 @@ export function createDesktopHttpHost(options: DesktopHttpHostOptions): DesktopH
           error: message,
         };
         server = undefined;
+        sandboxServer = undefined;
+        activeSandboxPort = undefined;
+        activeMainPort = undefined;
         throw error;
       }
     },
     async stop() {
       const current = server;
-      if (!current) {
+      const currentSandbox = sandboxServer;
+      if (!current && !currentSandbox) {
         state = { ...state, running: false };
         return { ...state };
       }
 
       closeAllDesktopWebHostDeviceConnections();
-      await new Promise<void>((resolve, reject) => {
-        current.close((error) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-          resolve();
-        });
-      });
+      const [mainResult, sandboxResult] = await Promise.allSettled([
+        current ? closeServer(current) : Promise.resolve(),
+        currentSandbox ? closeServer(currentSandbox) : Promise.resolve(),
+      ]);
 
       server = undefined;
+      sandboxServer = undefined;
+      activeSandboxPort = undefined;
+      activeMainPort = undefined;
       state = {
         host: options.host,
         port: options.port,
         running: false,
       };
+      if (mainResult.status === "rejected") {
+        throw mainResult.reason;
+      }
+      if (sandboxResult.status === "rejected") {
+        throw sandboxResult.reason;
+      }
       return { ...state };
     },
   };
@@ -173,6 +206,7 @@ export function createDesktopHttpRequestHandler({
   subscribeHostUpdates,
   auth,
   static: staticOptions,
+  resolveSandboxUrl,
 }: {
   /** The host the service listens on; used for Host header validation (DNS rebinding protection). */
   host: string;
@@ -181,8 +215,10 @@ export function createDesktopHttpRequestHandler({
   subscribeHostUpdates?: DesktopHostUpdateSubscriber;
   auth: DesktopHttpAuthOptions;
   static?: DesktopHttpStaticOptions;
+  resolveSandboxUrl?: (request: IncomingMessage) => string | undefined;
 }) {
   return async (request: IncomingMessage, response: ServerResponse) => {
+    const sandboxUrl = resolveSandboxUrl?.(request);
     const runHostCommand = async (command: HostCommandName, payload?: unknown) => {
       const result = await invokeHostCommand(command, payload);
       if (onHostCommandResult) {
@@ -190,7 +226,7 @@ export function createDesktopHttpRequestHandler({
           void onHostCommandResult(command, payload, result);
         });
       }
-      return result;
+      return withHttpSandboxUrl(result, sandboxUrl);
     };
 
     try {
@@ -224,6 +260,7 @@ export function createDesktopHttpRequestHandler({
           runHostCommand,
           auth,
           subscribeHostUpdates,
+          sandboxUrl,
         });
         return;
       }
@@ -255,6 +292,7 @@ async function handleApiRequest({
   runHostCommand,
   auth,
   subscribeHostUpdates,
+  sandboxUrl,
 }: {
   request: IncomingMessage;
   response: ServerResponse;
@@ -262,6 +300,7 @@ async function handleApiRequest({
   runHostCommand: (command: HostCommandName, payload?: unknown) => Promise<unknown>;
   auth: DesktopHttpAuthOptions;
   subscribeHostUpdates?: DesktopHostUpdateSubscriber;
+  sandboxUrl?: string;
 }): Promise<void> {
   const access = await authorizeDeviceRequest(request, auth);
   if (access.code !== "OK") {
@@ -291,7 +330,7 @@ async function handleApiRequest({
     let unregisterConnection = () => {};
     const unsubscribe = subscribeHostUpdates((snapshot) => {
       if (!response.destroyed) {
-        response.write(`${JSON.stringify(snapshot)}\n`);
+        response.write(`${JSON.stringify(withHttpSandboxUrl(snapshot, sandboxUrl))}\n`);
       }
     });
     await new Promise<void>((resolve) => {
@@ -484,6 +523,42 @@ async function handleApiRequest({
       200,
       await runHostCommand("inspectMcpServer", {
         name: typeof jsonBody?.name === "string" ? jsonBody.name : "",
+      }),
+    );
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/mcp-apps/read-resource") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("mcpAppReadResource", {
+        request: jsonBody ?? {},
+      }),
+    );
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/mcp-apps/call-tool") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("mcpAppCallTool", {
+        request: jsonBody ?? {},
+      }),
+    );
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/mcp-apps/update-model-context") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("mcpAppUpdateModelContext", {
+        request: jsonBody ?? {},
       }),
     );
     return;
@@ -1772,6 +1847,166 @@ function normalizeApprovalDecisionPayload(value: unknown): unknown {
     default:
       return undefined;
   }
+}
+
+async function listenServer(target: Server, port: number, host: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const handleError = (error: Error) => {
+      target.off("listening", handleListening);
+      reject(error);
+    };
+    const handleListening = () => {
+      target.off("error", handleError);
+      resolve();
+    };
+    target.once("error", handleError);
+    target.once("listening", handleListening);
+    target.listen(port, host);
+  });
+}
+
+async function closeServer(target: Server): Promise<void> {
+  if (!target.listening) {
+    return;
+  }
+  await new Promise<void>((resolve, reject) => {
+    target.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+function formatHostForUrl(host: string): string {
+  const trimmed = host.trim();
+  if (trimmed === "0.0.0.0") {
+    return "127.0.0.1";
+  }
+  if (trimmed === "::") {
+    return "[::1]";
+  }
+  if (isIP(trimmed) === 6 && !trimmed.startsWith("[")) {
+    return `[${trimmed}]`;
+  }
+  return trimmed;
+}
+
+function extractHostnameFromHostHeader(hostHeader: string | undefined): string | undefined {
+  if (!hostHeader) {
+    return undefined;
+  }
+  const trimmed = hostHeader.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  try {
+    const parsed = new URL(`http://${trimmed}`);
+    return parsed.hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+function resolveMcpAppSandboxUrlForRequest(
+  request: IncomingMessage,
+  fallbackHost: string,
+  sandboxPort: number,
+): string {
+  const hostname = extractHostnameFromHostHeader(request.headers.host);
+  const hostForUrl = hostname ? formatHostForUrl(hostname) : formatHostForUrl(fallbackHost);
+  return `http://${hostForUrl}:${sandboxPort}${MCP_APP_SANDBOX_PATH}`;
+}
+
+function withHttpSandboxUrl<T>(payload: T, sandboxUrl: string | undefined): T {
+  if (!sandboxUrl || !isJsonObject(payload)) {
+    return payload;
+  }
+  if (typeof payload.sessionListRevision === "number") {
+    return {
+      ...payload,
+      mcpAppSandboxUrl: sandboxUrl,
+    } as T;
+  }
+  if (isJsonObject(payload.snapshot) && typeof payload.snapshot.sessionListRevision === "number") {
+    return {
+      ...payload,
+      snapshot: {
+        ...payload.snapshot,
+        mcpAppSandboxUrl: sandboxUrl,
+      },
+    } as T;
+  }
+  return payload;
+}
+
+function buildAllowedSandboxParentOrigins(
+  request: IncomingMessage,
+  options: { bindHost: string; mainPort: number; allowDevViteOrigin: boolean },
+): string[] {
+  const origins = new Set<string>();
+  const reqHostname = extractHostnameFromHostHeader(request.headers.host);
+  const effectiveHost = reqHostname ?? options.bindHost;
+  const isLoopback =
+    effectiveHost === "127.0.0.1" ||
+    effectiveHost === "localhost" ||
+    effectiveHost === "::1" ||
+    effectiveHost === "[::1]";
+
+  if (isLoopback) {
+    origins.add(`http://127.0.0.1:${options.mainPort}`);
+    origins.add(`http://localhost:${options.mainPort}`);
+    origins.add(`http://[::1]:${options.mainPort}`);
+    if (options.allowDevViteOrigin) {
+      origins.add("http://127.0.0.1:5173");
+      origins.add("http://localhost:5173");
+    }
+  } else {
+    const formatted = formatHostForUrl(effectiveHost);
+    origins.add(`http://${formatted}:${options.mainPort}`);
+    origins.add(`https://${formatted}:${options.mainPort}`);
+  }
+  return [...origins];
+}
+
+function handleMcpAppSandboxRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  options: { bindHost: string; mainPort: number; allowDevViteOrigin: boolean },
+): void {
+  const method = request.method?.toUpperCase() ?? "";
+  let pathname = "/";
+  try {
+    pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+  } catch {
+    pathname = "/";
+  }
+
+  if ((method !== "GET" && method !== "HEAD") || pathname !== MCP_APP_SANDBOX_PATH) {
+    response.writeHead(404, {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    });
+    response.end("Not Found");
+    return;
+  }
+
+  const allowedParentOrigins = buildAllowedSandboxParentOrigins(request, options);
+  const html = buildMcpAppSandboxProxyHtml({ allowedParentOrigins });
+  response.writeHead(200, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Content-Security-Policy": buildMcpAppSandboxOuterCsp(allowedParentOrigins),
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+  });
+  if (method === "HEAD") {
+    response.end();
+    return;
+  }
+  response.end(html);
 }
 
 function parseSkillRootKind(value: unknown): "user" | "workspaceSpirit" | "workspaceAgents" {

@@ -91,6 +91,9 @@ export type CommandPayloads = {
   saveHookEntry: { request: SaveHookEntryRequest };
   deleteHookEntry: { request: DeleteHookEntryRequest };
   inspectMcpServer: { name: string };
+  mcpAppReadResource: { request: import("./types.js").McpAppReadResourceRequest };
+  mcpAppCallTool: { request: import("./types.js").McpAppCallToolRequest };
+  mcpAppUpdateModelContext: { request: import("./types.js").McpAppUpdateModelContextRequest };
   importExtension: { request: ImportExtensionRequest };
   installBuiltInExtension: { request: InstallBuiltInExtensionRequest };
   addMarketplaceSource: { request: AddMarketplaceSourceRequest };

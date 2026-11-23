@@ -82,6 +82,15 @@ export async function createElectronHostApi(): Promise<HostApi> {
     inspectMcpServer(name) {
       return bridge.inspectMcpServer(name);
     },
+    mcpAppReadResource(request) {
+      return bridge.mcpAppReadResource(request);
+    },
+    mcpAppCallTool(request) {
+      return bridge.mcpAppCallTool(request);
+    },
+    mcpAppUpdateModelContext(request) {
+      return bridge.mcpAppUpdateModelContext(request);
+    },
     importExtension(request) {
       return bridge.importExtension(request);
     },

@@ -71,6 +71,7 @@
     "@spiritagent/i18n": "workspace:*",
     "@spiritagent/icons": "workspace:*",
     "@spiritagent/lsp": "workspace:*",
+    "@spiritagent/mcp": "workspace:*",
     "@spiritagent/process": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "@spiritagent/remote-control": "workspace:*",

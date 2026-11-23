@@ -45,6 +45,9 @@ import {
   SESSION_LIST,
   SESSION_MIGRATE_CONVERSATION_KEY,
   SESSION_MCP,
+  SESSION_MCP_APP_READ_RESOURCE,
+  SESSION_MCP_APP_CALL_TOOL,
+  SESSION_MCP_APP_UPDATE_MODEL_CONTEXT,
   SESSION_POLL,
   SESSION_PUSH_DESKTOP_TIMELINE,
   SESSION_RENAME,
@@ -130,6 +133,9 @@ const SESSION_METHODS = new Set([
   SESSION_CLEAR_PENDING_MCP_RESOURCES,
   SESSION_APPLY_MCP_PROMPT,
   SESSION_MCP,
+  SESSION_MCP_APP_READ_RESOURCE,
+  SESSION_MCP_APP_CALL_TOOL,
+  SESSION_MCP_APP_UPDATE_MODEL_CONTEXT,
   SESSION_START_MANUAL_TOOL_COMMAND,
   SESSION_CONTINUE_MANUAL_APPROVAL,
   SESSION_TAKE_MANUAL_RESULT,
@@ -750,6 +756,46 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
           String(params["action"] ?? ""),
           (params["params"] ?? {}) as Record<string, unknown>,
         );
+      case SESSION_MCP_APP_READ_RESOURCE:
+        return sessionManager.mcpAppReadResource(
+          readSessionId(params),
+          String(params["server"] ?? ""),
+          String(params["uri"] ?? ""),
+        );
+      case SESSION_MCP_APP_CALL_TOOL: {
+        const rawArgs = params["arguments"];
+        const args =
+          rawArgs && typeof rawArgs === "object" && !Array.isArray(rawArgs)
+            ? (rawArgs as Record<string, unknown>)
+            : undefined;
+        return sessionManager.mcpAppCallTool(
+          readSessionId(params),
+          String(params["server"] ?? ""),
+          String(params["tool"] ?? ""),
+          args,
+          params["approved"] === true,
+        );
+      }
+      case SESSION_MCP_APP_UPDATE_MODEL_CONTEXT: {
+        const rawStructured = params["structuredContent"];
+        const structuredContent =
+          rawStructured && typeof rawStructured === "object" && !Array.isArray(rawStructured)
+            ? (rawStructured as Record<string, unknown>)
+            : undefined;
+        const toolName =
+          typeof params["toolName"] === "string" && params["toolName"].trim()
+            ? params["toolName"].trim()
+            : undefined;
+        const text = typeof params["text"] === "string" ? params["text"] : undefined;
+        sessionManager.mcpAppUpdateModelContext(readSessionId(params), {
+          appId: String(params["appId"] ?? ""),
+          server: String(params["server"] ?? ""),
+          ...(toolName ? { toolName } : {}),
+          ...(text !== undefined ? { text } : {}),
+          ...(structuredContent ? { structuredContent } : {}),
+        });
+        return { ok: true };
+      }
       case SESSION_START_MANUAL_TOOL_COMMAND:
         return sessionManager.startManualToolCommand(
           readSessionId(params),
