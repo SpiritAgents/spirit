@@ -1,3 +1,4 @@
+export * from "./async-block-height.js";
 export * from "./spirit-streamdown-markdown.js";
 export * from "./review-comment-hunk-view.js";
 export * from "./unified-diff-code-view.js";

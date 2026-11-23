@@ -1,12 +1,47 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import type { MermaidConfig } from "mermaid";
 
 import { useTranslation } from "react-i18next";
 
 import { Spinner } from "../spinner.js";
+import { useAsyncBlockScrollAnchor } from "./async-block-height.js";
 import { createSpiritMermaidPlugin } from "./markdown-mermaid-theme.js";
 import { cn } from "../cn.js";
+
+const DEFAULT_MERMAID_PLACEHOLDER_HEIGHT_PX = 200;
+const MAX_MERMAID_SVG_CACHE_ENTRIES = 120;
+const mermaidSvgCache = new Map<string, string>();
+
+function getCachedMermaidSvg(key: string): string | undefined {
+  const hit = mermaidSvgCache.get(key);
+  if (hit === undefined) {
+    return undefined;
+  }
+  mermaidSvgCache.delete(key);
+  mermaidSvgCache.set(key, hit);
+  return hit;
+}
+
+function setCachedMermaidSvg(key: string, svg: string): void {
+  mermaidSvgCache.delete(key);
+  mermaidSvgCache.set(key, svg);
+  if (mermaidSvgCache.size > MAX_MERMAID_SVG_CACHE_ENTRIES) {
+    const oldest = mermaidSvgCache.keys().next().value;
+    if (oldest !== undefined) {
+      mermaidSvgCache.delete(oldest);
+    }
+  }
+}
 
 const MERMAID_SVG_LAYOUT_CLASS_FULLSCREEN =
   "[&_svg]:block [&_svg]:h-auto [&_svg]:max-h-full [&_svg]:w-auto [&_svg]:max-w-full";
@@ -217,17 +252,35 @@ export function SpiritMermaidChart({
   eager?: boolean;
 }) {
   const plugin = useMemo(() => createSpiritMermaidPlugin(resolvedDark), [resolvedDark]);
+  const scrollAnchor = useAsyncBlockScrollAnchor();
   const chartId = useId().replace(/:/g, "");
   const renderSeqRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [shouldRender, setShouldRender] = useState(eager || fullscreen);
-  const [svg, setSvg] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const cacheKey = `${resolvedDark ? "d" : "l"}:${hashChart(chart)}:${chart.length}:${chart}`;
+  const heightBlockKey = `mermaid:${resolvedDark ? "d" : "l"}:${hashChart(chart)}:${chart.length}`;
   const [retryKey, setRetryKey] = useState(0);
+  const cachedSvg = retryKey === 0 ? getCachedMermaidSvg(cacheKey) : undefined;
+  const [intersected, setIntersected] = useState(false);
+  const shouldRender = eager || fullscreen || intersected || cachedSvg !== undefined;
+  const [rendered, setRendered] = useState<{
+    cacheKey: string;
+    retryKey: number;
+    svg: string;
+    error: string | null;
+  } | null>(null);
+
+  const activeRendered =
+    rendered && rendered.cacheKey === cacheKey && rendered.retryKey === retryKey ? rendered : null;
+  const svg = cachedSvg ?? activeRendered?.svg ?? "";
+  const error = cachedSvg !== undefined ? null : (activeRendered?.error ?? null);
+  const loading = shouldRender && !svg && !error;
+
+  const reservedHeightPx = fullscreen
+    ? undefined
+    : (scrollAnchor?.getCachedHeight(heightBlockKey) ?? DEFAULT_MERMAID_PLACEHOLDER_HEIGHT_PX);
 
   useEffect(() => {
-    if (eager || fullscreen) {
+    if (shouldRender) {
       return;
     }
     const element = containerRef.current;
@@ -237,7 +290,7 @@ export function SpiritMermaidChart({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting) {
-          setShouldRender(true);
+          setIntersected(true);
           observer.disconnect();
         }
       },
@@ -245,49 +298,82 @@ export function SpiritMermaidChart({
     );
     observer.observe(element);
     return () => observer.disconnect();
-  }, [eager, fullscreen]);
+  }, [shouldRender]);
 
   useEffect(() => {
-    if (!shouldRender) {
+    if (!shouldRender || cachedSvg !== undefined) {
       return;
     }
     let cancelled = false;
     void (async () => {
-      setLoading(true);
-      setError(null);
       try {
         const mermaid = plugin.getMermaid(mermaidConfig);
         // Unique per invocation: mermaid.render reuses its temp DOM by id, so overlapping
         // renders of one chart (e.g. a config change mid-flight) must not share an id.
         renderSeqRef.current += 1;
         const id = `spirit-mermaid-${Math.abs(hashChart(chart))}-${chartId}-${retryKey}-${renderSeqRef.current}`;
-        const { svg: rendered } = await mermaid.render(id, chart);
+        const { svg: renderedSvg } = await mermaid.render(id, chart);
         if (!cancelled) {
-          setSvg(rendered);
+          setCachedMermaidSvg(cacheKey, renderedSvg);
+          scrollAnchor?.notifyAsyncBlockWillResize(containerRef.current);
+          setRendered({ cacheKey, retryKey, svg: renderedSvg, error: null });
         }
       } catch (renderError) {
         if (!cancelled) {
-          setSvg("");
-          setError(
-            renderError instanceof Error ? renderError.message : "Failed to render Mermaid chart",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
+          scrollAnchor?.notifyAsyncBlockWillResize(containerRef.current);
+          setRendered({
+            cacheKey,
+            retryKey,
+            svg: "",
+            error:
+              renderError instanceof Error ? renderError.message : "Failed to render Mermaid chart",
+          });
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [chart, chartId, mermaidConfig, plugin, retryKey, shouldRender]);
+  }, [
+    cacheKey,
+    cachedSvg,
+    chart,
+    chartId,
+    mermaidConfig,
+    plugin,
+    retryKey,
+    scrollAnchor,
+    shouldRender,
+  ]);
 
-  if ((eager || fullscreen) && !shouldRender) {
-    setShouldRender(true);
-  }
+  useLayoutEffect(() => {
+    if (fullscreen || !svg || !scrollAnchor) {
+      return;
+    }
+    const element = containerRef.current;
+    if (!element) {
+      return;
+    }
+    const record = () => {
+      const height = element.getBoundingClientRect().height;
+      if (height > 0) {
+        scrollAnchor.setCachedHeight(heightBlockKey, height);
+      }
+    };
+    record();
+    const observer = new ResizeObserver(record);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [fullscreen, heightBlockKey, scrollAnchor, svg]);
+
   if (!shouldRender && !svg) {
-    return <div className={cn("my-4 min-h-[200px]", className)} ref={containerRef} />;
+    return (
+      <div
+        className={cn("my-4 w-full", className)}
+        style={reservedHeightPx !== undefined ? { minHeight: reservedHeightPx } : undefined}
+        ref={containerRef}
+      />
+    );
   }
 
   if (loading && !svg) {
@@ -296,9 +382,10 @@ export function SpiritMermaidChart({
         ref={containerRef}
         className={cn(
           "flex items-center justify-center",
-          fullscreen ? "size-full min-h-32" : "my-4 min-h-32 w-full p-4",
+          fullscreen ? "size-full min-h-32" : "my-4 w-full p-4",
           className,
         )}
+        style={reservedHeightPx !== undefined ? { minHeight: reservedHeightPx } : undefined}
       >
         <Spinner className="size-4 shrink-0 text-muted-foreground" />
       </div>

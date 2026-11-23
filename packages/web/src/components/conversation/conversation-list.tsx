@@ -46,6 +46,13 @@ import { normalizePaneSessionPathKey } from "@/lib/pane-desktop-snapshot";
 import type { PointerEvent, ReactNode, RefObject } from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import {
+  AsyncBlockScrollAnchorProvider,
+  createAsyncBlockHeightCache,
+  decideVirtualRowScrollAdjustment,
+  type AsyncBlockScrollAnchorValue,
+  type PendingAsyncRowResize,
+} from "@spiritagent/ui/rendering";
 
 import {
   CONVERSATION_GUTTER_X,
@@ -62,6 +69,8 @@ type DesktopRuntime = ReturnType<typeof useDesktopRuntime>;
 // Memoized row props must be reference-stable; use module-level constants for empty arrays instead of inline literals
 const EMPTY_MODELS: DesktopSnapshot["config"]["models"] = [];
 const EMPTY_REWIND_LOCAL_FILE_ATTACHMENTS: readonly ComposerLocalFileAttachmentView[] = [];
+const sharedAsyncBlockHeightCache = createAsyncBlockHeightCache(400);
+const ASYNC_BLOCK_RESIZE_COMPENSATION_WINDOW_MS = 350;
 
 export type ConversationListProps = {
   messages: readonly ConversationMessageSnapshot[];
@@ -327,6 +336,9 @@ export function ConversationList({
   // yet at the bottom suddenly jumps to the bottom".
   const lastPinnedTotalSizeRef = useRef(-1);
   const suppressTailPinRef = useRef(false);
+  const pendingAsyncResizeByKeyRef = useRef<Map<string | number | bigint, PendingAsyncRowResize>>(
+    new Map(),
+  );
   // oxlint-disable-next-line react/incompatible-library -- TanStack Virtual returns functions that React Compiler cannot safely memoize.
   const virtualizer = useVirtualizer({
     count: conversationRenderItems.length,
@@ -348,6 +360,68 @@ export function ConversationList({
       pinScrollToTail();
     },
   });
+
+  // Preserve TanStack Virtual's default scroll-adjustment policy for normal rows, while enabling
+  // same-frame scroll-anchor compensation for rows undergoing an async embedded-block height change
+  // (Mermaid diagram resolution, MCP App size-changed) above the viewport top edge—even when
+  // scrollDirection is "backward".
+  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item, _delta, instance) => {
+    const now = performance.now();
+    const pending = pendingAsyncResizeByKeyRef.current.get(item.key);
+    if (pending && now > pending.expiresAt) {
+      pendingAsyncResizeByKeyRef.current.delete(item.key);
+    }
+    const scrollOffsetWithAdj = (instance.scrollOffset ?? 0) + instance.scrollAdjustments;
+    const isFirstMeasure = !instance.itemSizeCache.has(item.key);
+    return decideVirtualRowScrollAdjustment({
+      pendingAsyncResize: pending,
+      now,
+      isFirstMeasure,
+      itemStart: item.start,
+      itemEnd: item.end,
+      scrollOffsetWithAdj,
+      scrollDirection: instance.scrollDirection,
+    });
+  };
+
+  const getItemKeyRef = useRef(getItemKey);
+  getItemKeyRef.current = getItemKey;
+  const scrollElementRef = useRef(scrollElement);
+  scrollElementRef.current = scrollElement;
+
+  const asyncBlockScrollAnchorValue = useMemo<AsyncBlockScrollAnchorValue>(
+    () => ({
+      getCachedHeight: (blockKey) => sharedAsyncBlockHeightCache.get(blockKey),
+      setCachedHeight: (blockKey, heightPx) => sharedAsyncBlockHeightCache.set(blockKey, heightPx),
+      notifyAsyncBlockWillResize: (element) => {
+        const viewport = scrollElementRef.current;
+        if (!element || !viewport) {
+          return;
+        }
+        const rowEl = element.closest<HTMLElement>("[data-index]");
+        const indexAttr = rowEl?.getAttribute("data-index");
+        if (!indexAttr) {
+          return;
+        }
+        const rowIndex = Number.parseInt(indexAttr, 10);
+        if (!Number.isFinite(rowIndex)) {
+          return;
+        }
+        const rowKey = getItemKeyRef.current(rowIndex);
+        const blockTop = element.getBoundingClientRect().top;
+        const viewportTop = viewport.getBoundingClientRect().top;
+        // When the async block starts above the viewport top edge (either fully above the fold or
+        // straddling the top edge while the user reads below it), compensate scrollTop by delta so
+        // content below stays visually pinned. When its top is visible inside the viewport, let it
+        // expand downward from its anchored top edge without dragging the viewport.
+        pendingAsyncResizeByKeyRef.current.set(rowKey, {
+          compensate: blockTop < viewportTop,
+          expiresAt: performance.now() + ASYNC_BLOCK_RESIZE_COMPENSATION_WINDOW_MS,
+        });
+      },
+    }),
+    [],
+  );
 
   // scrollMargin = offset of the list start relative to the scroll viewport top (including shell
   // pt-6/7), otherwise translateY and scrollToIndex would be offset as a whole.
@@ -666,60 +740,62 @@ export function ConversationList({
       )}
     >
       <ToolCallDiffHostProvider value={toolCallDiffHostValue}>
-        {subagentViewActive && messages.length === 0 ? (
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {t("app.subagentViewerEmpty")}
-          </p>
-        ) : null}
-        <div
-          key={`${composerSessionKey || "__no-session__"}:${conversationListScopeKey}:e${conversationListRemountEpoch}`}
-          // directDomUpdates: container height and row transforms are written directly by the
-          // virtualizer; JSX must not set height / translateY again (see the useVirtualizer comment above).
-          ref={(el) => {
-            sizingRef.current = el;
-            virtualizer.containerRef(el);
-          }}
-          data-spirit-surface="conversation-list"
-          className="relative w-full"
-        >
-          {virtualItems.map((virtualItem) => (
-            <div
-              key={virtualItem.key}
-              ref={(el) => {
-                virtualizer.measureElement(el);
-                // For rows mounted mid-scroll, virtual-core skips synchronous measurement
-                // (when isScrolling and no scrollState it only registers RO); measurement and
-                // scrollTop compensation are deferred until after paint.
-                // When not scrolling, measureElement already resizeItem'ed synchronously; do not
-                // call it again.
-                if (el && virtualizer.isScrolling) {
-                  virtualizer.resizeItem(virtualItem.index, el.offsetHeight);
-                }
-              }}
-              data-index={virtualItem.index}
-              className="absolute left-0 top-0 w-full"
-              style={{
-                paddingTop: conversationRenderItemGapBeforePxAt(
-                  virtualItem.index,
-                  conversationRenderItems,
-                  messages,
-                ),
-                // translateY (written directly by the virtualizer) makes the row wrapper its own
-                // stacking context, so the in-card z-40 cannot escape to compete with the z-30
-                // rewind overlay; rewind rows must be promoted in z at the wrapper level.
-                ...(rewindDraft &&
-                (() => {
-                  const item = conversationRenderItems[virtualItem.index];
-                  return item?.kind === "message" && item.messageIndex === rewindDraft.listIndex;
-                })()
-                  ? { zIndex: 40 }
-                  : undefined),
-              }}
-            >
-              {renderRow(virtualItem.index)}
-            </div>
-          ))}
-        </div>
+        <AsyncBlockScrollAnchorProvider value={asyncBlockScrollAnchorValue}>
+          {subagentViewActive && messages.length === 0 ? (
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {t("app.subagentViewerEmpty")}
+            </p>
+          ) : null}
+          <div
+            key={`${composerSessionKey || "__no-session__"}:${conversationListScopeKey}:e${conversationListRemountEpoch}`}
+            // directDomUpdates: container height and row transforms are written directly by the
+            // virtualizer; JSX must not set height / translateY again (see the useVirtualizer comment above).
+            ref={(el) => {
+              sizingRef.current = el;
+              virtualizer.containerRef(el);
+            }}
+            data-spirit-surface="conversation-list"
+            className="relative w-full"
+          >
+            {virtualItems.map((virtualItem) => (
+              <div
+                key={virtualItem.key}
+                ref={(el) => {
+                  virtualizer.measureElement(el);
+                  // For rows mounted mid-scroll, virtual-core skips synchronous measurement
+                  // (when isScrolling and no scrollState it only registers RO); measurement and
+                  // scrollTop compensation are deferred until after paint.
+                  // When not scrolling, measureElement already resizeItem'ed synchronously; do not
+                  // call it again.
+                  if (el && virtualizer.isScrolling) {
+                    virtualizer.resizeItem(virtualItem.index, el.offsetHeight);
+                  }
+                }}
+                data-index={virtualItem.index}
+                className="absolute left-0 top-0 w-full"
+                style={{
+                  paddingTop: conversationRenderItemGapBeforePxAt(
+                    virtualItem.index,
+                    conversationRenderItems,
+                    messages,
+                  ),
+                  // translateY (written directly by the virtualizer) makes the row wrapper its own
+                  // stacking context, so the in-card z-40 cannot escape to compete with the z-30
+                  // rewind overlay; rewind rows must be promoted in z at the wrapper level.
+                  ...(rewindDraft &&
+                  (() => {
+                    const item = conversationRenderItems[virtualItem.index];
+                    return item?.kind === "message" && item.messageIndex === rewindDraft.listIndex;
+                  })()
+                    ? { zIndex: 40 }
+                    : undefined),
+                }}
+              >
+                {renderRow(virtualItem.index)}
+              </div>
+            ))}
+          </div>
+        </AsyncBlockScrollAnchorProvider>
       </ToolCallDiffHostProvider>
     </div>
   );
