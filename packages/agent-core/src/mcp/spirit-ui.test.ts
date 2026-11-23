@@ -87,16 +87,20 @@ test("extension MCP can open an owned view during tools/call", async () => {
           },
         }),
       });
-      const result = await service.callTool("demo", "demo", JSON.stringify({ viewId: "own" }), {
-        uiOpener: async (request) => {
-          assert.equal(request.extensionId, "built-in/demo");
-          assert.equal(request.viewId, "own");
-          return { kind: "opened", result: { enabled: true } };
-        },
-      });
-      const text = extractToolText(result);
-      assert.match(text, /opened/);
-      assert.match(text, /enabled/);
+      try {
+        const result = await service.callTool("demo", "demo", JSON.stringify({ viewId: "own" }), {
+          uiOpener: async (request) => {
+            assert.equal(request.extensionId, "built-in/demo");
+            assert.equal(request.viewId, "own");
+            return { kind: "opened", result: { enabled: true } };
+          },
+        });
+        const text = extractToolText(result);
+        assert.match(text, /opened/);
+        assert.match(text, /enabled/);
+      } finally {
+        await service.dispose();
+      }
     });
   } finally {
     rmSync(workspaceRoot, { recursive: true, force: true });
@@ -121,11 +125,20 @@ test("extension MCP cannot open another extension's view", async () => {
           },
         }),
       });
-      const result = await service.callTool("demo", "demo", JSON.stringify({ viewId: "foreign" }), {
-        uiOpener: async () => ({ kind: "opened", result: { leaked: true } }),
-      });
-      const text = extractToolText(result);
-      assert.match(text, /not owned|error:/);
+      try {
+        const result = await service.callTool(
+          "demo",
+          "demo",
+          JSON.stringify({ viewId: "foreign" }),
+          {
+            uiOpener: async () => ({ kind: "opened", result: { leaked: true } }),
+          },
+        );
+        const text = extractToolText(result);
+        assert.match(text, /not owned|error:/);
+      } finally {
+        await service.dispose();
+      }
     });
   } finally {
     rmSync(workspaceRoot, { recursive: true, force: true });
@@ -155,11 +168,15 @@ test("user and workspace MCP servers cannot open views", async () => {
           }),
         },
       });
-      const result = await service.callTool("demo", "demo", JSON.stringify({ viewId: "own" }), {
-        uiOpener: async () => ({ kind: "opened", result: { leaked: true } }),
-      });
-      const text = extractToolText(result);
-      assert.match(text, /no extension UI ownership|error:/);
+      try {
+        const result = await service.callTool("demo", "demo", JSON.stringify({ viewId: "own" }), {
+          uiOpener: async () => ({ kind: "opened", result: { leaked: true } }),
+        });
+        const text = extractToolText(result);
+        assert.match(text, /no extension UI ownership|error:/);
+      } finally {
+        await service.dispose();
+      }
     });
   } finally {
     rmSync(workspaceRoot, { recursive: true, force: true });
@@ -184,10 +201,14 @@ test("hosts without a UI opener return unavailable", async () => {
           },
         }),
       });
-      const result = await service.callTool("demo", "demo", JSON.stringify({ viewId: "own" }));
-      const text = extractToolText(result);
-      assert.match(text, /unavailable/);
-      assert.match(text, /host-has-no-ui/);
+      try {
+        const result = await service.callTool("demo", "demo", JSON.stringify({ viewId: "own" }));
+        const text = extractToolText(result);
+        assert.match(text, /unavailable/);
+        assert.match(text, /host-has-no-ui/);
+      } finally {
+        await service.dispose();
+      }
     });
   } finally {
     rmSync(workspaceRoot, { recursive: true, force: true });

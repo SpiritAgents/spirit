@@ -12,16 +12,16 @@ export class McpRegistry {
     private readonly extraConfigs?: McpExtraConfigProvider,
   ) {}
 
-  forWorkspace(workspaceRoot: string): McpService {
-    const key = path.resolve(workspaceRoot);
+  forWorkspace(workspaceRoot: string, options?: { enableMcpApps?: boolean }): McpService {
+    const resolvedRoot = path.resolve(workspaceRoot);
+    const enableMcpApps = options?.enableMcpApps === true;
+    const key = `${resolvedRoot}|${enableMcpApps ? "mcp-apps" : "headless"}`;
     let service = this.cache.get(key);
     if (!service) {
-      service = createHostMcpService(
-        key,
-        this.spiritDataDir,
-        true,
-        this.extraConfigs ? { extraConfigs: this.extraConfigs } : {},
-      );
+      service = createHostMcpService(resolvedRoot, this.spiritDataDir, true, {
+        ...(this.extraConfigs ? { extraConfigs: this.extraConfigs } : {}),
+        enableMcpApps,
+      });
       this.cache.set(key, service);
     }
     return service;
@@ -34,5 +34,23 @@ export class McpRegistry {
         service.startBackgroundRefreshInBackground(true);
       }),
     );
+  }
+
+  async disposeWorkspace(workspaceRoot: string): Promise<void> {
+    const prefix = `${path.resolve(workspaceRoot)}|`;
+    const toDispose: McpService[] = [];
+    for (const [key, service] of this.cache.entries()) {
+      if (key.startsWith(prefix)) {
+        this.cache.delete(key);
+        toDispose.push(service);
+      }
+    }
+    await Promise.all(toDispose.map((service) => service.dispose()));
+  }
+
+  async disposeAll(): Promise<void> {
+    const services = [...this.cache.values()];
+    this.cache.clear();
+    await Promise.all(services.map((service) => service.dispose()));
   }
 }

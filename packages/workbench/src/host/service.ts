@@ -540,6 +540,7 @@ import {
 import { listDesktopHookListItems } from "@spiritagent/sessions/host/hooks";
 import type { SessionEndHookInput, SessionStartHookInput } from "@spiritagent/agent-core";
 import {
+  disposeAllMcpServices,
   disposeMcpServicesExcept,
   refreshMcpServices,
   sharedMcpServiceForWorkspace,
@@ -6050,6 +6051,7 @@ export class DesktopHostService {
     this.sessionPump.stop();
     const runtimes = [...this.sessionRegistry.all()].map((bundle) => bundle.runtime);
     await Promise.all(runtimes.map((runtime) => closeRemoteDesktopRuntime(runtime)));
+    await disposeAllMcpServices(this.mcpServiceByWorkspaceRoot);
     // After sessions close, drop the shared WS so daemon can idle-exit when we are the last host.
     await closeSharedDesktopServerClient();
   }

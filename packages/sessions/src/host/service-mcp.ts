@@ -30,7 +30,10 @@ export function sharedMcpServiceForWorkspace(
       path.resolve(workspaceRoot),
       spiritDataDir(),
       includeWorkspaceConfig,
-      extraConfigs ? { extraConfigs } : {},
+      {
+        ...(extraConfigs ? { extraConfigs } : {}),
+        enableMcpApps: true,
+      },
     );
     service.startBackgroundRefreshInBackground(false);
     cache.set(key, service);
@@ -48,20 +51,27 @@ export async function refreshMcpServices(services: Iterable<McpService>): Promis
 }
 
 /**
- * Counterpart of LSP's disposeLspServicesExcept: shrinks the MCP directory cache on workspace switch.
- * McpService has no persistent connection (connect→close per call), so deleting Map entries frees the memory.
+ * Counterpart of LSP's disposeLspServicesExcept: shrinks the MCP directory cache on workspace switch
+ * and disposes any pooled MCP client connections for evicted workspaces.
  */
 export function disposeMcpServicesExcept(
   cache: Map<string, McpService>,
   keepWorkspaceRoot?: string,
 ): void {
   const keepPrefix = keepWorkspaceRoot ? `${path.resolve(keepWorkspaceRoot)}|` : undefined;
-  for (const key of cache.keys()) {
+  for (const [key, service] of cache.entries()) {
     if (keepPrefix !== undefined && key.startsWith(keepPrefix)) {
       continue;
     }
     cache.delete(key);
+    void service.dispose();
   }
+}
+
+export async function disposeAllMcpServices(cache: Map<string, McpService>): Promise<void> {
+  const services = [...cache.values()];
+  cache.clear();
+  await Promise.all(services.map((service) => service.dispose()));
 }
 
 export async function addDesktopMcpServer(input: {

@@ -429,7 +429,11 @@ export class SessionManager {
       ...(params.todoSessionKey?.trim() ? { todoSessionKey: params.todoSessionKey.trim() } : {}),
       ...(params.sessionKind === "dream-collector"
         ? {}
-        : { mcpService: this.mcpRegistry.forWorkspace(params.workspaceRoot) }),
+        : {
+            mcpService: this.mcpRegistry.forWorkspace(params.workspaceRoot, {
+              enableMcpApps: supportsMcpAppsForHostKind(params.hostKind),
+            }),
+          }),
       hostKind: params.hostKind === "web" ? "cli" : params.hostKind,
       approvalLevel: params.approvalLevel ?? "default",
       agentMode: params.agentMode ?? "agent",
@@ -753,7 +757,9 @@ export class SessionManager {
       agentMode: current.agentModeSnapshot(),
       ...(session.createParams.modelRef ? { modelRef: session.createParams.modelRef } : {}),
       todoSessionKey: session.todoSessionKey,
-      mcpService: this.mcpRegistry.forWorkspace(workspaceRoot),
+      mcpService: this.mcpRegistry.forWorkspace(workspaceRoot, {
+        enableMcpApps: supportsMcpAppsForHostKind(session.createParams.hostKind),
+      }),
       hostKind: session.createParams.hostKind === "web" ? "cli" : session.createParams.hostKind,
       approvalLevel: session.info.approvalLevel,
       ...(session.info.sessionKind ? { sessionKind: session.info.sessionKind } : {}),
@@ -1959,7 +1965,9 @@ export class SessionManager {
         agentMode: mode,
         ...(session.createParams.modelRef ? { modelRef: session.createParams.modelRef } : {}),
         todoSessionKey: session.todoSessionKey,
-        mcpService: this.mcpRegistry.forWorkspace(session.createParams.workspaceRoot),
+        mcpService: this.mcpRegistry.forWorkspace(session.createParams.workspaceRoot, {
+          enableMcpApps: supportsMcpAppsForHostKind(session.createParams.hostKind),
+        }),
         hostKind: session.createParams.hostKind === "web" ? "cli" : session.createParams.hostKind,
         approvalLevel: session.info.approvalLevel,
         ...(session.createParams.hostUiPromptSection
@@ -2282,13 +2290,18 @@ export class SessionManager {
       pending.resolve({ kind: "unavailable", reason: "host-has-no-ui" });
     }
     const settled = await Promise.allSettled(disposals);
+    const mcpDisposed = await Promise.allSettled([this.mcpRegistry.disposeAll()]);
     const owner = await Promise.allSettled(
       this.taskOwner ? [this.taskOwner.then((value) => value.close())] : [],
     );
     this.taskOwner = undefined;
-    const failures = [...settled, ...owner].flatMap((entry) =>
+    const failures = [...settled, ...mcpDisposed, ...owner].flatMap((entry) =>
       entry.status === "rejected" ? [entry.reason] : [],
     );
     if (failures.length) throw new AggregateError(failures, "Daemon session shutdown failed.");
   }
+}
+
+function supportsMcpAppsForHostKind(hostKind: ServerClientKind): boolean {
+  return hostKind === "desktop" || hostKind === "web";
 }
