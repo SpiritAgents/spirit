@@ -1,10 +1,17 @@
-import { buildActiveSkillsBlockContent, type ToolAgentActiveSkill } from "../tool-agent.js";
+import {
+  buildActiveSkillsBlockContent,
+  buildMcpAppContextBlockContent,
+  type ToolAgentActiveSkill,
+  type ToolAgentMcpAppContext,
+} from "../tool-agent.js";
 
 /** Prefix user turn content with a local-time anchor for the LLM (plain text, no separate metadata field). */
 const USER_MESSAGE_AT_OPEN = "<user_message_at>";
 const USER_MESSAGE_AT_CLOSE = "</user_message_at>";
 const ACTIVE_SKILL_OPEN = "<active_skill>";
 const ACTIVE_SKILL_CLOSE = "</active_skill>";
+const MCP_APP_CONTEXT_OPEN = "<mcp_app_context>";
+const MCP_APP_CONTEXT_CLOSE = "</mcp_app_context>";
 
 export function formatActiveSkillUserMessageMeta(
   activeSkills: ToolAgentActiveSkill[],
@@ -17,14 +24,30 @@ export function formatActiveSkillUserMessageMeta(
   return `${ACTIVE_SKILL_OPEN}\n${block}\n${ACTIVE_SKILL_CLOSE}`;
 }
 
+export function formatMcpAppContextUserMessageMeta(
+  mcpAppContexts: readonly ToolAgentMcpAppContext[],
+): string | undefined {
+  const block = buildMcpAppContextBlockContent(mcpAppContexts);
+  if (!block) {
+    return undefined;
+  }
+
+  return `${MCP_APP_CONTEXT_OPEN}\n${block}\n${MCP_APP_CONTEXT_CLOSE}`;
+}
+
 export function formatUserMessageContentForLlm(
   body: string,
   activeSkills: ToolAgentActiveSkill[] = [],
+  mcpAppContexts: readonly ToolAgentMcpAppContext[] = [],
 ): string {
   const lines: string[] = [];
   const activeSkillMeta = formatActiveSkillUserMessageMeta(activeSkills);
   if (activeSkillMeta) {
     lines.push(activeSkillMeta);
+  }
+  const mcpAppContextMeta = formatMcpAppContextUserMessageMeta(mcpAppContexts);
+  if (mcpAppContextMeta) {
+    lines.push(mcpAppContextMeta);
   }
   lines.push(
     `${USER_MESSAGE_AT_OPEN}${formatLocalIsoWithOffset(new Date())}${USER_MESSAGE_AT_CLOSE}`,
@@ -42,18 +65,30 @@ export function userMessageContentMatchesInput(content: string, input: string): 
   return body !== undefined && body === input;
 }
 
-function bodyAfterUserMessageMeta(content: string): string | undefined {
-  let remaining = content;
+function stripLeadingMetaBlock(
+  content: string,
+  openTag: string,
+  closeTag: string,
+): string | undefined {
+  if (!content.startsWith(openTag)) {
+    return content;
+  }
+  const closeIndex = content.indexOf(closeTag);
+  if (closeIndex < 0) {
+    return undefined;
+  }
+  const after = content.slice(closeIndex + closeTag.length);
+  return after.startsWith("\n") ? after.slice(1) : after;
+}
 
-  if (remaining.startsWith(ACTIVE_SKILL_OPEN)) {
-    const closeIndex = remaining.indexOf(ACTIVE_SKILL_CLOSE);
-    if (closeIndex < 0) {
-      return undefined;
-    }
-    remaining = remaining.slice(closeIndex + ACTIVE_SKILL_CLOSE.length);
-    if (remaining.startsWith("\n")) {
-      remaining = remaining.slice(1);
-    }
+function bodyAfterUserMessageMeta(content: string): string | undefined {
+  const afterSkill = stripLeadingMetaBlock(content, ACTIVE_SKILL_OPEN, ACTIVE_SKILL_CLOSE);
+  if (afterSkill === undefined) {
+    return undefined;
+  }
+  const remaining = stripLeadingMetaBlock(afterSkill, MCP_APP_CONTEXT_OPEN, MCP_APP_CONTEXT_CLOSE);
+  if (remaining === undefined) {
+    return undefined;
   }
 
   const firstLineEnd = remaining.indexOf("\n");

@@ -3,7 +3,12 @@ import { execFile } from "node:child_process";
 import { access } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 
-import type { JsonValue } from "../ports.js";
+import {
+  createToolExecutionTextOutput,
+  type JsonValue,
+  type ToolExecutionMcpAppUi,
+  type ToolExecutionOutput,
+} from "../ports.js";
 import {
   buildLazyToolGatewayDefinitions,
   buildFetchMcpResourceDefinition,
@@ -14,8 +19,23 @@ import {
   isFetchMcpResourceToolRequest as isFetchMcpResourceToolRequestValue,
   isLazyToolGatewayToolName,
   isLazyToolGatewayToolRequest as isLazyToolGatewayToolRequestValue,
+  mcpToolCallSkipsApproval,
   parseFetchMcpResourceArguments,
+  parseLazyToolGatewayArguments,
+  TOOL_CALL_TOOL_NAME,
+  TOOL_DESCRIBE_TOOL_NAME,
+  type LazyToolGatewayApprovalLevel,
 } from "../tool-gateway/index.js";
+import {
+  MCP_APP_MAX_CONCURRENCY_PER_SERVER,
+  extractResourceUriFromToolResult,
+  isMcpAppHtmlMimeType,
+  isMcpAppUiResource,
+  parseMcpAppResourceResult,
+  parseMcpToolUiMeta,
+  type McpAppResourcePayload,
+  type McpToolUiMeta,
+} from "./apps.js";
 import {
   resolveEnvRecord,
   mergeMcpConfigFiles,
@@ -30,7 +50,7 @@ import {
   findResourceIndexEntry,
 } from "./catalog-snapshot.js";
 import { parseMcpToolApprovalAnnotations } from "./approval-annotations.js";
-import { McpConfigError, McpConnectionError } from "./errors.js";
+import { McpAppToolApprovalRequiredError, McpConfigError, McpConnectionError } from "./errors.js";
 import { McpRegistry } from "./registry.js";
 import {
   SPIRIT_UI_CALL_TOOL_TIMEOUT_MS,
@@ -169,6 +189,7 @@ export class McpService {
   private pendingInvalidationRefresh = false;
   private extensionServerOwnershipStore: Record<string, ExtensionMcpServerOwnership> = {};
   private readonly connectionPool = new Map<string, PooledMcpConnection>();
+  private readonly appCallSemaphores = new Map<string, ServerConcurrencyLimiter>();
   private disposed = false;
 
   constructor(
@@ -203,6 +224,14 @@ export class McpService {
     );
   }
 
+  isMcpAppsEnabled(): boolean {
+    return this.serviceOptions.enableMcpApps === true;
+  }
+
+  lookupToolUiMeta(serverName: string, toolName: string): McpToolUiMeta | undefined {
+    return findToolIndexEntry(this.toolIndexStore, serverName, toolName)?.ui;
+  }
+
   async describeTool(
     serverName: string,
     toolName: string,
@@ -211,6 +240,11 @@ export class McpService {
     const entry = findToolIndexEntry(this.toolIndexStore, serverName, toolName);
     if (!entry) {
       throw new McpConfigError(`Unknown MCP tool: ${serverName}/${toolName}`);
+    }
+    if (entry.ui?.appOnly) {
+      throw new McpConfigError(
+        `MCP tool ${serverName}/${toolName} is app-only and cannot be inspected by the model`,
+      );
     }
 
     return {
@@ -238,6 +272,36 @@ export class McpService {
   ): Promise<string> {
     const backend = createMcpLazyToolGatewayBackend(this, options);
     return executeLazyToolGatewayCall(request.name, request.argumentsJson, backend);
+  }
+
+  async executeLazyToolGatewayToolRequestWithUi(
+    request: import("../tool-gateway/types.js").LazyToolGatewayToolRequest,
+    options?: McpCallToolOptions,
+  ): Promise<ToolExecutionOutput> {
+    if (request.name === TOOL_DESCRIBE_TOOL_NAME) {
+      const text = await this.executeLazyToolGatewayToolRequest(request, options);
+      return createToolExecutionTextOutput(text);
+    }
+    if (request.name !== TOOL_CALL_TOOL_NAME) {
+      throw new McpConfigError(`Unknown lazy tool gateway name: ${request.name}`);
+    }
+
+    const parsed = parseLazyToolGatewayArguments(request.name, request.argumentsJson) as {
+      server: string;
+      tool: string;
+      arguments?: JsonValue;
+    };
+    await this.ensureToolingCache();
+    const indexed = findToolIndexEntry(this.toolIndexStore, parsed.server, parsed.tool);
+    if (indexed?.ui?.appOnly) {
+      throw new McpConfigError(
+        `MCP tool ${parsed.server}/${parsed.tool} is app-only and cannot be called by the model`,
+      );
+    }
+
+    const argsJson = parsed.arguments === undefined ? undefined : JSON.stringify(parsed.arguments);
+    const mcpRequest = await this.createToolRequest(parsed.server, parsed.tool, argsJson);
+    return this.executeToolRequestWithUi(mcpRequest, options, argsJson);
   }
 
   lazyToolGatewayBackgroundStatusText(value: JsonValue): string | undefined {
@@ -423,12 +487,19 @@ export class McpService {
 
   async assertResourceReadable(server: string, uri: string): Promise<void> {
     await this.ensureToolingCache();
+    const indexed = findResourceIndexEntry(this.resourceIndexStore, server, uri);
+    if (indexed?.isMcpAppUi || isMcpAppUiResource({ uri })) {
+      throw new McpConfigError(
+        `MCP resource ${server}/${uri} is an MCP App UI resource and is not readable by the model`,
+      );
+    }
+
     const snapshot = this.catalogSnapshot();
     if (snapshot.resourcesTruncated) {
       return;
     }
 
-    if (!findResourceIndexEntry(this.resourceIndexStore, server, uri)) {
+    if (!indexed) {
       throw new McpConfigError(`Unknown MCP resource: ${server}/${uri}`);
     }
   }
@@ -475,6 +546,127 @@ export class McpService {
   async executeToolRequest(request: McpToolRequest, options?: McpCallToolOptions): Promise<string> {
     const result = await this.callToolRequest(request, options);
     return JSON.stringify(result, null, 2);
+  }
+
+  async executeToolRequestWithUi(
+    request: McpToolRequest,
+    options?: McpCallToolOptions,
+    rawArgumentsJson?: string,
+  ): Promise<ToolExecutionOutput> {
+    await this.ensureToolingCache();
+    const indexed = findToolIndexEntry(this.toolIndexStore, request.server, request.toolName);
+    if (indexed?.ui?.appOnly) {
+      throw new McpConfigError(
+        `MCP tool ${request.server}/${request.toolName} is app-only and cannot be called by the model`,
+      );
+    }
+
+    const result = await this.callToolRequest(request, options);
+    const text = JSON.stringify(result, null, 2);
+    const baseOutput = createToolExecutionTextOutput(text);
+    const mcpApp = this.buildMcpAppHostUi(request, result, rawArgumentsJson);
+    if (!mcpApp) {
+      return baseOutput;
+    }
+
+    return {
+      ...baseOutput,
+      hostUi: {
+        mcpApp,
+      },
+    };
+  }
+
+  async callAppTool(
+    serverName: string,
+    toolName: string,
+    args?: Record<string, unknown>,
+    options?: McpCallToolOptions & {
+      approvalLevel?: LazyToolGatewayApprovalLevel;
+      approved?: boolean;
+    },
+  ): Promise<JsonValue> {
+    await this.ensureToolingCache();
+    const indexed = findToolIndexEntry(this.toolIndexStore, serverName, toolName);
+    if (indexed?.ui?.modelOnly) {
+      throw new McpConfigError(
+        `MCP tool ${serverName}/${toolName} is model-only and cannot be called by an MCP App`,
+      );
+    }
+
+    if (
+      options?.approved !== true &&
+      options?.approvalLevel !== "bypass-approval" &&
+      !mcpToolCallSkipsApproval(indexed?.annotations)
+    ) {
+      throw new McpAppToolApprovalRequiredError(serverName, toolName);
+    }
+
+    const limiter = this.appLimiterForServer(serverName);
+    return limiter.run(async () => {
+      const request = await this.createToolRequest(
+        serverName,
+        toolName,
+        args === undefined ? undefined : JSON.stringify(args),
+      );
+      return this.callToolRequest(request, options);
+    });
+  }
+
+  async readAppResource(serverName: string, uri: string): Promise<McpAppResourcePayload> {
+    const trimmedUri = uri.trim();
+    if (!trimmedUri.startsWith("ui://")) {
+      throw new McpConfigError(`MCP App resource URI must use the ui:// scheme: ${trimmedUri}`);
+    }
+
+    const limiter = this.appLimiterForServer(serverName);
+    return limiter.run(async () => {
+      const raw = await this.readResource(serverName, trimmedUri, { allowMcpAppUi: true });
+      return parseMcpAppResourceResult(trimmedUri, raw);
+    });
+  }
+
+  private buildMcpAppHostUi(
+    request: McpToolRequest,
+    result: JsonValue,
+    rawArgumentsJson?: string,
+  ): ToolExecutionMcpAppUi | undefined {
+    if (!this.isMcpAppsEnabled()) {
+      return undefined;
+    }
+
+    const indexed = findToolIndexEntry(this.toolIndexStore, request.server, request.toolName);
+    const resourceUri = extractResourceUriFromToolResult(result) ?? indexed?.ui?.resourceUri;
+    if (!resourceUri) {
+      return undefined;
+    }
+
+    const ownership = this.extensionServerOwnershipStore[request.server];
+    const argumentsJson =
+      rawArgumentsJson !== undefined
+        ? rawArgumentsJson
+        : request.arguments === null
+          ? undefined
+          : JSON.stringify(request.arguments);
+
+    return {
+      server: request.server,
+      displayName: request.displayName,
+      toolName: request.toolName,
+      resourceUri,
+      ...(argumentsJson !== undefined ? { argumentsJson } : {}),
+      toolResult: result,
+      ...(ownership?.extensionId ? { extensionId: ownership.extensionId } : {}),
+    };
+  }
+
+  private appLimiterForServer(serverName: string): ServerConcurrencyLimiter {
+    let limiter = this.appCallSemaphores.get(serverName);
+    if (!limiter) {
+      limiter = new ServerConcurrencyLimiter(MCP_APP_MAX_CONCURRENCY_PER_SERVER);
+      this.appCallSemaphores.set(serverName, limiter);
+    }
+    return limiter;
   }
 
   lookupExtensionServerOwnership(serverName: string): ExtensionMcpServerOwnership | undefined {
@@ -675,7 +867,11 @@ export class McpService {
     );
   }
 
-  async readResource(name: string, uri: string): Promise<JsonValue> {
+  async readResource(
+    name: string,
+    uri: string,
+    options?: { allowMcpAppUi?: boolean },
+  ): Promise<JsonValue> {
     const server = await this.requireConnectableServer(name);
 
     return this.withConnection(
@@ -684,6 +880,22 @@ export class McpService {
         const capabilities = connection.serverCapabilities;
         assertResourceCapability(server, capabilities);
         const result = await connection.readResource(uri);
+        if (
+          options?.allowMcpAppUi !== true &&
+          Array.isArray(result.contents) &&
+          result.contents.some(
+            (item) =>
+              typeof item === "object" &&
+              item !== null &&
+              "mimeType" in item &&
+              typeof item.mimeType === "string" &&
+              isMcpAppHtmlMimeType(item.mimeType),
+          )
+        ) {
+          throw new McpConfigError(
+            `MCP resource ${server.name}/${uri} is an MCP App UI resource and is not readable by the model`,
+          );
+        }
         this.registry.setServerState(server.name, "ready");
         return result as JsonValue;
       },
@@ -1261,6 +1473,7 @@ export class McpService {
               ? (await connection.listPrompts()).prompts
               : [];
 
+          const referencedUiUris = new Set<string>();
           for (const tool of discoveredTools) {
             const description =
               tool.description ?? `MCP tool ${tool.name} from server ${server.displayName}.`;
@@ -1271,6 +1484,10 @@ export class McpService {
                   additionalProperties: true,
                 };
             const annotations = parseMcpToolApprovalAnnotations(tool.annotations);
+            const ui = parseMcpToolUiMeta(tool as { _meta?: Record<string, unknown> });
+            if (ui?.resourceUri) {
+              referencedUiUris.add(ui.resourceUri);
+            }
 
             indexEntries.push({
               server: server.name,
@@ -1279,6 +1496,7 @@ export class McpService {
               description,
               inputSchema,
               ...(annotations ? { annotations } : {}),
+              ...(ui ? { ui } : {}),
             });
           }
 
@@ -1292,6 +1510,15 @@ export class McpService {
                   ? {}
                   : { description: resource.description }),
                 ...(resource.mimeType === undefined ? {} : { mimeType: resource.mimeType }),
+                ...(isMcpAppUiResource(
+                  {
+                    uri: resource.uri,
+                    ...(resource.mimeType === undefined ? {} : { mimeType: resource.mimeType }),
+                  },
+                  referencedUiUris,
+                )
+                  ? { isMcpAppUi: true }
+                  : {}),
               })),
             ),
           );
@@ -1780,6 +2007,31 @@ async function pathExists(path: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+class ServerConcurrencyLimiter {
+  private active = 0;
+  private readonly queue: Array<() => void> = [];
+
+  constructor(private readonly maxConcurrent: number) {}
+
+  async run<T>(task: () => Promise<T>): Promise<T> {
+    if (this.active >= this.maxConcurrent) {
+      await new Promise<void>((resolve) => {
+        this.queue.push(resolve);
+      });
+    }
+    this.active += 1;
+    try {
+      return await task();
+    } finally {
+      this.active -= 1;
+      const next = this.queue.shift();
+      if (next) {
+        next();
+      }
+    }
   }
 }
 

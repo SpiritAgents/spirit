@@ -876,9 +876,11 @@ export function normalizeToolBlockSnapshot(
   const videoPaths = tool.videoPaths?.map((entry) => entry.trim()).filter(Boolean);
   const lspWriteDiagnostics = normalizeLspWriteDiagnosticsSnapshot(tool.lspWriteDiagnostics);
   const todoWriteBeforeTodos = normalizeTodoWriteBeforeTodosSnapshot(tool.todoWriteBeforeTodos);
+  const mcpApp = normalizeMcpAppSnapshot(tool.mcpApp);
+  const { mcpApp: _discardMcpApp, ...restTool } = tool;
 
   return {
-    ...tool,
+    ...restTool,
     toolName,
     headline,
     detailLines,
@@ -890,6 +892,60 @@ export function normalizeToolBlockSnapshot(
     ...(videoPaths && videoPaths.length > 0 ? { videoPaths } : {}),
     ...(lspWriteDiagnostics ? { lspWriteDiagnostics } : {}),
     ...(todoWriteBeforeTodos ? { todoWriteBeforeTodos } : {}),
+    ...(mcpApp ? { mcpApp } : {}),
+  };
+}
+
+const MAX_PERSISTED_MCP_APP_RESULT_BYTES = 2 * 1024 * 1024;
+
+function normalizeMcpAppSnapshot(
+  value: ToolBlockSnapshot["mcpApp"],
+): ToolBlockSnapshot["mcpApp"] | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+  const server = typeof value.server === "string" ? value.server.trim() : "";
+  const displayName =
+    typeof value.displayName === "string" && value.displayName.trim()
+      ? value.displayName.trim()
+      : server;
+  const toolName = typeof value.toolName === "string" ? value.toolName.trim() : "";
+  const resourceUri = typeof value.resourceUri === "string" ? value.resourceUri.trim() : "";
+  if (!server || !toolName || !resourceUri || !resourceUri.startsWith("ui://")) {
+    return undefined;
+  }
+  const argumentsJson =
+    typeof value.argumentsJson === "string" && value.argumentsJson.trim()
+      ? value.argumentsJson
+      : undefined;
+  const extensionId =
+    typeof value.extensionId === "string" && value.extensionId.trim()
+      ? value.extensionId.trim()
+      : undefined;
+
+  let toolResult: NonNullable<ToolBlockSnapshot["mcpApp"]>["toolResult"] = undefined;
+  if (value.toolResult !== undefined) {
+    try {
+      const serialized = JSON.stringify(value.toolResult);
+      if (
+        serialized &&
+        Buffer.byteLength(serialized, "utf8") <= MAX_PERSISTED_MCP_APP_RESULT_BYTES
+      ) {
+        toolResult = value.toolResult;
+      }
+    } catch {
+      toolResult = undefined;
+    }
+  }
+
+  return {
+    server,
+    displayName,
+    toolName,
+    resourceUri,
+    ...(argumentsJson !== undefined ? { argumentsJson } : {}),
+    ...(toolResult !== undefined ? { toolResult } : {}),
+    ...(extensionId !== undefined ? { extensionId } : {}),
   };
 }
 

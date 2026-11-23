@@ -16,6 +16,7 @@ export function aggregateListedResourcesForServer(
     name: string;
     description?: string;
     mimeType?: string;
+    isMcpAppUi?: boolean;
   }>,
 ): McpResourceIndexEntry[] {
   const byUri = new Map<string, McpResourceIndexEntry>();
@@ -26,6 +27,7 @@ export function aggregateListedResourcesForServer(
     if (typeof resource.mimeType === "string" && resource.mimeType.trim()) {
       mimeTypes.add(resource.mimeType.trim());
     }
+    const isMcpAppUi = existing?.isMcpAppUi === true || resource.isMcpAppUi === true;
 
     byUri.set(resource.uri, {
       server: serverName,
@@ -37,6 +39,7 @@ export function aggregateListedResourcesForServer(
           ? { description: existing.description }
           : {}),
       ...(mimeTypes.size > 0 ? { mimeTypes: [...mimeTypes].sort() } : {}),
+      ...(isMcpAppUi ? { isMcpAppUi: true } : {}),
     });
   }
 
@@ -57,25 +60,28 @@ export function buildMcpToolCatalogSnapshot(
   registry: McpRegistry,
   resolvedServers: Record<string, ResolvedMcpServerConfig>,
 ): ToolAgentMcpToolCatalogSnapshot {
+  const modelVisibleTools = indexEntries.filter((entry) => entry.ui?.appOnly !== true);
+  const modelVisibleResources = resourceEntries.filter((entry) => entry.isMcpAppUi !== true);
+
   const groupedTools = new Map<string, McpToolIndexEntry[]>();
-  for (const entry of indexEntries) {
+  for (const entry of modelVisibleTools) {
     const current = groupedTools.get(entry.server) ?? [];
     current.push(entry);
     groupedTools.set(entry.server, current);
   }
 
   const groupedResources = new Map<string, McpResourceIndexEntry[]>();
-  for (const entry of resourceEntries) {
+  for (const entry of modelVisibleResources) {
     const current = groupedResources.get(entry.server) ?? [];
     current.push(entry);
     groupedResources.set(entry.server, current);
   }
 
-  const totalToolCount = indexEntries.length;
+  const totalToolCount = modelVisibleTools.length;
   const truncated = totalToolCount > MCP_CATALOG_TOOL_LIMIT;
   let remainingTools = MCP_CATALOG_TOOL_LIMIT;
 
-  const totalResourceCount = resourceEntries.length;
+  const totalResourceCount = modelVisibleResources.length;
   const resourcesTruncated = totalResourceCount > MCP_CATALOG_RESOURCE_LIMIT;
   let remainingResources = MCP_CATALOG_RESOURCE_LIMIT;
 

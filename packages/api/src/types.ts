@@ -26,6 +26,7 @@ import type {
   BackgroundTaskRecord,
   BackgroundTaskOutputPreview,
   ToolExecutionHostUi,
+  ToolExecutionMcpAppUi,
   LspWriteDiagnosticsUi,
   PermissionMemoryTarget,
   ThinkingCapabilities,
@@ -1901,6 +1902,8 @@ export interface ToolBlockSnapshot {
   suppressExpand?: boolean;
   /** Declared provider tool entry label carried by the preview event; the card renders the MCP-style Calling/Called line with it. */
   providerToolLabel?: string;
+  /** Interactive MCP App (`io.modelcontextprotocol/ui`) metadata and result payload for inline/PiP/fullscreen rendering. */
+  mcpApp?: ToolExecutionMcpAppUi;
 }
 
 export interface MessageAuxSnapshot {

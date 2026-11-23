@@ -372,9 +372,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
       );
     }
     if (this.mcp.isLazyToolGatewayToolRequest(request)) {
-      return createToolExecutionTextOutput(
-        await this.mcp.executeLazyToolGatewayToolRequest(request, this.mcpCallToolOptions()),
-      );
+      return this.mcp.executeLazyToolGatewayToolRequestWithUi(request, this.mcpCallToolOptions());
     }
     if (this.mcp.isToolRequest(request)) {
       return this.executeLocalMcpTool(request);
@@ -626,10 +624,10 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
     const metadata = this.resolveRequestMetadata(request);
 
     try {
-      const output = await this.mcp.executeToolRequest(request, this.mcpCallToolOptions());
+      const output = await this.mcp.executeToolRequestWithUi(request, this.mcpCallToolOptions());
       this.peer.notify("host.localToolExecuted", {
         request,
-        output,
+        output: output.summaryText,
         ...(metadata?.toolCallId === undefined ? {} : { toolCallId: metadata.toolCallId }),
         toolName: metadata?.toolName ?? "mcp_tool",
         ...(metadata?.subagentSessionId === undefined
@@ -637,7 +635,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
           : { subagentSessionId: metadata.subagentSessionId }),
         ...(metadata?.subagentTitle === undefined ? {} : { subagentTitle: metadata.subagentTitle }),
       });
-      return createToolExecutionTextOutput(output);
+      return output;
     } catch (error) {
       const message = renderError(error);
       this.peer.notify("host.localToolFailed", {

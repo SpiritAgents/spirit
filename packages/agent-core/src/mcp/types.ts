@@ -103,6 +103,7 @@ export interface McpToolIndexEntry {
   description: string;
   inputSchema: import("../ports.js").JsonValue;
   annotations?: McpToolApprovalAnnotations;
+  ui?: import("./apps.js").McpToolUiMeta;
 }
 
 export interface ToolAgentMcpToolCatalogToolEntry {
@@ -123,6 +124,7 @@ export interface McpResourceIndexEntry {
   name: string;
   description?: string;
   mimeTypes?: string[];
+  isMcpAppUi?: boolean;
 }
 
 export interface ToolAgentMcpToolCatalogServerEntry {

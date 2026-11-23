@@ -147,6 +147,21 @@ export interface ToolExecutionHostUi {
    * tool card. Absent when a side exceeded the size budget.
    */
   fileChangeDiff?: ToolExecutionFileChangeDiff;
+  /**
+   * MCP Apps (io.modelcontextprotocol/ui): structured metadata for tools that declare a
+   * ui:// resource so desktop and web hosts can mount the interactive App inside the tool card.
+   */
+  mcpApp?: ToolExecutionMcpAppUi;
+}
+
+export interface ToolExecutionMcpAppUi {
+  server: string;
+  displayName: string;
+  toolName: string;
+  resourceUri: string;
+  argumentsJson?: string;
+  toolResult?: JsonValue;
+  extensionId?: string;
 }
 
 export interface ToolExecutionFileChangeDiff {
