@@ -13,6 +13,10 @@
       "outputs": ["dist/**", "dist-electron/**", ".next/**", ".source/**"],
       "env": ["SITE_URL", "VERCEL_ENV", "VERCEL_URL"]
     },
+    "@spiritagent/icons#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "src/index.ts", "src/icons/**"]
+    },
     "@spiritagent/site#build": {
       "dependsOn": ["^build"],
       "env": ["SITE_URL", "VERCEL_ENV", "VERCEL_URL"],
