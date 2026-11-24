@@ -45,6 +45,7 @@
   },
   "providers": {
     "openai": "OpenAI",
+    "chatgpt": "ChatGPT",
     "google": "Google",
     "googleVertexAi": "Google Vertex AI",
     "xai": "SpaceXAI",
@@ -1574,5 +1575,31 @@
     "toolApprovalTitle": "批准 MCP App 工具调用",
     "toolApprovalDescription": "{{app}} 请求在 {{server}} 上运行 {{tool}}。继续前请确认参数。",
     "toolApprovalAllow": "运行工具"
+  },
+  "chatgptAuth": {
+    "title": "连接 ChatGPT",
+    "waiting": "等待浏览器授权",
+    "openAuthorizationPage": "打开 ChatGPT 授权页面",
+    "connected": "已连接 ChatGPT",
+    "connectedAs": "已连接 {{email}}",
+    "retry": "重试",
+    "errorTimeout": "ChatGPT 授权已超时，请重试。",
+    "errorCancelled": "已取消 ChatGPT 授权。",
+    "errorDenied": "已拒绝 ChatGPT 授权。",
+    "errorMissingPlanScope": "未授予 ChatGPT 订阅额度使用权限，请重新登录并允许使用套餐额度。",
+    "errorInvalidClient": "无法验证 ChatGPT 客户端注册信息，请重新尝试连接。",
+    "errorGeneric": "连接 ChatGPT 失败，请重试。"
+  },
+  "chatgptErrors": {
+    "usageLimitExceeded": "已达到当前应用可用的 ChatGPT 订阅额度上限，请检查用量设置或稍后再试。",
+    "manageUsage": "管理用量",
+    "userNotEligible": "当前 ChatGPT 订阅或工作区不符合在此复用额度的资格，请升级订阅或切换其他提供商。",
+    "upgradePlan": "升级订阅",
+    "invalidUser": "当前 ChatGPT 登录状态已失效，请在设置中重新连接 ChatGPT 后继续。",
+    "refreshTokenExpired": "ChatGPT 授权已过期或被撤销，请在设置中重新连接 ChatGPT 后继续。",
+    "scopeNotAuthorized": "当前连接未获得 ChatGPT 订阅额度使用权限，请在设置中重新连接并允许使用套餐额度。",
+    "invalidClient": "ChatGPT 客户端注册已失效，请在设置中断开并重新连接 ChatGPT。",
+    "policyRestricted": "当前请求因 ChatGPT 地区或工作区策略限制而被拒绝。",
+    "serviceUnavailable": "ChatGPT 订阅额度直连服务暂不可用，连接状态已保留，请稍后重试。"
   }
 }

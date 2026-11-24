@@ -45,6 +45,7 @@
   },
   "providers": {
     "openai": "OpenAI",
+    "chatgpt": "ChatGPT",
     "google": "Google",
     "googleVertexAi": "Google Vertex AI",
     "xai": "SpaceXAI",
@@ -1565,5 +1566,31 @@
     "toolApprovalTitle": "MCP App ツール呼び出しを承認",
     "toolApprovalDescription": "{{app}} が {{server}} 上で {{tool}} を実行しようとしています。続行する前に引数を確認してください。",
     "toolApprovalAllow": "ツールを実行"
+  },
+  "chatgptAuth": {
+    "title": "ChatGPT を接続",
+    "waiting": "ブラウザでの認証を待機しています",
+    "openAuthorizationPage": "ChatGPT 認証ページを開く",
+    "connected": "ChatGPT に接続しました",
+    "connectedAs": "{{email}} として接続しました",
+    "retry": "再試行",
+    "errorTimeout": "ChatGPT の認証がタイムアウトしました。もう一度お試しください。",
+    "errorCancelled": "ChatGPT の認証がキャンセルされました。",
+    "errorDenied": "ChatGPT の認証が拒否されました。",
+    "errorMissingPlanScope": "ChatGPT プランの利用権限が付与されませんでした。再度サインインしてプラン利用を許可してください。",
+    "errorInvalidClient": "ChatGPT クライアント登録を確認できませんでした。もう一度接続をお試しください。",
+    "errorGeneric": "ChatGPT への接続に失敗しました。もう一度お試しください。"
+  },
+  "chatgptErrors": {
+    "usageLimitExceeded": "このアプリでの ChatGPT プラン使用量上限に達しました。使用状況を確認するか、しばらくしてから再試行してください。",
+    "manageUsage": "使用量を管理",
+    "userNotEligible": "現在の ChatGPT プランまたはワークスペースではプラン利用が対象外です。プランをアップグレードするか、別のプロバイダーに切り替えてください。",
+    "upgradePlan": "プランをアップグレード",
+    "invalidUser": "ChatGPT のサインインが無効になっています。続行するには設定から ChatGPT を再接続してください。",
+    "refreshTokenExpired": "ChatGPT の認証が期限切れか取り消されました。続行するには設定から ChatGPT を再接続してください。",
+    "scopeNotAuthorized": "この接続には ChatGPT プラン利用の権限がありません。設定から ChatGPT を再接続し、プラン利用を許可してください。",
+    "invalidClient": "ChatGPT のクライアント登録が無効になりました。設定で切断してから再接続してください。",
+    "policyRestricted": "このリクエストは ChatGPT の地域またはワークスペースポリシー制限によりブロックされました。",
+    "serviceUnavailable": "ChatGPT プランのルーティングが一時的に利用できません。接続は保持されています。しばらくしてから再試行してください。"
   }
 }

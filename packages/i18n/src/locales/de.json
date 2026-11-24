@@ -45,6 +45,7 @@
   },
   "providers": {
     "openai": "OpenAI",
+    "chatgpt": "ChatGPT",
     "google": "Google",
     "googleVertexAi": "Google Vertex AI",
     "xai": "SpaceXAI",
@@ -1565,5 +1566,31 @@
     "toolApprovalTitle": "MCP-App-Tool-Aufruf genehmigen",
     "toolApprovalDescription": "{{app}} möchte {{tool}} auf {{server}} ausführen. Prüfen Sie die Argumente, bevor Sie fortfahren.",
     "toolApprovalAllow": "Tool ausführen"
+  },
+  "chatgptAuth": {
+    "title": "ChatGPT verbinden",
+    "waiting": "Warten auf Browser-Autorisierung",
+    "openAuthorizationPage": "ChatGPT-Autorisierungsseite öffnen",
+    "connected": "Mit ChatGPT verbunden",
+    "connectedAs": "Verbunden als {{email}}",
+    "retry": "Erneut versuchen",
+    "errorTimeout": "Zeitüberschreitung bei der ChatGPT-Autorisierung. Bitte erneut versuchen.",
+    "errorCancelled": "ChatGPT-Autorisierung wurde abgebrochen.",
+    "errorDenied": "ChatGPT-Autorisierung wurde abgelehnt.",
+    "errorMissingPlanScope": "Die Berechtigung zur Nutzung des ChatGPT-Tarifs wurde nicht erteilt. Melde dich erneut an und erlaube die Tarifnutzung.",
+    "errorInvalidClient": "Die ChatGPT-Clientregistrierung konnte nicht überprüft werden. Versuche erneut, eine Verbindung herzustellen.",
+    "errorGeneric": "Verbindung zu ChatGPT fehlgeschlagen. Bitte erneut versuchen."
+  },
+  "chatgptErrors": {
+    "usageLimitExceeded": "Du hast das Nutzungslimit deines ChatGPT-Tarifs für diese App erreicht. Prüfe deine Nutzungslimits oder versuche es später erneut.",
+    "manageUsage": "Nutzung verwalten",
+    "userNotEligible": "Dein aktueller ChatGPT-Tarif oder Workspace ist hier nicht für die Tarifnutzung berechtigt. Upgrade deinen Tarif oder wechsle den Anbieter.",
+    "upgradePlan": "Tarif upgraden",
+    "invalidUser": "Deine ChatGPT-Anmeldung ist nicht mehr gültig. Verbinde ChatGPT in den Einstellungen erneut, um fortzufahren.",
+    "refreshTokenExpired": "Deine ChatGPT-Autorisierung ist abgelaufen oder wurde widerrufen. Verbinde ChatGPT in den Einstellungen erneut, um fortzufahren.",
+    "scopeNotAuthorized": "Die Berechtigung zur ChatGPT-Tarifnutzung ist für diese Verbindung nicht erteilt. Verbinde ChatGPT in den Einstellungen erneut und erlaube die Tarifnutzung.",
+    "invalidClient": "Deine ChatGPT-Clientregistrierung ist nicht mehr gültig. Trenne ChatGPT in den Einstellungen und verbinde es erneut.",
+    "policyRestricted": "Diese Anfrage wurde aufgrund von ChatGPT-Regions- oder Workspace-Richtlinien blockiert.",
+    "serviceUnavailable": "Das ChatGPT-Tarif-Routing ist vorübergehend nicht verfügbar. Deine Verbindung bleibt erhalten; versuche es in Kürze erneut."
   }
 }
