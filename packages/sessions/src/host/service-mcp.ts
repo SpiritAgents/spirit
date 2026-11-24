@@ -21,6 +21,7 @@ export function sharedMcpServiceForWorkspace(
   workspaceRoot: string,
   workspaceBinding: DesktopWorkspaceBinding = "project",
   extraConfigs?: McpExtraConfigProvider,
+  options?: { autoBackgroundRefresh?: boolean },
 ): McpService {
   const includeWorkspaceConfig = workspaceBinding === "project";
   const key = `${path.resolve(workspaceRoot)}|${includeWorkspaceConfig ? "project" : "none"}`;
@@ -35,7 +36,9 @@ export function sharedMcpServiceForWorkspace(
         enableMcpApps: true,
       },
     );
-    service.startBackgroundRefreshInBackground(false);
+    if (options?.autoBackgroundRefresh !== false) {
+      service.startBackgroundRefreshInBackground(false);
+    }
     cache.set(key, service);
   }
   return service;

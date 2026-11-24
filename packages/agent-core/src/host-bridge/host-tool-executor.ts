@@ -106,6 +106,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
   private hostToolDescriptionHints: HostToolDescriptionHint[] = [];
   private subagentLanguageModelSelectorResolver: (() => readonly string[]) | undefined;
   private subagentLanguageModelSelectors: readonly string[] = [];
+  private mcpCatalogRevision = -1;
   private mcpUiOpener: McpUiOpener | undefined;
 
   constructor(
@@ -256,6 +257,9 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
 
   toolDefinitionsJson(): JsonValue {
     this.refreshSubagentLanguageModelSelectors();
+    if (this.mcp.catalogRevision() !== this.mcpCatalogRevision) {
+      this.refreshMergedToolDefinitions();
+    }
     return this.toolDefinitionsCache;
   }
 
@@ -723,6 +727,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
         : [...this.loopToolDefinitionsCache, ...planDefinitions, ...this.todoToolDefinitionsCache],
       this.agentMode,
     );
+    this.mcpCatalogRevision = this.mcp.catalogRevision();
     this.toolDefinitionsCache = applyHostToolDescriptionHints(
       mergeToolDefinitions(
         mergedHostDefinitions,

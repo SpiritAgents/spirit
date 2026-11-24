@@ -177,6 +177,8 @@ export class McpService {
     serverScopes: {},
   };
   private configDigestStore = mcpConfigDigest({ servers: {} });
+  private diskConfigDigestStore: string | undefined;
+  private resolvedConfigDigestStore: string | undefined;
   private toolIndexStore: McpToolIndexEntry[] = [];
   private resourceIndexStore: McpResourceIndexEntry[] = [];
   private catalogRevisionStore = 0;
@@ -185,6 +187,7 @@ export class McpService {
   private windowsEnvLookupPromise: Promise<EnvLookupStore> | undefined;
   private toolingRefreshPromise: Promise<void> | undefined;
   private toolingCacheInitialized = false;
+  private initialDiscoverySettled = false;
   private toolingInvalidationVersion = 0;
   private pendingInvalidationRefresh = false;
   private extensionServerOwnershipStore: Record<string, ExtensionMcpServerOwnership> = {};
@@ -341,7 +344,7 @@ export class McpService {
   }
 
   async ensureToolingCache(): Promise<void> {
-    if (this.toolingCacheInitialized) {
+    if (this.toolingCacheInitialized && !this.hasDiskConfigChanged()) {
       return;
     }
 
@@ -351,14 +354,57 @@ export class McpService {
     }
   }
 
+  /**
+   * Wait for the initial MCP tooling discovery to settle (bounded by `timeoutMs`),
+   * returning immediately once initial discovery has completed at least once.
+   * Subsequent disk or secret-driven re-refreshes run asynchronously in the background
+   * so live session refreshes and turns never block behind them.
+   */
+  async waitForInitialToolingCache(timeoutMs = 15_000): Promise<void> {
+    const diskChanged = this.hasDiskConfigChanged();
+    if (this.initialDiscoverySettled) {
+      if (diskChanged) {
+        this.ensureToolingCacheInBackground();
+      }
+      return;
+    }
+
+    this.ensureToolingCacheInBackground();
+    const pending = this.toolingRefreshPromise;
+    if (!pending) {
+      return;
+    }
+
+    if (timeoutMs <= 0) {
+      await pending.catch(() => {});
+      return;
+    }
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        pending.catch(() => {}),
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, timeoutMs);
+          timer.unref?.();
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    }
+  }
+
   ensureToolingCacheInBackground(): void {
     this.launchBackgroundRefresh(false);
   }
 
-  async refreshConfig(): Promise<void> {
+  async refreshConfig(): Promise<boolean> {
     try {
       const extra = await this.loadExtraConfig();
       const { merged, serverScopes, user } = this.loadMergedConfig();
+      const nextDiskDigest = mcpConfigDigest(merged);
       const raw = mergeMcpConfigFiles(extra, merged);
       this.extensionServerOwnershipStore = retainUnoverlaidExtensionOwnership(
         extra.extensionServerOwnership,
@@ -386,18 +432,26 @@ export class McpService {
           return [name, resolved] as const;
         }),
       );
+      const nextResolvedDigest = createHash("sha256")
+        .update(JSON.stringify(resolvedEntries))
+        .digest("hex");
+      const effectiveChanged =
+        configChanged || nextResolvedDigest !== this.resolvedConfigDigestStore;
 
       this.loadedConfigStore = {
         raw,
         resolved: Object.fromEntries(resolvedEntries),
         serverScopes,
       };
+      this.diskConfigDigestStore = nextDiskDigest;
+      this.resolvedConfigDigestStore = nextResolvedDigest;
       await this.evictStalePooledConnections(this.loadedConfigStore.resolved);
-      if (configChanged) {
+      if (effectiveChanged) {
         this.configDigestStore = nextDigest;
         this.toolingCacheInitialized = false;
       }
       this.loadErrorStore = undefined;
+      return effectiveChanged;
     } catch (error) {
       this.loadErrorStore = describeError(error);
       this.toolIndexStore = [];
@@ -770,14 +824,15 @@ export class McpService {
         const supportsResources =
           server.capabilities.resources && capabilities?.resources !== undefined;
         const supportsPrompts = server.capabilities.prompts && capabilities?.prompts !== undefined;
-        const toolsResult = supportsTools ? await connection.listTools() : { tools: [] };
-        const resourcesResult = supportsResources
-          ? await connection.listResources()
-          : { resources: [] };
-        const resourceTemplatesResult = supportsResources
-          ? await connection.listResourceTemplates()
-          : { resourceTemplates: [] };
-        const promptsResult = supportsPrompts ? await connection.listPrompts() : { prompts: [] };
+        const [toolsResult, resourcesResult, resourceTemplatesResult, promptsResult] =
+          await Promise.all([
+            supportsTools ? connection.listTools() : Promise.resolve({ tools: [] }),
+            supportsResources ? connection.listResources() : Promise.resolve({ resources: [] }),
+            supportsResources
+              ? connection.listResourceTemplates()
+              : Promise.resolve({ resourceTemplates: [] }),
+            supportsPrompts ? connection.listPrompts() : Promise.resolve({ prompts: [] }),
+          ]);
 
         this.registry.setServerState(server.name, "ready", {
           cachedTools: toolsResult.tools.length,
@@ -1393,7 +1448,50 @@ export class McpService {
         }
       }
     }
-    if (!userCacheHit && userServers.length > 0) {
+    console.error("[mcp-service] refreshToolingCaches.start", {
+      servers: userServers.length + workspaceServers.length,
+      userCacheHit,
+      userServers: userServers.length,
+      workspaceServers: workspaceServers.length,
+    });
+
+    const userDiscoveryTask =
+      !userCacheHit && userServers.length > 0
+        ? Promise.all(
+            userServers.map(async (server) => {
+              const localTools: McpToolIndexEntry[] = [];
+              const localResources: McpResourceIndexEntry[] = [];
+              const localPrompts = new Map<string, McpPromptCatalogEntry[]>();
+              const status = await this.discoverServerTooling(
+                server,
+                localTools,
+                localResources,
+                localPrompts,
+              );
+              return { serverName: server.name, status, localTools, localResources, localPrompts };
+            }),
+          )
+        : Promise.resolve(null);
+
+    const workspaceDiscoveryTask =
+      workspaceServers.length > 0
+        ? Promise.all(
+            workspaceServers.map(async (server) => {
+              const localTools: McpToolIndexEntry[] = [];
+              const localResources: McpResourceIndexEntry[] = [];
+              const localPrompts = new Map<string, McpPromptCatalogEntry[]>();
+              await this.discoverServerTooling(server, localTools, localResources, localPrompts);
+              return { localTools, localResources, localPrompts };
+            }),
+          )
+        : Promise.resolve([]);
+
+    const [userResults, workspaceResults] = await Promise.all([
+      userDiscoveryTask,
+      workspaceDiscoveryTask,
+    ]);
+
+    if (userResults) {
       const userIndexEntries: McpToolIndexEntry[] = [];
       const userResourceEntries: McpResourceIndexEntry[] = [];
       const userPrompts = new Map<string, McpPromptCatalogEntry[]>();
@@ -1401,14 +1499,13 @@ export class McpService {
         string,
         { state: McpServerRuntimeState; cachedTools: number; lastError?: string }
       >();
-      for (const server of userServers) {
-        const status = await this.discoverServerTooling(
-          server,
-          userIndexEntries,
-          userResourceEntries,
-          userPrompts,
-        );
-        userServerStates.set(server.name, status);
+      for (const item of userResults) {
+        userIndexEntries.push(...item.localTools);
+        userResourceEntries.push(...item.localResources);
+        for (const [serverName, entries] of item.localPrompts) {
+          userPrompts.set(serverName, entries);
+        }
+        userServerStates.set(item.serverName, item.status);
       }
       sharedUserMcpToolingCache = {
         digest: currentUserDigest,
@@ -1424,15 +1521,12 @@ export class McpService {
       }
     }
 
-    console.error("[mcp-service] refreshToolingCaches.start", {
-      servers: userServers.length + workspaceServers.length,
-      userCacheHit,
-      userServers: userServers.length,
-      workspaceServers: workspaceServers.length,
-    });
-
-    for (const server of workspaceServers) {
-      await this.discoverServerTooling(server, indexEntries, resourceEntries, prompts);
+    for (const item of workspaceResults) {
+      indexEntries.push(...item.localTools);
+      resourceEntries.push(...item.localResources);
+      for (const [serverName, entries] of item.localPrompts) {
+        prompts.set(serverName, entries);
+      }
     }
 
     this.toolIndexStore = indexEntries;
@@ -1440,6 +1534,7 @@ export class McpService {
     this.catalogRevisionStore += 1;
     this.promptCatalogStore = prompts;
     this.toolingCacheInitialized = this.toolingInvalidationVersion === startVersion;
+    this.initialDiscoverySettled = true;
     console.error("[mcp-service] refreshToolingCaches.done", {
       indexedTools: indexEntries.length,
       indexedResources: resourceEntries.length,
@@ -1460,18 +1555,20 @@ export class McpService {
         server,
         async (connection) => {
           const capabilities = connection.serverCapabilities;
-          const discoveredTools =
+          const [toolsResult, resourcesResult, promptsResult] = await Promise.all([
             server.capabilities.tools && capabilities?.tools !== undefined
-              ? (await connection.listTools()).tools
-              : [];
-          const discoveredResources =
+              ? connection.listTools()
+              : Promise.resolve({ tools: [] }),
             server.capabilities.resources && capabilities?.resources !== undefined
-              ? (await connection.listResources()).resources
-              : [];
-          const discoveredPrompts =
+              ? connection.listResources()
+              : Promise.resolve({ resources: [] }),
             server.capabilities.prompts && capabilities?.prompts !== undefined
-              ? (await connection.listPrompts()).prompts
-              : [];
+              ? connection.listPrompts()
+              : Promise.resolve({ prompts: [] }),
+          ]);
+          const discoveredTools = toolsResult.tools;
+          const discoveredResources = resourcesResult.resources;
+          const discoveredPrompts = promptsResult.prompts;
 
           const referencedUiUris = new Set<string>();
           for (const tool of discoveredTools) {
@@ -1562,13 +1659,19 @@ export class McpService {
       return;
     }
 
-    if (!force && this.toolingCacheInitialized) {
+    const diskChanged = this.hasDiskConfigChanged();
+    if (!force && this.toolingCacheInitialized && !diskChanged) {
       return;
     }
 
     this.toolingCacheInitialized = false;
     this.pendingInvalidationRefresh = false;
-    this.primeRegistryFromDisk();
+    // Only prime from disk on cold start before any resolved config exists; on subsequent
+    // refreshes keep the previous resolved snapshot (including extension MCP servers) intact
+    // until `refreshToolingCaches()` atomically swaps in the new discovery results.
+    if (Object.keys(this.loadedConfigStore.resolved).length === 0) {
+      this.primeRegistryFromDisk();
+    }
     const refreshPromise = this.refreshToolingCaches();
     const settledPromise = refreshPromise.finally(() => {
       if (this.toolingRefreshPromise === refreshPromise) {
@@ -1585,6 +1688,18 @@ export class McpService {
       });
     });
     this.toolingRefreshPromise = refreshPromise;
+  }
+
+  private hasDiskConfigChanged(): boolean {
+    if (!this.serviceOptions.configSource || this.diskConfigDigestStore === undefined) {
+      return false;
+    }
+    try {
+      const { merged } = this.loadMergedConfig();
+      return mcpConfigDigest(merged) !== this.diskConfigDigestStore;
+    } catch {
+      return true;
+    }
   }
 
   private primeRegistryFromDisk(): void {

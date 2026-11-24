@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, test } from "vitest";
 import { createHostMcpService, createMcpConfigSource } from "./mcp-config-source.js";
+import { McpRegistry } from "./registry.js";
 import { mcpUserConfigPath, mcpWorkspaceConfigPath } from "@spiritagent/config/data-paths";
 
 test("MCP reads the injected daemon root and workspace configuration without ambient discovery", async () => {
@@ -47,6 +48,98 @@ test("MCP reads the injected daemon root and workspace configuration without amb
       workspace: { servers: {} },
     });
   } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("McpRegistry.refreshAllConfigs skips forced background refresh when resolved config is unchanged", async () => {
+  const http = await import("node:http");
+  const root = await mkdtemp(path.join(tmpdir(), "product-mcp-registry-"));
+  let listToolsCalls = 0;
+
+  const server = http.createServer(async (req, res) => {
+    if (req.method === "DELETE") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+    if (req.method === "GET") {
+      res.writeHead(405);
+      res.end();
+      return;
+    }
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const msg = JSON.parse(Buffer.concat(chunks).toString("utf8")) as {
+      id?: number | string;
+      method?: string;
+    };
+    if (msg.method === "notifications/initialized") {
+      res.writeHead(202);
+      res.end();
+      return;
+    }
+    if (msg.method === "initialize") {
+      res.writeHead(200, { "Content-Type": "application/json", "Mcp-Session-Id": "sess-reg" });
+      res.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: msg.id,
+          result: {
+            protocolVersion: "2025-03-26",
+            capabilities: { tools: {} },
+            serverInfo: { name: "reg-test", version: "1.0.0" },
+          },
+        }),
+      );
+      return;
+    }
+    if (msg.method === "tools/list") {
+      listToolsCalls += 1;
+      res.writeHead(200, { "Content-Type": "application/json", "Mcp-Session-Id": "sess-reg" });
+      res.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: msg.id,
+          result: {
+            tools: [{ name: "ping", description: "Ping", inputSchema: { type: "object" } }],
+          },
+        }),
+      );
+      return;
+    }
+    res.writeHead(404);
+    res.end();
+  });
+
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+
+  const registry = new McpRegistry(path.join(root, "data"), () => ({
+    servers: {
+      reg_test: {
+        transport: { type: "http", url: `http://127.0.0.1:${address.port}/mcp` },
+      },
+    },
+  }));
+
+  try {
+    const workspaceRoot = path.join(root, "workspace");
+    await mkdir(workspaceRoot, { recursive: true });
+    const service = registry.forWorkspace(workspaceRoot, { enableMcpApps: true });
+    await service.waitForInitialToolingCache(5_000);
+    assert.equal(listToolsCalls, 1);
+
+    // Unchanged extension/disk config must not trigger redundant server re-discovery.
+    await registry.refreshAllConfigs();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.equal(listToolsCalls, 1);
+  } finally {
+    await registry.disposeAll();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
     await rm(root, { recursive: true, force: true });
   }
 });

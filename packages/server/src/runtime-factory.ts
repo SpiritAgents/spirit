@@ -575,8 +575,10 @@ async function prepareServerRuntime(
         builtInSeededTrees.add(builtInTreeKey);
       }
       // After the recopy (first session on this tree) so extension stdio cwd
-      // still exists when `node server.mjs` starts.
-      mcpService.startBackgroundRefreshInBackground(false);
+      // still exists when `node server.mjs` starts. Wait (bounded) for initial MCP
+      // discovery so LaunchSplash finishes with MCP catalogs already populated,
+      // while subsequent sessions on the warm workspace return immediately.
+      await mcpService.waitForInitialToolingCache();
     }
     let currentApprovalLevel = approvalLevel;
     const service = new NodeHostToolService(

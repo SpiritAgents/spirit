@@ -595,3 +595,298 @@ test("McpService requeues discovery when list_changed invalidation arrives while
     rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
+
+test("McpService detects disk mcp.json edits and keeps existing extension servers visible during background refresh", async () => {
+  const workspaceRoot = mkdtempSync(join(tmpdir(), "spirit-mcp-disk-change-"));
+  let includeUserServer = false;
+  const service = new McpService(workspaceRoot, true, {
+    extraConfigs: () => ({
+      servers: {
+        ext_server: {
+          transport: { type: "stdio", command: process.execPath, args: [fixtureServer] },
+        },
+      },
+    }),
+    configSource: {
+      scopeKey: `disk-change-${Date.now()}`,
+      read: () => ({
+        user: {
+          servers: includeUserServer
+            ? {
+                disk_server: {
+                  transport: { type: "stdio", command: process.execPath, args: [fixtureServer] },
+                },
+              }
+            : {},
+        },
+        workspace: { servers: {} },
+      }),
+    },
+  });
+
+  try {
+    await service.ensureToolingCache();
+    assert.deepEqual(
+      service.catalogSnapshot().servers.map((s) => s.name),
+      ["ext_server"],
+    );
+
+    // Simulate editing mcp.json on disk while the daemon is already running.
+    includeUserServer = true;
+    service.ensureToolingCacheInBackground();
+
+    // Immediately while background refresh is still in flight, ext_server must NOT vanish.
+    assert.deepEqual(
+      service.catalogSnapshot().servers.map((s) => s.name),
+      ["ext_server"],
+    );
+
+    await service.ensureToolingCache();
+    assert.deepEqual(
+      service.catalogSnapshot().servers.map((s) => s.name),
+      ["disk_server", "ext_server"],
+    );
+  } finally {
+    await service.dispose();
+    rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("McpService.waitForInitialToolingCache awaits cold discovery and returns immediately when warm", async () => {
+  const workspaceRoot = mkdtempSync(join(tmpdir(), "spirit-mcp-startup-wait-"));
+  const service = new McpService(workspaceRoot, false, {
+    extraConfigs: () => ({
+      servers: {
+        pooled: {
+          transport: { type: "stdio", command: process.execPath, args: [fixtureServer] },
+        },
+      },
+    }),
+  });
+
+  try {
+    await service.waitForInitialToolingCache(5_000);
+    assert.deepEqual(
+      service.catalogSnapshot().servers.map((s) => s.name),
+      ["pooled"],
+    );
+
+    const t0 = Date.now();
+    await service.waitForInitialToolingCache(5_000);
+    assert.ok(Date.now() - t0 < 200, "warm waitForInitialToolingCache should return immediately");
+  } finally {
+    await service.dispose();
+    rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("McpService.refreshConfig tracks resolved config changes and waitForInitialToolingCache does not block on subsequent forced refreshes", async () => {
+  const http = await import("node:http");
+  const workspaceRoot = mkdtempSync(join(tmpdir(), "spirit-mcp-refresh-nonblock-"));
+  let listToolsCalls = 0;
+  let token = "token-v1";
+  let releaseSecondDiscovery: (() => void) | undefined;
+
+  const server = http.createServer(async (req, res) => {
+    if (req.method === "DELETE") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+    if (req.method === "GET") {
+      res.writeHead(405);
+      res.end();
+      return;
+    }
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const msg = JSON.parse(Buffer.concat(chunks).toString("utf8")) as {
+      id?: number | string;
+      method?: string;
+    };
+    if (msg.method === "notifications/initialized") {
+      res.writeHead(202);
+      res.end();
+      return;
+    }
+    if (msg.method === "initialize") {
+      res.writeHead(200, { "Content-Type": "application/json", "Mcp-Session-Id": "sess-1" });
+      res.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: msg.id,
+          result: {
+            protocolVersion: "2025-03-26",
+            capabilities: { tools: {} },
+            serverInfo: { name: "refresh-test", version: "1.0.0" },
+          },
+        }),
+      );
+      return;
+    }
+    if (msg.method === "tools/list") {
+      listToolsCalls += 1;
+      if (listToolsCalls >= 2) {
+        await new Promise<void>((resolve) => {
+          releaseSecondDiscovery = resolve;
+        });
+      }
+      res.writeHead(200, { "Content-Type": "application/json", "Mcp-Session-Id": "sess-1" });
+      res.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: msg.id,
+          result: {
+            tools: [{ name: "ping", description: "Ping", inputSchema: { type: "object" } }],
+          },
+        }),
+      );
+      return;
+    }
+    res.writeHead(404);
+    res.end();
+  });
+
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+
+  const service = new McpService(workspaceRoot, false, {
+    extraConfigs: () => ({
+      servers: {
+        refresh_test: {
+          transport: {
+            type: "http",
+            url: `http://127.0.0.1:${address.port}/mcp`,
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        },
+      },
+    }),
+  });
+
+  try {
+    await service.waitForInitialToolingCache(5_000);
+    assert.equal(listToolsCalls, 1);
+
+    // Unchanged config/headers must report no change so callers skip redundant re-discovery.
+    assert.equal(await service.refreshConfig(), false);
+
+    // Changed header must report changed = true.
+    token = "token-v2";
+    assert.equal(await service.refreshConfig(), true);
+
+    // Kick off a slow forced re-refresh; waitForInitialToolingCache must return immediately
+    // because initial startup discovery already settled.
+    service.startBackgroundRefreshInBackground(true);
+    const t0 = Date.now();
+    await service.waitForInitialToolingCache(5_000);
+    assert.ok(
+      Date.now() - t0 < 200,
+      "waitForInitialToolingCache must not block behind a post-startup forced refresh",
+    );
+  } finally {
+    releaseSecondDiscovery?.();
+    await service.dispose();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("McpService discovers tools, resources, and prompts concurrently per server", async () => {
+  const http = await import("node:http");
+  const workspaceRoot = mkdtempSync(join(tmpdir(), "spirit-mcp-parallel-discover-"));
+  let inFlight = 0;
+  let maxInFlight = 0;
+
+  const server = http.createServer(async (req, res) => {
+    if (req.method === "DELETE") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+    if (req.method === "GET") {
+      res.writeHead(405);
+      res.end();
+      return;
+    }
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const msg = JSON.parse(Buffer.concat(chunks).toString("utf8")) as {
+      id?: number | string;
+      method?: string;
+    };
+    if (msg.method === "notifications/initialized") {
+      res.writeHead(202);
+      res.end();
+      return;
+    }
+    if (msg.method === "initialize") {
+      res.writeHead(200, { "Content-Type": "application/json", "Mcp-Session-Id": "sess-par" });
+      res.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: msg.id,
+          result: {
+            protocolVersion: "2025-03-26",
+            capabilities: { tools: {}, resources: {}, prompts: {} },
+            serverInfo: { name: "par-test", version: "1.0.0" },
+          },
+        }),
+      );
+      return;
+    }
+    if (
+      msg.method === "tools/list" ||
+      msg.method === "resources/list" ||
+      msg.method === "prompts/list"
+    ) {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      inFlight -= 1;
+      const result =
+        msg.method === "tools/list"
+          ? { tools: [{ name: "t1", description: "T1", inputSchema: { type: "object" } }] }
+          : msg.method === "resources/list"
+            ? { resources: [{ uri: "demo://r1", name: "R1" }] }
+            : { prompts: [{ name: "p1", description: "P1" }] };
+      res.writeHead(200, { "Content-Type": "application/json", "Mcp-Session-Id": "sess-par" });
+      res.end(JSON.stringify({ jsonrpc: "2.0", id: msg.id, result }));
+      return;
+    }
+    res.writeHead(404);
+    res.end();
+  });
+
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+
+  const service = new McpService(workspaceRoot, false, {
+    extraConfigs: () => ({
+      servers: {
+        par_test: {
+          transport: { type: "http", url: `http://127.0.0.1:${address.port}/mcp` },
+        },
+      },
+    }),
+  });
+
+  try {
+    await service.waitForInitialToolingCache(5_000);
+    assert.ok(
+      maxInFlight >= 2,
+      `expected concurrent listTools/listResources/listPrompts, saw maxInFlight=${maxInFlight}`,
+    );
+    assert.equal(service.catalogSnapshot().servers[0]?.tools.length, 1);
+  } finally {
+    await service.dispose();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});

@@ -30,8 +30,10 @@ export class McpRegistry {
   async refreshAllConfigs(): Promise<void> {
     await Promise.all(
       [...this.cache.values()].map(async (service) => {
-        await service.refreshConfig();
-        service.startBackgroundRefreshInBackground(true);
+        const changed = await service.refreshConfig();
+        if (changed) {
+          service.startBackgroundRefreshInBackground(true);
+        }
       }),
     );
   }

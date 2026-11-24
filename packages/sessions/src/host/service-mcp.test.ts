@@ -10,6 +10,7 @@ test("extension secret changes refresh every cached workspace MCP service", asyn
     ({
       async refreshConfig() {
         calls.push(`${name}:refresh`);
+        return true;
       },
       startBackgroundRefreshInBackground(force: boolean) {
         calls.push(`${name}:background:${force}`);

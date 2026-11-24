@@ -1,6 +1,7 @@
 import { lstat, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+
 import { configureServerConnector } from "@spiritagent/sessions/host/server-connector";
 import { connectOrSpawnServer } from "@spiritagent/server/client";
 import {
@@ -669,6 +670,8 @@ export class DesktopHostService {
 
   private readonly invokeDispatch = createHostInvokeDispatch(this);
   private runtimeTransport: SpiritLlmTransport = createLlmTransport();
+  private readonly pendingSecretRefreshExtensionIds = new Set<string>();
+  private secretRefreshTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly extensionStateStore = createDesktopExtensionStateStore(
     {
       spiritDataDir: spiritDataDir(),
@@ -676,21 +679,41 @@ export class DesktopHostService {
     },
     (extensionId) => {
       if (!this.state) return;
+      this.scheduleCoalescedExtensionSecretRefresh(extensionId);
+    },
+  );
+
+  private scheduleCoalescedExtensionSecretRefresh(extensionId: string): void {
+    this.pendingSecretRefreshExtensionIds.add(extensionId);
+    if (this.secretRefreshTimer !== undefined) {
+      return;
+    }
+    this.secretRefreshTimer = setTimeout(() => {
+      this.secretRefreshTimer = undefined;
+      if (!this.state || this.pendingSecretRefreshExtensionIds.size === 0) {
+        this.pendingSecretRefreshExtensionIds.clear();
+        return;
+      }
+      const extensionIds = [...this.pendingSecretRefreshExtensionIds];
+      this.pendingSecretRefreshExtensionIds.clear();
       void this.runSerialized(async () => {
-        await this.refreshExtensionAuthorizationState(extensionId);
+        for (const id of extensionIds) {
+          await this.refreshExtensionAuthorizationState(id);
+        }
         await this.refreshSharedMcpConfigAfterExtensionMutation();
         if (this.runtime?.isBusy()) {
           this.activeBundle().deferredRuntimeRefreshWhileBusy = true;
         } else {
           await this.refreshRuntime();
         }
-      })
+      }, "extension-secret-refresh")
         .then(() => this.emitLiveSnapshotUpdate())
         .catch((error) =>
           console.error("[extensions] failed to refresh authorization and MCP state", error),
         );
-    },
-  );
+    }, 50);
+    this.secretRefreshTimer.unref?.();
+  }
   private readonly hostExtensionManager = createHostExtensionManager({
     spiritDataDir: spiritDataDir(),
     hostKind: "desktop",
@@ -2053,7 +2076,9 @@ export class DesktopHostService {
       );
       const rulesSystemPrompt = buildRulesSystemMessage(overlay.rules);
       const skillsCatalogSystemPrompt = buildSkillsCatalogSystemMessage(overlay.skills);
-      const toolExecutor = await this.ensureToolExecutor();
+      const toolExecutor = await this.ensureToolExecutor(undefined, {
+        ensureMcpToolingReady: true,
+      });
       const mcpCatalogSystemPrompt = buildMcpCatalogSystemMessage(
         toolExecutor.mcpToolCatalogSnapshot(),
       );
@@ -3923,7 +3948,7 @@ export class DesktopHostService {
 
   private async ensureToolExecutor(
     bundle: SessionBundle = this.activeBundle(),
-    _options?: { skipMcpCatalogRefresh?: boolean },
+    options?: { ensureMcpToolingReady?: boolean },
   ): Promise<DesktopToolExecutor> {
     const state = this.requireState();
     const isActive = bundle.id === this.sessionRegistry.activeSessionId();
@@ -3965,7 +3990,12 @@ export class DesktopHostService {
     bundle.toolExecutor.setAgentModeToolExposure(
       resolveDesktopAgentMode(this.requireState().config),
     );
-    await bundle.toolExecutor.ensureMcpToolingReady();
+    // Live turns and MCP tool execution run in the server daemon, which warms its
+    // own McpService during bootstrap. Only await Workbench-local MCP discovery when
+    // a caller explicitly needs the local catalog (e.g. session export).
+    if (options?.ensureMcpToolingReady === true) {
+      await bundle.toolExecutor.ensureMcpToolingReady();
+    }
     return bundle.toolExecutor;
   }
 
@@ -3991,6 +4021,7 @@ export class DesktopHostService {
           extensionServerOwnership: contributions.mcpOwnership,
         };
       },
+      { autoBackgroundRefresh: false },
     );
   }
 
@@ -5591,10 +5622,9 @@ export class DesktopHostService {
   }
 
   private async refreshSharedMcpConfigAfterExtensionMutation(): Promise<void> {
-    const state = this.requireState();
-    const services = new Set(this.mcpServiceByWorkspaceRoot.values());
-    services.add(this.sharedMcpServiceForWorkspace(state.workspaceRoot, state.workspaceBinding));
-    await refreshMcpServices(services);
+    if (this.mcpServiceByWorkspaceRoot.size > 0) {
+      await refreshMcpServices(this.mcpServiceByWorkspaceRoot.values());
+    }
     await notifyDesktopServerRefreshExtensions(spiritDataDir());
   }
 
@@ -5619,17 +5649,19 @@ export class DesktopHostService {
   }
 
   private async applyExtensionWarmupToRuntime(): Promise<void> {
-    const bundle = this.activeBundle();
-    if (bundle.runtime?.isBusy()) {
-      bundle.deferredRuntimeRefreshWhileBusy = true;
-      return;
-    }
-    bundle.deferredRuntimeRefreshWhileBusy = false;
-    await this.refreshRuntimeForBundle(bundle);
-    if (bundle.id === this.sessionRegistry.activeSessionId()) {
-      this.syncActiveRuntimePointer();
-    }
-    this.lastRuntimeError = "";
+    await this.runSerialized(async () => {
+      const bundle = this.activeBundle();
+      if (bundle.runtime?.isBusy() || this.isBundleConversationBusy(bundle)) {
+        bundle.deferredRuntimeRefreshWhileBusy = true;
+        return;
+      }
+      bundle.deferredRuntimeRefreshWhileBusy = false;
+      await this.refreshRuntimeForBundle(bundle);
+      if (bundle.id === this.sessionRegistry.activeSessionId()) {
+        this.syncActiveRuntimePointer();
+      }
+      this.lastRuntimeError = "";
+    }, "extension-warmup-apply");
   }
 
   private async dispatchExtensionEvent(
@@ -6023,7 +6055,7 @@ export class DesktopHostService {
     orchestration.runtimeEvents.reset();
   }
 
-  private async runSerialized<T>(work: () => Promise<T>, _label = "unlabeled"): Promise<T> {
+  private async runSerialized<T>(work: () => Promise<T>, _label?: string): Promise<T> {
     const previous = this.serialized;
     let release: (() => void) | undefined;
     this.serialized = new Promise<void>((resolve) => {
@@ -6151,6 +6183,11 @@ export class DesktopHostService {
   }
 
   async shutdown(): Promise<void> {
+    if (this.secretRefreshTimer !== undefined) {
+      clearTimeout(this.secretRefreshTimer);
+      this.secretRefreshTimer = undefined;
+    }
+    this.pendingSecretRefreshExtensionIds.clear();
     this.abortAutomationTriggerPolls();
     this.tasksWatcher.close();
     for (const bundle of this.sessionRegistry.all()) {
