@@ -25,7 +25,13 @@ export async function withSpiritConfigWriteLock<T>(
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      if (await isStaleLock(path)) {
+      const state = await inspectLockState(path);
+      if (state === "missing") {
+        // Lock was released between open() and stat()/readFile(); retry without unlinking a
+        // lock file that another writer may have already acquired in the meantime.
+        continue;
+      }
+      if (state === "stale") {
         await rm(path, { force: true });
         continue;
       }
@@ -37,19 +43,40 @@ export async function withSpiritConfigWriteLock<T>(
   }
 }
 
-async function isStaleLock(path: string): Promise<boolean> {
+type LockState = "active" | "missing" | "stale";
+
+async function inspectLockState(path: string): Promise<LockState> {
+  let info;
   try {
-    const info = await stat(path);
-    if (Date.now() - info.mtimeMs > STALE_LOCK_MS) return true;
-    const owner = JSON.parse(await readFile(path, "utf8")) as { pid?: number };
-    if (!owner.pid || owner.pid === process.pid) return false;
-    try {
-      process.kill(owner.pid, 0);
-      return false;
-    } catch {
-      return true;
-    }
+    info = await stat(path);
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ENOENT" ? "missing" : "active";
+  }
+  if (Date.now() - info.mtimeMs > STALE_LOCK_MS) {
+    return "stale";
+  }
+  let raw: string;
+  try {
+    raw = await readFile(path, "utf8");
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ENOENT" ? "missing" : "active";
+  }
+  let owner: { pid?: number };
+  try {
+    owner = JSON.parse(raw) as { pid?: number };
   } catch {
-    return true;
+    // A freshly created lock file can briefly be empty or partially written between
+    // open("wx") and handle.writeFile(); treat it as active until STALE_LOCK_MS expires.
+    return "active";
+  }
+  if (!owner.pid || owner.pid === process.pid) {
+    return "active";
+  }
+  try {
+    process.kill(owner.pid, 0);
+    return "active";
+  } catch (error) {
+    // EPERM means the process exists under another user; only ESRCH confirms it is gone.
+    return (error as NodeJS.ErrnoException).code === "ESRCH" ? "stale" : "active";
   }
 }

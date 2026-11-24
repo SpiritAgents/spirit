@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
@@ -23,6 +23,50 @@ test("serializes config writers across the shared lock", async () => {
       ),
     );
     assert.equal(maxActive, 1);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("does not break a freshly created empty lock file before its owner writes metadata", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "spirit-config-lock-fresh-"));
+  const lockPath = join(dir, "config.json.lock");
+  try {
+    // Simulate another writer between open("wx") and handle.writeFile(): 0-byte file with fresh mtime.
+    await writeFile(lockPath, "");
+    let enteredBeforeRelease = false;
+    let released = false;
+
+    const contender = withSpiritConfigWriteLock(dir, async () => {
+      if (!released) {
+        enteredBeforeRelease = true;
+      }
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    released = true;
+    await rm(lockPath, { force: true });
+    await contender;
+
+    assert.equal(enteredBeforeRelease, false);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("reclaims an expired empty lock file after the stale threshold", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "spirit-config-lock-stale-"));
+  const lockPath = join(dir, "config.json.lock");
+  try {
+    await writeFile(lockPath, "");
+    const expiredAt = new Date(Date.now() - 60_000);
+    await utimes(lockPath, expiredAt, expiredAt);
+
+    let ran = false;
+    await withSpiritConfigWriteLock(dir, async () => {
+      ran = true;
+    });
+    assert.equal(ran, true);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
