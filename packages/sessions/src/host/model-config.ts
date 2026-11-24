@@ -225,12 +225,11 @@ async function fetchCatalogJson(
 }
 
 function assertCompatibleCatalogListPayload(payload: unknown): void {
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    !("data" in payload) ||
-    !Array.isArray((payload as { data?: unknown }).data)
-  ) {
+  if (typeof payload !== "object" || payload === null) {
+    throw new Error("Model list response does not contain a compatible model list.");
+  }
+  const record = payload as { data?: unknown; models?: unknown };
+  if (!Array.isArray(record.data) && !Array.isArray(record.models)) {
     throw new Error("Model list response does not contain a compatible model list.");
   }
 }
@@ -240,6 +239,7 @@ async function fetchCatalogEntriesWithDescriptor(
   input: CatalogFetchInput,
   descriptor: ModelCatalogParserDescriptor,
   endpoint: string,
+  options?: { preserveServerOrder?: boolean },
 ): Promise<ProviderListedModelEntry[]> {
   const base = descriptor.resolveListingBase?.(input.apiBase) ?? input.apiBase;
   const url = catalogListingUrl(base, endpoint);
@@ -276,7 +276,8 @@ async function fetchCatalogEntriesWithDescriptor(
     );
   }
 
-  return dedupeProviderListedModelEntries(entries).sort((a, b) => a.id.localeCompare(b.id));
+  const deduped = dedupeProviderListedModelEntries(entries);
+  return options?.preserveServerOrder ? deduped : deduped.sort((a, b) => a.id.localeCompare(b.id));
 }
 
 /**
@@ -347,7 +348,9 @@ export async function fetchCatalogModels(
   if (!catalog.endpoint) {
     throw new Error(`Catalog parser "${catalog.parser}" declares no listing endpoint.`);
   }
-  return fetchCatalogEntriesWithDescriptor(input, descriptor, catalog.endpoint);
+  return fetchCatalogEntriesWithDescriptor(input, descriptor, catalog.endpoint, {
+    preserveServerOrder: catalog.parser === "chatgpt-models",
+  });
 }
 
 interface LoadedPreviewModelsResult {

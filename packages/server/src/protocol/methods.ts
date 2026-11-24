@@ -275,7 +275,12 @@ export interface SessionTurnFinishedParams {
   stopReason: TurnStopReason;
   result?:
     | { kind: "completed"; assistantText: string; toolExecutions: unknown[] }
-    | { kind: "failed"; error: string; toolExecutions: unknown[] };
+    | {
+        kind: "failed";
+        error: string;
+        providerError?: import("@spiritagent/agent-core").ProviderErrorDetail;
+        toolExecutions: unknown[];
+      };
 }
 
 export interface SessionUserTurnSubmittedParams {

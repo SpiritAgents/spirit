@@ -254,6 +254,7 @@ export interface ServerRuntimeResult extends ServerRuntimeBindings {
   title?: string;
   conversationKey?: string;
   workspaceRoot: string;
+  providerId?: string;
   sessionKind?: ServerSessionKind;
   subagentOrigin?: import("@spiritagent/agent-core").SubagentSessionOrigin;
   workLocation: import("@spiritagent/api/work-location").WorkLocationKind;
@@ -430,6 +431,7 @@ export async function createServerRuntime(
         sessionId,
         ...(title ? { title } : {}),
         ...(conversationKey ? { conversationKey } : {}),
+        ...(prepared.providerId ? { providerId: prepared.providerId } : {}),
         restoredFromDisk: saved?.initialized === true,
         restoredDesktopTimeline: desktopTimeline,
         tasks,
@@ -495,6 +497,7 @@ interface PreparedServerRuntime {
   toolExecutor: HostToolExecutorProxy;
   runtimeOptions: AgentRuntimeOptions<LlmTransportConfig, LlmToolAgentState, JsonValue>;
   disposeOwnedResources: () => Promise<void>;
+  providerId?: string;
   bind(runtime: ServerHostRuntime): ServerRuntimeBindings;
 }
 
@@ -971,6 +974,7 @@ async function prepareServerRuntime(
       toolExecutor,
       runtimeOptions,
       disposeOwnedResources,
+      ...(hostPromptProviderId ? { providerId: hostPromptProviderId } : {}),
       bind: (runtime) => {
         const setAgentMode = async (mode: AgentMode): Promise<void> => {
           if (isDreamCollector) {

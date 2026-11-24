@@ -1024,6 +1024,35 @@ export function normalizeMessageAuxSnapshot(
   const compaction = aux.compaction?.trim() ? aux.compaction : undefined;
   const finishTaskNotice = aux.finishTaskNotice?.trim() ? aux.finishTaskNotice : undefined;
   const turnError = aux.turnError === true ? true : undefined;
+  const rawDetail = aux.turnErrorDetail;
+  const turnErrorDetail =
+    rawDetail && typeof rawDetail === "object"
+      ? (() => {
+          const code = typeof rawDetail.code === "string" ? rawDetail.code.trim() : "";
+          const status =
+            typeof rawDetail.status === "number" &&
+            Number.isInteger(rawDetail.status) &&
+            rawDetail.status >= 100 &&
+            rawDetail.status <= 599
+              ? rawDetail.status
+              : undefined;
+          const param = typeof rawDetail.param === "string" ? rawDetail.param.trim() : "";
+          const requestId =
+            typeof rawDetail.requestId === "string" ? rawDetail.requestId.trim() : "";
+          const providerId =
+            typeof rawDetail.providerId === "string" ? rawDetail.providerId.trim() : "";
+          if (!code && status === undefined && !param && !requestId && !providerId) {
+            return undefined;
+          }
+          return {
+            ...(code ? { code } : {}),
+            ...(status !== undefined ? { status } : {}),
+            ...(param ? { param } : {}),
+            ...(requestId ? { requestId } : {}),
+            ...(providerId ? { providerId } : {}),
+          };
+        })()
+      : undefined;
   const turnErrorRetry =
     aux.turnErrorRetry &&
     Number.isInteger(aux.turnErrorRetry.attempt) &&
@@ -1035,7 +1064,14 @@ export function normalizeMessageAuxSnapshot(
           maxAttempts: aux.turnErrorRetry.maxAttempts,
         }
       : undefined;
-  if (!thinking && !compaction && !finishTaskNotice && !turnError && !turnErrorRetry) {
+  if (
+    !thinking &&
+    !compaction &&
+    !finishTaskNotice &&
+    !turnError &&
+    !turnErrorDetail &&
+    !turnErrorRetry
+  ) {
     return undefined;
   }
 
@@ -1044,6 +1080,7 @@ export function normalizeMessageAuxSnapshot(
     ...(compaction ? { compaction } : {}),
     ...(finishTaskNotice ? { finishTaskNotice } : {}),
     ...(turnError ? { turnError: true } : {}),
+    ...(turnErrorDetail ? { turnErrorDetail } : {}),
     ...(turnErrorRetry ? { turnErrorRetry } : {}),
   };
 }

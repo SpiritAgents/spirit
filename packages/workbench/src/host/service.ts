@@ -524,6 +524,7 @@ import {
   resolveEnabledExtensionTabFile,
   resolveEnabledExtensionIconFile,
 } from "@spiritagent/sessions/host/extensions";
+import { ChatGptOAuthConnectManager } from "@spiritagent/sessions/host/chatgpt-oauth-connect";
 import {
   getDesktopExtensionHostAdapter,
   requireDesktopExtensionHostAdapter,
@@ -669,6 +670,7 @@ export class DesktopHostService {
   }
 
   private readonly invokeDispatch = createHostInvokeDispatch(this);
+  private readonly chatGptOAuthConnect = new ChatGptOAuthConnectManager();
   private runtimeTransport: SpiritLlmTransport = createLlmTransport();
   private readonly pendingSecretRefreshExtensionIds = new Set<string>();
   private secretRefreshTimer: ReturnType<typeof setTimeout> | undefined;
@@ -1805,6 +1807,46 @@ export class DesktopHostService {
 
   async disconnectProvider(request: DisconnectProviderRequest): Promise<DesktopSnapshot> {
     return disconnectProviderCommand(this.modelCommandContext(), request);
+  }
+
+  async beginChatGptOAuth(
+    request?: import("@spiritagent/api/types").BeginChatGptOAuthRequest,
+  ): Promise<import("@spiritagent/api/types").BeginChatGptOAuthResponse> {
+    const adapter = getDesktopExtensionHostAdapter();
+    return this.chatGptOAuthConnect.begin(
+      request,
+      adapter ? { openExternal: (url) => adapter.openExternal(url) } : undefined,
+    );
+  }
+
+  async completeChatGptOAuth(
+    request: import("@spiritagent/api/types").CompleteChatGptOAuthRequest,
+  ): Promise<import("@spiritagent/api/types").CompleteChatGptOAuthResponse> {
+    return this.chatGptOAuthConnect.complete(request.sessionId, this.modelCommandContext());
+  }
+
+  async cancelChatGptOAuth(
+    request: import("@spiritagent/api/types").CancelChatGptOAuthRequest,
+  ): Promise<{ ok: true }> {
+    this.chatGptOAuthConnect.cancel(request.sessionId);
+    return { ok: true };
+  }
+
+  async openExternalUrl(
+    request: import("@spiritagent/api/types").OpenExternalUrlRequest,
+  ): Promise<void> {
+    const raw = request.url?.trim();
+    if (!raw) {
+      throw new Error("A URL is required.");
+    }
+    const parsed = new URL(raw);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      throw new Error(`Unsupported external URL protocol: ${parsed.protocol}`);
+    }
+    const adapter = getDesktopExtensionHostAdapter();
+    if (adapter) {
+      await adapter.openExternal(parsed.href);
+    }
   }
 
   async createSkill(request: CreateSkillRequest): Promise<DesktopSnapshot> {
@@ -6183,6 +6225,7 @@ export class DesktopHostService {
   }
 
   async shutdown(): Promise<void> {
+    this.chatGptOAuthConnect.dispose();
     if (this.secretRefreshTimer !== undefined) {
       clearTimeout(this.secretRefreshTimer);
       this.secretRefreshTimer = undefined;

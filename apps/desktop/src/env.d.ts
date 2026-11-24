@@ -81,6 +81,18 @@ declare global {
     disconnectProvider(
       request: import("./types").DisconnectProviderRequest,
     ): Promise<DesktopSnapshot>;
+    beginChatGptOAuth(
+      request?: import("@spiritagent/api/types").BeginChatGptOAuthRequest,
+    ): Promise<import("@spiritagent/api/types").BeginChatGptOAuthResponse>;
+    completeChatGptOAuth(
+      request: import("@spiritagent/api/types").CompleteChatGptOAuthRequest,
+    ): Promise<import("@spiritagent/api/types").CompleteChatGptOAuthResponse>;
+    cancelChatGptOAuth(
+      request: import("@spiritagent/api/types").CancelChatGptOAuthRequest,
+    ): Promise<{ ok: true }>;
+    openExternalUrl(
+      request: import("@spiritagent/api/types").OpenExternalUrlRequest,
+    ): Promise<void>;
     addMcpServer(request: AddMcpServerRequest): Promise<DesktopSnapshot>;
     deleteMcpServer(request: DeleteMcpServerRequest): Promise<DesktopSnapshot>;
     saveHookEntry(request: SaveHookEntryRequest): Promise<DesktopSnapshot>;

@@ -14,6 +14,7 @@ import {
 } from "../lib/translucency.js";
 import { deleteKeyringPassword, getKeyringPassword, setKeyringPassword } from "./keyring-secret.js";
 import { configureLlmClientVersion } from "@spiritagent/agent-core";
+import { hasStoredChatGptOAuthCredentials } from "@spiritagent/config/chatgpt-oauth";
 import { createConfigStore } from "@spiritagent/config";
 import {
   normalizeRemoteControlConfig,
@@ -488,6 +489,9 @@ export async function resolveApiKeyForConfigModel(
 
 /** Keychain-internal credential slot read for presence display (excludes declared env/keyring channels). */
 function hasProviderSecretInKeyring(provider: ProviderEntry): boolean {
+  if (provider.options?.auth === "chatgpt-oauth") {
+    return hasStoredChatGptOAuthCredentials(provider.id);
+  }
   if (readProviderKeyFromKeyring(provider.id)) {
     return true;
   }

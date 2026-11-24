@@ -6,6 +6,10 @@ import {
   type ProviderEntry,
 } from "@spiritagent/config";
 import {
+  createChatGptOAuthCredentialManager,
+  hasStoredChatGptOAuthCredentials,
+} from "@spiritagent/config/chatgpt-oauth";
+import {
   resolveProviderApiKey,
   resolveProviderCredentialSlot,
 } from "@spiritagent/config/credentials";
@@ -73,9 +77,9 @@ function resolveEntryApiKey(provider: ProviderEntry): string | undefined {
  * Credential/option gate before a startup fetch; a provider without resolvable credentials is
  * skipped silently (the user may simply not have connected it yet).
  */
-function catalogFetchCredentials(
+async function catalogFetchCredentials(
   provider: ProviderEntry,
-):
+): Promise<
   | Pick<
       CatalogFetchInput,
       | "apiKey"
@@ -85,7 +89,8 @@ function catalogFetchCredentials(
       | "vertexClientEmail"
       | "vertexPrivateKey"
     >
-  | undefined {
+  | undefined
+> {
   const transportKind = resolveProviderTransportKind(provider);
   const apiKey = resolveEntryApiKey(provider);
   const channels = providerKeyChannels(provider);
@@ -129,6 +134,20 @@ function catalogFetchCredentials(
     };
   }
 
+  if (transportKind === "open-responses" && provider.options?.auth === "chatgpt-oauth") {
+    if (!hasStoredChatGptOAuthCredentials(provider.id)) {
+      return undefined;
+    }
+    try {
+      const accessToken = await createChatGptOAuthCredentialManager({
+        providerId: provider.id,
+      }).getAccessToken();
+      return { apiKey: accessToken, ...(provider.options ? { options: provider.options } : {}) };
+    } catch {
+      return undefined;
+    }
+  }
+
   if (!apiKey?.trim()) {
     return undefined;
   }
@@ -139,7 +158,7 @@ export async function loadModelCatalogForProvider(
   provider: ProviderEntry,
   options?: { forceRefresh?: boolean },
 ): Promise<LoadedPreviewModelsResult | undefined> {
-  const credentials = catalogFetchCredentials(provider);
+  const credentials = await catalogFetchCredentials(provider);
   if (!credentials) {
     return undefined;
   }

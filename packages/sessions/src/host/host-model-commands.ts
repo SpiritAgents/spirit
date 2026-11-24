@@ -85,6 +85,10 @@ import {
   hasGoogleVertexRuntimeCredentials,
   hasGoogleVertexServiceAccountCredentials,
 } from "./provider-api-key.js";
+import {
+  clearChatGptOAuthCredentialsLocked,
+  hasStoredChatGptOAuthCredentials,
+} from "@spiritagent/config/chatgpt-oauth";
 import { deleteKeyringPassword } from "./keyring-secret.js";
 import { currentApiBase } from "./service-utils.js";
 
@@ -998,6 +1002,8 @@ export async function addProviderModelsCommand(
     const secretAccessKey = request.secretAccessKey?.trim();
     const vertexClientEmail = request.vertexClientEmail?.trim();
     const vertexPrivateKey = request.vertexPrivateKey?.trim();
+    const isChatGptOAuth =
+      preset?.credentials.kind === "chatgpt-oauth" || request.credentialKind === "chatgpt-oauth";
     if (provider === "amazon-bedrock") {
       assertBedrockConnectCredentials({ apiKey, accessKeyId, secretAccessKey });
     } else if (provider === "google-vertex-ai") {
@@ -1008,6 +1014,16 @@ export async function addProviderModelsCommand(
         vertexProject,
         vertexLocation,
       });
+    } else if (isChatGptOAuth) {
+      const targetProviderId = request.providerId?.trim() || provider || "chatgpt";
+      if (!hasStoredChatGptOAuthCredentials(targetProviderId)) {
+        throw new Error(
+          i18n.t("chatgptErrors.invalidUser", {
+            defaultValue:
+              "Your ChatGPT sign-in is no longer valid. Reconnect ChatGPT in Settings to continue.",
+          }),
+        );
+      }
     } else if (provider !== "cloudflare-ai-gateway" && provider !== "custom" && !apiKey) {
       throw new Error(i18n.t("error.apiKeyRequired"));
     }
@@ -1068,7 +1084,8 @@ export async function addProviderModelsCommand(
       uniqueIds.length > 0 &&
       toAdd.length === 0 &&
       syncedPreview === 0 &&
-      prunedPreview.length === 0
+      prunedPreview.length === 0 &&
+      !(isChatGptOAuth && previewConfigEntry !== undefined)
     ) {
       throw new Error(i18n.t("error.modelsAlreadyExist"));
     }
@@ -1345,7 +1362,7 @@ export async function disconnectProviderCommand(
     applyModelsRemovalToConfig(state.config, targetsToRemove);
     state.config.providers = state.config.providers.filter((entry) => entry.id !== providerId);
     await saveConfig(state.config);
-    removeProviderKeyring(provider);
+    await removeProviderKeyring(provider);
     await ctx.refreshModelKeyPresence();
     await ctx.refreshRuntime();
     ctx.setLastRuntimeError("");
@@ -1355,7 +1372,7 @@ export async function disconnectProviderCommand(
 }
 
 /** Deletes the entry's internal keyring credential accounts (`provider::{id}[::{slot}]`). */
-function removeProviderKeyring(provider: ProviderEntry): void {
+async function removeProviderKeyring(provider: ProviderEntry): Promise<void> {
   const slots = providerCredentialSlotNames(
     resolveProviderTransportKind(provider),
     provider.sdk,
@@ -1364,6 +1381,7 @@ function removeProviderKeyring(provider: ProviderEntry): void {
   for (const slot of slots) {
     deleteKeyringPassword(KEYRING_SERVICE, providerInternalSlotAccount(provider.id, slot));
   }
+  await clearChatGptOAuthCredentialsLocked(provider.id);
 }
 
 async function finalizeModelRemoval(
