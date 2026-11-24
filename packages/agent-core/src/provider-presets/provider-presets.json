@@ -21,6 +21,29 @@
       "catalog": { "parser": "openai-models", "endpoint": "/models" }
     },
     {
+      "id": "chatgpt",
+      "label": "ChatGPT",
+      "defaultTransport": "open-responses",
+      "sdk": "@ai-sdk/openai",
+      "transports": {
+        "open-responses": "https://api.openai.com/v1"
+      },
+      "credentials": { "kind": "chatgpt-oauth" },
+      "providerTools": [
+        {
+          "label": "Web Search",
+          "tools": [{ "type": "web_search" }]
+        }
+      ],
+      "options": {
+        "auth": "chatgpt-oauth",
+        "applyPatch": true,
+        "reasoningSummary": true,
+        "statelessStreamingResponses": true
+      },
+      "catalog": { "parser": "chatgpt-models", "endpoint": "/models" }
+    },
+    {
       "id": "anthropic",
       "label": "Anthropic",
       "defaultTransport": "anthropic",

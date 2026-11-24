@@ -30,6 +30,14 @@ import {
   wrapFetchForBedrockMantleIamAuth,
 } from "./bedrock-mantle-auth-fetch.js";
 import {
+  resolveDynamicBearerOpenResponsesApiKey,
+  wrapFetchForDynamicBearerAuth,
+} from "./responses-bearer-auth-fetch.js";
+import {
+  createStatelessStreamingResponsesFetch,
+  isStatelessStreamingResponsesConfig,
+} from "./responses-stateless-streaming-fetch.js";
+import {
   buildResponsesAiSdkTools,
   type OpenAiFunctionToolDefinition,
 } from "./ai-sdk-message-bridge.js";
@@ -145,7 +153,19 @@ function responsesFetchForConfig(
   if (shouldUseApplyPatchFileTools(config)) {
     fetchFn = createApplyPatchAwareFetch(config, fetchFn);
   }
-  return createResponsesFileUploadFetch(config, wrapFetchForBedrockMantleIamAuth(config, fetchFn));
+  fetchFn = createStatelessStreamingResponsesFetch(config, fetchFn);
+  fetchFn = createResponsesFileUploadFetch(
+    config,
+    wrapFetchForBedrockMantleIamAuth(config, fetchFn),
+  );
+  return wrapFetchForDynamicBearerAuth(config, fetchFn);
+}
+
+function resolveOpenAiResponsesApiKey(config: OpenResponsesTransportConfig): string {
+  return (
+    resolveDynamicBearerOpenResponsesApiKey(config) ||
+    resolveBedrockMantleOpenResponsesApiKey(config)
+  );
 }
 
 function createOpenAIResponsesProvider(
@@ -153,7 +173,7 @@ function createOpenAIResponsesProvider(
   providerTools: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">,
 ): OpenAIProvider {
   return createOpenAI({
-    apiKey: resolveBedrockMantleOpenResponsesApiKey(config),
+    apiKey: resolveOpenAiResponsesApiKey(config),
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
     ...(config.organization ? { organization: config.organization } : {}),
     ...(config.project ? { project: config.project } : {}),
@@ -288,9 +308,14 @@ export function buildResponsesProviderOptions(
   }
 
   if (sdk === "@ai-sdk/openai") {
+    const statelessStreaming = isStatelessStreamingResponsesConfig(config);
     const openaiOptions: JsonObject = {
-      store: config.store ?? responsesUsesStoredState(config),
-      ...(config.truncation === "auto" ? { truncation: "auto" } : { truncation: "disabled" }),
+      store: statelessStreaming ? false : (config.store ?? responsesUsesStoredState(config)),
+      ...(statelessStreaming
+        ? { systemMessageMode: "developer" }
+        : config.truncation === "auto"
+          ? { truncation: "auto" }
+          : { truncation: "disabled" }),
       ...(config.options?.responsesFileUpload === true
         ? { passThroughUnsupportedFiles: true, forceReasoning: true }
         : {}),
@@ -308,7 +333,7 @@ export function buildResponsesProviderOptions(
       openaiOptions.reasoningSummary = reasoningSummary;
     }
 
-    if (previousResponseId && responsesUsesStoredState(config)) {
+    if (!statelessStreaming && previousResponseId && responsesUsesStoredState(config)) {
       openaiOptions.previousResponseId = previousResponseId;
     }
 

@@ -19,6 +19,7 @@ import {
 } from "./provider-state.js";
 import type { OpenResponsesTransportConfig } from "./responses-compat.js";
 import { renderResponsesTransportError } from "./ai-sdk-message-bridge.js";
+import { extractAiSdkProviderErrorDetail } from "../openai/ai-sdk-provider-error.js";
 import {
   accumulateResponsesBuiltInToolPreviewsFromRawChunk,
   buildGatewaySdkProviderBuiltinToolResultArgumentsJson,
@@ -393,14 +394,17 @@ export async function* responsesEventStreamToRuntimeEvents(
     yield { kind: "done" };
   } catch (error) {
     const rendered = renderResponsesTransportError(error);
+    const providerError = extractAiSdkProviderErrorDetail(error);
     completion.resolve({
       kind: "failure",
       error: rendered,
+      ...(providerError ? { providerError } : {}),
       requestTrace,
     });
     yield {
       kind: "error",
       error: rendered,
+      ...(providerError ? { providerError } : {}),
     };
   }
 }

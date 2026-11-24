@@ -35,7 +35,7 @@ export interface ProviderPresetBillingPlan {
 }
 
 /** Wizard credential form driver: which credential shape the connect flow collects. */
-export type ProviderPresetCredentialKind = "apiKey" | "bedrock" | "vertex";
+export type ProviderPresetCredentialKind = "apiKey" | "bedrock" | "vertex" | "chatgpt-oauth";
 
 export interface ProviderPresetCredentials {
   kind: ProviderPresetCredentialKind;

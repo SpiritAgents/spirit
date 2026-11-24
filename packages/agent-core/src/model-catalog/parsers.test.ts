@@ -10,6 +10,7 @@ import {
 
 const CANONICAL_PARSER_NAMES = [
   "openai-models",
+  "chatgpt-models",
   "anthropic-models",
   "google-gemini-models",
   "google-vertex-models",
@@ -64,6 +65,39 @@ test("openai-models parseList extracts ids from the generic OpenAI shape", () =>
   assert.deepEqual(entries, [
     { id: "gpt-5.4", supportedReasoningEfforts: ["none", "low", "medium", "high", "xhigh"] },
   ]);
+});
+
+test("chatgpt-models parseList filters visibility=list and preserves server order", () => {
+  const entries = resolveModelCatalogParser("chatgpt-models").parseList({
+    models: [
+      {
+        slug: "gpt-5.4",
+        display_name: "GPT-5.4",
+        visibility: "list",
+        context_window: 272000,
+        input_modalities: ["text", "image"],
+      },
+      {
+        slug: "internal-hidden",
+        display_name: "Hidden",
+        visibility: "hide",
+      },
+      {
+        slug: "gpt-5.4-mini",
+        display_name: "GPT-5.4 Mini",
+        visibility: "list",
+      },
+    ],
+  });
+  assert.deepEqual(
+    entries.map((entry) => ({ id: entry.id, displayName: entry.displayName })),
+    [
+      { id: "gpt-5.4", displayName: "GPT-5.4" },
+      { id: "gpt-5.4-mini", displayName: "GPT-5.4 Mini" },
+    ],
+  );
+  assert.equal(entries[0]?.contextLength, 272000);
+  assert.equal(entries[0]?.supportsImageInput, true);
 });
 
 test("siliconflow-models descriptor carries the typed queries and capability-merging merge", () => {

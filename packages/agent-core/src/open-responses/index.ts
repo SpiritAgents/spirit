@@ -29,6 +29,16 @@ export {
 } from "./model-factory.js";
 export { createApplyPatchAwareFetch } from "./apply-patch-responses-fetch.js";
 export {
+  wrapFetchForDynamicBearerAuth,
+  resolveDynamicBearerOpenResponsesApiKey,
+  type DynamicBearerAuthConfig,
+} from "./responses-bearer-auth-fetch.js";
+export {
+  isStatelessStreamingResponsesConfig,
+  patchStatelessStreamingResponsesBody,
+  createStatelessStreamingResponsesFetch,
+} from "./responses-stateless-streaming-fetch.js";
+export {
   APPLY_PATCH_HOST_TOOL_NAME,
   type ApplyPatchOperation,
   type ApplyPatchOperationType,

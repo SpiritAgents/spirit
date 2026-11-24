@@ -390,6 +390,7 @@ export type RuntimeTurnResult<State, ToolRequest> =
   | {
       kind: "failed";
       error: string;
+      providerError?: import("../openai/ai-sdk-provider-error.js").ProviderErrorDetail;
       state?: State;
       requestTrace: JsonValue[];
       toolExecutions: RuntimeToolExecution<ToolRequest>[];

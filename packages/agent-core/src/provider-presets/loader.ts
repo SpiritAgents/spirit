@@ -27,7 +27,12 @@ const TRANSPORT_KINDS: ReadonlySet<string> = new Set([
   "bedrock",
 ]);
 
-const CREDENTIAL_KINDS: ReadonlySet<string> = new Set(["apiKey", "bedrock", "vertex"]);
+const CREDENTIAL_KINDS: ReadonlySet<string> = new Set([
+  "apiKey",
+  "bedrock",
+  "vertex",
+  "chatgpt-oauth",
+]);
 
 const SOURCE = "provider-presets.json";
 

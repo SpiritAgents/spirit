@@ -1,3 +1,4 @@
+export * from "./ai-sdk-provider-error.js";
 export * from "./tool-agent-helpers.js";
 export * from "./json-schema.js";
 export * from "./ai-sdk-transport.js";

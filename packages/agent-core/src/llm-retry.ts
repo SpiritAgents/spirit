@@ -1,4 +1,9 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import {
+  extractProviderErrorDetailFromBody,
+  isNonRetryableProviderErrorCode,
+  NonRetryableProviderError,
+} from "./openai/ai-sdk-provider-error.js";
 
 /** AI SDK `maxRetries`: number of retries allowed beyond the initial request. */
 export const LLM_MAX_RETRIES = 2;
@@ -75,25 +80,38 @@ export async function readLlmRetryErrorMessage(response: Response): Promise<stri
 }
 
 export async function observeLlmFetchResponse(response: Response): Promise<Response> {
-  const store = llmRetryObservationStore.getStore();
-  if (!store?.observer) {
-    return response;
-  }
-
   if (isRetryableLlmHttpStatus(response.status)) {
-    store.retryableFailureCount += 1;
-    const maxAttempts = store.maxRetries + 1;
-    const error = (await readLlmRetryErrorMessage(response)) ?? `HTTP ${response.status}`;
-    store.observer({
-      kind: "retry",
-      attempt: store.retryableFailureCount,
-      maxAttempts,
-      error,
-    });
+    const clonedText = await response
+      .clone()
+      .text()
+      .catch(() => "");
+    const requestId = response.headers.get("x-request-id") ?? undefined;
+    const detail = extractProviderErrorDetailFromBody(clonedText, response.status, requestId);
+    if (isNonRetryableProviderErrorCode(detail?.code)) {
+      const errorMessage = (await readLlmRetryErrorMessage(response)) ?? `HTTP ${response.status}`;
+      throw new NonRetryableProviderError(errorMessage, {
+        ...detail,
+        status: response.status,
+      });
+    }
+
+    const store = llmRetryObservationStore.getStore();
+    if (store?.observer) {
+      store.retryableFailureCount += 1;
+      const maxAttempts = store.maxRetries + 1;
+      const error = (await readLlmRetryErrorMessage(response)) ?? `HTTP ${response.status}`;
+      store.observer({
+        kind: "retry",
+        attempt: store.retryableFailureCount,
+        maxAttempts,
+        error,
+      });
+    }
     return response;
   }
 
-  if (response.ok && store.retryableFailureCount > 0) {
+  const store = llmRetryObservationStore.getStore();
+  if (store?.observer && response.ok && store.retryableFailureCount > 0) {
     store.observer({ kind: "cleared" });
   }
 

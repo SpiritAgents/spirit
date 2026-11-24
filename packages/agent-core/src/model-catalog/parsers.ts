@@ -20,6 +20,7 @@ import type { FoundationModelSummary } from "@aws-sdk/client-bedrock";
 import { listProviderPresets } from "../provider-presets/index.js";
 import { parseBedrockFoundationModelSummaries } from "./bedrock-models.js";
 import { parseCerebrasModelEntriesPayload } from "./cerebras-models.js";
+import { parseChatGptModelEntriesPayload } from "./chatgpt-models.js";
 import { parseVertexModelEntriesPayload } from "./google-vertex-models.js";
 import { parseNebiusTokenFactoryModelEntriesPayload } from "./nebius-token-factory-models.js";
 import { parseModalModelEntriesPayload } from "./modal-models.js";
@@ -99,6 +100,7 @@ const SILICONFLOW_LISTING_QUERIES: readonly ModelCatalogListingQuery[] = [
 /** Parser descriptors keyed by the preset manifest's `catalog.parser` names. */
 export const MODEL_CATALOG_PARSERS: Readonly<Record<string, ModelCatalogParserDescriptor>> = {
   "openai-models": { parseList: (payload) => parseOpenAiCompatibleModelEntriesPayload(payload) },
+  "chatgpt-models": { parseList: parseChatGptModelEntriesPayload },
   "meta-models": { parseList: parseMetaModelEntriesPayload },
   "anthropic-models": { parseList: parseAnthropicModelEntriesPayload },
   "google-gemini-models": { parseList: parseGoogleModelEntriesPayload },
