@@ -23,12 +23,18 @@ export {
   truncateOpenAiHistoryForCompaction as truncateLlmHistoryForCompaction,
   truncateOpenAiToolAgentStateForContextRetry as truncateLlmToolAgentStateForContextRetry,
 } from "./openai/tool-agent-helpers.js";
-export { formatActiveSkillUserMessageMeta } from "./runtime/user-turn-timestamp.js";
+export {
+  formatActiveSkillUserMessageMeta,
+  formatMcpAppContextUserMessageMeta,
+} from "./runtime/user-turn-timestamp.js";
 export {
   assistantToolCallMessageFromState,
   assistantToolCallMessageFromState as assistantToolCallMessageFromLlmState,
+  buildMcpAppContextBlockContent,
   finalAssistantHistoryMessageFromState,
   finalAssistantHistoryMessageFromState as finalAssistantHistoryMessageFromLlmState,
+  type ToolAgentMcpAppContext,
+  type ToolAgentMcpAppContext as LlmMcpAppContext,
 } from "./tool-agent.js";
 
 export type {

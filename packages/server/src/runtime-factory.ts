@@ -304,6 +304,7 @@ export async function createServerRuntime(
   const sessionStore = new RuntimeSessionStore(options.spiritDataDir, sessionId);
   const owner = options.taskOwner ?? (await createBackgroundTaskOwner(options.spiritDataDir));
   const executors = new Set<HostToolExecutorProxy>();
+  const ownedDisposables = new Set<() => Promise<void>>();
   let lease: RuntimeSessionLease | undefined;
   try {
     const sessionLease = await acquireRuntimeSessionLease(
@@ -398,6 +399,7 @@ export async function createServerRuntime(
       ...(saved?.activePlanPath ? { activePlanPath: saved.activePlanPath } : {}),
     });
     executors.add(prepared.toolExecutor);
+    ownedDisposables.add(prepared.disposeOwnedResources);
     const configurePreparedRuntime = (environment: PreparedServerRuntime): void => {
       environment.runtimeOptions.backgroundTasks = {
         manager: tasks,
@@ -445,6 +447,7 @@ export async function createServerRuntime(
           });
           configurePreparedRuntime(fresh);
           executors.add(fresh.toolExecutor);
+          ownedDisposables.add(fresh.disposeOwnedResources);
           runtime.replaceHostOptions(fresh.runtimeOptions);
           const rebound = bind(fresh);
           rebound.workspaceRoot = next.workspaceRoot;
@@ -457,6 +460,7 @@ export async function createServerRuntime(
           const saved = await Promise.allSettled([persist()]);
           const disposed = await Promise.allSettled([
             ...[...executors].map((executor) => executor.disposeLsp()),
+            ...[...ownedDisposables].map((disposeOwned) => disposeOwned()),
             sessionLease.release(),
             ...(options.taskOwner ? [] : [owner.close()]),
           ]);
@@ -476,6 +480,7 @@ export async function createServerRuntime(
   } catch (error) {
     const cleanup = await Promise.allSettled([
       ...[...executors].map((executor) => executor.disposeLsp()),
+      ...[...ownedDisposables].map((disposeOwned) => disposeOwned()),
       ...(lease ? [lease.release()] : []),
       ...(options.taskOwner ? [] : [owner.close()]),
     ]);
@@ -489,6 +494,7 @@ export async function createServerRuntime(
 interface PreparedServerRuntime {
   toolExecutor: HostToolExecutorProxy;
   runtimeOptions: AgentRuntimeOptions<LlmTransportConfig, LlmToolAgentState, JsonValue>;
+  disposeOwnedResources: () => Promise<void>;
   bind(runtime: ServerHostRuntime): ServerRuntimeBindings;
 }
 
@@ -523,12 +529,19 @@ async function prepareServerRuntime(
   await ensureTranscriptSessionDir(spiritDataDir, sessionKey);
 
   // 1. Tool executor: noop peer (no stdio peer in the daemon) + per-session MCP.
+  const ownsMcpService = isDreamCollector || !options.mcpService;
   const mcpService = isDreamCollector
     ? createHostMcpService(workspaceRoot, spiritDataDir, true)
     : (options.mcpService ??
       createHostMcpService(workspaceRoot, spiritDataDir, true, {
         extraConfigs: createExtensionMcpExtraConfigs(spiritDataDir, hostKind),
+        enableMcpApps: hostKind === "desktop",
       }));
+  const disposeOwnedResources = async (): Promise<void> => {
+    if (ownsMcpService) {
+      await mcpService.dispose();
+    }
+  };
   const toolExecutor = new HostToolExecutorProxy(createNoopPeer(), mcpService);
   try {
     toolExecutor.setSubagentLanguageModelSelectorResolver(() =>
@@ -562,8 +575,10 @@ async function prepareServerRuntime(
         builtInSeededTrees.add(builtInTreeKey);
       }
       // After the recopy (first session on this tree) so extension stdio cwd
-      // still exists when `node server.mjs` starts.
-      mcpService.startBackgroundRefreshInBackground(false);
+      // still exists when `node server.mjs` starts. Wait (bounded) for initial MCP
+      // discovery so LaunchSplash finishes with MCP catalogs already populated,
+      // while subsequent sessions on the warm workspace return immediately.
+      await mcpService.waitForInitialToolingCache();
     }
     let currentApprovalLevel = approvalLevel;
     const service = new NodeHostToolService(
@@ -930,6 +945,7 @@ async function prepareServerRuntime(
             dispose: async () => {
               const executor = child.runtimeOptions.toolExecutor;
               if (executor instanceof HostToolExecutorProxy) await executor.disposeLsp();
+              await child.disposeOwnedResources();
             },
           };
         },
@@ -954,6 +970,7 @@ async function prepareServerRuntime(
     return {
       toolExecutor,
       runtimeOptions,
+      disposeOwnedResources,
       bind: (runtime) => {
         const setAgentMode = async (mode: AgentMode): Promise<void> => {
           if (isDreamCollector) {

@@ -3,6 +3,11 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { net, protocol } from "electron";
+import {
+  buildMcpAppSandboxOuterCsp,
+  buildMcpAppSandboxProxyHtml,
+  MCP_APP_SANDBOX_PROTOCOL,
+} from "@spiritagent/mcp";
 import { product } from "@spiritagent/product";
 
 import {
@@ -29,7 +34,75 @@ export function registerSpiritGeneratedAssetPrivilegedScheme(): void {
         corsEnabled: true,
       },
     },
+    {
+      scheme: MCP_APP_SANDBOX_PROTOCOL,
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: false,
+        corsEnabled: true,
+      },
+    },
   ]);
+}
+
+export function resolveDesktopMcpAppSandboxOrigins(devServerUrl?: string): {
+  allowedFrameAncestors: string[];
+  allowedParentOrigins: string[];
+} {
+  if (devServerUrl) {
+    try {
+      const parsed = new URL(devServerUrl);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        return {
+          allowedFrameAncestors: [parsed.origin],
+          allowedParentOrigins: [parsed.origin],
+        };
+      }
+    } catch {
+      // Fall through to packaged file:// app shell origins if devServerUrl is invalid.
+    }
+  }
+  // Packaged Electron renderer loads via loadFile() (file://); browsers send postMessage
+  // event.origin === "null" (or "file://") from file:// parents while frame-ancestors file:
+  // ensures only file:// documents can embed the sandbox.
+  return {
+    allowedFrameAncestors: ["file:"],
+    allowedParentOrigins: ["file://", "null"],
+  };
+}
+
+export function installMcpAppSandboxProtocolHandler(options?: { devServerUrl?: string }): void {
+  const { allowedFrameAncestors, allowedParentOrigins } = resolveDesktopMcpAppSandboxOrigins(
+    options?.devServerUrl,
+  );
+  protocol.handle(MCP_APP_SANDBOX_PROTOCOL, (request) => {
+    const url = new URL(request.url);
+    if (
+      (request.method !== "GET" && request.method !== "HEAD") ||
+      url.hostname !== "sandbox" ||
+      url.pathname !== "/index.html"
+    ) {
+      return new Response("Not Found", {
+        status: 404,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-store",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    }
+    const html = buildMcpAppSandboxProxyHtml({ allowedParentOrigins });
+    return new Response(request.method === "HEAD" ? null : html, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Content-Security-Policy": buildMcpAppSandboxOuterCsp(allowedFrameAncestors),
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  });
 }
 
 export type ResolveManagedGeneratedAssetPath = (reference: string) => Promise<string | null>;

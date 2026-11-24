@@ -1544,5 +1544,26 @@
       "pairingRequired": "Terminez d'abord l'appairage initial.",
       "invalidProvider": "Argument de fournisseur invalide."
     }
+  },
+  "mcpApp": {
+    "loading": "Chargement de l’application…",
+    "loadFailed": "Échec du chargement de l’application",
+    "retry": "Réessayer",
+    "sandboxUnavailable": "Le bac à sable MCP App n’est pas disponible sur cet hôte.",
+    "pictureInPicture": "Image dans l’image",
+    "fullscreen": "Plein écran",
+    "returnInline": "Revenir en ligne",
+    "dockedInPip": "Ancrée en image dans l’image",
+    "viewingInFullscreen": "Affichage en plein écran",
+    "draftConflictTitle": "Brouillon existant",
+    "draftConflictDescription": "{{app}} souhaite préremplir un message, mais votre zone de saisie contient déjà du texte. Choisissez comment l’appliquer.",
+    "appendDraft": "Ajouter",
+    "replaceDraft": "Remplacer le brouillon",
+    "openExternalLinkTitle": "Ouvrir un lien externe",
+    "openExternalLinkDescription": "{{app}} souhaite ouvrir un lien en dehors de ses origines déclarées. Vérifiez l’URL avant de continuer.",
+    "openLink": "Ouvrir le lien",
+    "toolApprovalTitle": "Approuver l’appel d’outil MCP App",
+    "toolApprovalDescription": "{{app}} souhaite exécuter {{tool}} sur {{server}}. Vérifiez les arguments avant de continuer.",
+    "toolApprovalAllow": "Exécuter l’outil"
   }
 }

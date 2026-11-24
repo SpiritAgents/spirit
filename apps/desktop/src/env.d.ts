@@ -86,6 +86,15 @@ declare global {
     saveHookEntry(request: SaveHookEntryRequest): Promise<DesktopSnapshot>;
     deleteHookEntry(request: DeleteHookEntryRequest): Promise<DesktopSnapshot>;
     inspectMcpServer(name: string): Promise<DesktopMcpServerInspection>;
+    mcpAppReadResource(
+      request: import("./types.js").McpAppReadResourceRequest,
+    ): Promise<import("./types.js").McpAppReadResourceResponse>;
+    mcpAppCallTool(
+      request: import("./types.js").McpAppCallToolRequest,
+    ): Promise<import("./types.js").McpAppCallToolResponse>;
+    mcpAppUpdateModelContext(
+      request: import("./types.js").McpAppUpdateModelContextRequest,
+    ): Promise<{ ok: true }>;
     importExtension(request: ImportExtensionRequest): Promise<DesktopSnapshot>;
     installBuiltInExtension(request: InstallBuiltInExtensionRequest): Promise<DesktopSnapshot>;
     addMarketplaceSource(request: AddMarketplaceSourceRequest): Promise<unknown>;

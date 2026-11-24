@@ -20,6 +20,11 @@ import type {
   DesktopDreamOverviewItem,
   DeleteSkillRequest,
   DesktopMcpServerInspection,
+  McpAppCallToolRequest,
+  McpAppCallToolResponse,
+  McpAppReadResourceRequest,
+  McpAppReadResourceResponse,
+  McpAppUpdateModelContextRequest,
   DesktopSnapshot,
   ImportExtensionRequest,
   AddMarketplaceSourceRequest,
@@ -169,6 +174,15 @@ export function createWebHostApi(): HostApi {
     },
     inspectMcpServer(name: string) {
       return post<DesktopMcpServerInspection>(baseUrl, "/api/mcps/inspect", { name });
+    },
+    mcpAppReadResource(request: McpAppReadResourceRequest) {
+      return post<McpAppReadResourceResponse>(baseUrl, "/api/mcp-apps/read-resource", request);
+    },
+    mcpAppCallTool(request: McpAppCallToolRequest) {
+      return post<McpAppCallToolResponse>(baseUrl, "/api/mcp-apps/call-tool", request);
+    },
+    mcpAppUpdateModelContext(request: McpAppUpdateModelContextRequest) {
+      return post<{ ok: true }>(baseUrl, "/api/mcp-apps/update-model-context", request);
     },
     importExtension(request: ImportExtensionRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions", request);

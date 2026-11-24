@@ -1,11 +1,16 @@
-import { Client } from "@modelcontextprotocol/sdk/client";
+import {
+  Client,
+  LATEST_PROTOCOL_VERSION,
+  StreamableHTTPClientTransport,
+  type ClientCapabilities,
+  type Implementation,
+  type ServerCapabilities,
+} from "@modelcontextprotocol/client";
 import {
   StdioClientTransport,
   type StdioServerParameters,
-} from "@modelcontextprotocol/sdk/client/stdio.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import type { Implementation, ServerCapabilities } from "@modelcontextprotocol/sdk/types.js";
-import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
+} from "@modelcontextprotocol/client/stdio";
+import { RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/app-bridge";
 
 import { DEFAULT_MCP_CLIENT_INFO } from "./config.js";
 import { McpConnectionError } from "./errors.js";
@@ -25,6 +30,9 @@ import type {
   ResolvedMcpTransportConfig,
 } from "./types.js";
 
+export const MCP_APPS_EXTENSION_ID = "io.modelcontextprotocol/ui";
+export const MCP_APPS_RESOURCE_MIME_TYPE = RESOURCE_MIME_TYPE;
+
 export type McpListToolsResult = Awaited<ReturnType<Client["listTools"]>>;
 export type McpListResourcesResult = Awaited<ReturnType<Client["listResources"]>>;
 export type McpListResourceTemplatesResult = Awaited<ReturnType<Client["listResourceTemplates"]>>;
@@ -35,23 +43,38 @@ export type McpCallToolResult = Awaited<ReturnType<Client["callTool"]>>;
 type McpSdkTransport = StdioClientTransport | StreamableHTTPClientTransport;
 type McpConnectTransport = Parameters<Client["connect"]>[0];
 
+export interface CreateMcpSdkClientOptions {
+  onSpiritUiOpen?: (params: unknown) => Promise<Record<string, unknown>>;
+  onToolsListChanged?: () => void;
+  onResourcesListChanged?: () => void;
+  mcpAppsUi?: boolean;
+}
+
 export function createMcpSdkClient(
   clientInfo: McpClientInfo = DEFAULT_MCP_CLIENT_INFO,
-  options?: {
-    onSpiritUiOpen?: (params: unknown) => Promise<Record<string, unknown>>;
-  },
+  options?: CreateMcpSdkClientOptions,
 ): Client {
+  const capabilities: ClientCapabilities = {
+    experimental: {
+      [SPIRIT_UI_EXPERIMENTAL_KEY]: {},
+    },
+    ...(options?.mcpAppsUi
+      ? {
+          extensions: {
+            [MCP_APPS_EXTENSION_ID]: {
+              mimeTypes: [MCP_APPS_RESOURCE_MIME_TYPE],
+            },
+          },
+        }
+      : {}),
+  };
   const client = new Client(
     {
       name: clientInfo.name,
       version: clientInfo.version,
     },
     {
-      capabilities: {
-        experimental: {
-          [SPIRIT_UI_EXPERIMENTAL_KEY]: {},
-        },
-      },
+      capabilities,
     },
   );
   // Protocol option, not Client constructor — set after construct so spirit/ui/open
@@ -65,7 +88,26 @@ export function createMcpSdkClient(
     }
     return options.onSpiritUiOpen(request.params);
   };
+  client.fallbackNotificationHandler = async (notification) => {
+    if (notification.method === "notifications/tools/list_changed") {
+      options?.onToolsListChanged?.();
+    } else if (notification.method === "notifications/resources/list_changed") {
+      options?.onResourcesListChanged?.();
+    }
+  };
   return client;
+}
+
+export interface SdkMcpConnectionSpiritUi {
+  ownership?: ExtensionMcpServerOwnership;
+  opener?: McpUiOpener;
+}
+
+export interface SdkMcpConnectionOptions extends SdkMcpConnectionSpiritUi {
+  mcpAppsUi?: boolean;
+  onUnexpectedClose?: () => void;
+  onToolsListChanged?: () => void;
+  onResourcesListChanged?: () => void;
 }
 
 export class SdkMcpConnection {
@@ -74,20 +116,31 @@ export class SdkMcpConnection {
   private serverNameStore: string | undefined;
   private timeoutMsStore: number | undefined;
   private protocolVersionStore = LATEST_PROTOCOL_VERSION;
+  private spiritUiStore: SdkMcpConnectionSpiritUi;
+  private connectionGeneration = 0;
+  private broken = false;
+  private readonly onUnexpectedCloseCallback: (() => void) | undefined;
 
   constructor(
     clientInfo: McpClientInfo = DEFAULT_MCP_CLIENT_INFO,
-    private readonly spiritUi: {
-      ownership?: ExtensionMcpServerOwnership;
-      opener?: McpUiOpener;
-    } = {},
+    options: SdkMcpConnectionOptions = {},
   ) {
+    this.spiritUiStore = {
+      ...(options.ownership ? { ownership: options.ownership } : {}),
+      ...(options.opener ? { opener: options.opener } : {}),
+    };
+    this.onUnexpectedCloseCallback = options.onUnexpectedClose;
     this.clientStore = createMcpSdkClient(clientInfo, {
+      mcpAppsUi: options.mcpAppsUi === true,
+      ...(options.onToolsListChanged ? { onToolsListChanged: options.onToolsListChanged } : {}),
+      ...(options.onResourcesListChanged
+        ? { onResourcesListChanged: options.onResourcesListChanged }
+        : {}),
       onSpiritUiOpen: async (params) => {
         const parsed = parseSpiritUiOpenParams(params);
         return resolveSpiritUiOpen({
-          ownership: this.spiritUi.ownership,
-          opener: this.spiritUi.opener,
+          ownership: this.spiritUiStore.ownership,
+          opener: this.spiritUiStore.opener,
           viewId: parsed.viewId,
           ...(parsed.params === undefined ? {} : { params: parsed.params }),
         });
@@ -101,6 +154,10 @@ export class SdkMcpConnection {
 
   get connectedServer(): string | undefined {
     return this.serverNameStore;
+  }
+
+  get isConnected(): boolean {
+    return this.transportStore !== undefined && !this.broken;
   }
 
   get serverCapabilities(): ServerCapabilities | undefined {
@@ -119,10 +176,36 @@ export class SdkMcpConnection {
     return this.protocolVersionStore;
   }
 
+  setSpiritUi(spiritUi: SdkMcpConnectionSpiritUi): void {
+    this.spiritUiStore = {
+      ...(spiritUi.ownership ? { ownership: spiritUi.ownership } : {}),
+      ...(spiritUi.opener ? { opener: spiritUi.opener } : {}),
+    };
+  }
+
   async connect(server: ResolvedMcpServerConfig): Promise<void> {
     await this.close();
+    this.broken = false;
+    const generation = ++this.connectionGeneration;
     const transport = createTransport(server.transport);
     this.timeoutMsStore = server.transport.timeoutMs;
+    let handshakeCompleted = false;
+    let closedDuringConnect = false;
+    this.clientStore.onclose = () => {
+      if (this.connectionGeneration !== generation) {
+        return;
+      }
+      if (!handshakeCompleted) {
+        closedDuringConnect = true;
+        return;
+      }
+      if (this.transportStore !== transport) {
+        return;
+      }
+      this.broken = true;
+      this.transportStore = undefined;
+      this.onUnexpectedCloseCallback?.();
+    };
 
     try {
       await this.clientStore.connect(
@@ -130,25 +213,44 @@ export class SdkMcpConnection {
         this.requestOptions(),
       );
     } catch (error) {
+      this.connectionGeneration += 1;
       await safeCloseTransport(transport);
+      this.broken = true;
       throw new McpConnectionError(`MCP server connection failed: ${server.name}`, {
         cause: error,
       });
     }
 
+    if (this.connectionGeneration !== generation || closedDuringConnect) {
+      this.connectionGeneration += 1;
+      await safeCloseTransport(transport);
+      this.broken = true;
+      throw new McpConnectionError(`MCP server connection closed during handshake: ${server.name}`);
+    }
+
+    handshakeCompleted = true;
     this.transportStore = transport;
     this.serverNameStore = server.name;
-    this.protocolVersionStore = resolveProtocolVersion(transport);
+    this.protocolVersionStore =
+      this.clientStore.getNegotiatedProtocolVersion() ?? resolveProtocolVersion(transport);
   }
 
   async close(): Promise<void> {
     const transport = this.transportStore;
+    // Advance generation before closing so any late SDK/stdio onclose callback
+    // from this transport is ignored even after close() resolves or connect() starts.
+    this.connectionGeneration += 1;
     this.transportStore = undefined;
     this.serverNameStore = undefined;
     this.timeoutMsStore = undefined;
     this.protocolVersionStore = LATEST_PROTOCOL_VERSION;
+    this.broken = false;
 
     if (transport) {
+      // Detach transport callbacks before closing so a late child-process exit from
+      // this transport cannot invoke Client._onclose() after a subsequent reconnect.
+      delete transport.onclose;
+      delete transport.onerror;
       await transport.close();
     }
   }
@@ -193,7 +295,6 @@ export class SdkMcpConnection {
         name,
         ...(args === undefined ? {} : { arguments: args }),
       },
-      undefined,
       this.requestOptions(options?.timeoutMs),
     );
   }

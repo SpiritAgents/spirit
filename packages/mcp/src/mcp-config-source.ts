@@ -49,7 +49,7 @@ export function createHostMcpService(
   workspaceRoot: string,
   spiritDataDir: string,
   includeWorkspace = true,
-  options: Pick<McpServiceOptions, "extraConfigs"> = {},
+  options: Pick<McpServiceOptions, "extraConfigs" | "enableMcpApps" | "idleTimeoutMs"> = {},
 ): McpService {
   return new McpService(workspaceRoot, includeWorkspace, {
     ...options,

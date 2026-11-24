@@ -106,6 +106,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
   private hostToolDescriptionHints: HostToolDescriptionHint[] = [];
   private subagentLanguageModelSelectorResolver: (() => readonly string[]) | undefined;
   private subagentLanguageModelSelectors: readonly string[] = [];
+  private mcpCatalogRevision = -1;
   private mcpUiOpener: McpUiOpener | undefined;
 
   constructor(
@@ -256,6 +257,9 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
 
   toolDefinitionsJson(): JsonValue {
     this.refreshSubagentLanguageModelSelectors();
+    if (this.mcp.catalogRevision() !== this.mcpCatalogRevision) {
+      this.refreshMergedToolDefinitions();
+    }
     return this.toolDefinitionsCache;
   }
 
@@ -372,9 +376,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
       );
     }
     if (this.mcp.isLazyToolGatewayToolRequest(request)) {
-      return createToolExecutionTextOutput(
-        await this.mcp.executeLazyToolGatewayToolRequest(request, this.mcpCallToolOptions()),
-      );
+      return this.mcp.executeLazyToolGatewayToolRequestWithUi(request, this.mcpCallToolOptions());
     }
     if (this.mcp.isToolRequest(request)) {
       return this.executeLocalMcpTool(request);
@@ -539,6 +541,26 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
     return this.mcp.callTool(server, toolName, argsJson, this.mcpCallToolOptions());
   }
 
+  async callMcpAppTool(
+    server: string,
+    toolName: string,
+    args?: Record<string, unknown>,
+    options?: { approved?: boolean },
+  ): Promise<JsonValue> {
+    return this.mcp.callAppTool(server, toolName, args, {
+      ...this.mcpCallToolOptions(),
+      approvalLevel: this.approvalLevel,
+      ...(options?.approved === true ? { approved: true } : {}),
+    });
+  }
+
+  async readMcpAppResource(
+    server: string,
+    uri: string,
+  ): Promise<import("../mcp/apps.js").McpAppResourcePayload> {
+    return this.mcp.readAppResource(server, uri);
+  }
+
   async listMcpServers(): Promise<JsonValue[]> {
     return this.mcp.listServers();
   }
@@ -626,10 +648,10 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
     const metadata = this.resolveRequestMetadata(request);
 
     try {
-      const output = await this.mcp.executeToolRequest(request, this.mcpCallToolOptions());
+      const output = await this.mcp.executeToolRequestWithUi(request, this.mcpCallToolOptions());
       this.peer.notify("host.localToolExecuted", {
         request,
-        output,
+        output: output.summaryText,
         ...(metadata?.toolCallId === undefined ? {} : { toolCallId: metadata.toolCallId }),
         toolName: metadata?.toolName ?? "mcp_tool",
         ...(metadata?.subagentSessionId === undefined
@@ -637,7 +659,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
           : { subagentSessionId: metadata.subagentSessionId }),
         ...(metadata?.subagentTitle === undefined ? {} : { subagentTitle: metadata.subagentTitle }),
       });
-      return createToolExecutionTextOutput(output);
+      return output;
     } catch (error) {
       const message = renderError(error);
       this.peer.notify("host.localToolFailed", {
@@ -705,6 +727,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
         : [...this.loopToolDefinitionsCache, ...planDefinitions, ...this.todoToolDefinitionsCache],
       this.agentMode,
     );
+    this.mcpCatalogRevision = this.mcp.catalogRevision();
     this.toolDefinitionsCache = applyHostToolDescriptionHints(
       mergeToolDefinitions(
         mergedHostDefinitions,

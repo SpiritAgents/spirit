@@ -939,6 +939,97 @@ export function buildActiveSkillsBlockContent(
   return lines.join("\n").trimEnd();
 }
 
+export interface ToolAgentMcpAppContext {
+  /** Stable identifier per mounted MCP App instance (toolCallId). Repeated updates overwrite prior context for this appId. */
+  appId: string;
+  server: string;
+  toolName?: string;
+  text?: string;
+  structuredContent?: Record<string, unknown>;
+}
+
+const MAX_MCP_APP_CONTEXT_ENTRY_BYTES = 16 * 1024;
+const MAX_MCP_APP_CONTEXT_TOTAL_BYTES = 32 * 1024;
+const MCP_APP_CONTEXT_TRUNCATED_SUFFIX = "\n[truncated]";
+const MCP_APP_CONTEXT_TRUNCATED_SUFFIX_BYTES = Buffer.byteLength(
+  MCP_APP_CONTEXT_TRUNCATED_SUFFIX,
+  "utf8",
+);
+
+function escapeXmlText(value: string): string {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+function escapeXmlTextWithinByteLimit(value: string, maxBytes: number): string {
+  const escaped = escapeXmlText(value);
+  if (Buffer.byteLength(escaped, "utf8") <= maxBytes) {
+    return escaped;
+  }
+  const contentBudget = Math.max(0, maxBytes - MCP_APP_CONTEXT_TRUNCATED_SUFFIX_BYTES);
+  let out = "";
+  let usedBytes = 0;
+  for (const ch of value) {
+    const escapedChar = escapeXmlText(ch);
+    const charBytes = Buffer.byteLength(escapedChar, "utf8");
+    if (usedBytes + charBytes > contentBudget) {
+      break;
+    }
+    out += escapedChar;
+    usedBytes += charBytes;
+  }
+  return `${out}${MCP_APP_CONTEXT_TRUNCATED_SUFFIX}`;
+}
+
+export function buildMcpAppContextBlockContent(
+  entries: readonly ToolAgentMcpAppContext[],
+): string | undefined {
+  if (entries.length === 0) {
+    return undefined;
+  }
+
+  const lines = [
+    "The following context was updated by interactive MCP Apps displayed in this conversation.",
+    "Treat it as user-visible UI state from the corresponding app for this turn.",
+    "",
+  ];
+  let totalBytes = 0;
+  let includedCount = 0;
+
+  for (const entry of entries) {
+    const parts: string[] = [];
+    if (entry.text?.trim()) {
+      parts.push(entry.text.trim());
+    }
+    if (entry.structuredContent && Object.keys(entry.structuredContent).length > 0) {
+      parts.push(JSON.stringify(entry.structuredContent, null, 2));
+    }
+    if (parts.length === 0) {
+      continue;
+    }
+
+    const body = escapeXmlTextWithinByteLimit(parts.join("\n\n"), MAX_MCP_APP_CONTEXT_ENTRY_BYTES);
+    const entryBytes = Buffer.byteLength(body, "utf8");
+    if (totalBytes + entryBytes > MAX_MCP_APP_CONTEXT_TOTAL_BYTES) {
+      break;
+    }
+    totalBytes += entryBytes;
+    includedCount += 1;
+
+    const toolAttr = entry.toolName ? ` tool="${escapeRuleAttribute(entry.toolName)}"` : "";
+    lines.push(
+      `<app id="${escapeRuleAttribute(entry.appId)}" server="${escapeRuleAttribute(entry.server)}"${toolAttr}>`,
+    );
+    lines.push(body);
+    lines.push("</app>");
+    lines.push("");
+  }
+
+  if (includedCount === 0) {
+    return undefined;
+  }
+  return lines.join("\n").trimEnd();
+}
+
 export function mergeEnabledExtensionSystemPrompts(
   installed: readonly {
     extensionId: string;

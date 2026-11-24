@@ -17,6 +17,7 @@ import type { ConversationMessageSnapshot } from "@/types";
 const PROCESS_GROUP_BODY_ESTIMATE_PX = 20;
 const USER_MESSAGE_BODY_ESTIMATE_PX = 56;
 const TOOL_MESSAGE_BODY_ESTIMATE_PX = 40;
+const MCP_APP_CARD_BODY_ESTIMATE_PX = 340;
 const ASSISTANT_BODY_ESTIMATE_PX = 241;
 const ASSISTANT_META_BODY_ESTIMATE_PX = 80;
 const FALLBACK_BODY_ESTIMATE_PX = 120;
@@ -45,7 +46,9 @@ function bodyEstimateForMessage(message: ConversationMessageSnapshot): number {
     return USER_MESSAGE_BODY_ESTIMATE_PX;
   }
   if (message.tool) {
-    return TOOL_MESSAGE_BODY_ESTIMATE_PX;
+    return message.tool.mcpApp
+      ? TOOL_MESSAGE_BODY_ESTIMATE_PX + MCP_APP_CARD_BODY_ESTIMATE_PX
+      : TOOL_MESSAGE_BODY_ESTIMATE_PX;
   }
   if (message.content.trim()) {
     return ASSISTANT_BODY_ESTIMATE_PX;

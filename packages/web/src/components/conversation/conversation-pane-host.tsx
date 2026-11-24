@@ -177,6 +177,20 @@ export function ConversationPaneHost({
     [controllerInput],
   );
 
+  const handleOpenMcpAppExternalUrl = useCallback(
+    async (url: string) => {
+      if (controllerInput.runtime.hostKind === "electron") {
+        controllerInput.workspaceTools.openWorkspaceUrl(url);
+        return;
+      }
+      const handled = await controllerInput.runtime.openExtensionLink({ url });
+      if (!handled && typeof window !== "undefined") {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    },
+    [controllerInput.runtime, controllerInput.workspaceTools],
+  );
+
   const paneSessionPathKey = normalizeSessionPathKey(sessionPath);
   const sessionPinned = controllerInput.runtime.sessions.some(
     (session) =>
@@ -269,6 +283,7 @@ export function ConversationPaneHost({
         list={pane.list}
         composerDock={pane.composerDock}
         branchCheckout={pane.branchCheckout}
+        onOpenMcpAppExternalUrl={handleOpenMcpAppExternalUrl}
       />
     </ComposerChipNavigateProvider>
   );

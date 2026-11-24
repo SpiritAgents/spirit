@@ -21,6 +21,7 @@ export async function runWorkbench({
   const [
     {
       invokeDesktopHostCommand,
+      setDesktopMcpAppSandboxUrlProvider,
       shutdownDesktopHostService,
       subscribeDesktopDreamUpdates,
       refreshDesktopRemoteControlConfig,
@@ -75,6 +76,7 @@ export async function runWorkbench({
     });
     const state = await next.start();
     webHost = next;
+    setDesktopMcpAppSandboxUrlProvider(() => webHost?.getState().sandboxUrl);
     setDesktopWebHostRuntimeStatus({
       state: "running",
       host,
@@ -92,6 +94,7 @@ export async function runWorkbench({
   async function stop(): Promise<void> {
     const current = webHost;
     webHost = undefined;
+    setDesktopMcpAppSandboxUrlProvider(undefined);
     await current?.stop();
     await callDesktopRemoteControl(spiritDataDir(), "remote.unregisterHost", { instanceId });
   }

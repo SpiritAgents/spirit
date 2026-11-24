@@ -48,7 +48,20 @@ export type WorkspaceExtensionToolTab = WorkspaceToolTabBase & {
   icon?: DesktopExtensionDesktopTabRuntimeIcon;
 };
 
-export type WorkspaceToolTab = WorkspaceBuiltInToolTab | WorkspaceExtensionToolTab;
+/** Ephemeral renderer-only tab hosting a fullscreen MCP App iframe; never persisted or listed in the "+" menu. */
+export type WorkspaceMcpAppToolTab = WorkspaceToolTabBase & {
+  kind: "mcp-app";
+  /** Unique per-pane + per-tool-call identity so multiple instances of the same resource URI coexist cleanly. */
+  instanceKey: string;
+  appKey: string;
+  sessionKey: string;
+  tabTitle: string;
+};
+
+export type WorkspaceToolTab =
+  | WorkspaceBuiltInToolTab
+  | WorkspaceExtensionToolTab
+  | WorkspaceMcpAppToolTab;
 
 const KIND_BASE_LABEL_KEY: Record<WorkspaceToolTabKind, string> = {
   files: "workspace.files",
@@ -110,6 +123,22 @@ export function createExtensionWorkspaceToolTab(input: {
       : { navigationRevision: input.navigationRevision }),
     ...(input.icon ? { icon: input.icon } : {}),
     ...(input.tabTitle ? { tabTitle: input.tabTitle } : {}),
+  };
+}
+
+export function createMcpAppWorkspaceToolTab(input: {
+  instanceKey: string;
+  appKey: string;
+  sessionKey: string;
+  tabTitle: string;
+}): WorkspaceMcpAppToolTab {
+  return {
+    id: `mcp-app:${input.instanceKey}`,
+    kind: "mcp-app",
+    instanceKey: input.instanceKey,
+    appKey: input.appKey,
+    sessionKey: input.sessionKey,
+    tabTitle: input.tabTitle,
   };
 }
 
@@ -189,7 +218,13 @@ export function isWorkspaceToolTabVisibleInContext(
   tab: WorkspaceToolTab,
   context: { workspaceRoot: string; sessionKey: string },
 ): boolean {
-  if (tab.kind === "built-in" || tab.scope.kind === "window-shared") {
+  if (tab.kind === "built-in") {
+    return true;
+  }
+  if (tab.kind === "mcp-app") {
+    return !tab.sessionKey || tab.sessionKey === context.sessionKey;
+  }
+  if (tab.scope.kind === "window-shared") {
     return true;
   }
   if (tab.scope.kind === "workspace") {

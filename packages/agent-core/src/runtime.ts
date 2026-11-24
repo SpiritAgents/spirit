@@ -244,6 +244,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
   private pendingBackgroundToolStatusStore: string | undefined;
   private pendingImagePathsStore: string[];
   private pendingMcpResourcesStore: PendingMcpResource[];
+  private pendingMcpAppContextsStore: Map<string, import("./tool-agent.js").ToolAgentMcpAppContext>;
   private pendingAssistantTextStore: string;
   private thinkingTextStore: string;
   private toolPreviewSeenInStreamRoundStore = false;
@@ -329,6 +330,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
     this.eventQueueStore = [];
     this.pendingImagePathsStore = [];
     this.pendingMcpResourcesStore = [];
+    this.pendingMcpAppContextsStore = new Map();
     this.pendingAssistantTextStore = "";
     this.thinkingTextStore = "";
     this.toolPreviewSeenInStreamRoundStore = false;
@@ -1101,6 +1103,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
     this.pendingBackgroundToolStatusStore = undefined;
     this.pendingImagePathsStore = [];
     this.pendingMcpResourcesStore = [];
+    this.pendingMcpAppContextsStore.clear();
     this.pendingUserTurnStore = undefined;
     this.pendingApproval = undefined;
     this.pendingManualApproval = undefined;
@@ -1134,6 +1137,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
     this.pendingBackgroundToolStatusStore = undefined;
     this.pendingImagePathsStore = [];
     this.pendingMcpResourcesStore = [];
+    this.pendingMcpAppContextsStore.clear();
     this.pendingUserTurnStore = undefined;
     this.pendingApproval = undefined;
     this.pendingManualApproval = undefined;
@@ -1365,6 +1369,33 @@ export class AgentRuntime<Config, State, ToolRequest> {
     const cleared = this.pendingMcpResourcesStore.length;
     this.pendingMcpResourcesStore = [];
     return cleared;
+  }
+
+  /**
+   * Store or overwrite model context sent by an interactive MCP App (`ui/update-model-context`).
+   * Applied once to the next user turn as a `<mcp_app_context>` block; repeated updates from the
+   * same `appId` overwrite the prior pending value rather than stacking.
+   */
+  setMcpAppModelContext(entry: import("./tool-agent.js").ToolAgentMcpAppContext): void {
+    const appId = entry.appId.trim();
+    if (!appId) {
+      return;
+    }
+    const hasText = Boolean(entry.text?.trim());
+    const hasStructured =
+      entry.structuredContent !== undefined && Object.keys(entry.structuredContent).length > 0;
+    if (!hasText && !hasStructured) {
+      this.pendingMcpAppContextsStore.delete(appId);
+      return;
+    }
+    this.pendingMcpAppContextsStore.set(appId, {
+      ...entry,
+      appId,
+    });
+  }
+
+  clearMcpAppModelContext(appId: string): void {
+    this.pendingMcpAppContextsStore.delete(appId);
   }
 
   recordContextMessage(role: "system" | "user" | "assistant", content: string): void {
@@ -3201,6 +3232,12 @@ export class AgentRuntime<Config, State, ToolRequest> {
     const resources = [...this.pendingMcpResourcesStore];
     this.pendingMcpResourcesStore = [];
     return resources;
+  }
+
+  private takePendingMcpAppModelContexts(): import("./tool-agent.js").ToolAgentMcpAppContext[] {
+    const contexts = [...this.pendingMcpAppContextsStore.values()];
+    this.pendingMcpAppContextsStore.clear();
+    return contexts;
   }
 
   private async tryExecuteSubagentTool(

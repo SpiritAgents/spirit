@@ -1544,5 +1544,26 @@
       "pairingRequired": "Conclua primeiro o pareamento inicial.",
       "invalidProvider": "Argumento de provedor inválido."
     }
+  },
+  "mcpApp": {
+    "loading": "Carregando aplicativo…",
+    "loadFailed": "Falha ao carregar o aplicativo",
+    "retry": "Tentar novamente",
+    "sandboxUnavailable": "A sandbox do MCP App não está disponível neste host.",
+    "pictureInPicture": "Picture-in-Picture",
+    "fullscreen": "Tela cheia",
+    "returnInline": "Voltar ao inline",
+    "dockedInPip": "Fixado em Picture-in-Picture",
+    "viewingInFullscreen": "Visualizando em tela cheia",
+    "draftConflictTitle": "Rascunho existente",
+    "draftConflictDescription": "{{app}} deseja preencher uma mensagem, mas o campo de texto já contém conteúdo. Escolha como aplicá-la.",
+    "appendDraft": "Anexar",
+    "replaceDraft": "Substituir rascunho",
+    "openExternalLinkTitle": "Abrir link externo",
+    "openExternalLinkDescription": "{{app}} deseja abrir um link fora de suas origens declaradas. Verifique a URL antes de continuar.",
+    "openLink": "Abrir link",
+    "toolApprovalTitle": "Aprovar chamada de ferramenta do MCP App",
+    "toolApprovalDescription": "{{app}} deseja executar {{tool}} em {{server}}. Revise os argumentos antes de continuar.",
+    "toolApprovalAllow": "Executar ferramenta"
   }
 }

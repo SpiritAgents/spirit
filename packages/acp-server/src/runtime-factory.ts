@@ -145,6 +145,7 @@ export async function createAcpRuntime(
   const owner = options.taskOwner ?? (await createBackgroundTaskOwner(config.spiritDataDir));
   let result: AcpRuntimeResult | undefined;
   let lease: RuntimeSessionLease | undefined;
+  let activePrepared: PreparedAcpRuntime | undefined;
   try {
     const sessionLease = await acquireRuntimeSessionLease(
       config.spiritDataDir,
@@ -224,6 +225,7 @@ export async function createAcpRuntime(
       undefined,
       modelRef,
     );
+    activePrepared = prepared;
     const configurePreparedRuntime = (environment: PreparedAcpRuntime): void => {
       environment.runtimeOptions.backgroundTasks = {
         manager: tasks,
@@ -269,8 +271,15 @@ export async function createAcpRuntime(
           undefined,
           nextModelRef,
         );
-        configurePreparedRuntime(nextPrepared);
-        runtime.replaceHostOptions(nextPrepared.runtimeOptions);
+        const previousPrepared = activePrepared ?? prepared;
+        try {
+          configurePreparedRuntime(nextPrepared);
+          runtime.replaceHostOptions(nextPrepared.runtimeOptions);
+        } catch (error) {
+          await nextPrepared.disposeMcp().catch(() => {});
+          throw error;
+        }
+        activePrepared = nextPrepared;
         modelRef = nextModelRef;
         result = {
           ...nextPrepared,
@@ -293,6 +302,7 @@ export async function createAcpRuntime(
           reconfigure: current.reconfigure,
           dispose: current.dispose,
         };
+        await previousPrepared.disposeMcp().catch(() => {});
         return result;
       },
       dispose: async () => {
@@ -301,6 +311,7 @@ export async function createAcpRuntime(
         const stopped = await Promise.allSettled([runtime.shutdown()]);
         const persisted = await Promise.allSettled([persist()]);
         const owners = await Promise.allSettled([
+          (activePrepared ?? prepared).disposeMcp(),
           sessionLease.release(),
           ...(options.taskOwner ? [] : [owner.close()]),
         ]);
@@ -319,7 +330,11 @@ export async function createAcpRuntime(
     const cleanup = await Promise.allSettled(
       result
         ? [result.dispose()]
-        : [...(lease ? [lease.release()] : []), ...(options.taskOwner ? [] : [owner.close()])],
+        : [
+            ...(activePrepared ? [activePrepared.disposeMcp()] : []),
+            ...(lease ? [lease.release()] : []),
+            ...(options.taskOwner ? [] : [owner.close()]),
+          ],
     );
     const errors = cleanup.flatMap((entry) => (entry.status === "rejected" ? [entry.reason] : []));
     if (errors.length)
@@ -339,6 +354,7 @@ interface PreparedAcpRuntime extends Pick<
   | "agentModeSnapshot"
 > {
   runtimeOptions: AgentRuntimeOptions<LlmTransportConfig, LlmToolAgentState, JsonValue>;
+  disposeMcp: () => Promise<void>;
 }
 
 /**
@@ -374,163 +390,105 @@ async function prepareAcpRuntime(
 
   // 1. Create noop peer + tool executor (ACP doesn't use JSON-RPC peer)
   const noopPeer = createNoopPeer();
-  const toolExecutor = new HostToolExecutorProxy(
-    noopPeer,
-    createHostMcpService(workspaceRoot, spiritDataDir),
-  );
-  toolExecutor.setSubagentLanguageModelSelectorResolver(() =>
-    listSubagentLanguageModelSelectors(loadSpiritConfig(spiritDataDir)?.providers ?? []),
-  );
-
-  // 2. Create NodeHostToolService with noop MCP adapter
-  await ensureBuiltInSkills(spiritDataDir);
-  await ensurePersonalMarketplace(spiritDataDir);
-  const service = new NodeHostToolService(
-    { workspaceRoot, spiritDataDir },
-    {
-      mcp: createNoopMcpAdapter(),
-    },
-  );
-  toolExecutor.setLocalHostService(service as unknown as LocalHostToolService);
-  toolExecutor.setBackgroundTaskExposure(true);
-  toolExecutor.setTransportConfigForToolDefinitions(transportConfig);
-  await toolExecutor.refreshCaches();
-
-  // 3. Load rules/skills via instructions discovery
-  const metadata = await loadHostInstructionMetadata(
-    { workspaceRoot, spiritDataDir },
-    { planMode: initialMode === "plan", agentMode: initialMode },
-  );
-  const enabledRules: LlmEnabledRule[] = [...metadata.rules.enabledRules];
-  const enabledSkillCatalog: LlmEnabledSkillCatalogEntry[] = [
-    ...metadata.skills.enabledSkillCatalog,
-  ];
+  const mcpService = createHostMcpService(workspaceRoot, spiritDataDir);
   try {
-    const extensionStateStore = createKeyringExtensionStateStore({
-      spiritDataDir,
-      hostKind: "cli",
-    });
-    const extensionManager = createHostExtensionManager({
-      spiritDataDir,
-      hostKind: "cli",
-      stateStore: extensionStateStore,
-    });
-    const overlay = overlayExtensionRulesAndSkills(
-      enabledRules,
-      enabledSkillCatalog,
-      await collectEnabledExtensionInstructionContributions(
-        await extensionManager.list(),
-        undefined,
-        {
-          loadSecret: (extensionId, key) =>
-            extensionStateStore.loadSecret?.(extensionId, key) ?? Promise.resolve(undefined),
-        },
-      ),
+    const toolExecutor = new HostToolExecutorProxy(noopPeer, mcpService);
+    toolExecutor.setSubagentLanguageModelSelectorResolver(() =>
+      listSubagentLanguageModelSelectors(loadSpiritConfig(spiritDataDir)?.providers ?? []),
     );
-    enabledRules.length = 0;
-    enabledRules.push(...overlay.rules);
-    enabledSkillCatalog.length = 0;
-    enabledSkillCatalog.push(...overlay.skills);
-  } catch (error) {
-    console.warn("[acp] failed to overlay extension skills and rules", error);
-  }
-  // Mutable: closures capture the binding, setAgentMode() reassigns it
-  let currentPlanMetadata: LlmPlanMetadata | undefined = metadata.planMetadata;
 
-  // 4. Set mode tool exposure
-  toolExecutor.setAgentModeToolExposure(initialMode);
+    // 2. Create NodeHostToolService with noop MCP adapter
+    await ensureBuiltInSkills(spiritDataDir);
+    await ensurePersonalMarketplace(spiritDataDir);
+    const service = new NodeHostToolService(
+      { workspaceRoot, spiritDataDir },
+      {
+        mcp: createNoopMcpAdapter(),
+      },
+    );
+    toolExecutor.setLocalHostService(service as unknown as LocalHostToolService);
+    toolExecutor.setBackgroundTaskExposure(true);
+    toolExecutor.setTransportConfigForToolDefinitions(transportConfig);
+    await toolExecutor.refreshCaches();
 
-  // 5. Build runtime basic info
-  const shell = service.toolDefinitionEnvironment();
-  const sessionTranscript = sessionKey?.trim()
-    ? resolveTranscriptSessionDir(spiritDataDir, sessionKey.trim())
-    : undefined;
-  const basicInfo: LlmToolAgentBasicInfo = {
-    workspaceRoot,
-    ...(shell?.shellDisplayName ? { terminal: shell.shellDisplayName } : {}),
-    gitBranch: await readGitBranchLabelForBasicInfo(workspaceRoot),
-    ...(sessionTranscript ? { sessionTranscript } : {}),
-    system: service.operatingSystemInfo?.() ?? {
-      name:
-        process.platform === "win32"
-          ? "Windows"
-          : process.platform === "darwin"
-            ? "macOS"
-            : process.platform === "linux"
-              ? "Linux"
-              : process.platform,
-      version: osRelease(),
-    },
-    host: { kind: "ACP Server" },
-  };
+    // 3. Load rules/skills via instructions discovery
+    const metadata = await loadHostInstructionMetadata(
+      { workspaceRoot, spiritDataDir },
+      { planMode: initialMode === "plan", agentMode: initialMode },
+    );
+    const enabledRules: LlmEnabledRule[] = [...metadata.rules.enabledRules];
+    const enabledSkillCatalog: LlmEnabledSkillCatalogEntry[] = [
+      ...metadata.skills.enabledSkillCatalog,
+    ];
+    try {
+      const extensionStateStore = createKeyringExtensionStateStore({
+        spiritDataDir,
+        hostKind: "cli",
+      });
+      const extensionManager = createHostExtensionManager({
+        spiritDataDir,
+        hostKind: "cli",
+        stateStore: extensionStateStore,
+      });
+      const overlay = overlayExtensionRulesAndSkills(
+        enabledRules,
+        enabledSkillCatalog,
+        await collectEnabledExtensionInstructionContributions(
+          await extensionManager.list(),
+          undefined,
+          {
+            loadSecret: (extensionId, key) =>
+              extensionStateStore.loadSecret?.(extensionId, key) ?? Promise.resolve(undefined),
+          },
+        ),
+      );
+      enabledRules.length = 0;
+      enabledRules.push(...overlay.rules);
+      enabledSkillCatalog.length = 0;
+      enabledSkillCatalog.push(...overlay.skills);
+    } catch (error) {
+      console.warn("[acp] failed to overlay extension skills and rules", error);
+    }
+    // Mutable: closures capture the binding, setAgentMode() reassigns it
+    let currentPlanMetadata: LlmPlanMetadata | undefined = metadata.planMetadata;
 
-  // 6. Mutable active skills array — session bookkeeping for slash activation
-  const activeSkills: LlmActiveSkill[] = [];
+    // 4. Set mode tool exposure
+    toolExecutor.setAgentModeToolExposure(initialMode);
 
-  // 7. State factory functions
-  const attribution = { commitEnabled: false, prEnabled: false };
-
-  const createToolAgentState = (messages: LlmMessage[], userInput: string) =>
-    startLlmToolAgentState(
-      messages,
-      userInput,
+    // 5. Build runtime basic info
+    const shell = service.toolDefinitionEnvironment();
+    const sessionTranscript = sessionKey?.trim()
+      ? resolveTranscriptSessionDir(spiritDataDir, sessionKey.trim())
+      : undefined;
+    const basicInfo: LlmToolAgentBasicInfo = {
       workspaceRoot,
-      enabledRules,
-      enabledSkillCatalog,
-      transportConfig.model,
-      currentPlanMetadata,
-      [], // extensionSystemPrompts
-      undefined, // dreamsContextText
-      basicInfo,
-      undefined, // hostUiPromptSection
-      false, // loopEnabled
-      undefined, // mcpToolCatalog
-      attribution,
-      hostPromptProviderId,
-    );
+      ...(shell?.shellDisplayName ? { terminal: shell.shellDisplayName } : {}),
+      gitBranch: await readGitBranchLabelForBasicInfo(workspaceRoot),
+      ...(sessionTranscript ? { sessionTranscript } : {}),
+      system: service.operatingSystemInfo?.() ?? {
+        name:
+          process.platform === "win32"
+            ? "Windows"
+            : process.platform === "darwin"
+              ? "macOS"
+              : process.platform === "linux"
+                ? "Linux"
+                : process.platform,
+        version: osRelease(),
+      },
+      host: { kind: "ACP Server" },
+    };
 
-  const createContinuationState = (messages: LlmMessage[]) =>
-    continueLlmToolAgentState(
-      messages,
-      workspaceRoot,
-      enabledRules,
-      enabledSkillCatalog,
-      transportConfig.model,
-      currentPlanMetadata,
-      [], // extensionSystemPrompts
-      undefined, // dreamsContextText
-      basicInfo,
-      undefined, // hostUiPromptSection
-      false, // loopEnabled
-      undefined, // mcpToolCatalog
-      attribution,
-      hostPromptProviderId,
-    );
+    // 6. Mutable active skills array — session bookkeeping for slash activation
+    const activeSkills: LlmActiveSkill[] = [];
 
-  // 8. Create LLM transport
-  const llmTransport = createLlmTransport(transportConfig);
+    // 7. State factory functions
+    const attribution = { commitEnabled: false, prEnabled: false };
 
-  // 9. Assemble AgentRuntime
-  const runtimeOptions: AgentRuntimeOptions<LlmTransportConfig, LlmToolAgentState, JsonValue> = {
-    config: transportConfig,
-    llmTransport,
-    toolExecutor,
-    createToolAgentState,
-    createContinuationState,
-    appendToolResultMessage: appendLlmToolResultMessage,
-    assistantToolCallMessageFromState: assistantToolCallMessageFromLlmState,
-    finalAssistantHistoryMessageFromState: finalAssistantHistoryMessageFromLlmState,
-    appendUserMessage: appendLlmUserMessage,
-    appendUserLlmMessage: (state, message) =>
-      appendLlmUserLlmMessage(state, message, workspaceRoot),
-    extractAssistantText: extractLastLlmAssistantText,
-    truncateStateForContextRetry: truncateLlmToolAgentStateForContextRetry,
-    truncateHistoryForCompaction: truncateLlmHistoryForCompaction,
-    rebuildRetryStateAfterCompaction: (messages, userInput, retryState) =>
-      rebuildLlmToolAgentStateAfterCompaction(
+    const createToolAgentState = (messages: LlmMessage[], userInput: string) =>
+      startLlmToolAgentState(
         messages,
         userInput,
-        retryState,
         workspaceRoot,
         enabledRules,
         enabledSkillCatalog,
@@ -544,100 +502,166 @@ async function prepareAcpRuntime(
         undefined, // mcpToolCatalog
         attribution,
         hostPromptProviderId,
-      ),
-    generateImage: (request) =>
-      llmTransport.generateImage(
-        transportConfig,
-        request,
-        async (saveRequest: GeneratedImageSaveRequest) => {
-          const saveGeneratedImage = service.saveGeneratedImage;
-          if (!saveGeneratedImage) {
-            throw new Error("ACP host: image generation not supported");
-          }
-          return saveGeneratedImage.call(service, saveRequest);
-        },
-      ),
-    generateVideo: (request) =>
-      llmTransport.generateVideo(transportConfig, request, async (saveRequest) => {
-        const saveGeneratedVideo = service.saveGeneratedVideo;
-        if (!saveGeneratedVideo) {
-          throw new Error("ACP host: video generation not supported");
-        }
-        return saveGeneratedVideo.call(service, saveRequest);
-      }),
-    resolveWorkspaceFilesFromInput: (text) => pendingWorkspaceFilesFromInput(workspaceRoot, text),
-    // Pre-existing gap: ACP wires no hookRunner, so the hookSessionContext
-    // below is inert and session/tool hooks never fire in ACP mode.
-    ...(sessionKey
-      ? {
-          hookSessionContext: {
-            sessionId: sessionKey,
-            conversationPath: null,
-            workspaceRoot,
-            model: transportConfig.model,
-          },
-        }
-      : {}),
-    syncSessionTranscript: async ({ transcript, sessionKey: key }) => {
-      const resolvedKey = key ?? sessionKey;
-      return persistSessionTranscript(
-        spiritDataDir,
-        transcript,
-        resolvedKey !== undefined ? { sessionKey: resolvedKey } : {},
       );
-    },
-    syncSubagentTranscript: async ({ transcript, sessionKey: key, subagentSessionId }) => {
-      const resolvedKey = key ?? sessionKey;
-      await persistSubagentTranscript(spiritDataDir, transcript, {
-        subagentSessionId,
-        ...(resolvedKey !== undefined ? { sessionKey: resolvedKey } : {}),
-      });
-    },
-    resolveSubagentTranscriptPath: ({ sessionKey: key, subagentSessionId }) =>
-      resolveSubagentTranscriptFilePath(spiritDataDir, key ?? sessionKey, subagentSessionId),
-    persistToolOutputArchive: async (input) => persistToolOutputArchive(spiritDataDir, input),
-    bootstrapSubagentWorkspace: createSubagentWorkspaceBootstrap({
-      parentWorkspaceRoot: workspaceRoot,
-      buildScopedRuntime: async (scopedRoot) => {
-        const child = await prepareAcpRuntime(
-          { ...config, workspaceRoot: scopedRoot },
-          onEvent,
-          currentPlanMetadata?.agentMode ?? initialMode,
-          transcriptSessionKey,
-          {
-            config: { ...transportConfig, workspaceRoot: scopedRoot },
-            ...(hostPromptProviderId ? { providerId: hostPromptProviderId } : {}),
+
+    const createContinuationState = (messages: LlmMessage[]) =>
+      continueLlmToolAgentState(
+        messages,
+        workspaceRoot,
+        enabledRules,
+        enabledSkillCatalog,
+        transportConfig.model,
+        currentPlanMetadata,
+        [], // extensionSystemPrompts
+        undefined, // dreamsContextText
+        basicInfo,
+        undefined, // hostUiPromptSection
+        false, // loopEnabled
+        undefined, // mcpToolCatalog
+        attribution,
+        hostPromptProviderId,
+      );
+
+    // 8. Create LLM transport
+    const llmTransport = createLlmTransport(transportConfig);
+
+    // 9. Assemble AgentRuntime
+    const runtimeOptions: AgentRuntimeOptions<LlmTransportConfig, LlmToolAgentState, JsonValue> = {
+      config: transportConfig,
+      llmTransport,
+      toolExecutor,
+      createToolAgentState,
+      createContinuationState,
+      appendToolResultMessage: appendLlmToolResultMessage,
+      assistantToolCallMessageFromState: assistantToolCallMessageFromLlmState,
+      finalAssistantHistoryMessageFromState: finalAssistantHistoryMessageFromLlmState,
+      appendUserMessage: appendLlmUserMessage,
+      appendUserLlmMessage: (state, message) =>
+        appendLlmUserLlmMessage(state, message, workspaceRoot),
+      extractAssistantText: extractLastLlmAssistantText,
+      truncateStateForContextRetry: truncateLlmToolAgentStateForContextRetry,
+      truncateHistoryForCompaction: truncateLlmHistoryForCompaction,
+      rebuildRetryStateAfterCompaction: (messages, userInput, retryState) =>
+        rebuildLlmToolAgentStateAfterCompaction(
+          messages,
+          userInput,
+          retryState,
+          workspaceRoot,
+          enabledRules,
+          enabledSkillCatalog,
+          transportConfig.model,
+          currentPlanMetadata,
+          [], // extensionSystemPrompts
+          undefined, // dreamsContextText
+          basicInfo,
+          undefined, // hostUiPromptSection
+          false, // loopEnabled
+          undefined, // mcpToolCatalog
+          attribution,
+          hostPromptProviderId,
+        ),
+      generateImage: (request) =>
+        llmTransport.generateImage(
+          transportConfig,
+          request,
+          async (saveRequest: GeneratedImageSaveRequest) => {
+            const saveGeneratedImage = service.saveGeneratedImage;
+            if (!saveGeneratedImage) {
+              throw new Error("ACP host: image generation not supported");
+            }
+            return saveGeneratedImage.call(service, saveRequest);
           },
+        ),
+      generateVideo: (request) =>
+        llmTransport.generateVideo(transportConfig, request, async (saveRequest) => {
+          const saveGeneratedVideo = service.saveGeneratedVideo;
+          if (!saveGeneratedVideo) {
+            throw new Error("ACP host: video generation not supported");
+          }
+          return saveGeneratedVideo.call(service, saveRequest);
+        }),
+      resolveWorkspaceFilesFromInput: (text) => pendingWorkspaceFilesFromInput(workspaceRoot, text),
+      // Pre-existing gap: ACP wires no hookRunner, so the hookSessionContext
+      // below is inert and session/tool hooks never fire in ACP mode.
+      ...(sessionKey
+        ? {
+            hookSessionContext: {
+              sessionId: sessionKey,
+              conversationPath: null,
+              workspaceRoot,
+              model: transportConfig.model,
+            },
+          }
+        : {}),
+      syncSessionTranscript: async ({ transcript, sessionKey: key }) => {
+        const resolvedKey = key ?? sessionKey;
+        return persistSessionTranscript(
+          spiritDataDir,
+          transcript,
+          resolvedKey !== undefined ? { sessionKey: resolvedKey } : {},
         );
-        return { toolExecutor: child.toolExecutor, runtimeOptions: child.runtimeOptions };
       },
-    }),
-    onEvent: (event) => {
-      if (event.kind === "context-usage-updated") {
-        setTransportConfigLastInputTokens(transportConfig, event.usage.inputTokens);
-      }
-      onEvent(event);
-    },
-  };
+      syncSubagentTranscript: async ({ transcript, sessionKey: key, subagentSessionId }) => {
+        const resolvedKey = key ?? sessionKey;
+        await persistSubagentTranscript(spiritDataDir, transcript, {
+          subagentSessionId,
+          ...(resolvedKey !== undefined ? { sessionKey: resolvedKey } : {}),
+        });
+      },
+      resolveSubagentTranscriptPath: ({ sessionKey: key, subagentSessionId }) =>
+        resolveSubagentTranscriptFilePath(spiritDataDir, key ?? sessionKey, subagentSessionId),
+      persistToolOutputArchive: async (input) => persistToolOutputArchive(spiritDataDir, input),
+      bootstrapSubagentWorkspace: createSubagentWorkspaceBootstrap({
+        parentWorkspaceRoot: workspaceRoot,
+        buildScopedRuntime: async (scopedRoot) => {
+          const child = await prepareAcpRuntime(
+            { ...config, workspaceRoot: scopedRoot },
+            onEvent,
+            currentPlanMetadata?.agentMode ?? initialMode,
+            transcriptSessionKey,
+            {
+              config: { ...transportConfig, workspaceRoot: scopedRoot },
+              ...(hostPromptProviderId ? { providerId: hostPromptProviderId } : {}),
+            },
+          );
+          return {
+            toolExecutor: child.toolExecutor,
+            runtimeOptions: child.runtimeOptions,
+            dispose: child.disposeMcp,
+          };
+        },
+      }),
+      onEvent: (event) => {
+        if (event.kind === "context-usage-updated") {
+          setTransportConfigLastInputTokens(transportConfig, event.usage.inputTokens);
+        }
+        onEvent(event);
+      },
+    };
 
-  // 10. Mode switching: update planMetadata binding seen by closures + tool exposure
-  const setAgentMode = async (mode: AgentMode): Promise<void> => {
-    toolExecutor.setAgentModeToolExposure(mode);
-    const refreshed = await loadHostInstructionMetadata(
-      { workspaceRoot, spiritDataDir },
-      { planMode: mode === "plan", agentMode: mode },
-    );
-    currentPlanMetadata = refreshed.planMetadata;
-  };
+    // 10. Mode switching: update planMetadata binding seen by closures + tool exposure
+    const setAgentMode = async (mode: AgentMode): Promise<void> => {
+      toolExecutor.setAgentModeToolExposure(mode);
+      const refreshed = await loadHostInstructionMetadata(
+        { workspaceRoot, spiritDataDir },
+        { planMode: mode === "plan", agentMode: mode },
+      );
+      currentPlanMetadata = refreshed.planMetadata;
+    };
 
-  return {
-    runtimeOptions,
-    toolExecutor,
-    enabledRules,
-    enabledSkillCatalog,
-    planMetadata: currentPlanMetadata,
-    activeSkills,
-    setAgentMode,
-    agentModeSnapshot: () => currentPlanMetadata?.agentMode ?? initialMode,
-  };
+    return {
+      runtimeOptions,
+      toolExecutor,
+      disposeMcp: () => mcpService.dispose(),
+      enabledRules,
+      enabledSkillCatalog,
+      planMetadata: currentPlanMetadata,
+      activeSkills,
+      setAgentMode,
+      agentModeSnapshot: () => currentPlanMetadata?.agentMode ?? initialMode,
+    };
+  } catch (error) {
+    await mcpService.dispose().catch(() => {});
+    throw error;
+  }
 }

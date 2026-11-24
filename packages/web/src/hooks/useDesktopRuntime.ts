@@ -458,6 +458,10 @@ export function useDesktopRuntime() {
   /** Settings patches accumulated while the Host API is not ready, persisted in one go once the api is available. */
   const pendingSettingsPatchRef = useRef<Partial<SettingsFormState>>({});
   const sessionUiCacheRef = useRef(new Map<string, SessionUiState>());
+  const pendingSessionNavigationRef = useRef<{
+    kind: "reset" | "open";
+    promise: Promise<boolean>;
+  } | null>(null);
 
   const advanceSessionNavigationGeneration = useCallback(() => {
     const next = sessionNavigationGenerationRef.current + 1;
@@ -2113,6 +2117,42 @@ export function useDesktopRuntime() {
     [api],
   );
 
+  const mcpAppReadResource = useCallback(
+    async (
+      request: import("@spiritagent/api/types").McpAppReadResourceRequest,
+    ): Promise<import("@spiritagent/api/types").McpAppReadResourceResponse> => {
+      if (!api) {
+        throw new Error(i18n.t("error.hostNotReady"));
+      }
+      return api.mcpAppReadResource(request);
+    },
+    [api],
+  );
+
+  const mcpAppCallTool = useCallback(
+    async (
+      request: import("@spiritagent/api/types").McpAppCallToolRequest,
+    ): Promise<import("@spiritagent/api/types").McpAppCallToolResponse> => {
+      if (!api) {
+        throw new Error(i18n.t("error.hostNotReady"));
+      }
+      return api.mcpAppCallTool(request);
+    },
+    [api],
+  );
+
+  const mcpAppUpdateModelContext = useCallback(
+    async (
+      request: import("@spiritagent/api/types").McpAppUpdateModelContextRequest,
+    ): Promise<{ ok: true }> => {
+      if (!api) {
+        throw new Error(i18n.t("error.hostNotReady"));
+      }
+      return api.mcpAppUpdateModelContext(request);
+    },
+    [api],
+  );
+
   const importExtension = useCallback(
     async (request: ImportExtensionRequest) => {
       if (!api) {
@@ -2686,6 +2726,19 @@ export function useDesktopRuntime() {
       if (!text && !hasLocalFiles && !hasReferencedPaths) {
         return false;
       }
+
+      // If a session reset (Cmd+N / New Chat) or session open is still completing on the host,
+      // wait for it to settle before reading snapshot/targetSessionPath so messages typed in the
+      // new-chat screen never leak into the previous historical session.
+      let waitedForReset = false;
+      while (pendingSessionNavigationRef.current) {
+        const pending = pendingSessionNavigationRef.current;
+        if (pending.kind === "reset") {
+          waitedForReset = true;
+        }
+        await pending.promise;
+      }
+
       if (isExportSessionSlashInput(text)) {
         if (hasLocalFiles) {
           setRuntimeError(i18n.t("error.attachmentsNotSupportedWithSlash"));
@@ -2732,18 +2785,22 @@ export function useDesktopRuntime() {
           setBusyAction("");
         }
       }
-      const targetSessionPath =
-        request.sessionPath?.trim() ??
-        (isRemoteWebHostClient(api.kind)
+      const targetSessionPath = waitedForReset
+        ? isRemoteWebHostClient(api.kind)
           ? webViewingSessionPathRef.current.trim() || webViewingSessionPath.trim()
-          : undefined);
+          : undefined
+        : (request.sessionPath?.trim() ??
+          (isRemoteWebHostClient(api.kind)
+            ? webViewingSessionPathRef.current.trim() || webViewingSessionPath.trim()
+            : undefined));
       if (isRemoteWebHostClient(api.kind) && !targetSessionPath) {
         return false;
       }
+      const latestSnapshot = snapshotRef.current ?? snapshot;
       const effectiveSnapshot =
-        targetSessionPath && snapshot
-          ? resolvePaneDesktopSnapshot(snapshot, targetSessionPath)
-          : snapshot;
+        targetSessionPath && latestSnapshot
+          ? resolvePaneDesktopSnapshot(latestSnapshot, targetSessionPath)
+          : latestSnapshot;
 
       if (effectiveSnapshot?.activeSession?.readOnly) {
         setRuntimeError(i18n.t("error.readonlySessionSend"));
@@ -3621,29 +3678,39 @@ export function useDesktopRuntime() {
       acknowledgeSessionAttention(path);
       const navGeneration = sessionNavigationGenerationRef.current + 1;
       sessionNavigationGenerationRef.current = navGeneration;
+      busyActionRef.current = "session";
       setBusyAction("session");
-      try {
-        stashSessionUi(snapshotRef.current);
-        const next = await api.openSession(path);
-        if (navGeneration !== sessionNavigationGenerationRef.current) {
+      const run = (async () => {
+        try {
+          stashSessionUi(snapshotRef.current);
+          const next = await api.openSession(path);
+          if (navGeneration !== sessionNavigationGenerationRef.current) {
+            return false;
+          }
+          if (isRemoteWebHostClient(api.kind)) {
+            syncWebViewingSessionPath(next.activeSession?.filePath ?? path);
+          }
+          applySnapshot(next, { navGeneration });
+          restoreSessionUi(next);
+          setRuntimeError("");
+          void refreshSessions();
+          return true;
+        } catch (error) {
+          setRuntimeError(describeError(error));
           return false;
+        } finally {
+          if (navGeneration === sessionNavigationGenerationRef.current) {
+            busyActionRef.current = "";
+            setBusyAction("");
+          }
         }
-        if (isRemoteWebHostClient(api.kind)) {
-          syncWebViewingSessionPath(next.activeSession?.filePath ?? path);
+      })();
+      pendingSessionNavigationRef.current = { kind: "open", promise: run };
+      return run.finally(() => {
+        if (pendingSessionNavigationRef.current?.promise === run) {
+          pendingSessionNavigationRef.current = null;
         }
-        applySnapshot(next, { navGeneration });
-        restoreSessionUi(next);
-        setRuntimeError("");
-        void refreshSessions();
-        return true;
-      } catch (error) {
-        setRuntimeError(describeError(error));
-        return false;
-      } finally {
-        if (navGeneration === sessionNavigationGenerationRef.current) {
-          setBusyAction("");
-        }
-      }
+      });
     },
     [
       acknowledgeSessionAttention,
@@ -3982,36 +4049,46 @@ export function useDesktopRuntime() {
 
       const navGeneration = advanceSessionNavigationGeneration();
       beginNavigationDoodle(navGeneration);
+      busyActionRef.current = "reset";
       setBusyAction("reset");
-      try {
-        stashSessionUi(snapshotRef.current);
-        const next = await api.resetSession();
-        if (navGeneration !== sessionNavigationGenerationRef.current) {
+      const run = (async () => {
+        try {
+          stashSessionUi(snapshotRef.current);
+          const next = await api.resetSession();
+          if (navGeneration !== sessionNavigationGenerationRef.current) {
+            finishNavigationDoodle(navGeneration);
+            return false;
+          }
+          if (isRemoteWebHostClient(api.kind)) {
+            syncWebViewingSessionPath(next.activeSession?.filePath);
+          }
+          applySnapshot(next, { navGeneration });
+          restoreSessionUi(next);
+          commitDoodleNavigation(navGeneration, next.composerSessionKey);
+          setNavigationDoodleVariant(null);
+          if (options?.composerSeed !== undefined) {
+            applyComposerSeed(options.composerSeed, next);
+          }
+          setRuntimeError("");
+          void refreshSessions();
+          return true;
+        } catch (error) {
           finishNavigationDoodle(navGeneration);
+          setRuntimeError(describeError(error));
           return false;
+        } finally {
+          if (navGeneration === sessionNavigationGenerationRef.current) {
+            busyActionRef.current = "";
+            setBusyAction("");
+          }
         }
-        if (isRemoteWebHostClient(api.kind)) {
-          syncWebViewingSessionPath(next.activeSession?.filePath);
+      })();
+      pendingSessionNavigationRef.current = { kind: "reset", promise: run };
+      return run.finally(() => {
+        if (pendingSessionNavigationRef.current?.promise === run) {
+          pendingSessionNavigationRef.current = null;
         }
-        applySnapshot(next, { navGeneration });
-        restoreSessionUi(next);
-        commitDoodleNavigation(navGeneration, next.composerSessionKey);
-        setNavigationDoodleVariant(null);
-        if (options?.composerSeed !== undefined) {
-          applyComposerSeed(options.composerSeed, next);
-        }
-        setRuntimeError("");
-        void refreshSessions();
-        return true;
-      } catch (error) {
-        finishNavigationDoodle(navGeneration);
-        setRuntimeError(describeError(error));
-        return false;
-      } finally {
-        if (navGeneration === sessionNavigationGenerationRef.current) {
-          setBusyAction("");
-        }
-      }
+      });
     },
     [
       api,
@@ -4173,6 +4250,9 @@ export function useDesktopRuntime() {
     deleteSkill,
     deleteRule,
     inspectMcpServer,
+    mcpAppReadResource,
+    mcpAppCallTool,
+    mcpAppUpdateModelContext,
     abortConversation,
     abortShell,
     moveToBackground,

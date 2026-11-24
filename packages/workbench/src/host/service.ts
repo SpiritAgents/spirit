@@ -1,6 +1,7 @@
 import { lstat, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+
 import { configureServerConnector } from "@spiritagent/sessions/host/server-connector";
 import { connectOrSpawnServer } from "@spiritagent/server/client";
 import {
@@ -35,6 +36,7 @@ import {
   type PendingWorkspaceFile,
   type RuntimeToolExecution,
   type SpiritLlmTransport,
+  McpAppToolApprovalRequiredError,
   type LlmActiveSkill,
   type McpUiOpenRequest,
   type McpUiOpenResult,
@@ -540,6 +542,7 @@ import {
 import { listDesktopHookListItems } from "@spiritagent/sessions/host/hooks";
 import type { SessionEndHookInput, SessionStartHookInput } from "@spiritagent/agent-core";
 import {
+  disposeAllMcpServices,
   disposeMcpServicesExcept,
   refreshMcpServices,
   sharedMcpServiceForWorkspace,
@@ -667,6 +670,8 @@ export class DesktopHostService {
 
   private readonly invokeDispatch = createHostInvokeDispatch(this);
   private runtimeTransport: SpiritLlmTransport = createLlmTransport();
+  private readonly pendingSecretRefreshExtensionIds = new Set<string>();
+  private secretRefreshTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly extensionStateStore = createDesktopExtensionStateStore(
     {
       spiritDataDir: spiritDataDir(),
@@ -674,21 +679,41 @@ export class DesktopHostService {
     },
     (extensionId) => {
       if (!this.state) return;
+      this.scheduleCoalescedExtensionSecretRefresh(extensionId);
+    },
+  );
+
+  private scheduleCoalescedExtensionSecretRefresh(extensionId: string): void {
+    this.pendingSecretRefreshExtensionIds.add(extensionId);
+    if (this.secretRefreshTimer !== undefined) {
+      return;
+    }
+    this.secretRefreshTimer = setTimeout(() => {
+      this.secretRefreshTimer = undefined;
+      if (!this.state || this.pendingSecretRefreshExtensionIds.size === 0) {
+        this.pendingSecretRefreshExtensionIds.clear();
+        return;
+      }
+      const extensionIds = [...this.pendingSecretRefreshExtensionIds];
+      this.pendingSecretRefreshExtensionIds.clear();
       void this.runSerialized(async () => {
-        await this.refreshExtensionAuthorizationState(extensionId);
+        for (const id of extensionIds) {
+          await this.refreshExtensionAuthorizationState(id);
+        }
         await this.refreshSharedMcpConfigAfterExtensionMutation();
         if (this.runtime?.isBusy()) {
           this.activeBundle().deferredRuntimeRefreshWhileBusy = true;
         } else {
           await this.refreshRuntime();
         }
-      })
+      }, "extension-secret-refresh")
         .then(() => this.emitLiveSnapshotUpdate())
         .catch((error) =>
           console.error("[extensions] failed to refresh authorization and MCP state", error),
         );
-    },
-  );
+    }, 50);
+    this.secretRefreshTimer.unref?.();
+  }
   private readonly hostExtensionManager = createHostExtensionManager({
     spiritDataDir: spiritDataDir(),
     hostKind: "desktop",
@@ -709,6 +734,11 @@ export class DesktopHostService {
   private readonly workspaceToolTabs = new WorkspaceToolTabsStore(
     path.join(spiritDataDir(), "workspace-tool-tabs.json"),
   );
+  private mcpAppSandboxUrlProvider: (() => string | undefined) | undefined;
+  private readonly pendingMcpAppContextsBySessionKey = new Map<
+    string,
+    Map<string, import("@spiritagent/agent-core").ToolAgentMcpAppContext>
+  >();
   private state: HostState | undefined;
   private readonly sessionRegistry = new SessionRegistry((bundle) => {
     void closeRemoteDesktopRuntime(bundle.runtime);
@@ -1809,6 +1839,104 @@ export class DesktopHostService {
     return inspectMcpServerCommand(this.extensionCommandContext(), name);
   }
 
+  setMcpAppSandboxUrlProvider(provider: (() => string | undefined) | undefined): void {
+    this.mcpAppSandboxUrlProvider = provider;
+  }
+
+  private resolveMcpAppTargetBundle(sessionPath?: string): SessionBundle {
+    const trimmed = sessionPath?.trim();
+    if (trimmed) {
+      const bundle =
+        this.sessionRegistry.findBySessionPath(trimmed) ??
+        this.sessionRegistry.findBySessionPath(path.resolve(trimmed));
+      if (!bundle) {
+        throw new Error(`Session not found: ${trimmed}`);
+      }
+      return bundle;
+    }
+    return this.activeBundle();
+  }
+
+  async mcpAppReadResource(
+    request: import("@spiritagent/api/types").McpAppReadResourceRequest,
+  ): Promise<import("@spiritagent/api/types").McpAppReadResourceResponse> {
+    await this.ensureInitialized();
+    const state = this.requireState();
+    const bundle = this.resolveMcpAppTargetBundle(request.sessionPath);
+    if (bundle.runtime) {
+      return bundle.runtime.mcpAppReadResource(request.server, request.uri);
+    }
+    const workspaceRoot = bundle.workspaceRoot || state.workspaceRoot;
+    const mcp = this.sharedMcpServiceForWorkspace(workspaceRoot, state.workspaceBinding);
+    return mcp.readAppResource(request.server, request.uri);
+  }
+
+  async mcpAppCallTool(
+    request: import("@spiritagent/api/types").McpAppCallToolRequest,
+  ): Promise<import("@spiritagent/api/types").McpAppCallToolResponse> {
+    await this.ensureInitialized();
+    const state = this.requireState();
+    const bundle = this.resolveMcpAppTargetBundle(request.sessionPath);
+    if (bundle.runtime) {
+      return bundle.runtime.mcpAppCallTool(
+        request.server,
+        request.tool,
+        request.arguments,
+        request.approved,
+      );
+    }
+    const workspaceRoot = bundle.workspaceRoot || state.workspaceRoot;
+    const mcp = this.sharedMcpServiceForWorkspace(workspaceRoot, state.workspaceBinding);
+    try {
+      const result = await mcp.callAppTool(request.server, request.tool, request.arguments ?? {}, {
+        approvalLevel: bundle.approvalLevel,
+        ...(request.approved === true ? { approved: true } : {}),
+      });
+      return { status: "ok", result };
+    } catch (error) {
+      if (error instanceof McpAppToolApprovalRequiredError) {
+        return {
+          status: "approval-required",
+          server: error.server,
+          tool: error.toolName,
+        };
+      }
+      throw error;
+    }
+  }
+
+  async mcpAppUpdateModelContext(
+    request: import("@spiritagent/api/types").McpAppUpdateModelContextRequest,
+  ): Promise<{ ok: true }> {
+    await this.ensureInitialized();
+    const bundle = this.resolveMcpAppTargetBundle(request.sessionPath);
+    const entry: import("@spiritagent/agent-core").ToolAgentMcpAppContext = {
+      appId: request.appId,
+      server: request.server,
+      ...(request.toolName ? { toolName: request.toolName } : {}),
+      ...(request.text !== undefined ? { text: request.text } : {}),
+      ...(request.structuredContent !== undefined
+        ? { structuredContent: request.structuredContent }
+        : {}),
+    };
+    if (bundle.runtime) {
+      await bundle.runtime.mcpAppUpdateModelContext(entry);
+      return { ok: true };
+    }
+    const sessionKey = bundle.activeSession?.filePath ?? bundle.id;
+    let entries = this.pendingMcpAppContextsBySessionKey.get(sessionKey);
+    if (!entries) {
+      entries = new Map();
+      this.pendingMcpAppContextsBySessionKey.set(sessionKey, entries);
+    }
+    if (!entry.text?.trim() && !entry.structuredContent) {
+      entries.delete(entry.appId);
+    } else {
+      entries.set(entry.appId, entry);
+    }
+    return { ok: true };
+  }
+
   async importExtension(request: ImportExtensionRequest): Promise<DesktopSnapshot> {
     return importExtensionCommand(this.extensionCommandContext(), request);
   }
@@ -1948,7 +2076,9 @@ export class DesktopHostService {
       );
       const rulesSystemPrompt = buildRulesSystemMessage(overlay.rules);
       const skillsCatalogSystemPrompt = buildSkillsCatalogSystemMessage(overlay.skills);
-      const toolExecutor = await this.ensureToolExecutor();
+      const toolExecutor = await this.ensureToolExecutor(undefined, {
+        ensureMcpToolingReady: true,
+      });
       const mcpCatalogSystemPrompt = buildMcpCatalogSystemMessage(
         toolExecutor.mcpToolCatalogSnapshot(),
       );
@@ -3716,6 +3846,19 @@ export class DesktopHostService {
           : await createRemoteDesktopRuntime(remoteRuntimeInput);
       runtime.setLoopEnabled(bundle.loopEnabled);
       bundle.runtime = runtime;
+      const pendingContextKeys = [bundle.activeSession?.filePath, bundle.id].filter(
+        (value): value is string => Boolean(value),
+      );
+      for (const key of pendingContextKeys) {
+        const queued = this.pendingMcpAppContextsBySessionKey.get(key);
+        if (!queued) continue;
+        this.pendingMcpAppContextsBySessionKey.delete(key);
+        for (const entry of queued.values()) {
+          void runtime.mcpAppUpdateModelContext(entry).catch((error) => {
+            console.warn("[mcp-apps] failed to flush queued model context to runtime", error);
+          });
+        }
+      }
       const restoredPresentation = runtime.takeRestoredPresentation();
       if (restoredPresentation) {
         if (restoredPresentation.timeline) {
@@ -3805,7 +3948,7 @@ export class DesktopHostService {
 
   private async ensureToolExecutor(
     bundle: SessionBundle = this.activeBundle(),
-    _options?: { skipMcpCatalogRefresh?: boolean },
+    options?: { ensureMcpToolingReady?: boolean },
   ): Promise<DesktopToolExecutor> {
     const state = this.requireState();
     const isActive = bundle.id === this.sessionRegistry.activeSessionId();
@@ -3847,7 +3990,12 @@ export class DesktopHostService {
     bundle.toolExecutor.setAgentModeToolExposure(
       resolveDesktopAgentMode(this.requireState().config),
     );
-    await bundle.toolExecutor.ensureMcpToolingReady();
+    // Live turns and MCP tool execution run in the server daemon, which warms its
+    // own McpService during bootstrap. Only await Workbench-local MCP discovery when
+    // a caller explicitly needs the local catalog (e.g. session export).
+    if (options?.ensureMcpToolingReady === true) {
+      await bundle.toolExecutor.ensureMcpToolingReady();
+    }
     return bundle.toolExecutor;
   }
 
@@ -3873,6 +4021,7 @@ export class DesktopHostService {
           extensionServerOwnership: contributions.mcpOwnership,
         };
       },
+      { autoBackgroundRefresh: false },
     );
   }
 
@@ -4894,8 +5043,10 @@ export class DesktopHostService {
       isBusy: conversationBusy,
     });
 
+    const mcpAppSandboxUrl = this.mcpAppSandboxUrlProvider?.();
     return buildDesktopSnapshot({
       sessionListRevision: this.sessionListRevision,
+      ...(mcpAppSandboxUrl ? { mcpAppSandboxUrl } : {}),
       workspaceRoot: state.workspaceRoot,
       config: state.config,
       git: this.buildClientGitSnapshot(),
@@ -5471,10 +5622,9 @@ export class DesktopHostService {
   }
 
   private async refreshSharedMcpConfigAfterExtensionMutation(): Promise<void> {
-    const state = this.requireState();
-    const services = new Set(this.mcpServiceByWorkspaceRoot.values());
-    services.add(this.sharedMcpServiceForWorkspace(state.workspaceRoot, state.workspaceBinding));
-    await refreshMcpServices(services);
+    if (this.mcpServiceByWorkspaceRoot.size > 0) {
+      await refreshMcpServices(this.mcpServiceByWorkspaceRoot.values());
+    }
     await notifyDesktopServerRefreshExtensions(spiritDataDir());
   }
 
@@ -5499,17 +5649,19 @@ export class DesktopHostService {
   }
 
   private async applyExtensionWarmupToRuntime(): Promise<void> {
-    const bundle = this.activeBundle();
-    if (bundle.runtime?.isBusy()) {
-      bundle.deferredRuntimeRefreshWhileBusy = true;
-      return;
-    }
-    bundle.deferredRuntimeRefreshWhileBusy = false;
-    await this.refreshRuntimeForBundle(bundle);
-    if (bundle.id === this.sessionRegistry.activeSessionId()) {
-      this.syncActiveRuntimePointer();
-    }
-    this.lastRuntimeError = "";
+    await this.runSerialized(async () => {
+      const bundle = this.activeBundle();
+      if (bundle.runtime?.isBusy() || this.isBundleConversationBusy(bundle)) {
+        bundle.deferredRuntimeRefreshWhileBusy = true;
+        return;
+      }
+      bundle.deferredRuntimeRefreshWhileBusy = false;
+      await this.refreshRuntimeForBundle(bundle);
+      if (bundle.id === this.sessionRegistry.activeSessionId()) {
+        this.syncActiveRuntimePointer();
+      }
+      this.lastRuntimeError = "";
+    }, "extension-warmup-apply");
   }
 
   private async dispatchExtensionEvent(
@@ -5903,7 +6055,7 @@ export class DesktopHostService {
     orchestration.runtimeEvents.reset();
   }
 
-  private async runSerialized<T>(work: () => Promise<T>, _label = "unlabeled"): Promise<T> {
+  private async runSerialized<T>(work: () => Promise<T>, _label?: string): Promise<T> {
     const previous = this.serialized;
     let release: (() => void) | undefined;
     this.serialized = new Promise<void>((resolve) => {
@@ -6031,6 +6183,11 @@ export class DesktopHostService {
   }
 
   async shutdown(): Promise<void> {
+    if (this.secretRefreshTimer !== undefined) {
+      clearTimeout(this.secretRefreshTimer);
+      this.secretRefreshTimer = undefined;
+    }
+    this.pendingSecretRefreshExtensionIds.clear();
     this.abortAutomationTriggerPolls();
     this.tasksWatcher.close();
     for (const bundle of this.sessionRegistry.all()) {
@@ -6050,6 +6207,7 @@ export class DesktopHostService {
     this.sessionPump.stop();
     const runtimes = [...this.sessionRegistry.all()].map((bundle) => bundle.runtime);
     await Promise.all(runtimes.map((runtime) => closeRemoteDesktopRuntime(runtime)));
+    await disposeAllMcpServices(this.mcpServiceByWorkspaceRoot);
     // After sessions close, drop the shared WS so daemon can idle-exit when we are the last host.
     await closeSharedDesktopServerClient();
   }
@@ -6066,6 +6224,12 @@ export async function invokeDesktopHostCommand(
 
 export function publishDesktopSnapshot(): void {
   desktopHostService.publishSnapshot();
+}
+
+export function setDesktopMcpAppSandboxUrlProvider(
+  provider: (() => string | undefined) | undefined,
+): void {
+  desktopHostService.setMcpAppSandboxUrlProvider(provider);
 }
 
 export async function refreshDesktopRemoteControlConfig(): Promise<void> {

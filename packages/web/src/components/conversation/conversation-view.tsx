@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { ComposerDock } from "@/components/conversation/composer-dock";
 import { BranchCheckoutDialog } from "@/components/branch-checkout-dialog";
 import { ConversationList } from "@/components/conversation/conversation-list";
+import { McpAppPaneProvider } from "@/components/mcp-app/mcp-app-pane-host";
 import { ApprovalPreviewDemoGallery } from "@/components/conversation/approval-preview-demo-gallery";
 import { MessageQuoteActionsProvider } from "@/components/message-quote-actions-context";
 import { ConversationNavPlaceholder } from "@/components/conversation/conversation-nav-placeholder";
@@ -22,9 +23,14 @@ import { sessionGitTooltipItemFromChromeSession } from "@/components/session-lis
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { ComposerRichInputHandle } from "@spiritagent/ui/composer";
-import type { DesktopAgentMode } from "@spiritagent/ui/composer";
-import type { BrowserElementAttachment } from "@spiritagent/ui/composer";
+import {
+  emptySegments,
+  segmentsToPlainText,
+  syncSegmentsFromExternalValue,
+  type ComposerRichInputHandle,
+  type DesktopAgentMode,
+  type BrowserElementAttachment,
+} from "@spiritagent/ui/composer";
 import { CONVERSATION_GUTTER_X, CONVERSATION_MAX_W } from "@/lib/conversation-layout-constants";
 import {
   desktopTranslucencyTintClass,
@@ -259,6 +265,7 @@ export type ConversationViewProps = {
   paneDropOverlayActive?: boolean;
   paneDragSourcePaneId?: string | null;
   sidebarSessionDragActive?: boolean;
+  onOpenMcpAppExternalUrl?: (url: string) => Promise<void>;
 };
 
 export function ConversationView({
@@ -324,11 +331,66 @@ export function ConversationView({
   paneDropOverlayActive = false,
   paneDragSourcePaneId = null,
   sidebarSessionDragActive = false,
+  onOpenMcpAppExternalUrl,
 }: ConversationViewProps) {
   const { t } = useTranslation();
   const split = useConversationSplit();
   const conversationScrollAreaRef = useRef<ComponentRef<typeof ScrollArea>>(null);
   const conversationScrollBodyRef = useRef<HTMLDivElement | null>(null);
+  const composerSegmentsRef = useRef(composerDock.composerSegments);
+  useLayoutEffect(() => {
+    composerSegmentsRef.current = composerDock.composerSegments;
+  }, [composerDock.composerSegments]);
+  const getCurrentComposerText = useCallback(() => {
+    const richInput = composerDock.composerRichInputRef.current;
+    const currentSegments = richInput ? richInput.getSegments() : [...composerSegmentsRef.current];
+    return segmentsToPlainText(currentSegments);
+  }, [composerDock]);
+  const handleReplaceComposerText = useCallback(
+    (text: string) => {
+      const nextSegments = syncSegmentsFromExternalValue(emptySegments(), text);
+      const richInput = composerDock.composerRichInputRef.current;
+      if (richInput) {
+        richInput.setSegments(nextSegments);
+      } else {
+        composerDock.onComposerSegmentsChange(nextSegments);
+      }
+    },
+    [composerDock],
+  );
+  const handleAppendComposerText = useCallback(
+    (text: string) => {
+      const richInput = composerDock.composerRichInputRef.current;
+      const currentSegments = richInput
+        ? richInput.getSegments()
+        : [...composerSegmentsRef.current];
+      const currentPlain = segmentsToPlainText(currentSegments).trimEnd();
+      const nextPlain = currentPlain ? `${currentPlain}\n\n${text}` : text;
+      const nextSegments = syncSegmentsFromExternalValue(currentSegments, nextPlain);
+      if (richInput) {
+        richInput.setSegments(nextSegments);
+      } else {
+        composerDock.onComposerSegmentsChange(nextSegments);
+      }
+    },
+    [composerDock],
+  );
+  const handleFocusComposer = useCallback(() => {
+    composerDock.composerRichInputRef.current?.focusAtEnd();
+  }, [composerDock]);
+  const handleFallbackOpenMcpAppExternalUrl = useCallback(
+    async (url: string) => {
+      if (onOpenMcpAppExternalUrl) {
+        await onOpenMcpAppExternalUrl(url);
+        return;
+      }
+      const handled = await list.runtime.openExtensionLink({ url });
+      if (!handled && typeof window !== "undefined") {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    },
+    [list.runtime, onOpenMcpAppExternalUrl],
+  );
   const getConversationScrollElement = useCallback(
     () => scrollAreaViewport(conversationScrollAreaRef.current),
     [],
@@ -617,318 +679,335 @@ export function ConversationView({
             data-spirit-surface="conversation-stage"
             className="relative flex min-h-0 min-w-0 flex-1 flex-col text-sm"
           >
-            {compactionDemoActive ||
-            longConversationListDemoActive ||
-            approvalPreviewDemoActive ||
-            toolCardPreviewDemoActive ? (
-              <div
-                data-spirit-surface={
-                  toolCardPreviewDemoActive
-                    ? "tool-card-preview-demo-banner"
-                    : approvalPreviewDemoActive
-                      ? "approval-preview-demo-banner"
-                      : longConversationListDemoActive
-                        ? "long-list-demo-banner"
-                        : "compaction-ui-demo-banner"
-                }
-                className={cn("shrink-0", desktopTranslucencyTintInnerClass(useTranslucency))}
-              >
+            <McpAppPaneProvider
+              sessionKey={list.composerSessionKey || "__no-session__"}
+              sessionPath={quoteSessionPath}
+              sandboxUrl={snapshot?.mcpAppSandboxUrl}
+              runtime={list.runtime}
+              getCurrentComposerText={getCurrentComposerText}
+              onReplaceComposerText={handleReplaceComposerText}
+              onAppendComposerText={handleAppendComposerText}
+              onFocusComposer={handleFocusComposer}
+              onOpenExternalUrl={handleFallbackOpenMcpAppExternalUrl}
+            >
+              {compactionDemoActive ||
+              longConversationListDemoActive ||
+              approvalPreviewDemoActive ||
+              toolCardPreviewDemoActive ? (
                 <div
-                  className={cn(
-                    "mx-auto flex w-full flex-wrap items-center justify-between gap-2 py-2",
-                    CONVERSATION_GUTTER_X,
-                    CONVERSATION_MAX_W,
-                  )}
+                  data-spirit-surface={
+                    toolCardPreviewDemoActive
+                      ? "tool-card-preview-demo-banner"
+                      : approvalPreviewDemoActive
+                        ? "approval-preview-demo-banner"
+                        : longConversationListDemoActive
+                          ? "long-list-demo-banner"
+                          : "compaction-ui-demo-banner"
+                  }
+                  className={cn("shrink-0", desktopTranslucencyTintInnerClass(useTranslucency))}
                 >
-                  <p className="text-xs text-muted-foreground">
-                    {toolCardPreviewDemoActive ? (
-                      <>
-                        <span className="font-normal text-foreground">
-                          {t("app.toolCardPreviewDemo")}
-                        </span>
-                        <span className="hidden sm:inline">
-                          {" "}
-                          · {t("app.toolCardPreviewDemoDescription")}
-                        </span>
-                      </>
-                    ) : approvalPreviewDemoActive ? (
-                      <>
-                        <span className="font-normal text-foreground">
-                          {t("app.approvalPreviewDemo")}
-                        </span>
-                        <span className="hidden sm:inline">
-                          {" "}
-                          · {t("app.approvalPreviewDemoDescription")}
-                        </span>
-                      </>
-                    ) : longConversationListDemoActive ? (
-                      <>
-                        <span className="font-normal text-foreground">
-                          {t("app.longConversationListDemo")}
-                        </span>
-                        <span className="hidden sm:inline">
-                          {" "}
-                          · {t("app.longConversationListDemoDescription")}
-                          {longConversationListDemoStats
-                            ? ` · ${t("app.longConversationListDemoStats", longConversationListDemoStats)}`
-                            : ""}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="font-normal text-foreground">
-                          {t("app.compactionDemo")}
-                        </span>
-                        <span className="hidden sm:inline">
-                          {" "}
-                          · {t("app.compactionDemoDescription")}
-                        </span>
-                      </>
+                  <div
+                    className={cn(
+                      "mx-auto flex w-full flex-wrap items-center justify-between gap-2 py-2",
+                      CONVERSATION_GUTTER_X,
+                      CONVERSATION_MAX_W,
                     )}
-                  </p>
-                  <div className="flex items-center gap-3">
-                    {approvalPreviewDemoActive ? (
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id="approval-preview-demo-show-reasons"
-                          checked={approvalDemoShowReasonNotes}
-                          onCheckedChange={(value) =>
-                            setApprovalDemoShowReasonNotes(value === true)
-                          }
-                        />
-                        <label
-                          htmlFor="approval-preview-demo-show-reasons"
-                          className="cursor-pointer text-xs text-muted-foreground"
-                        >
-                          {t("app.approvalPreviewDemoShowReasons")}
-                        </label>
-                      </div>
-                    ) : null}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={
-                        toolCardPreviewDemoActive
-                          ? onToolCardPreviewDemoStop
-                          : approvalPreviewDemoActive
-                            ? onApprovalPreviewDemoStop
-                            : longConversationListDemoActive
-                              ? onLongConversationListDemoStop
-                              : onCompactionDemoStop
-                      }
-                    >
-                      {t("app.exitDemo")}
-                    </Button>
+                  >
+                    <p className="text-xs text-muted-foreground">
+                      {toolCardPreviewDemoActive ? (
+                        <>
+                          <span className="font-normal text-foreground">
+                            {t("app.toolCardPreviewDemo")}
+                          </span>
+                          <span className="hidden sm:inline">
+                            {" "}
+                            · {t("app.toolCardPreviewDemoDescription")}
+                          </span>
+                        </>
+                      ) : approvalPreviewDemoActive ? (
+                        <>
+                          <span className="font-normal text-foreground">
+                            {t("app.approvalPreviewDemo")}
+                          </span>
+                          <span className="hidden sm:inline">
+                            {" "}
+                            · {t("app.approvalPreviewDemoDescription")}
+                          </span>
+                        </>
+                      ) : longConversationListDemoActive ? (
+                        <>
+                          <span className="font-normal text-foreground">
+                            {t("app.longConversationListDemo")}
+                          </span>
+                          <span className="hidden sm:inline">
+                            {" "}
+                            · {t("app.longConversationListDemoDescription")}
+                            {longConversationListDemoStats
+                              ? ` · ${t("app.longConversationListDemoStats", longConversationListDemoStats)}`
+                              : ""}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-normal text-foreground">
+                            {t("app.compactionDemo")}
+                          </span>
+                          <span className="hidden sm:inline">
+                            {" "}
+                            · {t("app.compactionDemoDescription")}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                    <div className="flex items-center gap-3">
+                      {approvalPreviewDemoActive ? (
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            id="approval-preview-demo-show-reasons"
+                            checked={approvalDemoShowReasonNotes}
+                            onCheckedChange={(value) =>
+                              setApprovalDemoShowReasonNotes(value === true)
+                            }
+                          />
+                          <label
+                            htmlFor="approval-preview-demo-show-reasons"
+                            className="cursor-pointer text-xs text-muted-foreground"
+                          >
+                            {t("app.approvalPreviewDemoShowReasons")}
+                          </label>
+                        </div>
+                      ) : null}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={
+                          toolCardPreviewDemoActive
+                            ? onToolCardPreviewDemoStop
+                            : approvalPreviewDemoActive
+                              ? onApprovalPreviewDemoStop
+                              : longConversationListDemoActive
+                                ? onLongConversationListDemoStop
+                                : onCompactionDemoStop
+                        }
+                      >
+                        {t("app.exitDemo")}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : null}
-            {rewindDraft ? (
-              <button
-                type="button"
-                aria-label={t("app.cancelRewind")}
-                className="fixed inset-0 z-30 cursor-default bg-background/35 backdrop-blur-sm"
-                onClick={onRewindDraftClear}
-              />
-            ) : null}
-            <MessageQuoteActionsProvider
-              value={{
-                ...(quoteSessionPath ? { quoteSessionPath } : {}),
-                ...(quoteOrigin ? { quoteOrigin } : {}),
-                onMessageQuoteAddToChat: handleMessageQuoteAddToChat,
-                ...(showSideChat && paneId
-                  ? { onMessageQuoteAddToSideChat: handleMessageQuoteAddToSideChat }
-                  : {}),
-              }}
-            >
-              <ScrollArea
-                ref={conversationScrollAreaRef}
-                data-spirit-surface="conversation-scroll"
-                className={cn("min-h-0 flex-1", desktopTranslucencyTintInnerClass(useTranslucency))}
-                type="hover"
-                scrollHideDelay={450}
-                viewportStyle={conversationScrollViewportStyle}
+              ) : null}
+              {rewindDraft ? (
+                <button
+                  type="button"
+                  aria-label={t("app.cancelRewind")}
+                  className="fixed inset-0 z-30 cursor-default bg-background/35 backdrop-blur-sm"
+                  onClick={onRewindDraftClear}
+                />
+              ) : null}
+              <MessageQuoteActionsProvider
+                value={{
+                  ...(quoteSessionPath ? { quoteSessionPath } : {}),
+                  ...(quoteOrigin ? { quoteOrigin } : {}),
+                  onMessageQuoteAddToChat: handleMessageQuoteAddToChat,
+                  ...(showSideChat && paneId
+                    ? { onMessageQuoteAddToSideChat: handleMessageQuoteAddToSideChat }
+                    : {}),
+                }}
               >
-                {/* min-h-full: short content still fills the viewport; pb ≥ measured dock height + breathing room, grows in sync when the approval card pops up */}
-                <div
-                  ref={conversationScrollBodyRef}
-                  data-spirit-surface="conversation-scroll-body"
+                <ScrollArea
+                  ref={conversationScrollAreaRef}
+                  data-spirit-surface="conversation-scroll"
                   className={cn(
-                    "min-h-full w-full",
+                    "min-h-0 flex-1",
                     desktopTranslucencyTintInnerClass(useTranslucency),
                   )}
-                  style={{
-                    ...(conversationMessagesVisible
-                      ? { paddingBottom: conversationScrollBedPaddingPx }
-                      : undefined),
-                    // Hide the list until bottom-anchoring settles, avoiding two visible shifts
-                    // ("estimated-height anchoring → measured correction")
-                    ...(listSettling ? { visibility: "hidden" as const } : undefined),
-                  }}
+                  type="hover"
+                  scrollHideDelay={450}
+                  viewportStyle={conversationScrollViewportStyle}
                 >
-                  {toolCardPreviewDemoActive ? (
-                    <ToolCardPreviewDemoGallery tools={toolCardPreviewDemoTools} />
-                  ) : approvalPreviewDemoActive ? (
-                    <ApprovalPreviewDemoGallery
-                      approvals={approvalPreviewDemoApprovals}
-                      useTranslucency={useTranslucency}
-                      showReasonNotes={approvalDemoShowReasonNotes}
-                    />
-                  ) : conversationMessagesVisible ? (
-                    <ConversationList
-                      messages={list.messages}
-                      conversationRenderItems={list.conversationRenderItems}
-                      pinScrollToTail={pinScrollToTail}
-                      releaseTailFollow={releaseTailFollow}
-                      quoteScrollRequest={quoteScrollRequest}
-                      onQuoteScrollHandled={() => setQuoteScrollRequest(null)}
-                      subagentViewActive={subagentViewActive}
-                      composerSessionKey={list.composerSessionKey}
-                      conversationListScopeKey={list.conversationListScopeKey}
-                      conversationListRemountEpoch={list.conversationListRemountEpoch}
-                      conversationPendingAuxState={list.conversationPendingAuxState}
-                      processGroupManualOpen={list.processGroupManualOpen}
-                      processGroupManualOpenKey={list.processGroupManualOpenKey}
-                      onProcessGroupManualOpenChange={list.onProcessGroupManualOpenChange}
-                      shouldPlayProcessSealAnimation={list.shouldPlayProcessSealAnimation}
-                      workspaceRoot={snapshot?.workspaceRoot ?? ""}
-                      runtime={list.runtime}
-                      turnContinue={list.turnContinue}
-                      activeSessionReadOnly={list.activeSessionReadOnly}
-                      conversationIsBusy={snapshot?.conversation.isBusy === true}
-                      continueBusy={list.continueBusy}
-                      rewindDraft={list.rewindDraft}
-                      onRewindDraftChange={list.onRewindDraftChange}
-                      messageRewindComposerEnabled={list.messageRewindComposerEnabled}
-                      rewindRichInputRef={list.rewindRichInputRef}
-                      models={list.models}
-                      catalogHints={snapshot?.config.modelCatalogHints}
-                      providerPresets={snapshot?.config.providerPickerPresets}
-                      activeModel={
-                        snapshot?.config.activeModel ?? list.runtime.settings.activeModel
-                      }
-                      agentMode={list.runtime.settings.agentMode}
-                      onOpenSubagentViewer={list.onOpenSubagentViewer}
-                      onOpenReadFile={list.onOpenReadFile}
-                      onOpenPlan={list.onOpenPlan}
-                      onStartMessageRewind={list.onStartMessageRewind}
-                      onForkMessage={list.onForkMessage}
-                      onSubmitMessageRewind={list.onSubmitMessageRewind}
-                      onRewindRemoveLocalFileAttachment={list.onRewindRemoveLocalFileAttachment}
-                      onRewindPickLocalFile={list.onRewindPickLocalFile}
-                      onRewindPaste={list.onRewindPaste}
-                      onRewindDragOver={list.onRewindDragOver}
-                      onRewindDrop={list.onRewindDrop}
-                      onComposerAgentModeChange={list.onComposerAgentModeChange}
-                      moveBackgroundShortcutTarget={split.moveBackgroundShortcutTarget}
-                    />
-                  ) : null}
-                  {navPlaceholderActive ? <ConversationNavPlaceholder /> : null}
-                </div>
-              </ScrollArea>
+                  {/* min-h-full: short content still fills the viewport; pb ≥ measured dock height + breathing room, grows in sync when the approval card pops up */}
+                  <div
+                    ref={conversationScrollBodyRef}
+                    data-spirit-surface="conversation-scroll-body"
+                    className={cn(
+                      "relative min-h-full w-full",
+                      desktopTranslucencyTintInnerClass(useTranslucency),
+                    )}
+                    style={{
+                      ...(conversationMessagesVisible
+                        ? { paddingBottom: conversationScrollBedPaddingPx }
+                        : undefined),
+                      // Hide the list until bottom-anchoring settles, avoiding two visible shifts
+                      // ("estimated-height anchoring → measured correction")
+                      ...(listSettling ? { visibility: "hidden" as const } : undefined),
+                    }}
+                  >
+                    {toolCardPreviewDemoActive ? (
+                      <ToolCardPreviewDemoGallery tools={toolCardPreviewDemoTools} />
+                    ) : approvalPreviewDemoActive ? (
+                      <ApprovalPreviewDemoGallery
+                        approvals={approvalPreviewDemoApprovals}
+                        useTranslucency={useTranslucency}
+                        showReasonNotes={approvalDemoShowReasonNotes}
+                      />
+                    ) : conversationMessagesVisible ? (
+                      <ConversationList
+                        messages={list.messages}
+                        conversationRenderItems={list.conversationRenderItems}
+                        pinScrollToTail={pinScrollToTail}
+                        releaseTailFollow={releaseTailFollow}
+                        quoteScrollRequest={quoteScrollRequest}
+                        onQuoteScrollHandled={() => setQuoteScrollRequest(null)}
+                        subagentViewActive={subagentViewActive}
+                        composerSessionKey={list.composerSessionKey}
+                        conversationListScopeKey={list.conversationListScopeKey}
+                        conversationListRemountEpoch={list.conversationListRemountEpoch}
+                        conversationPendingAuxState={list.conversationPendingAuxState}
+                        processGroupManualOpen={list.processGroupManualOpen}
+                        processGroupManualOpenKey={list.processGroupManualOpenKey}
+                        onProcessGroupManualOpenChange={list.onProcessGroupManualOpenChange}
+                        shouldPlayProcessSealAnimation={list.shouldPlayProcessSealAnimation}
+                        workspaceRoot={snapshot?.workspaceRoot ?? ""}
+                        runtime={list.runtime}
+                        turnContinue={list.turnContinue}
+                        activeSessionReadOnly={list.activeSessionReadOnly}
+                        conversationIsBusy={snapshot?.conversation.isBusy === true}
+                        continueBusy={list.continueBusy}
+                        rewindDraft={list.rewindDraft}
+                        onRewindDraftChange={list.onRewindDraftChange}
+                        messageRewindComposerEnabled={list.messageRewindComposerEnabled}
+                        rewindRichInputRef={list.rewindRichInputRef}
+                        models={list.models}
+                        catalogHints={snapshot?.config.modelCatalogHints}
+                        providerPresets={snapshot?.config.providerPickerPresets}
+                        activeModel={
+                          snapshot?.config.activeModel ?? list.runtime.settings.activeModel
+                        }
+                        agentMode={list.runtime.settings.agentMode}
+                        onOpenSubagentViewer={list.onOpenSubagentViewer}
+                        onOpenReadFile={list.onOpenReadFile}
+                        onOpenPlan={list.onOpenPlan}
+                        onStartMessageRewind={list.onStartMessageRewind}
+                        onForkMessage={list.onForkMessage}
+                        onSubmitMessageRewind={list.onSubmitMessageRewind}
+                        onRewindRemoveLocalFileAttachment={list.onRewindRemoveLocalFileAttachment}
+                        onRewindPickLocalFile={list.onRewindPickLocalFile}
+                        onRewindPaste={list.onRewindPaste}
+                        onRewindDragOver={list.onRewindDragOver}
+                        onRewindDrop={list.onRewindDrop}
+                        onComposerAgentModeChange={list.onComposerAgentModeChange}
+                        moveBackgroundShortcutTarget={split.moveBackgroundShortcutTarget}
+                      />
+                    ) : null}
+                    {navPlaceholderActive ? <ConversationNavPlaceholder /> : null}
+                  </div>
+                </ScrollArea>
 
-              <ConversationMessageSelectionMenu
-                rootRef={conversationScrollBodyRef}
-                quoteSessionPath={quoteSessionPath}
-                quoteOrigin={quoteOrigin}
-                onMessageQuoteAddToChat={composerDock.onMessageQuoteAddToChat}
-                onMessageQuoteAddToSideChat={
-                  showSideChat && paneId ? handleMessageQuoteAddToSideChat : undefined
-                }
-              />
-            </MessageQuoteActionsProvider>
-            {showComposerDock &&
-            !navPlaceholderActive &&
-            !approvalPreviewDemoActive &&
-            !toolCardPreviewDemoActive ? (
-              <ComposerDock
-                ref={handleComposerDockRef}
-                isEmptySession={isEmptySession}
-                doodleText={composerDock.doodleText}
-                showWorkspaceBindingControls={composerDock.showWorkspaceBindingControls}
-                paneSessionPath={composerDock.paneSessionPath}
-                useIsolatedPaneWorkspace={composerDock.useIsolatedPaneWorkspace}
-                composerSegments={composerDock.composerSegments}
-                onComposerSegmentsChange={composerDock.onComposerSegmentsChange}
-                composerLocalFileAttachments={composerDock.composerLocalFileAttachments}
-                onComposerLocalFileAttachmentsChange={
-                  composerDock.onComposerLocalFileAttachmentsChange
-                }
-                snapshot={snapshot}
-                runtime={list.runtime}
-                commitBusy={composerDock.commitBusy}
-                activeSessionReadOnly={list.activeSessionReadOnly}
-                rewindWarnings={composerDock.rewindWarnings}
-                showPendingApprovalInComposer={composerDock.showPendingApprovalInComposer}
-                pendingApproval={composerDock.pendingApproval}
-                showPendingQuestionsInComposer={composerDock.showPendingQuestionsInComposer}
-                pendingQuestions={composerDock.pendingQuestions}
-                questionDrafts={composerDock.questionDrafts}
-                onUpdateQuestionDraft={composerDock.onUpdateQuestionDraft}
-                onSubmitQuestions={composerDock.onSubmitQuestions}
-                onSkipQuestions={composerDock.onSkipQuestions}
-                fileReferenceSelectedIndex={composerDock.fileReferenceSelectedIndex}
-                onFileReferenceSelectedIndexChange={composerDock.onFileReferenceSelectedIndexChange}
-                fileReferenceMenuView={composerDock.fileReferenceMenuView}
-                atReferenceMenuItems={composerDock.atReferenceMenuItems}
-                onApplyFileReferenceSuggestion={composerDock.onApplyFileReferenceSuggestion}
-                onApplySessionReferenceSuggestion={composerDock.onApplySessionReferenceSuggestion}
-                onOpenAtReferenceSessions={composerDock.onOpenAtReferenceSessions}
-                onBackAtReferenceMenu={composerDock.onBackAtReferenceMenu}
-                onDismissFileReferenceSuggestions={composerDock.onDismissFileReferenceSuggestions}
-                activeFileReferenceQuery={composerDock.activeFileReferenceQuery}
-                slashQuery={composerDock.slashQuery}
-                slashSuggestions={composerDock.slashSuggestions}
-                slashSelectedIndex={composerDock.slashSelectedIndex}
-                onSlashSelectedIndexChange={composerDock.onSlashSelectedIndexChange}
-                onApplySlashSuggestionItem={composerDock.onApplySlashSuggestionItem}
-                onDismissSlashSuggestions={composerDock.onDismissSlashSuggestions}
-                composerCursorCodeUnits={composerDock.composerCursorCodeUnits}
-                composerPlaceholder={composerDock.composerPlaceholder}
-                composerAgentModeChipPlaceholder={composerDock.composerAgentModeChipPlaceholder}
-                composerCanSend={composerDock.composerCanSend}
-                composerHasPayload={composerDock.composerHasPayload}
-                composerBusy={composerDock.composerBusy}
-                conversationInterruptible={composerDock.conversationInterruptible}
-                continueBusy={list.continueBusy}
-                composerBrowserElementAttachments={composerDock.composerBrowserElementAttachments}
-                onComposerBrowserElementAttachmentsChange={
-                  composerDock.onComposerBrowserElementAttachmentsChange
-                }
-                onSubmitComposerMessage={composerDock.onSubmitComposerMessage}
-                onComposerAgentModeChange={composerDock.onComposerAgentModeChange}
-                composerRichInputRef={composerDock.composerRichInputRef}
-                onComposerKeyDown={composerDock.onComposerKeyDown}
-                onComposerCursorCodeUnitsChange={composerDock.onComposerCursorCodeUnitsChange}
-                onInsertFileReferenceTrigger={composerDock.onInsertFileReferenceTrigger}
-                onPickLocalFileFromPalette={composerDock.onPickLocalFileFromPalette}
-                onInsertSkillTriggerFromPalette={composerDock.onInsertSkillTriggerFromPalette}
-                onRemoveLocalFileAttachment={composerDock.onRemoveLocalFileAttachment}
-                onComposerPaste={composerDock.onComposerPaste}
-                onComposerDragOver={composerDock.onComposerDragOver}
-                onComposerDrop={composerDock.onComposerDrop}
-                models={composerDock.models}
-                useTranslucency={useTranslucency}
-                onOpenGitTab={composerDock.onOpenGitTab}
-                showScrollToBottom={!isEmptySession && !navPlaceholderActive && !followingTail}
-                onScrollToBottom={() => pinScrollToTail(true, "smooth")}
-                getScrollViewport={getConversationScrollElement}
-                onScrollOccludeMaskStyleChange={composerDock.onScrollOccludeMaskStyleChange}
-              />
-            ) : null}
-            {showComposerDock && branchCheckout ? (
-              <BranchCheckoutDialog
-                open={branchCheckout.open}
-                onOpenChange={branchCheckout.onOpenChange}
-                branchCheckoutBlockedByChanges={branchCheckout.branchCheckoutBlockedByChanges}
-                git={snapshot?.git}
-                commitBusy={branchCheckout.commitBusy}
-                onCancel={branchCheckout.onCancel}
-                onConfirmCheckout={branchCheckout.onConfirmCheckout}
-                onDiscardAndCheckout={branchCheckout.onDiscardAndCheckout}
-              />
-            ) : null}
+                <ConversationMessageSelectionMenu
+                  rootRef={conversationScrollBodyRef}
+                  quoteSessionPath={quoteSessionPath}
+                  quoteOrigin={quoteOrigin}
+                  onMessageQuoteAddToChat={composerDock.onMessageQuoteAddToChat}
+                  onMessageQuoteAddToSideChat={
+                    showSideChat && paneId ? handleMessageQuoteAddToSideChat : undefined
+                  }
+                />
+              </MessageQuoteActionsProvider>
+              {showComposerDock &&
+              !navPlaceholderActive &&
+              !approvalPreviewDemoActive &&
+              !toolCardPreviewDemoActive ? (
+                <ComposerDock
+                  ref={handleComposerDockRef}
+                  isEmptySession={isEmptySession}
+                  doodleText={composerDock.doodleText}
+                  showWorkspaceBindingControls={composerDock.showWorkspaceBindingControls}
+                  paneSessionPath={composerDock.paneSessionPath}
+                  useIsolatedPaneWorkspace={composerDock.useIsolatedPaneWorkspace}
+                  composerSegments={composerDock.composerSegments}
+                  onComposerSegmentsChange={composerDock.onComposerSegmentsChange}
+                  composerLocalFileAttachments={composerDock.composerLocalFileAttachments}
+                  onComposerLocalFileAttachmentsChange={
+                    composerDock.onComposerLocalFileAttachmentsChange
+                  }
+                  snapshot={snapshot}
+                  runtime={list.runtime}
+                  commitBusy={composerDock.commitBusy}
+                  activeSessionReadOnly={list.activeSessionReadOnly}
+                  rewindWarnings={composerDock.rewindWarnings}
+                  showPendingApprovalInComposer={composerDock.showPendingApprovalInComposer}
+                  pendingApproval={composerDock.pendingApproval}
+                  showPendingQuestionsInComposer={composerDock.showPendingQuestionsInComposer}
+                  pendingQuestions={composerDock.pendingQuestions}
+                  questionDrafts={composerDock.questionDrafts}
+                  onUpdateQuestionDraft={composerDock.onUpdateQuestionDraft}
+                  onSubmitQuestions={composerDock.onSubmitQuestions}
+                  onSkipQuestions={composerDock.onSkipQuestions}
+                  fileReferenceSelectedIndex={composerDock.fileReferenceSelectedIndex}
+                  onFileReferenceSelectedIndexChange={
+                    composerDock.onFileReferenceSelectedIndexChange
+                  }
+                  fileReferenceMenuView={composerDock.fileReferenceMenuView}
+                  atReferenceMenuItems={composerDock.atReferenceMenuItems}
+                  onApplyFileReferenceSuggestion={composerDock.onApplyFileReferenceSuggestion}
+                  onApplySessionReferenceSuggestion={composerDock.onApplySessionReferenceSuggestion}
+                  onOpenAtReferenceSessions={composerDock.onOpenAtReferenceSessions}
+                  onBackAtReferenceMenu={composerDock.onBackAtReferenceMenu}
+                  onDismissFileReferenceSuggestions={composerDock.onDismissFileReferenceSuggestions}
+                  activeFileReferenceQuery={composerDock.activeFileReferenceQuery}
+                  slashQuery={composerDock.slashQuery}
+                  slashSuggestions={composerDock.slashSuggestions}
+                  slashSelectedIndex={composerDock.slashSelectedIndex}
+                  onSlashSelectedIndexChange={composerDock.onSlashSelectedIndexChange}
+                  onApplySlashSuggestionItem={composerDock.onApplySlashSuggestionItem}
+                  onDismissSlashSuggestions={composerDock.onDismissSlashSuggestions}
+                  composerCursorCodeUnits={composerDock.composerCursorCodeUnits}
+                  composerPlaceholder={composerDock.composerPlaceholder}
+                  composerAgentModeChipPlaceholder={composerDock.composerAgentModeChipPlaceholder}
+                  composerCanSend={composerDock.composerCanSend}
+                  composerHasPayload={composerDock.composerHasPayload}
+                  composerBusy={composerDock.composerBusy}
+                  conversationInterruptible={composerDock.conversationInterruptible}
+                  continueBusy={list.continueBusy}
+                  composerBrowserElementAttachments={composerDock.composerBrowserElementAttachments}
+                  onComposerBrowserElementAttachmentsChange={
+                    composerDock.onComposerBrowserElementAttachmentsChange
+                  }
+                  onSubmitComposerMessage={composerDock.onSubmitComposerMessage}
+                  onComposerAgentModeChange={composerDock.onComposerAgentModeChange}
+                  composerRichInputRef={composerDock.composerRichInputRef}
+                  onComposerKeyDown={composerDock.onComposerKeyDown}
+                  onComposerCursorCodeUnitsChange={composerDock.onComposerCursorCodeUnitsChange}
+                  onInsertFileReferenceTrigger={composerDock.onInsertFileReferenceTrigger}
+                  onPickLocalFileFromPalette={composerDock.onPickLocalFileFromPalette}
+                  onInsertSkillTriggerFromPalette={composerDock.onInsertSkillTriggerFromPalette}
+                  onRemoveLocalFileAttachment={composerDock.onRemoveLocalFileAttachment}
+                  onComposerPaste={composerDock.onComposerPaste}
+                  onComposerDragOver={composerDock.onComposerDragOver}
+                  onComposerDrop={composerDock.onComposerDrop}
+                  models={composerDock.models}
+                  useTranslucency={useTranslucency}
+                  onOpenGitTab={composerDock.onOpenGitTab}
+                  showScrollToBottom={!isEmptySession && !navPlaceholderActive && !followingTail}
+                  onScrollToBottom={() => pinScrollToTail(true, "smooth")}
+                  getScrollViewport={getConversationScrollElement}
+                  onScrollOccludeMaskStyleChange={composerDock.onScrollOccludeMaskStyleChange}
+                />
+              ) : null}
+              {showComposerDock && branchCheckout ? (
+                <BranchCheckoutDialog
+                  open={branchCheckout.open}
+                  onOpenChange={branchCheckout.onOpenChange}
+                  branchCheckoutBlockedByChanges={branchCheckout.branchCheckoutBlockedByChanges}
+                  git={snapshot?.git}
+                  commitBusy={branchCheckout.commitBusy}
+                  onCancel={branchCheckout.onCancel}
+                  onConfirmCheckout={branchCheckout.onConfirmCheckout}
+                  onDiscardAndCheckout={branchCheckout.onDiscardAndCheckout}
+                />
+              ) : null}
+            </McpAppPaneProvider>
           </div>
         </div>
       </div>

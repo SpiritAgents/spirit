@@ -8,7 +8,7 @@ import {
   repairMissingToolResultsInHistory,
 } from "./helpers.js";
 import { formatUserMessageContentForLlm } from "./user-turn-timestamp.js";
-import type { ToolAgentActiveSkill } from "../tool-agent.js";
+import type { ToolAgentActiveSkill, ToolAgentMcpAppContext } from "../tool-agent.js";
 import type { AgentRuntimeOptions, PendingMcpResource, PendingWorkspaceFile } from "./types.js";
 
 type ContextMessageRole = "system" | "user" | "assistant";
@@ -19,6 +19,7 @@ export interface ContextRuntime<Config, State, ToolRequest> {
   pendingUserTurnStore: string | undefined;
   takePendingImages(): string[];
   takePendingMcpResources(): PendingMcpResource[];
+  takePendingMcpAppModelContexts?(): ToolAgentMcpAppContext[];
   recordContextMessage(role: ContextMessageRole, content: string): void;
 }
 
@@ -82,7 +83,12 @@ export async function prepareSubmittedUserTurn<Config, State, ToolRequest>(
   }
 
   runtime.historyStore = repairMissingToolResultsInHistory(runtime.historyStore);
-  const contentForLlm = formatUserMessageContentForLlm(userInput, activeSkillsForTurn);
+  const mcpAppContexts = runtime.takePendingMcpAppModelContexts?.() ?? [];
+  const contentForLlm = formatUserMessageContentForLlm(
+    userInput,
+    activeSkillsForTurn,
+    mcpAppContexts,
+  );
   runtime.historyStore.push({
     role: "user",
     content: createLlmMessageContentFromTextAndImages(

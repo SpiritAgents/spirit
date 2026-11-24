@@ -42,9 +42,11 @@ import {
   refreshDesktopAttention,
 } from "./desktop-attention.js";
 import {
+  installMcpAppSandboxProtocolHandler,
   installSpiritGeneratedAssetProtocolHandler,
   registerSpiritGeneratedAssetPrivilegedScheme,
 } from "./generated-asset-protocol.js";
+import { MCP_APP_DESKTOP_SANDBOX_URL } from "@spiritagent/mcp";
 import { syncWindowsJumpList } from "./sync-windows-jump-list.js";
 import {
   bindMacOSDockMenuDeps,
@@ -175,6 +177,7 @@ import {
   setDesktopExtensionHostAdapter,
   shutdownDesktopHostService,
   refreshDesktopRemoteControlConfig,
+  setDesktopMcpAppSandboxUrlProvider,
   subscribeDesktopAutomationsUpdates,
   subscribeDesktopDreamUpdates,
   subscribeDesktopSessionListUpdates,
@@ -1259,6 +1262,8 @@ if (gotSpiritSingleInstanceLock) {
   app.whenReady().then(async () => {
     setApprovalNotificationHandler(handleApprovalNotificationAction);
     registerWindowsToastActivationHandler();
+    installMcpAppSandboxProtocolHandler({ devServerUrl: DEV_SERVER_URL });
+    setDesktopMcpAppSandboxUrlProvider(() => MCP_APP_DESKTOP_SANDBOX_URL);
     installSpiritGeneratedAssetProtocolHandler({
       resolveManagedGeneratedAssetPath,
       videoPreviewMimeType,

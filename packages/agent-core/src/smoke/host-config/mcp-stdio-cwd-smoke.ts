@@ -132,8 +132,8 @@ async function loadViaExtraConfigs(
 ): Promise<{ tools: number; state: string; lastError?: string }> {
   const previousDataDir = process.env.SPIRIT_DATA_DIR;
   process.env.SPIRIT_DATA_DIR = dataDir;
+  const service = new McpService(workspaceRoot, true, { extraConfigs });
   try {
-    const service = new McpService(workspaceRoot, true, { extraConfigs });
     await service.ensureToolingCache();
     const snapshot = service.statusSnapshot();
     const catalog = service.catalogSnapshot();
@@ -148,6 +148,7 @@ async function loadViaExtraConfigs(
           : {}),
     };
   } finally {
+    await service.dispose();
     restoreEnv("SPIRIT_DATA_DIR", previousDataDir);
   }
 }

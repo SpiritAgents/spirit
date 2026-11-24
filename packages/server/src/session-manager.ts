@@ -16,6 +16,7 @@ import {
   type RuntimeSubagentSessionArchiveEntry,
   type RuntimeSubagentSessionSummary,
   type AgentMode,
+  McpAppToolApprovalRequiredError,
   type SubagentSessionExecutionRequest,
   type SessionTaskContext,
   type SessionTaskResult,
@@ -429,7 +430,11 @@ export class SessionManager {
       ...(params.todoSessionKey?.trim() ? { todoSessionKey: params.todoSessionKey.trim() } : {}),
       ...(params.sessionKind === "dream-collector"
         ? {}
-        : { mcpService: this.mcpRegistry.forWorkspace(params.workspaceRoot) }),
+        : {
+            mcpService: this.mcpRegistry.forWorkspace(params.workspaceRoot, {
+              enableMcpApps: supportsMcpAppsForHostKind(params.hostKind),
+            }),
+          }),
       hostKind: params.hostKind === "web" ? "cli" : params.hostKind,
       approvalLevel: params.approvalLevel ?? "default",
       agentMode: params.agentMode ?? "agent",
@@ -753,7 +758,9 @@ export class SessionManager {
       agentMode: current.agentModeSnapshot(),
       ...(session.createParams.modelRef ? { modelRef: session.createParams.modelRef } : {}),
       todoSessionKey: session.todoSessionKey,
-      mcpService: this.mcpRegistry.forWorkspace(workspaceRoot),
+      mcpService: this.mcpRegistry.forWorkspace(workspaceRoot, {
+        enableMcpApps: supportsMcpAppsForHostKind(session.createParams.hostKind),
+      }),
       hostKind: session.createParams.hostKind === "web" ? "cli" : session.createParams.hostKind,
       approvalLevel: session.info.approvalLevel,
       ...(session.info.sessionKind ? { sessionKind: session.info.sessionKind } : {}),
@@ -1791,6 +1798,54 @@ export class SessionManager {
     }
   }
 
+  /** Read a `ui://` MCP App HTML resource through the session's pooled MCP service. */
+  async mcpAppReadResource(
+    sessionId: string,
+    server: string,
+    uri: string,
+  ): Promise<import("@spiritagent/agent-core").McpAppResourcePayload> {
+    const { toolExecutor } = this.requireSession(sessionId).runtimeResult;
+    return toolExecutor.readMcpAppResource(server, uri);
+  }
+
+  /** Proxy an app-initiated `tools/call` strictly scoped to the originating MCP server. */
+  async mcpAppCallTool(
+    sessionId: string,
+    server: string,
+    toolName: string,
+    args?: Record<string, unknown>,
+    approved?: boolean,
+  ): Promise<import("@spiritagent/api/types").McpAppCallToolResponse> {
+    const { toolExecutor } = this.requireSession(sessionId).runtimeResult;
+    try {
+      const result = await toolExecutor.callMcpAppTool(
+        server,
+        toolName,
+        args,
+        approved === true ? { approved: true } : undefined,
+      );
+      return { status: "ok", result };
+    } catch (error) {
+      if (error instanceof McpAppToolApprovalRequiredError) {
+        return {
+          status: "approval-required",
+          server: error.server,
+          tool: error.toolName,
+        };
+      }
+      throw error;
+    }
+  }
+
+  /** Record or overwrite per-app model context (`ui/update-model-context`) for the next user turn. */
+  mcpAppUpdateModelContext(
+    sessionId: string,
+    entry: import("@spiritagent/agent-core").ToolAgentMcpAppContext,
+  ): void {
+    const { runtime } = this.requireSession(sessionId).runtimeResult;
+    runtime.setMcpAppModelContext(entry);
+  }
+
   // -------------------------------------------------------- manual tools
 
   async startManualToolCommand(sessionId: string, message: string): Promise<unknown> {
@@ -1959,7 +2014,9 @@ export class SessionManager {
         agentMode: mode,
         ...(session.createParams.modelRef ? { modelRef: session.createParams.modelRef } : {}),
         todoSessionKey: session.todoSessionKey,
-        mcpService: this.mcpRegistry.forWorkspace(session.createParams.workspaceRoot),
+        mcpService: this.mcpRegistry.forWorkspace(session.createParams.workspaceRoot, {
+          enableMcpApps: supportsMcpAppsForHostKind(session.createParams.hostKind),
+        }),
         hostKind: session.createParams.hostKind === "web" ? "cli" : session.createParams.hostKind,
         approvalLevel: session.info.approvalLevel,
         ...(session.createParams.hostUiPromptSection
@@ -2282,13 +2339,18 @@ export class SessionManager {
       pending.resolve({ kind: "unavailable", reason: "host-has-no-ui" });
     }
     const settled = await Promise.allSettled(disposals);
+    const mcpDisposed = await Promise.allSettled([this.mcpRegistry.disposeAll()]);
     const owner = await Promise.allSettled(
       this.taskOwner ? [this.taskOwner.then((value) => value.close())] : [],
     );
     this.taskOwner = undefined;
-    const failures = [...settled, ...owner].flatMap((entry) =>
+    const failures = [...settled, ...mcpDisposed, ...owner].flatMap((entry) =>
       entry.status === "rejected" ? [entry.reason] : [],
     );
     if (failures.length) throw new AggregateError(failures, "Daemon session shutdown failed.");
   }
+}
+
+function supportsMcpAppsForHostKind(hostKind: ServerClientKind): boolean {
+  return hostKind === "desktop" || hostKind === "web";
 }

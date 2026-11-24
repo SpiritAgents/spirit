@@ -3,7 +3,12 @@ import { execFile } from "node:child_process";
 import { access } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 
-import type { JsonValue } from "../ports.js";
+import {
+  createToolExecutionTextOutput,
+  type JsonValue,
+  type ToolExecutionMcpAppUi,
+  type ToolExecutionOutput,
+} from "../ports.js";
 import {
   buildLazyToolGatewayDefinitions,
   buildFetchMcpResourceDefinition,
@@ -14,8 +19,23 @@ import {
   isFetchMcpResourceToolRequest as isFetchMcpResourceToolRequestValue,
   isLazyToolGatewayToolName,
   isLazyToolGatewayToolRequest as isLazyToolGatewayToolRequestValue,
+  mcpToolCallSkipsApproval,
   parseFetchMcpResourceArguments,
+  parseLazyToolGatewayArguments,
+  TOOL_CALL_TOOL_NAME,
+  TOOL_DESCRIBE_TOOL_NAME,
+  type LazyToolGatewayApprovalLevel,
 } from "../tool-gateway/index.js";
+import {
+  MCP_APP_MAX_CONCURRENCY_PER_SERVER,
+  extractResourceUriFromToolResult,
+  isMcpAppHtmlMimeType,
+  isMcpAppUiResource,
+  parseMcpAppResourceResult,
+  parseMcpToolUiMeta,
+  type McpAppResourcePayload,
+  type McpToolUiMeta,
+} from "./apps.js";
 import {
   resolveEnvRecord,
   mergeMcpConfigFiles,
@@ -30,7 +50,7 @@ import {
   findResourceIndexEntry,
 } from "./catalog-snapshot.js";
 import { parseMcpToolApprovalAnnotations } from "./approval-annotations.js";
-import { McpConfigError } from "./errors.js";
+import { McpAppToolApprovalRequiredError, McpConfigError, McpConnectionError } from "./errors.js";
 import { McpRegistry } from "./registry.js";
 import {
   SPIRIT_UI_CALL_TOOL_TIMEOUT_MS,
@@ -118,10 +138,28 @@ export interface McpCallToolOptions {
   uiOpener?: McpUiOpener;
 }
 
+const DEFAULT_MCP_POOL_IDLE_TIMEOUT_MS = 10 * 60_000;
+
+interface PooledMcpConnection {
+  digest: string;
+  connection: SdkMcpConnection;
+  connectPromise?: Promise<SdkMcpConnection> | undefined;
+  activeCalls: number;
+  idleTimer?: ReturnType<typeof setTimeout> | undefined;
+  /** Extension-owned servers share one spirit/ui/open handler without a call correlation ID, so distinct openers serialize while identical openers stay concurrent. */
+  activeUiOpener?: McpUiOpener | undefined;
+  activeUiOpenerCount: number;
+  uiOpenerWaiters: Array<() => void>;
+}
+
 export interface McpServiceOptions {
   extraConfigs?: McpExtraConfigProvider;
   /** Hosts supply configuration; an SDK service without a source has no file-backed servers. */
   configSource?: McpConfigSource;
+  /** Advertise MCP Apps UI capability (io.modelcontextprotocol/ui) during MCP handshakes. */
+  enableMcpApps?: boolean;
+  /** Idle TTL before closing an unused pooled MCP connection. Defaults to 10 minutes. */
+  idleTimeoutMs?: number;
 }
 
 export interface McpConfigSource {
@@ -139,6 +177,8 @@ export class McpService {
     serverScopes: {},
   };
   private configDigestStore = mcpConfigDigest({ servers: {} });
+  private diskConfigDigestStore: string | undefined;
+  private resolvedConfigDigestStore: string | undefined;
   private toolIndexStore: McpToolIndexEntry[] = [];
   private resourceIndexStore: McpResourceIndexEntry[] = [];
   private catalogRevisionStore = 0;
@@ -147,7 +187,13 @@ export class McpService {
   private windowsEnvLookupPromise: Promise<EnvLookupStore> | undefined;
   private toolingRefreshPromise: Promise<void> | undefined;
   private toolingCacheInitialized = false;
+  private initialDiscoverySettled = false;
+  private toolingInvalidationVersion = 0;
+  private pendingInvalidationRefresh = false;
   private extensionServerOwnershipStore: Record<string, ExtensionMcpServerOwnership> = {};
+  private readonly connectionPool = new Map<string, PooledMcpConnection>();
+  private readonly appCallSemaphores = new Map<string, ServerConcurrencyLimiter>();
+  private disposed = false;
 
   constructor(
     private readonly workspaceRootStore = process.cwd(),
@@ -181,6 +227,14 @@ export class McpService {
     );
   }
 
+  isMcpAppsEnabled(): boolean {
+    return this.serviceOptions.enableMcpApps === true;
+  }
+
+  lookupToolUiMeta(serverName: string, toolName: string): McpToolUiMeta | undefined {
+    return findToolIndexEntry(this.toolIndexStore, serverName, toolName)?.ui;
+  }
+
   async describeTool(
     serverName: string,
     toolName: string,
@@ -189,6 +243,11 @@ export class McpService {
     const entry = findToolIndexEntry(this.toolIndexStore, serverName, toolName);
     if (!entry) {
       throw new McpConfigError(`Unknown MCP tool: ${serverName}/${toolName}`);
+    }
+    if (entry.ui?.appOnly) {
+      throw new McpConfigError(
+        `MCP tool ${serverName}/${toolName} is app-only and cannot be inspected by the model`,
+      );
     }
 
     return {
@@ -216,6 +275,36 @@ export class McpService {
   ): Promise<string> {
     const backend = createMcpLazyToolGatewayBackend(this, options);
     return executeLazyToolGatewayCall(request.name, request.argumentsJson, backend);
+  }
+
+  async executeLazyToolGatewayToolRequestWithUi(
+    request: import("../tool-gateway/types.js").LazyToolGatewayToolRequest,
+    options?: McpCallToolOptions,
+  ): Promise<ToolExecutionOutput> {
+    if (request.name === TOOL_DESCRIBE_TOOL_NAME) {
+      const text = await this.executeLazyToolGatewayToolRequest(request, options);
+      return createToolExecutionTextOutput(text);
+    }
+    if (request.name !== TOOL_CALL_TOOL_NAME) {
+      throw new McpConfigError(`Unknown lazy tool gateway name: ${request.name}`);
+    }
+
+    const parsed = parseLazyToolGatewayArguments(request.name, request.argumentsJson) as {
+      server: string;
+      tool: string;
+      arguments?: JsonValue;
+    };
+    await this.ensureToolingCache();
+    const indexed = findToolIndexEntry(this.toolIndexStore, parsed.server, parsed.tool);
+    if (indexed?.ui?.appOnly) {
+      throw new McpConfigError(
+        `MCP tool ${parsed.server}/${parsed.tool} is app-only and cannot be called by the model`,
+      );
+    }
+
+    const argsJson = parsed.arguments === undefined ? undefined : JSON.stringify(parsed.arguments);
+    const mcpRequest = await this.createToolRequest(parsed.server, parsed.tool, argsJson);
+    return this.executeToolRequestWithUi(mcpRequest, options, argsJson);
   }
 
   lazyToolGatewayBackgroundStatusText(value: JsonValue): string | undefined {
@@ -255,7 +344,7 @@ export class McpService {
   }
 
   async ensureToolingCache(): Promise<void> {
-    if (this.toolingCacheInitialized) {
+    if (this.toolingCacheInitialized && !this.hasDiskConfigChanged()) {
       return;
     }
 
@@ -265,14 +354,57 @@ export class McpService {
     }
   }
 
+  /**
+   * Wait for the initial MCP tooling discovery to settle (bounded by `timeoutMs`),
+   * returning immediately once initial discovery has completed at least once.
+   * Subsequent disk or secret-driven re-refreshes run asynchronously in the background
+   * so live session refreshes and turns never block behind them.
+   */
+  async waitForInitialToolingCache(timeoutMs = 15_000): Promise<void> {
+    const diskChanged = this.hasDiskConfigChanged();
+    if (this.initialDiscoverySettled) {
+      if (diskChanged) {
+        this.ensureToolingCacheInBackground();
+      }
+      return;
+    }
+
+    this.ensureToolingCacheInBackground();
+    const pending = this.toolingRefreshPromise;
+    if (!pending) {
+      return;
+    }
+
+    if (timeoutMs <= 0) {
+      await pending.catch(() => {});
+      return;
+    }
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        pending.catch(() => {}),
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, timeoutMs);
+          timer.unref?.();
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    }
+  }
+
   ensureToolingCacheInBackground(): void {
     this.launchBackgroundRefresh(false);
   }
 
-  async refreshConfig(): Promise<void> {
+  async refreshConfig(): Promise<boolean> {
     try {
       const extra = await this.loadExtraConfig();
       const { merged, serverScopes, user } = this.loadMergedConfig();
+      const nextDiskDigest = mcpConfigDigest(merged);
       const raw = mergeMcpConfigFiles(extra, merged);
       this.extensionServerOwnershipStore = retainUnoverlaidExtensionOwnership(
         extra.extensionServerOwnership,
@@ -300,17 +432,26 @@ export class McpService {
           return [name, resolved] as const;
         }),
       );
+      const nextResolvedDigest = createHash("sha256")
+        .update(JSON.stringify(resolvedEntries))
+        .digest("hex");
+      const effectiveChanged =
+        configChanged || nextResolvedDigest !== this.resolvedConfigDigestStore;
 
       this.loadedConfigStore = {
         raw,
         resolved: Object.fromEntries(resolvedEntries),
         serverScopes,
       };
-      if (configChanged) {
+      this.diskConfigDigestStore = nextDiskDigest;
+      this.resolvedConfigDigestStore = nextResolvedDigest;
+      await this.evictStalePooledConnections(this.loadedConfigStore.resolved);
+      if (effectiveChanged) {
         this.configDigestStore = nextDigest;
         this.toolingCacheInitialized = false;
       }
       this.loadErrorStore = undefined;
+      return effectiveChanged;
     } catch (error) {
       this.loadErrorStore = describeError(error);
       this.toolIndexStore = [];
@@ -400,12 +541,19 @@ export class McpService {
 
   async assertResourceReadable(server: string, uri: string): Promise<void> {
     await this.ensureToolingCache();
+    const indexed = findResourceIndexEntry(this.resourceIndexStore, server, uri);
+    if (indexed?.isMcpAppUi || isMcpAppUiResource({ uri })) {
+      throw new McpConfigError(
+        `MCP resource ${server}/${uri} is an MCP App UI resource and is not readable by the model`,
+      );
+    }
+
     const snapshot = this.catalogSnapshot();
     if (snapshot.resourcesTruncated) {
       return;
     }
 
-    if (!findResourceIndexEntry(this.resourceIndexStore, server, uri)) {
+    if (!indexed) {
       throw new McpConfigError(`Unknown MCP resource: ${server}/${uri}`);
     }
   }
@@ -452,6 +600,127 @@ export class McpService {
   async executeToolRequest(request: McpToolRequest, options?: McpCallToolOptions): Promise<string> {
     const result = await this.callToolRequest(request, options);
     return JSON.stringify(result, null, 2);
+  }
+
+  async executeToolRequestWithUi(
+    request: McpToolRequest,
+    options?: McpCallToolOptions,
+    rawArgumentsJson?: string,
+  ): Promise<ToolExecutionOutput> {
+    await this.ensureToolingCache();
+    const indexed = findToolIndexEntry(this.toolIndexStore, request.server, request.toolName);
+    if (indexed?.ui?.appOnly) {
+      throw new McpConfigError(
+        `MCP tool ${request.server}/${request.toolName} is app-only and cannot be called by the model`,
+      );
+    }
+
+    const result = await this.callToolRequest(request, options);
+    const text = JSON.stringify(result, null, 2);
+    const baseOutput = createToolExecutionTextOutput(text);
+    const mcpApp = this.buildMcpAppHostUi(request, result, rawArgumentsJson);
+    if (!mcpApp) {
+      return baseOutput;
+    }
+
+    return {
+      ...baseOutput,
+      hostUi: {
+        mcpApp,
+      },
+    };
+  }
+
+  async callAppTool(
+    serverName: string,
+    toolName: string,
+    args?: Record<string, unknown>,
+    options?: McpCallToolOptions & {
+      approvalLevel?: LazyToolGatewayApprovalLevel;
+      approved?: boolean;
+    },
+  ): Promise<JsonValue> {
+    await this.ensureToolingCache();
+    const indexed = findToolIndexEntry(this.toolIndexStore, serverName, toolName);
+    if (indexed?.ui?.modelOnly) {
+      throw new McpConfigError(
+        `MCP tool ${serverName}/${toolName} is model-only and cannot be called by an MCP App`,
+      );
+    }
+
+    if (
+      options?.approved !== true &&
+      options?.approvalLevel !== "bypass-approval" &&
+      !mcpToolCallSkipsApproval(indexed?.annotations)
+    ) {
+      throw new McpAppToolApprovalRequiredError(serverName, toolName);
+    }
+
+    const limiter = this.appLimiterForServer(serverName);
+    return limiter.run(async () => {
+      const request = await this.createToolRequest(
+        serverName,
+        toolName,
+        args === undefined ? undefined : JSON.stringify(args),
+      );
+      return this.callToolRequest(request, options);
+    });
+  }
+
+  async readAppResource(serverName: string, uri: string): Promise<McpAppResourcePayload> {
+    const trimmedUri = uri.trim();
+    if (!trimmedUri.startsWith("ui://")) {
+      throw new McpConfigError(`MCP App resource URI must use the ui:// scheme: ${trimmedUri}`);
+    }
+
+    const limiter = this.appLimiterForServer(serverName);
+    return limiter.run(async () => {
+      const raw = await this.readResource(serverName, trimmedUri, { allowMcpAppUi: true });
+      return parseMcpAppResourceResult(trimmedUri, raw);
+    });
+  }
+
+  private buildMcpAppHostUi(
+    request: McpToolRequest,
+    result: JsonValue,
+    rawArgumentsJson?: string,
+  ): ToolExecutionMcpAppUi | undefined {
+    if (!this.isMcpAppsEnabled()) {
+      return undefined;
+    }
+
+    const indexed = findToolIndexEntry(this.toolIndexStore, request.server, request.toolName);
+    const resourceUri = extractResourceUriFromToolResult(result) ?? indexed?.ui?.resourceUri;
+    if (!resourceUri) {
+      return undefined;
+    }
+
+    const ownership = this.extensionServerOwnershipStore[request.server];
+    const argumentsJson =
+      rawArgumentsJson !== undefined
+        ? rawArgumentsJson
+        : request.arguments === null
+          ? undefined
+          : JSON.stringify(request.arguments);
+
+    return {
+      server: request.server,
+      displayName: request.displayName,
+      toolName: request.toolName,
+      resourceUri,
+      ...(argumentsJson !== undefined ? { argumentsJson } : {}),
+      toolResult: result,
+      ...(ownership?.extensionId ? { extensionId: ownership.extensionId } : {}),
+    };
+  }
+
+  private appLimiterForServer(serverName: string): ServerConcurrencyLimiter {
+    let limiter = this.appCallSemaphores.get(serverName);
+    if (!limiter) {
+      limiter = new ServerConcurrencyLimiter(MCP_APP_MAX_CONCURRENCY_PER_SERVER);
+      this.appCallSemaphores.set(serverName, limiter);
+    }
+    return limiter;
   }
 
   lookupExtensionServerOwnership(serverName: string): ExtensionMcpServerOwnership | undefined {
@@ -546,133 +815,176 @@ export class McpService {
 
     const server = await this.requireConnectableServer(name);
 
-    return this.withConnection(server, async (connection) => {
-      const capabilities = connection.serverCapabilities;
-      const serverVersion = connection.serverVersion;
-      const supportsTools = server.capabilities.tools && capabilities?.tools !== undefined;
-      const supportsResources =
-        server.capabilities.resources && capabilities?.resources !== undefined;
-      const supportsPrompts = server.capabilities.prompts && capabilities?.prompts !== undefined;
-      const toolsResult = supportsTools ? await connection.listTools() : { tools: [] };
-      const resourcesResult = supportsResources
-        ? await connection.listResources()
-        : { resources: [] };
-      const resourceTemplatesResult = supportsResources
-        ? await connection.listResourceTemplates()
-        : { resourceTemplates: [] };
-      const promptsResult = supportsPrompts ? await connection.listPrompts() : { prompts: [] };
+    return this.withConnection(
+      server,
+      async (connection) => {
+        const capabilities = connection.serverCapabilities;
+        const serverVersion = connection.serverVersion;
+        const supportsTools = server.capabilities.tools && capabilities?.tools !== undefined;
+        const supportsResources =
+          server.capabilities.resources && capabilities?.resources !== undefined;
+        const supportsPrompts = server.capabilities.prompts && capabilities?.prompts !== undefined;
+        const [toolsResult, resourcesResult, resourceTemplatesResult, promptsResult] =
+          await Promise.all([
+            supportsTools ? connection.listTools() : Promise.resolve({ tools: [] }),
+            supportsResources ? connection.listResources() : Promise.resolve({ resources: [] }),
+            supportsResources
+              ? connection.listResourceTemplates()
+              : Promise.resolve({ resourceTemplates: [] }),
+            supportsPrompts ? connection.listPrompts() : Promise.resolve({ prompts: [] }),
+          ]);
 
-      this.registry.setServerState(server.name, "ready", {
-        cachedTools: toolsResult.tools.length,
-      });
+        this.registry.setServerState(server.name, "ready", {
+          cachedTools: toolsResult.tools.length,
+        });
 
-      return {
-        name: server.name,
-        displayName: server.displayName,
-        protocolVersion: connection.protocolVersion,
-        serverName: serverVersion?.name ?? server.name,
-        ...(serverVersion?.title === undefined ? {} : { serverTitle: serverVersion.title }),
-        serverVersion: serverVersion?.version ?? "unknown",
-        ...(serverVersion?.description === undefined
-          ? {}
-          : { serverDescription: serverVersion.description }),
-        ...(connection.instructions === undefined ? {} : { instructions: connection.instructions }),
-        supportsTools,
-        supportsResources,
-        supportsPrompts,
-        supportsLogging: capabilities?.logging !== undefined,
-        supportsCompletions: capabilities?.completions !== undefined,
-        toolsListChanged: capabilities?.tools?.listChanged ?? false,
-        resourcesListChanged: capabilities?.resources?.listChanged ?? false,
-        promptsListChanged: capabilities?.prompts?.listChanged ?? false,
-        toolsCount: toolsResult.tools.length,
-        resourcesCount: resourcesResult.resources.length,
-        resourceTemplatesCount: resourceTemplatesResult.resourceTemplates.length,
-        promptsCount: promptsResult.prompts.length,
-      };
-    });
+        return {
+          name: server.name,
+          displayName: server.displayName,
+          protocolVersion: connection.protocolVersion,
+          serverName: serverVersion?.name ?? server.name,
+          ...(serverVersion?.title === undefined ? {} : { serverTitle: serverVersion.title }),
+          serverVersion: serverVersion?.version ?? "unknown",
+          ...(serverVersion?.description === undefined
+            ? {}
+            : { serverDescription: serverVersion.description }),
+          ...(connection.instructions === undefined
+            ? {}
+            : { instructions: connection.instructions }),
+          supportsTools,
+          supportsResources,
+          supportsPrompts,
+          supportsLogging: capabilities?.logging !== undefined,
+          supportsCompletions: capabilities?.completions !== undefined,
+          toolsListChanged: capabilities?.tools?.listChanged ?? false,
+          resourcesListChanged: capabilities?.resources?.listChanged ?? false,
+          promptsListChanged: capabilities?.prompts?.listChanged ?? false,
+          toolsCount: toolsResult.tools.length,
+          resourcesCount: resourcesResult.resources.length,
+          resourceTemplatesCount: resourceTemplatesResult.resourceTemplates.length,
+          promptsCount: promptsResult.prompts.length,
+        };
+      },
+      { retryOnTransportFailure: true },
+    );
   }
 
   async listTools(name: string): Promise<JsonValue[]> {
     const server = await this.requireConnectableServer(name);
 
-    return this.withConnection(server, async (connection) => {
-      const capabilities = connection.serverCapabilities;
-      if (!(server.capabilities.tools && capabilities?.tools !== undefined)) {
-        this.registry.setServerState(server.name, "ready", { cachedTools: 0 });
-        return [];
-      }
+    return this.withConnection(
+      server,
+      async (connection) => {
+        const capabilities = connection.serverCapabilities;
+        if (!(server.capabilities.tools && capabilities?.tools !== undefined)) {
+          this.registry.setServerState(server.name, "ready", { cachedTools: 0 });
+          return [];
+        }
 
-      const result = await connection.listTools();
-      const tools = result.tools.map((tool) => ({
-        name: tool.name,
-        ...(tool.title === undefined ? {} : { title: tool.title }),
-        ...(tool.description === undefined ? {} : { description: tool.description }),
-        inputSchema: tool.inputSchema as unknown as JsonValue,
-      }));
-      this.registry.setServerState(server.name, "ready", { cachedTools: tools.length });
-      return tools;
-    });
+        const result = await connection.listTools();
+        const tools = result.tools.map((tool) => ({
+          name: tool.name,
+          ...(tool.title === undefined ? {} : { title: tool.title }),
+          ...(tool.description === undefined ? {} : { description: tool.description }),
+          inputSchema: tool.inputSchema as unknown as JsonValue,
+        }));
+        this.registry.setServerState(server.name, "ready", { cachedTools: tools.length });
+        return tools;
+      },
+      { retryOnTransportFailure: true },
+    );
   }
 
   async listResources(name: string): Promise<JsonValue[]> {
     const server = await this.requireConnectableServer(name);
 
-    return this.withConnection(server, async (connection) => {
-      const capabilities = connection.serverCapabilities;
-      if (!(server.capabilities.resources && capabilities?.resources !== undefined)) {
-        this.registry.setServerState(server.name, "ready");
-        return [];
-      }
+    return this.withConnection(
+      server,
+      async (connection) => {
+        const capabilities = connection.serverCapabilities;
+        if (!(server.capabilities.resources && capabilities?.resources !== undefined)) {
+          this.registry.setServerState(server.name, "ready");
+          return [];
+        }
 
-      const result = await connection.listResources();
-      this.registry.setServerState(server.name, "ready");
-      return result.resources.map((resource) => ({
-        uri: resource.uri,
-        name: resource.name,
-        ...(resource.title === undefined ? {} : { title: resource.title }),
-        ...(resource.description === undefined ? {} : { description: resource.description }),
-        ...(resource.mimeType === undefined ? {} : { mimeType: resource.mimeType }),
-        ...(resource.size === undefined ? {} : { size: resource.size }),
-      }));
-    });
+        const result = await connection.listResources();
+        this.registry.setServerState(server.name, "ready");
+        return result.resources.map((resource) => ({
+          uri: resource.uri,
+          name: resource.name,
+          ...(resource.title === undefined ? {} : { title: resource.title }),
+          ...(resource.description === undefined ? {} : { description: resource.description }),
+          ...(resource.mimeType === undefined ? {} : { mimeType: resource.mimeType }),
+          ...(resource.size === undefined ? {} : { size: resource.size }),
+        }));
+      },
+      { retryOnTransportFailure: true },
+    );
   }
 
-  async readResource(name: string, uri: string): Promise<JsonValue> {
+  async readResource(
+    name: string,
+    uri: string,
+    options?: { allowMcpAppUi?: boolean },
+  ): Promise<JsonValue> {
     const server = await this.requireConnectableServer(name);
 
-    return this.withConnection(server, async (connection) => {
-      const capabilities = connection.serverCapabilities;
-      assertResourceCapability(server, capabilities);
-      const result = await connection.readResource(uri);
-      this.registry.setServerState(server.name, "ready");
-      return result as JsonValue;
-    });
+    return this.withConnection(
+      server,
+      async (connection) => {
+        const capabilities = connection.serverCapabilities;
+        assertResourceCapability(server, capabilities);
+        const result = await connection.readResource(uri);
+        if (
+          options?.allowMcpAppUi !== true &&
+          Array.isArray(result.contents) &&
+          result.contents.some(
+            (item) =>
+              typeof item === "object" &&
+              item !== null &&
+              "mimeType" in item &&
+              typeof item.mimeType === "string" &&
+              isMcpAppHtmlMimeType(item.mimeType),
+          )
+        ) {
+          throw new McpConfigError(
+            `MCP resource ${server.name}/${uri} is an MCP App UI resource and is not readable by the model`,
+          );
+        }
+        this.registry.setServerState(server.name, "ready");
+        return result as JsonValue;
+      },
+      { retryOnTransportFailure: true },
+    );
   }
 
   async listPrompts(name: string): Promise<JsonValue[]> {
     const server = await this.requireConnectableServer(name);
 
-    return this.withConnection(server, async (connection) => {
-      const capabilities = connection.serverCapabilities;
-      if (!(server.capabilities.prompts && capabilities?.prompts !== undefined)) {
-        this.registry.setServerState(server.name, "ready");
-        return [];
-      }
+    return this.withConnection(
+      server,
+      async (connection) => {
+        const capabilities = connection.serverCapabilities;
+        if (!(server.capabilities.prompts && capabilities?.prompts !== undefined)) {
+          this.registry.setServerState(server.name, "ready");
+          return [];
+        }
 
-      const result = await connection.listPrompts();
-      this.registry.setServerState(server.name, "ready");
-      return result.prompts.map((prompt) => ({
-        name: prompt.name,
-        ...(prompt.title === undefined ? {} : { title: prompt.title }),
-        ...(prompt.description === undefined ? {} : { description: prompt.description }),
-        arguments: (prompt.arguments ?? []).map((argument) => ({
-          name: argument.name,
-          ...(argument.description === undefined ? {} : { description: argument.description }),
-          required: argument.required ?? false,
-        })),
-      }));
-    });
+        const result = await connection.listPrompts();
+        this.registry.setServerState(server.name, "ready");
+        return result.prompts.map((prompt) => ({
+          name: prompt.name,
+          ...(prompt.title === undefined ? {} : { title: prompt.title }),
+          ...(prompt.description === undefined ? {} : { description: prompt.description }),
+          arguments: (prompt.arguments ?? []).map((argument) => ({
+            name: argument.name,
+            ...(argument.description === undefined ? {} : { description: argument.description }),
+            required: argument.required ?? false,
+          })),
+        }));
+      },
+      { retryOnTransportFailure: true },
+    );
   }
 
   async listCachedPrompts(name: string): Promise<JsonValue[]> {
@@ -703,13 +1015,17 @@ export class McpService {
     const server = await this.requireConnectableServer(name);
     const args = parsePromptArguments(argsJson);
 
-    return this.withConnection(server, async (connection) => {
-      const capabilities = connection.serverCapabilities;
-      assertPromptCapability(server, capabilities);
-      const result = await connection.getPrompt(prompt, args);
-      this.registry.setServerState(server.name, "ready");
-      return result as JsonValue;
-    });
+    return this.withConnection(
+      server,
+      async (connection) => {
+        const capabilities = connection.serverCapabilities;
+        assertPromptCapability(server, capabilities);
+        const result = await connection.getPrompt(prompt, args);
+        this.registry.setServerState(server.name, "ready");
+        return result as JsonValue;
+      },
+      { retryOnTransportFailure: true },
+    );
   }
 
   private async requireConnectableServer(name: string): Promise<ResolvedMcpServerConfig> {
@@ -724,30 +1040,294 @@ export class McpService {
     return server;
   }
 
+  async dispose(): Promise<void> {
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
+    this.pendingInvalidationRefresh = false;
+    const entries = [...this.connectionPool.entries()];
+    this.connectionPool.clear();
+    await Promise.all(
+      entries.map(async ([serverName, entry]) => {
+        if (entry.idleTimer) {
+          clearTimeout(entry.idleTimer);
+          entry.idleTimer = undefined;
+        }
+        if (entry.connectPromise) {
+          try {
+            await entry.connectPromise;
+          } catch {
+            // Connection attempt failed; still attempt cleanup below.
+          }
+        }
+        await closeConnectionQuietly(entry.connection, `dispose:${serverName}`);
+      }),
+    );
+  }
+
+  pooledConnectionCount(): number {
+    return this.connectionPool.size;
+  }
+
   private async withConnection<T>(
     server: ResolvedMcpServerConfig,
     operation: (connection: SdkMcpConnection) => Promise<T>,
-    options?: McpCallToolOptions,
+    options?: McpCallToolOptions & { retryOnTransportFailure?: boolean },
   ): Promise<T> {
-    this.registry.setServerState(server.name, "loading");
-    const connection = new SdkMcpConnection(undefined, {
-      ...(this.extensionServerOwnershipStore[server.name]
-        ? { ownership: this.extensionServerOwnershipStore[server.name] }
-        : {}),
-      ...(options?.uiOpener ? { opener: options.uiOpener } : {}),
-    });
+    const allowRetry = options?.retryOnTransportFailure === true;
+    let attempt = 0;
 
-    try {
-      await connection.connect(server);
-      return await operation(connection);
-    } catch (error) {
-      this.registry.setServerState(server.name, "error", {
-        lastError: describeError(error),
-      });
-      throw error;
-    } finally {
-      await closeConnectionQuietly(connection, `withConnection:${server.name}`);
+    while (true) {
+      attempt += 1;
+      const entry = await this.acquirePooledConnection(server);
+      entry.activeCalls += 1;
+      if (entry.idleTimer) {
+        clearTimeout(entry.idleTimer);
+        entry.idleTimer = undefined;
+      }
+
+      const ownership = this.extensionServerOwnershipStore[server.name];
+      const targetOpener = options?.uiOpener;
+      let acquiredOpener = false;
+
+      if (ownership) {
+        while (
+          entry.activeUiOpenerCount > 0 &&
+          entry.activeUiOpener !== targetOpener &&
+          this.connectionPool.get(server.name) === entry &&
+          entry.connection.isConnected
+        ) {
+          await new Promise<void>((resolve) => {
+            entry.uiOpenerWaiters.push(resolve);
+          });
+        }
+        if (this.connectionPool.get(server.name) !== entry || !entry.connection.isConnected) {
+          entry.activeCalls = Math.max(0, entry.activeCalls - 1);
+          if (this.disposed) {
+            throw new McpConnectionError(`MCP service has been disposed: ${server.name}`);
+          }
+          continue;
+        }
+        entry.activeUiOpener = targetOpener;
+        entry.activeUiOpenerCount += 1;
+        acquiredOpener = true;
+        entry.connection.setSpiritUi({
+          ownership,
+          ...(targetOpener ? { opener: targetOpener } : {}),
+        });
+      } else {
+        entry.connection.setSpiritUi({});
+      }
+
+      try {
+        return await operation(entry.connection);
+      } catch (error) {
+        const transportFailed = !entry.connection.isConnected || isTransportFailureError(error);
+        if (transportFailed) {
+          await this.evictPooledConnection(server.name, entry, `error:${server.name}`);
+          if (allowRetry && attempt < 2 && !this.disposed) {
+            continue;
+          }
+        }
+        this.registry.setServerState(server.name, "error", {
+          lastError: describeError(error),
+        });
+        throw error;
+      } finally {
+        if (acquiredOpener) {
+          entry.activeUiOpenerCount = Math.max(0, entry.activeUiOpenerCount - 1);
+          if (entry.activeUiOpenerCount === 0) {
+            entry.activeUiOpener = undefined;
+            entry.connection.setSpiritUi(ownership ? { ownership } : {});
+            const waiters = entry.uiOpenerWaiters.splice(0);
+            for (const wake of waiters) {
+              wake();
+            }
+          }
+        }
+        entry.activeCalls = Math.max(0, entry.activeCalls - 1);
+        if (this.connectionPool.get(server.name) === entry && entry.activeCalls === 0) {
+          this.scheduleIdleEviction(server.name, entry);
+        }
+      }
     }
+  }
+
+  private async acquirePooledConnection(
+    server: ResolvedMcpServerConfig,
+  ): Promise<PooledMcpConnection> {
+    const digest = this.resolvedServerPoolDigest(server);
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      if (this.disposed) {
+        throw new McpConnectionError(`MCP service has been disposed: ${server.name}`);
+      }
+
+      const existing = this.connectionPool.get(server.name);
+      if (existing) {
+        if (existing.digest === digest) {
+          if (existing.connectPromise) {
+            try {
+              await existing.connectPromise;
+            } catch (error) {
+              if (
+                !this.disposed &&
+                this.connectionPool.get(server.name) !== undefined &&
+                this.connectionPool.get(server.name) !== existing
+              ) {
+                continue;
+              }
+              throw error;
+            }
+            if (
+              this.connectionPool.get(server.name) === existing &&
+              existing.connection.isConnected
+            ) {
+              return existing;
+            }
+            continue;
+          }
+          if (existing.connection.isConnected) {
+            return existing;
+          }
+        }
+        await this.evictPooledConnection(server.name, existing, `replace:${server.name}`);
+        continue;
+      }
+
+      this.registry.setServerState(server.name, "loading");
+      const entry: PooledMcpConnection = {
+        digest,
+        connection: new SdkMcpConnection(undefined, {
+          mcpAppsUi: this.serviceOptions.enableMcpApps === true,
+          ...(this.extensionServerOwnershipStore[server.name]
+            ? { ownership: this.extensionServerOwnershipStore[server.name] }
+            : {}),
+          onUnexpectedClose: () => {
+            if (this.connectionPool.get(server.name) === entry) {
+              this.connectionPool.delete(server.name);
+            }
+            if (entry.idleTimer) {
+              clearTimeout(entry.idleTimer);
+              entry.idleTimer = undefined;
+            }
+            const waiters = entry.uiOpenerWaiters.splice(0);
+            for (const wake of waiters) {
+              wake();
+            }
+          },
+          onToolsListChanged: () => {
+            this.invalidateToolingCacheForServer(server.name);
+          },
+          onResourcesListChanged: () => {
+            this.invalidateToolingCacheForServer(server.name);
+          },
+        }),
+        activeCalls: 0,
+        activeUiOpenerCount: 0,
+        uiOpenerWaiters: [],
+      };
+
+      const connectPromise = (async () => {
+        try {
+          await entry.connection.connect(server);
+          if (this.disposed || this.connectionPool.get(server.name) !== entry) {
+            await closeConnectionQuietly(entry.connection, `abortedConnect:${server.name}`);
+            throw new McpConnectionError(
+              `MCP connection invalidated during startup: ${server.name}`,
+            );
+          }
+          return entry.connection;
+        } catch (error) {
+          if (this.connectionPool.get(server.name) === entry) {
+            this.connectionPool.delete(server.name);
+          }
+          this.registry.setServerState(server.name, "error", {
+            lastError: describeError(error),
+          });
+          throw error;
+        } finally {
+          entry.connectPromise = undefined;
+        }
+      })();
+
+      entry.connectPromise = connectPromise;
+      this.connectionPool.set(server.name, entry);
+      await connectPromise;
+      return entry;
+    }
+
+    throw new McpConnectionError(`Failed to acquire pooled MCP connection: ${server.name}`);
+  }
+
+  private async evictPooledConnection(
+    serverName: string,
+    expected: PooledMcpConnection,
+    reason: string,
+  ): Promise<void> {
+    if (this.connectionPool.get(serverName) === expected) {
+      this.connectionPool.delete(serverName);
+    }
+    if (expected.idleTimer) {
+      clearTimeout(expected.idleTimer);
+      expected.idleTimer = undefined;
+    }
+    const waiters = expected.uiOpenerWaiters.splice(0);
+    for (const wake of waiters) {
+      wake();
+    }
+    if (expected.connectPromise) {
+      try {
+        await expected.connectPromise;
+      } catch {
+        // Ignore startup error during eviction.
+      }
+    }
+    await closeConnectionQuietly(expected.connection, reason);
+  }
+
+  private async evictStalePooledConnections(
+    resolvedServers: Record<string, ResolvedMcpServerConfig>,
+  ): Promise<void> {
+    const evictions: Promise<void>[] = [];
+    for (const [serverName, entry] of this.connectionPool.entries()) {
+      const next = resolvedServers[serverName];
+      if (!next || !next.enabled || this.resolvedServerPoolDigest(next) !== entry.digest) {
+        evictions.push(this.evictPooledConnection(serverName, entry, `configChange:${serverName}`));
+      }
+    }
+    if (evictions.length > 0) {
+      await Promise.all(evictions);
+    }
+  }
+
+  private scheduleIdleEviction(serverName: string, entry: PooledMcpConnection): void {
+    const idleMs = this.serviceOptions.idleTimeoutMs ?? DEFAULT_MCP_POOL_IDLE_TIMEOUT_MS;
+    if (idleMs <= 0) {
+      return;
+    }
+    if (entry.idleTimer) {
+      clearTimeout(entry.idleTimer);
+    }
+    entry.idleTimer = setTimeout(() => {
+      entry.idleTimer = undefined;
+      if (this.connectionPool.get(serverName) === entry && entry.activeCalls === 0) {
+        void this.evictPooledConnection(serverName, entry, `idle:${serverName}`);
+      }
+    }, idleMs);
+    entry.idleTimer.unref?.();
+  }
+
+  private resolvedServerPoolDigest(server: ResolvedMcpServerConfig): string {
+    return createHash("sha1")
+      .update(
+        JSON.stringify({
+          server,
+          enableMcpApps: this.serviceOptions.enableMcpApps === true,
+        }),
+      )
+      .digest("hex");
   }
 
   private async buildEnvLookupStore(): Promise<EnvLookupStore> {
@@ -803,7 +1383,24 @@ export class McpService {
     return this.windowsEnvLookupPromise;
   }
 
+  private invalidateToolingCacheForServer(serverName: string): void {
+    this.toolingInvalidationVersion += 1;
+    this.toolingCacheInitialized = false;
+    if (this.loadedConfigStore.serverScopes[serverName] === "user") {
+      sharedUserMcpToolingCache = undefined;
+    }
+    if (this.disposed) {
+      return;
+    }
+    if (this.toolingRefreshPromise) {
+      this.pendingInvalidationRefresh = true;
+      return;
+    }
+    this.launchBackgroundRefresh(true);
+  }
+
   private async refreshToolingCaches(): Promise<void> {
+    const startVersion = this.toolingInvalidationVersion;
     await this.refreshConfig();
     const userServers: ResolvedMcpServerConfig[] = [];
     const workspaceServers: ResolvedMcpServerConfig[] = [];
@@ -851,7 +1448,50 @@ export class McpService {
         }
       }
     }
-    if (!userCacheHit && userServers.length > 0) {
+    console.error("[mcp-service] refreshToolingCaches.start", {
+      servers: userServers.length + workspaceServers.length,
+      userCacheHit,
+      userServers: userServers.length,
+      workspaceServers: workspaceServers.length,
+    });
+
+    const userDiscoveryTask =
+      !userCacheHit && userServers.length > 0
+        ? Promise.all(
+            userServers.map(async (server) => {
+              const localTools: McpToolIndexEntry[] = [];
+              const localResources: McpResourceIndexEntry[] = [];
+              const localPrompts = new Map<string, McpPromptCatalogEntry[]>();
+              const status = await this.discoverServerTooling(
+                server,
+                localTools,
+                localResources,
+                localPrompts,
+              );
+              return { serverName: server.name, status, localTools, localResources, localPrompts };
+            }),
+          )
+        : Promise.resolve(null);
+
+    const workspaceDiscoveryTask =
+      workspaceServers.length > 0
+        ? Promise.all(
+            workspaceServers.map(async (server) => {
+              const localTools: McpToolIndexEntry[] = [];
+              const localResources: McpResourceIndexEntry[] = [];
+              const localPrompts = new Map<string, McpPromptCatalogEntry[]>();
+              await this.discoverServerTooling(server, localTools, localResources, localPrompts);
+              return { localTools, localResources, localPrompts };
+            }),
+          )
+        : Promise.resolve([]);
+
+    const [userResults, workspaceResults] = await Promise.all([
+      userDiscoveryTask,
+      workspaceDiscoveryTask,
+    ]);
+
+    if (userResults) {
       const userIndexEntries: McpToolIndexEntry[] = [];
       const userResourceEntries: McpResourceIndexEntry[] = [];
       const userPrompts = new Map<string, McpPromptCatalogEntry[]>();
@@ -859,14 +1499,13 @@ export class McpService {
         string,
         { state: McpServerRuntimeState; cachedTools: number; lastError?: string }
       >();
-      for (const server of userServers) {
-        const status = await this.discoverServerTooling(
-          server,
-          userIndexEntries,
-          userResourceEntries,
-          userPrompts,
-        );
-        userServerStates.set(server.name, status);
+      for (const item of userResults) {
+        userIndexEntries.push(...item.localTools);
+        userResourceEntries.push(...item.localResources);
+        for (const [serverName, entries] of item.localPrompts) {
+          userPrompts.set(serverName, entries);
+        }
+        userServerStates.set(item.serverName, item.status);
       }
       sharedUserMcpToolingCache = {
         digest: currentUserDigest,
@@ -882,22 +1521,20 @@ export class McpService {
       }
     }
 
-    console.error("[mcp-service] refreshToolingCaches.start", {
-      servers: userServers.length + workspaceServers.length,
-      userCacheHit,
-      userServers: userServers.length,
-      workspaceServers: workspaceServers.length,
-    });
-
-    for (const server of workspaceServers) {
-      await this.discoverServerTooling(server, indexEntries, resourceEntries, prompts);
+    for (const item of workspaceResults) {
+      indexEntries.push(...item.localTools);
+      resourceEntries.push(...item.localResources);
+      for (const [serverName, entries] of item.localPrompts) {
+        prompts.set(serverName, entries);
+      }
     }
 
     this.toolIndexStore = indexEntries;
     this.resourceIndexStore = resourceEntries;
     this.catalogRevisionStore += 1;
     this.promptCatalogStore = prompts;
-    this.toolingCacheInitialized = true;
+    this.toolingCacheInitialized = this.toolingInvalidationVersion === startVersion;
+    this.initialDiscoverySettled = true;
     console.error("[mcp-service] refreshToolingCaches.done", {
       indexedTools: indexEntries.length,
       indexedResources: resourceEntries.length,
@@ -913,75 +1550,100 @@ export class McpService {
     prompts: Map<string, McpPromptCatalogEntry[]>,
   ): Promise<{ state: McpServerRuntimeState; cachedTools: number; lastError?: string }> {
     this.registry.setServerState(server.name, "loading", { cachedTools: 0 });
-    const connection = new SdkMcpConnection();
     try {
-      await connection.connect(server);
-      const capabilities = connection.serverCapabilities;
-      const discoveredTools =
-        server.capabilities.tools && capabilities?.tools !== undefined
-          ? (await connection.listTools()).tools
-          : [];
-      const discoveredResources =
-        server.capabilities.resources && capabilities?.resources !== undefined
-          ? (await connection.listResources()).resources
-          : [];
-      const discoveredPrompts =
-        server.capabilities.prompts && capabilities?.prompts !== undefined
-          ? (await connection.listPrompts()).prompts
-          : [];
+      return await this.withConnection(
+        server,
+        async (connection) => {
+          const capabilities = connection.serverCapabilities;
+          const [toolsResult, resourcesResult, promptsResult] = await Promise.all([
+            server.capabilities.tools && capabilities?.tools !== undefined
+              ? connection.listTools()
+              : Promise.resolve({ tools: [] }),
+            server.capabilities.resources && capabilities?.resources !== undefined
+              ? connection.listResources()
+              : Promise.resolve({ resources: [] }),
+            server.capabilities.prompts && capabilities?.prompts !== undefined
+              ? connection.listPrompts()
+              : Promise.resolve({ prompts: [] }),
+          ]);
+          const discoveredTools = toolsResult.tools;
+          const discoveredResources = resourcesResult.resources;
+          const discoveredPrompts = promptsResult.prompts;
 
-      for (const tool of discoveredTools) {
-        const description =
-          tool.description ?? `MCP tool ${tool.name} from server ${server.displayName}.`;
-        const inputSchema = isJsonRecord(tool.inputSchema)
-          ? (tool.inputSchema as JsonValue)
-          : {
-              type: "object",
-              additionalProperties: true,
-            };
-        const annotations = parseMcpToolApprovalAnnotations(tool.annotations);
+          const referencedUiUris = new Set<string>();
+          for (const tool of discoveredTools) {
+            const description =
+              tool.description ?? `MCP tool ${tool.name} from server ${server.displayName}.`;
+            const inputSchema = isJsonRecord(tool.inputSchema)
+              ? (tool.inputSchema as JsonValue)
+              : {
+                  type: "object",
+                  additionalProperties: true,
+                };
+            const annotations = parseMcpToolApprovalAnnotations(tool.annotations);
+            const ui = parseMcpToolUiMeta(tool as { _meta?: Record<string, unknown> });
+            if (ui?.resourceUri) {
+              referencedUiUris.add(ui.resourceUri);
+            }
 
-        indexEntries.push({
-          server: server.name,
-          displayName: server.displayName,
-          toolName: tool.name,
-          description,
-          inputSchema,
-          ...(annotations ? { annotations } : {}),
-        });
-      }
+            indexEntries.push({
+              server: server.name,
+              displayName: server.displayName,
+              toolName: tool.name,
+              description,
+              inputSchema,
+              ...(annotations ? { annotations } : {}),
+              ...(ui ? { ui } : {}),
+            });
+          }
 
-      resourceEntries.push(
-        ...aggregateListedResourcesForServer(
-          server.name,
-          discoveredResources.map((resource) => ({
-            uri: resource.uri,
-            name: resource.name,
-            ...(resource.description === undefined ? {} : { description: resource.description }),
-            ...(resource.mimeType === undefined ? {} : { mimeType: resource.mimeType }),
-          })),
-        ),
+          resourceEntries.push(
+            ...aggregateListedResourcesForServer(
+              server.name,
+              discoveredResources.map((resource) => ({
+                uri: resource.uri,
+                name: resource.name,
+                ...(resource.description === undefined
+                  ? {}
+                  : { description: resource.description }),
+                ...(resource.mimeType === undefined ? {} : { mimeType: resource.mimeType }),
+                ...(isMcpAppUiResource(
+                  {
+                    uri: resource.uri,
+                    ...(resource.mimeType === undefined ? {} : { mimeType: resource.mimeType }),
+                  },
+                  referencedUiUris,
+                )
+                  ? { isMcpAppUi: true }
+                  : {}),
+              })),
+            ),
+          );
+
+          prompts.set(
+            server.name,
+            discoveredPrompts.map((prompt) => ({
+              name: prompt.name,
+              ...(prompt.title === undefined ? {} : { title: prompt.title }),
+              ...(prompt.description === undefined ? {} : { description: prompt.description }),
+              arguments: (prompt.arguments ?? []).map((argument) => ({
+                name: argument.name,
+                ...(argument.description === undefined
+                  ? {}
+                  : { description: argument.description }),
+                required: argument.required ?? false,
+              })),
+            })),
+          );
+
+          this.registry.clearServerError(server.name);
+          this.registry.setServerState(server.name, "ready", {
+            cachedTools: discoveredTools.length,
+          });
+          return { state: "ready", cachedTools: discoveredTools.length };
+        },
+        { retryOnTransportFailure: true },
       );
-
-      prompts.set(
-        server.name,
-        discoveredPrompts.map((prompt) => ({
-          name: prompt.name,
-          ...(prompt.title === undefined ? {} : { title: prompt.title }),
-          ...(prompt.description === undefined ? {} : { description: prompt.description }),
-          arguments: (prompt.arguments ?? []).map((argument) => ({
-            name: argument.name,
-            ...(argument.description === undefined ? {} : { description: argument.description }),
-            required: argument.required ?? false,
-          })),
-        })),
-      );
-
-      this.registry.clearServerError(server.name);
-      this.registry.setServerState(server.name, "ready", {
-        cachedTools: discoveredTools.length,
-      });
-      return { state: "ready", cachedTools: discoveredTools.length };
     } catch (error) {
       const lastError = describeError(error);
       this.registry.setServerState(server.name, "error", {
@@ -989,8 +1651,6 @@ export class McpService {
         lastError,
       });
       return { state: "error", cachedTools: 0, lastError };
-    } finally {
-      await closeConnectionQuietly(connection, `refreshToolingCaches:${server.name}`);
     }
   }
 
@@ -999,16 +1659,27 @@ export class McpService {
       return;
     }
 
-    if (!force && this.toolingCacheInitialized) {
+    const diskChanged = this.hasDiskConfigChanged();
+    if (!force && this.toolingCacheInitialized && !diskChanged) {
       return;
     }
 
     this.toolingCacheInitialized = false;
-    this.primeRegistryFromDisk();
+    this.pendingInvalidationRefresh = false;
+    // Only prime from disk on cold start before any resolved config exists; on subsequent
+    // refreshes keep the previous resolved snapshot (including extension MCP servers) intact
+    // until `refreshToolingCaches()` atomically swaps in the new discovery results.
+    if (Object.keys(this.loadedConfigStore.resolved).length === 0) {
+      this.primeRegistryFromDisk();
+    }
     const refreshPromise = this.refreshToolingCaches();
     const settledPromise = refreshPromise.finally(() => {
       if (this.toolingRefreshPromise === refreshPromise) {
         this.toolingRefreshPromise = undefined;
+      }
+      if (!this.disposed && this.pendingInvalidationRefresh) {
+        this.pendingInvalidationRefresh = false;
+        this.launchBackgroundRefresh(true);
       }
     });
     void settledPromise.catch((error) => {
@@ -1017,6 +1688,18 @@ export class McpService {
       });
     });
     this.toolingRefreshPromise = refreshPromise;
+  }
+
+  private hasDiskConfigChanged(): boolean {
+    if (!this.serviceOptions.configSource || this.diskConfigDigestStore === undefined) {
+      return false;
+    }
+    try {
+      const { merged } = this.loadMergedConfig();
+      return mcpConfigDigest(merged) !== this.diskConfigDigestStore;
+    } catch {
+      return true;
+    }
   }
 
   private primeRegistryFromDisk(): void {
@@ -1060,7 +1743,8 @@ export class McpService {
   }
 
   private userConfigDigest(config: McpConfigFile): string {
-    return `${this.serviceOptions.configSource?.scopeKey ?? ""}\0${mcpConfigDigest(config)}`;
+    const mode = this.serviceOptions.enableMcpApps === true ? "mcp-apps" : "headless";
+    return `${this.serviceOptions.configSource?.scopeKey ?? ""}\0${mode}\0${mcpConfigDigest(config)}`;
   }
 }
 
@@ -1439,6 +2123,96 @@ async function pathExists(path: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+class ServerConcurrencyLimiter {
+  private active = 0;
+  private readonly queue: Array<() => void> = [];
+
+  constructor(private readonly maxConcurrent: number) {}
+
+  async run<T>(task: () => Promise<T>): Promise<T> {
+    if (this.active >= this.maxConcurrent) {
+      await new Promise<void>((resolve) => {
+        this.queue.push(resolve);
+      });
+    }
+    this.active += 1;
+    try {
+      return await task();
+    } finally {
+      this.active -= 1;
+      const next = this.queue.shift();
+      if (next) {
+        next();
+      }
+    }
+  }
+}
+
+const TRANSPORT_FAILURE_CODES = new Set<string | number>([
+  -32001,
+  404,
+  410,
+  "EPIPE",
+  "ECONNRESET",
+  "ECONNREFUSED",
+  "ETIMEDOUT",
+  "ENOTFOUND",
+  "EAI_AGAIN",
+  "UND_ERR_SOCKET",
+  "UND_ERR_CONNECT_TIMEOUT",
+  "UND_ERR_HEADERS_TIMEOUT",
+  "UND_ERR_BODY_TIMEOUT",
+  "UND_ERR_CLOSED",
+  "UND_ERR_DESTROYED",
+]);
+
+function isTransportFailureError(error: unknown): boolean {
+  const visited = new Set<unknown>();
+  let current: unknown = error;
+  for (let depth = 0; depth < 6 && current !== undefined && current !== null; depth += 1) {
+    if (visited.has(current)) {
+      break;
+    }
+    visited.add(current);
+    if (current instanceof McpConnectionError) {
+      return true;
+    }
+    if (typeof current === "object") {
+      const record = current as { code?: unknown; cause?: unknown; message?: unknown };
+      if (
+        (typeof record.code === "string" || typeof record.code === "number") &&
+        TRANSPORT_FAILURE_CODES.has(record.code)
+      ) {
+        return true;
+      }
+      const message =
+        typeof record.message === "string"
+          ? record.message
+          : current instanceof Error
+            ? current.message
+            : "";
+      if (
+        /connection closed|transport closed|not connected|EPIPE|ECONNRESET|ECONNREFUSED|ETIMEDOUT|socket hang up|terminated|fetch failed|request timed out|UND_ERR_|session not found|HTTP 404|HTTP 410/iu.test(
+          message,
+        )
+      ) {
+        return true;
+      }
+      current = record.cause;
+      continue;
+    }
+    if (
+      /connection closed|transport closed|not connected|EPIPE|ECONNRESET|ECONNREFUSED|ETIMEDOUT|socket hang up|terminated|fetch failed|request timed out|UND_ERR_|session not found|HTTP 404|HTTP 410/iu.test(
+        String(current),
+      )
+    ) {
+      return true;
+    }
+    break;
+  }
+  return false;
 }
 
 async function closeConnectionQuietly(

@@ -1075,6 +1075,7 @@ export class DesktopRuntimeEventOrchestrator {
             ...(execution.hostUi?.fileChangeDiff
               ? { fileChangeDiff: execution.hostUi.fileChangeDiff }
               : {}),
+            ...(execution.hostUi?.mcpApp ? { mcpApp: execution.hostUi.mcpApp } : {}),
             ...(todosBeforeWrite !== undefined
               ? { todoWriteBeforeTodos: [...todosBeforeWrite] }
               : {}),

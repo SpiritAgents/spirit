@@ -1553,5 +1553,26 @@
       "pairingRequired": "需要完成首次配对。",
       "invalidProvider": "无效的提供商参数。"
     }
+  },
+  "mcpApp": {
+    "loading": "正在加载应用…",
+    "loadFailed": "应用加载失败",
+    "retry": "重试",
+    "sandboxUnavailable": "当前宿主未启用 MCP App 沙箱。",
+    "pictureInPicture": "画中画",
+    "fullscreen": "全屏",
+    "returnInline": "返回行内",
+    "dockedInPip": "已停靠在画中画",
+    "viewingInFullscreen": "正在全屏查看",
+    "draftConflictTitle": "输入框已有草稿",
+    "draftConflictDescription": "{{app}} 希望向输入框预填消息，但当前输入框已有内容。请选择处理方式。",
+    "appendDraft": "追加",
+    "replaceDraft": "替换草稿",
+    "openExternalLinkTitle": "打开外部链接",
+    "openExternalLinkDescription": "{{app}} 请求打开其声明源之外的链接。继续前请确认该地址。",
+    "openLink": "打开链接",
+    "toolApprovalTitle": "批准 MCP App 工具调用",
+    "toolApprovalDescription": "{{app}} 请求在 {{server}} 上运行 {{tool}}。继续前请确认参数。",
+    "toolApprovalAllow": "运行工具"
   }
 }

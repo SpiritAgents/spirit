@@ -893,6 +893,10 @@ html.spirit-reduce-motion.spirit-launch-splash-exiting
     [data-slot="animated-collapse-content"] {
       animation: none !important;
     }
+    [data-slot="animated-collapse-content"][data-state="closed"] {
+      height: 0;
+      opacity: 0;
+    }
   }
 }
 
