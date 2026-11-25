@@ -795,6 +795,8 @@
     },
     "reasoningThinkingActive": "Réflexion en cours",
     "reasoningThinkingIdle": "Réflexion terminée",
+    "reasoningCompactingActive": "Compaction en cours",
+    "reasoningCompactingIdle": "Compaction terminée",
     "noModelsAvailable": "Aucun modèle disponible",
     "abort": "Abandonner",
     "send": "Envoyer",

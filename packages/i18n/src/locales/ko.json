@@ -795,6 +795,8 @@
     },
     "reasoningThinkingActive": "생각 중",
     "reasoningThinkingIdle": "생각 완료",
+    "reasoningCompactingActive": "압축 중",
+    "reasoningCompactingIdle": "압축 완료",
     "noModelsAvailable": "사용 가능한 모델이 없습니다",
     "abort": "중단",
     "send": "전송",

@@ -41,3 +41,15 @@ test("Automation trigger contribution groups use the same Automation semantics a
     );
   }
 });
+
+test("all locales define compaction shimmer labels", () => {
+  for (const [locale, { translation }] of Object.entries(resources)) {
+    assert.ok(translation.app.reasoningCompactingActive.trim().length > 0, locale);
+    assert.ok(translation.app.reasoningCompactingIdle.trim().length > 0, locale);
+  }
+  assert.equal(resources["zh-CN"].translation.app.reasoningCompactingActive, "压缩");
+  assert.equal(resources["zh-CN"].translation.app.reasoningCompactingIdle, "压缩");
+  assert.equal(resources["zh-TW"].translation.app.reasoningCompactingActive, "壓縮");
+  assert.equal(resources["zh-TW"].translation.app.reasoningCompactingIdle, "壓縮");
+  assert.equal(resources["zh-TW"].translation.app.modelPickerThinking, "思考");
+});

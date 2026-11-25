@@ -57,8 +57,13 @@ export function ThinkingLabelWithShimmer({ active }: { active: boolean }) {
 }
 
 export function CompactionLabelWithShimmer({ active }: { active: boolean }) {
+  const { t } = useTranslation();
   return (
-    <ReasoningLabelWithShimmer active={active} activeLabel="Compacting" idleLabel="Compacted" />
+    <ReasoningLabelWithShimmer
+      active={active}
+      activeLabel={t("app.reasoningCompactingActive")}
+      idleLabel={t("app.reasoningCompactingIdle")}
+    />
   );
 }
 

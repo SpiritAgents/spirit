@@ -795,6 +795,8 @@
     },
     "reasoningThinkingActive": "思考中",
     "reasoningThinkingIdle": "思考済み",
+    "reasoningCompactingActive": "圧縮中",
+    "reasoningCompactingIdle": "圧縮済み",
     "noModelsAvailable": "利用可能なモデルがありません",
     "abort": "中断",
     "send": "送信",

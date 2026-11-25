@@ -59,7 +59,15 @@ test("notifications retranslate statuses without appending a misleading Failed s
   }
   const tool = makeTool();
   await i18n.changeLanguage("zh-CN");
-  assert.equal(getToolCallSummaryParts(tool).headline, "Shell 已完成");
+  assert.equal(getToolCallSummaryParts(tool).headline, "Shell 完成");
+  assert.equal(getToolCallSummaryParts(makeTool({ status: "stopped" })).headline, "Shell 停止");
+  assert.equal(getToolCallSummaryParts(makeTool({ status: "interrupted" })).headline, "Shell 中断");
+  assert.equal(getToolCallSummaryParts(makeTool({ kind: "subagent" })).headline, "子智能体 完成");
+  await i18n.changeLanguage("zh-TW");
+  assert.equal(getToolCallSummaryParts(tool).headline, "Shell 完成");
+  assert.equal(getToolCallSummaryParts(makeTool({ status: "stopped" })).headline, "Shell 停止");
+  assert.equal(getToolCallSummaryParts(makeTool({ status: "interrupted" })).headline, "Shell 中斷");
+  assert.equal(getToolCallSummaryParts(makeTool({ kind: "subagent" })).headline, "子代理 完成");
 });
 
 test("Shell notices retain the reason before the command with Shell summary tones", async () => {

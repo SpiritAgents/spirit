@@ -805,6 +805,8 @@
     },
     "reasoningThinkingActive": "Думает",
     "reasoningThinkingIdle": "Подумал",
+    "reasoningCompactingActive": "Сжатие",
+    "reasoningCompactingIdle": "Сжато",
     "noModelsAvailable": "Нет доступных моделей",
     "abort": "Прервать",
     "send": "Отправить",
