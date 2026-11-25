@@ -3,6 +3,7 @@ import { Block, parseMarkdownIntoBlocks, type BlockProps } from "streamdown";
 import type { Pluggable } from "unified";
 
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
+import { AgentInlineLink } from "@/components/agent-inline-link";
 import type { MarkdownTone } from "@/lib/markdown-message-components";
 import {
   SpiritStreamdownMarkdown,
@@ -191,6 +192,7 @@ function AgentMarkdownMessageImpl({
         BlockComponent={motionActive ? StreamingAnimateBlock : undefined}
         isAnimating={motionActive}
         animated={motionActive ? streamingAnimateOptions : false}
+        linkComponent={AgentInlineLink}
       />
     </StreamBlockAnimateContext.Provider>
   );

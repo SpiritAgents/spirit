@@ -9,6 +9,7 @@ import { useWorkspaceMarkdownLinkClick } from "./workspace-markdown-link-context
 import {
   createMarkdownMessageComponents,
   markdownMessageRootClassName,
+  type MarkdownLinkComponentProps,
   type MarkdownSize,
   type MarkdownTone,
 } from "./markdown-message-components.js";
@@ -48,6 +49,7 @@ export type SpiritStreamdownMarkdownProps = {
   BlockComponent?: ComponentType<BlockProps>;
   isAnimating?: boolean;
   animated?: ComponentProps<typeof Streamdown>["animated"];
+  linkComponent?: ComponentType<MarkdownLinkComponentProps>;
 };
 
 export function SpiritStreamdownMarkdown({
@@ -68,6 +70,7 @@ export function SpiritStreamdownMarkdown({
   BlockComponent,
   isAnimating = false,
   animated = false,
+  linkComponent,
 }: SpiritStreamdownMarkdownProps) {
   const onMarkdownLinkClick = useWorkspaceMarkdownLinkClick();
   const streamdownPlugins = useMemo(
@@ -100,6 +103,7 @@ export function SpiritStreamdownMarkdown({
       localImageBaseDir,
       localImageAllowedRootDir,
       readLocalVideoPreviewUrl,
+      linkComponent,
     );
     return {
       ...rest,
@@ -121,6 +125,7 @@ export function SpiritStreamdownMarkdown({
     resolvedDark,
     size,
     tone,
+    linkComponent,
   ]);
 
   return (

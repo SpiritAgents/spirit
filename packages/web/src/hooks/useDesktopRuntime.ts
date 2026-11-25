@@ -1957,6 +1957,16 @@ export function useDesktopRuntime() {
     [api],
   );
 
+  const fetchLinkPreview = useCallback(
+    (request: import("@spiritagent/api/types").LinkPreviewRequest) => {
+      if (!api) {
+        return Promise.reject(new Error("Host API is unavailable."));
+      }
+      return api.fetchLinkPreview(request);
+    },
+    [api],
+  );
+
   const disconnectProvider = useCallback(
     async (providerId: string) => {
       if (!api) {
@@ -4283,6 +4293,7 @@ export function useDesktopRuntime() {
     completeChatGptOAuth,
     cancelChatGptOAuth,
     openExternalUrl,
+    fetchLinkPreview,
     addMcpServer,
     importExtension,
     installBuiltInExtension,
