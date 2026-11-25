@@ -622,6 +622,18 @@ async function handleApiRequest({
     return;
   }
 
+  if (request.method === "POST" && pathname === "/api/link-preview") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("fetchLinkPreview", {
+        request: { url: typeof jsonBody?.url === "string" ? jsonBody.url : "" },
+      }),
+    );
+    return;
+  }
+
   if (request.method === "POST" && pathname === "/api/extensions") {
     writeJson(
       request,

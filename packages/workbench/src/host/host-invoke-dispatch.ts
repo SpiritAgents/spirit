@@ -20,6 +20,7 @@ export interface HostCommandDelegate {
   ): Promise<unknown>;
   cancelChatGptOAuth(request: CommandPayloads["cancelChatGptOAuth"]["request"]): Promise<unknown>;
   openExternalUrl(request: CommandPayloads["openExternalUrl"]["request"]): Promise<unknown>;
+  fetchLinkPreview(request: CommandPayloads["fetchLinkPreview"]["request"]): Promise<unknown>;
   addMcpServer(request: CommandPayloads["addMcpServer"]["request"]): Promise<unknown>;
   deleteMcpServer(request: CommandPayloads["deleteMcpServer"]["request"]): Promise<unknown>;
   saveHookEntry(request: CommandPayloads["saveHookEntry"]["request"]): Promise<unknown>;
@@ -245,6 +246,7 @@ const hostCommandDispatch = {
   completeChatGptOAuth: (host, payload) => host.completeChatGptOAuth(payload.request),
   cancelChatGptOAuth: (host, payload) => host.cancelChatGptOAuth(payload.request),
   openExternalUrl: (host, payload) => host.openExternalUrl(payload.request),
+  fetchLinkPreview: (host, payload) => host.fetchLinkPreview(payload.request),
   addMcpServer: (host, payload) => host.addMcpServer(payload.request),
   deleteMcpServer: (host, payload) => host.deleteMcpServer(payload.request),
   saveHookEntry: (host, payload) => host.saveHookEntry(payload.request),

@@ -17,6 +17,7 @@ export type HostCommandName =
   | "completeChatGptOAuth"
   | "cancelChatGptOAuth"
   | "openExternalUrl"
+  | "fetchLinkPreview"
   | "addMcpServer"
   | "deleteMcpServer"
   | "saveHookEntry"

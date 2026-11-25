@@ -173,6 +173,9 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   openExternalUrl(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "openExternalUrl", { request });
   },
+  fetchLinkPreview(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "fetchLinkPreview", { request });
+  },
   addMcpServer(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "addMcpServer", { request });
   },

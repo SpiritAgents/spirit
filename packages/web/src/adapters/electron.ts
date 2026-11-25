@@ -79,6 +79,9 @@ export async function createElectronHostApi(): Promise<HostApi> {
     openExternalUrl(request) {
       return bridge.openExternalUrl(request);
     },
+    fetchLinkPreview(request) {
+      return bridge.fetchLinkPreview(request);
+    },
     addMcpServer(request) {
       return bridge.addMcpServer(request);
     },

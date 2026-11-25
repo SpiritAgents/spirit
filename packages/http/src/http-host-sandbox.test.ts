@@ -50,6 +50,13 @@ describe("createDesktopHttpHost MCP Apps companion sandbox", () => {
         if (command === "mcpAppUpdateModelContext") {
           return { ok: true };
         }
+        if (command === "fetchLinkPreview") {
+          return {
+            url: "https://example.com/",
+            finalUrl: "https://example.com/",
+            headHtml: "<head><title>Example</title></head>",
+          };
+        }
         return {};
       },
       logger: { log() {}, error() {} },
@@ -126,11 +133,25 @@ describe("createDesktopHttpHost MCP Apps companion sandbox", () => {
     });
     expect(ctxRes.status).toBe(200);
 
+    const previewRes = await fetch(`${state.url}/api/link-preview`, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer test-token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ url: "https://example.com/" }),
+    });
+    expect(previewRes.status).toBe(200);
+    expect(await previewRes.json()).toMatchObject({
+      headHtml: "<head><title>Example</title></head>",
+    });
+
     expect(invoked.map((item) => item.command)).toEqual([
       "bootstrap",
       "mcpAppReadResource",
       "mcpAppCallTool",
       "mcpAppUpdateModelContext",
+      "fetchLinkPreview",
     ]);
 
     await host.stop();
