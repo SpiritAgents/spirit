@@ -800,7 +800,6 @@
     "typeMessage": "Type a message…",
     "emptyMessage": "Empty message",
     "doodle": {
-      "startSomething": "Start something.",
       "letsBuild": "Let's build.",
       "doSomethingIn": "Do something in {{workspace}}?"
     },

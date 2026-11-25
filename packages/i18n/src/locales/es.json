@@ -767,7 +767,6 @@
     "typeMessage": "Escribe un mensaje…",
     "emptyMessage": "Mensaje vacío",
     "doodle": {
-      "startSomething": "Empieza algo.",
       "letsBuild": "Construyamos.",
       "doSomethingIn": "¿Hacer algo en {{workspace}}?"
     },

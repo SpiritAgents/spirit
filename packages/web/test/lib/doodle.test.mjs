@@ -17,13 +17,13 @@ import {
 
 test("doodlePool excludes workspace variant when disabled", () => {
   const pool = doodlePool(false);
-  assert.equal(pool.length, 2);
+  assert.equal(pool.length, 1);
   assert.ok(!pool.includes(DOODLE_WORKSPACE_VARIANT));
 });
 
 test("doodlePool includes workspace variant when enabled", () => {
   const pool = doodlePool(true);
-  assert.equal(pool.length, 3);
+  assert.equal(pool.length, 2);
   assert.ok(pool.includes(DOODLE_WORKSPACE_VARIANT));
 });
 

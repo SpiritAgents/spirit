@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 
-export const DOODLE_PLAIN_VARIANTS = ["startSomething", "letsBuild"] as const;
+export const DOODLE_PLAIN_VARIANTS = ["letsBuild"] as const;
 
 export const DOODLE_WORKSPACE_VARIANT = "doSomethingIn" as const;
 
