@@ -914,10 +914,7 @@ export function ConversationView({
                   }
                 />
               </MessageQuoteActionsProvider>
-              {showComposerDock &&
-              !navPlaceholderActive &&
-              !approvalPreviewDemoActive &&
-              !toolCardPreviewDemoActive ? (
+              {showComposerDock && !navPlaceholderActive && !approvalPreviewDemoActive ? (
                 <ComposerDock
                   ref={handleComposerDockRef}
                   isEmptySession={isEmptySession}

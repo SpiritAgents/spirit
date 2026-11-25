@@ -1,18 +1,23 @@
 import { ToolCallCollapsible } from "@/components/tool-call/tool-call-collapsible";
 import { CONVERSATION_GUTTER_X, CONVERSATION_MAX_W } from "@/lib/conversation-layout-constants";
-import { TOOL_CARD_PREVIEW_DEMO_WORKSPACE } from "@/lib/tool-card-preview-demo";
+import {
+  TOOL_CARD_PREVIEW_DEMO_SOLID_BLACK_IMAGE_PATH,
+  TOOL_CARD_PREVIEW_DEMO_SOLID_WHITE_IMAGE_PATH,
+  TOOL_CARD_PREVIEW_DEMO_WORKSPACE,
+} from "@/lib/tool-card-preview-demo";
 import { cn } from "@/lib/utils";
 import type { ToolBlockSnapshot } from "@/types";
 
-let demoImageDataUrl: string | null = null;
+const demoImageDataUrlCache = new Map<string, string>();
 
 /**
- * A locally painted PNG (no network, no disk) so the generate_image card and its zoom dialog
+ * Locally painted PNGs (no network, no disk) so the generate_image cards and zoom dialog
  * exercise the real preview pipeline in the demo.
  */
-function demoGeneratedImageDataUrl(): string | null {
-  if (demoImageDataUrl) {
-    return demoImageDataUrl;
+function demoGeneratedImageDataUrl(filePath: string): string | null {
+  const cached = demoImageDataUrlCache.get(filePath);
+  if (cached) {
+    return cached;
   }
   if (typeof document === "undefined") {
     return null;
@@ -24,25 +29,34 @@ function demoGeneratedImageDataUrl(): string | null {
   if (!ctx) {
     return null;
   }
-  const gradient = ctx.createLinearGradient(0, 0, 640, 640);
-  gradient.addColorStop(0, "#7c3aed");
-  gradient.addColorStop(1, "#0ea5e9");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, 640, 640);
-  ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-  ctx.beginPath();
-  ctx.arc(320, 280, 110, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
-  ctx.font = "600 28px system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("Demo image", 320, 460);
-  demoImageDataUrl = canvas.toDataURL("image/png");
-  return demoImageDataUrl;
+  if (filePath === TOOL_CARD_PREVIEW_DEMO_SOLID_BLACK_IMAGE_PATH) {
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, 640, 640);
+  } else if (filePath === TOOL_CARD_PREVIEW_DEMO_SOLID_WHITE_IMAGE_PATH) {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, 640, 640);
+  } else {
+    const gradient = ctx.createLinearGradient(0, 0, 640, 640);
+    gradient.addColorStop(0, "#7c3aed");
+    gradient.addColorStop(1, "#0ea5e9");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 640, 640);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.beginPath();
+    ctx.arc(320, 280, 110, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+    ctx.font = "600 28px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Demo image", 320, 460);
+  }
+  const dataUrl = canvas.toDataURL("image/png");
+  demoImageDataUrlCache.set(filePath, dataUrl);
+  return dataUrl;
 }
 
-const demoReadLocalImagePreviewDataUrl = async (): Promise<string | null> =>
-  demoGeneratedImageDataUrl();
+const demoReadLocalImagePreviewDataUrl = async (filePath: string): Promise<string | null> =>
+  demoGeneratedImageDataUrl(filePath);
 const demoUnavailableMediaPreview = async (): Promise<string | null> => null;
 const demoSaveLocalImageAs = async (): Promise<boolean> => false;
 

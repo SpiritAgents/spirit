@@ -11,13 +11,16 @@ import i18n from "../../src/lib/i18n.ts";
 import { getToolCallSummaryParts } from "../../src/lib/tool-call-display.ts";
 import {
   buildToolCardPreviewDemoTools,
+  TOOL_CARD_PREVIEW_DEMO_IMAGE_PATH,
+  TOOL_CARD_PREVIEW_DEMO_SOLID_BLACK_IMAGE_PATH,
+  TOOL_CARD_PREVIEW_DEMO_SOLID_WHITE_IMAGE_PATH,
   TOOL_CARD_PREVIEW_DEMO_WORKSPACE,
 } from "../../src/lib/tool-card-preview-demo.ts";
 
 test("tool card preview demo covers every listed agent tool as a completed card", () => {
   const tools = buildToolCardPreviewDemoTools();
 
-  assert.equal(tools.length, 26);
+  assert.equal(tools.length, 28);
   assert.deepEqual(
     tools.map((tool) => tool.toolName),
     [
@@ -45,6 +48,8 @@ test("tool card preview demo covers every listed agent tool as a completed card"
       "dream_update",
       "dream_delete",
       "dream_record",
+      "generate_image",
+      "generate_image",
       "generate_image",
       "generate_image",
     ],
@@ -175,13 +180,17 @@ test("tool card preview demo covers every listed agent tool as a completed card"
     uri: "notes://recent",
   });
 
-  // The generate_image pair: one permanently generating, one with a local image path for the
-  // preview + zoom dialog flow.
-  const [generating, generated] = tools.slice(24, 26);
+  // The generate_image variants: one permanently generating, plus gradient, solid black, and solid
+  // white local image fixtures for the preview + zoom dialog + backdrop contrast flows.
+  const [generating, generated, generatedBlack, generatedWhite] = tools.slice(24, 28);
   assert.equal(generating.phase, "running");
   assert.equal(generating.imagePaths, undefined);
   assert.equal(generated.phase, "succeeded");
-  assert.ok(generated.imagePaths?.[0]?.endsWith(".png"));
+  assert.deepEqual(generated.imagePaths, [TOOL_CARD_PREVIEW_DEMO_IMAGE_PATH]);
+  assert.equal(generatedBlack.phase, "succeeded");
+  assert.deepEqual(generatedBlack.imagePaths, [TOOL_CARD_PREVIEW_DEMO_SOLID_BLACK_IMAGE_PATH]);
+  assert.equal(generatedWhite.phase, "succeeded");
+  assert.deepEqual(generatedWhite.imagePaths, [TOOL_CARD_PREVIEW_DEMO_SOLID_WHITE_IMAGE_PATH]);
 
   // Every card but read_file and the in-flight image card has expandable content; read_file
   // matches the real one-liner card.

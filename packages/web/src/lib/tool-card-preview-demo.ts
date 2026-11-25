@@ -14,6 +14,9 @@ import type { ToolBlockSnapshot } from "@/types";
  * collapsed summary lines and expanded details always match the real conversation area.
  */
 export const TOOL_CARD_PREVIEW_DEMO_WORKSPACE = "/workspace/demo-project";
+export const TOOL_CARD_PREVIEW_DEMO_IMAGE_PATH = `${TOOL_CARD_PREVIEW_DEMO_WORKSPACE}/out/approval-frame-mock.png`;
+export const TOOL_CARD_PREVIEW_DEMO_SOLID_BLACK_IMAGE_PATH = `${TOOL_CARD_PREVIEW_DEMO_WORKSPACE}/out/solid-black-mock.png`;
+export const TOOL_CARD_PREVIEW_DEMO_SOLID_WHITE_IMAGE_PATH = `${TOOL_CARD_PREVIEW_DEMO_WORKSPACE}/out/solid-white-mock.png`;
 
 const DEMO_SHELL_COMMAND = "ls -la";
 
@@ -525,8 +528,26 @@ export function buildToolCardPreviewDemoTools(): ToolBlockSnapshot[] {
       phase: "succeeded",
       headline: "Generated",
       detailLines: [],
-      imagePaths: [`${TOOL_CARD_PREVIEW_DEMO_WORKSPACE}/out/approval-frame-mock.png`],
-      outputExcerpt: `[media]\naction: generate_image\npath: ${TOOL_CARD_PREVIEW_DEMO_WORKSPACE}/out/approval-frame-mock.png`,
+      imagePaths: [TOOL_CARD_PREVIEW_DEMO_IMAGE_PATH],
+      outputExcerpt: `[media]\naction: generate_image\npath: ${TOOL_CARD_PREVIEW_DEMO_IMAGE_PATH}`,
+    },
+    {
+      toolCallId: "demo-generate-image-black",
+      toolName: "generate_image",
+      phase: "succeeded",
+      headline: "Generated",
+      detailLines: [],
+      imagePaths: [TOOL_CARD_PREVIEW_DEMO_SOLID_BLACK_IMAGE_PATH],
+      outputExcerpt: `[media]\naction: generate_image\npath: ${TOOL_CARD_PREVIEW_DEMO_SOLID_BLACK_IMAGE_PATH}`,
+    },
+    {
+      toolCallId: "demo-generate-image-white",
+      toolName: "generate_image",
+      phase: "succeeded",
+      headline: "Generated",
+      detailLines: [],
+      imagePaths: [TOOL_CARD_PREVIEW_DEMO_SOLID_WHITE_IMAGE_PATH],
+      outputExcerpt: `[media]\naction: generate_image\npath: ${TOOL_CARD_PREVIEW_DEMO_SOLID_WHITE_IMAGE_PATH}`,
     },
   ];
 }
