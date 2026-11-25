@@ -27,14 +27,12 @@ afterEach(async () => {
   );
 });
 
-test("reads only the document head from an explicitly allowed loopback fixture", async () => {
+test("reads only the document head from a loopback fixture by default", async () => {
   const origin = await fixture((_request, response) => {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     response.end("<html><head><title>Fixture</title></head><body>ignored</body></html>");
   });
-  const document = await fetchLinkPreviewDocument(`${origin}/page#section`, {
-    allowPrivateNetwork: true,
-  });
+  const document = await fetchLinkPreviewDocument(`${origin}/page#section`);
   assert.equal(document.url, `${origin}/page`);
   assert.equal(document.finalUrl, `${origin}/page`);
   assert.equal(document.headHtml, "<html><head><title>Fixture</title></head>");
@@ -50,9 +48,7 @@ test("resolves same-origin redirects and reports the final URL", async () => {
     response.writeHead(200, { "Content-Type": "application/xhtml+xml" });
     response.end("<head><title>Final</title></head>");
   });
-  const document = await fetchLinkPreviewDocument(`${origin}/start`, {
-    allowPrivateNetwork: true,
-  });
+  const document = await fetchLinkPreviewDocument(`${origin}/start`);
   assert.equal(document.finalUrl, `${origin}/final`);
   assert.equal(document.headHtml, "<head><title>Final</title></head>");
 });
@@ -64,7 +60,7 @@ test("resolves hostnames when Node requests all candidate addresses", async () =
   });
   const url = new URL(origin);
   url.hostname = "localhost";
-  const document = await fetchLinkPreviewDocument(url.toString(), { allowPrivateNetwork: true });
+  const document = await fetchLinkPreviewDocument(url.toString());
   assert.equal(document.headHtml, "<head><title>Hostname</title></head>");
 });
 
@@ -76,14 +72,27 @@ test("rejects private targets and credentials without reaching the fixture", asy
   });
   const port = new URL(origin).port;
   for (const url of [
-    origin,
-    `http://localhost:${port}/`,
-    "http://[::ffff:127.0.0.1]/",
+    "http://10.0.0.1/",
+    "http://192.168.1.20/",
+    "http://[fe80::1]/",
+    "http://[::ffff:169.254.169.254]/",
     `http://user:secret@127.0.0.1:${port}/`,
   ]) {
     await assert.rejects(fetchLinkPreviewDocument(url));
   }
   assert.equal(requests, 0);
+});
+
+test("blocks redirects from a loopback page to a different origin", async () => {
+  const target = await fixture((_request, response) => {
+    response.writeHead(200, { "Content-Type": "text/html" });
+    response.end("<head><title>Other origin</title></head>");
+  });
+  const origin = await fixture((_request, response) => {
+    response.writeHead(302, { Location: target });
+    response.end();
+  });
+  await assert.rejects(fetchLinkPreviewDocument(origin), /not a public address/);
 });
 
 test("rejects non-HTML responses", async () => {
@@ -95,6 +104,26 @@ test("rejects non-HTML responses", async () => {
     fetchLinkPreviewDocument(origin, { allowPrivateNetwork: true }),
     /not an HTML document/,
   );
+});
+
+test("aborts non-HTML response streams instead of draining them", async () => {
+  let closed = false;
+  let chunks = 0;
+  const origin = await fixture((_request, response) => {
+    response.writeHead(200, { "Content-Type": "application/octet-stream" });
+    const timer = setInterval(() => {
+      chunks += 1;
+      response.write(Buffer.alloc(16_000));
+    }, 1);
+    response.on("close", () => {
+      closed = true;
+      clearInterval(timer);
+    });
+  });
+  await assert.rejects(fetchLinkPreviewDocument(origin), /not an HTML document/);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(closed, true);
+  assert.ok(chunks < 100, `response streamed ${chunks} chunks before abort`);
 });
 
 test("enforces the document size limit", async () => {

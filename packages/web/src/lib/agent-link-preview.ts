@@ -1,4 +1,8 @@
 import type { LinkPreviewDocument } from "@spiritagent/api/types";
+import {
+  isLoopbackLinkPreviewHostname,
+  isPublicLinkPreviewHostname,
+} from "@spiritagent/api/link-preview";
 
 export type AgentLinkIconKind = "svg" | "raster" | "apple-touch";
 export type AgentLinkIconColorScheme = "light" | "dark" | "any";
@@ -16,6 +20,7 @@ export type AgentLinkPreview = {
   description?: string;
   imageUrl?: string;
   icons: AgentLinkIcon[];
+  allowPrivateNetwork: boolean;
 };
 
 function nonEmpty(value: string | null | undefined): string | undefined {
@@ -25,11 +30,17 @@ function nonEmpty(value: string | null | undefined): string | undefined {
 export function resolveAgentLinkAssetUrl(
   value: string | undefined,
   finalUrl: string,
+  allowPrivateNetwork = false,
 ): string | undefined {
   if (!value) return undefined;
   try {
     const url = new URL(value, finalUrl);
     if ((url.protocol !== "https:" && url.protocol !== "http:") || url.username || url.password) {
+      return undefined;
+    }
+    const sameOriginLoopback =
+      url.origin === new URL(finalUrl).origin && isLoopbackLinkPreviewHostname(url.hostname);
+    if (!allowPrivateNetwork && !sameOriginLoopback && !isPublicLinkPreviewHostname(url.hostname)) {
       return undefined;
     }
     return url.toString();
@@ -47,7 +58,11 @@ function iconColorScheme(media: string): AgentLinkIconColorScheme | null {
   return dark ? "dark" : "light";
 }
 
-export function parseAgentLinkPreviewDocument(document: LinkPreviewDocument): AgentLinkPreview {
+export function parseAgentLinkPreviewDocument(
+  document: LinkPreviewDocument,
+  options: { allowPrivateNetwork?: boolean } = {},
+): AgentLinkPreview {
+  const allowPrivateNetwork = options.allowPrivateNetwork === true;
   const parsed = new DOMParser().parseFromString(document.headHtml, "text/html");
   const metas = [...parsed.querySelectorAll("meta")];
   const meta = (...names: string[]): string | undefined => {
@@ -70,7 +85,11 @@ export function parseAgentLinkPreviewDocument(document: LinkPreviewDocument): Ag
       rel.includes("apple-touch-icon") || rel.includes("apple-touch-icon-precomposed");
     if (!appleTouch && !rel.includes("icon")) continue;
     const colorScheme = iconColorScheme(link.getAttribute("media") ?? "");
-    const url = resolveAgentLinkAssetUrl(nonEmpty(link.getAttribute("href")), document.finalUrl);
+    const url = resolveAgentLinkAssetUrl(
+      nonEmpty(link.getAttribute("href")),
+      document.finalUrl,
+      allowPrivateNetwork,
+    );
     if (!colorScheme || !url) continue;
     const type = (link.getAttribute("type") ?? "").toLowerCase();
     const svg = type === "image/svg+xml" || new URL(url).pathname.toLowerCase().endsWith(".svg");
@@ -88,6 +107,7 @@ export function parseAgentLinkPreviewDocument(document: LinkPreviewDocument): Ag
   const imageUrl = resolveAgentLinkAssetUrl(
     meta("og:image:secure_url", "og:image:url", "og:image"),
     document.finalUrl,
+    allowPrivateNetwork,
   );
   return {
     finalUrl: document.finalUrl,
@@ -95,6 +115,7 @@ export function parseAgentLinkPreviewDocument(document: LinkPreviewDocument): Ag
     ...(description ? { description } : {}),
     ...(imageUrl ? { imageUrl } : {}),
     icons,
+    allowPrivateNetwork,
   };
 }
 
@@ -116,7 +137,11 @@ export function agentLinkIconCandidates(
     ...iconGroup(preview.icons, "any"),
     ...iconGroup(preview.icons, other),
   ].map((icon) => icon.url);
-  const favicon = resolveAgentLinkAssetUrl("/favicon.ico", preview.finalUrl);
+  const favicon = resolveAgentLinkAssetUrl(
+    "/favicon.ico",
+    preview.finalUrl,
+    preview.allowPrivateNetwork,
+  );
   if (favicon) candidates.push(favicon);
   return [...new Set(candidates)];
 }

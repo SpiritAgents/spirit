@@ -104,6 +104,7 @@ export function SpiritStreamdownMarkdown({
       localImageAllowedRootDir,
       readLocalVideoPreviewUrl,
       linkComponent,
+      streaming,
     );
     return {
       ...rest,
@@ -126,6 +127,7 @@ export function SpiritStreamdownMarkdown({
     size,
     tone,
     linkComponent,
+    streaming,
   ]);
 
   return (

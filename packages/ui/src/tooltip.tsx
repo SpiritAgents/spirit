@@ -675,13 +675,15 @@ const TooltipZone = memo(function TooltipZone({
   ref,
   className,
   onPointerLeave,
+  asChild = false,
   ...props
-}: ComponentProps<"div">) {
+}: ComponentProps<"div"> & { asChild?: boolean }) {
   const stableRegistration = useTooltipStableRegistration();
   const { registrationId } = useTooltipRegistrationContext();
+  const Component = asChild ? Slot.Root : "div";
 
   return (
-    <div
+    <Component
       data-slot="tooltip-zone"
       ref={(node) => {
         stableRegistration.registerTriggerZone(registrationId, node);

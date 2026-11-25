@@ -28,7 +28,10 @@ import { cn } from "../cn.js";
 
 export type MarkdownTone = "default" | "muted";
 export type MarkdownSize = "default" | "compact";
-export type MarkdownLinkComponentProps = ComponentPropsWithoutRef<"a"> & { muted?: boolean };
+export type MarkdownLinkComponentProps = ComponentPropsWithoutRef<"a"> & {
+  muted?: boolean;
+  streaming?: boolean;
+};
 export type MarkdownLinkComponent = ComponentType<MarkdownLinkComponentProps>;
 
 /** Shared element overrides for Streamdown message rendering. */
@@ -44,6 +47,7 @@ export function createMarkdownMessageComponents(
   localImageAllowedRootDir?: string,
   readLocalVideoPreviewUrl?: ReadLocalVideoPreview,
   linkComponent?: MarkdownLinkComponent,
+  linkStreaming = false,
 ): Record<string, ComponentType<Record<string, unknown>>> {
   const compact = size === "compact";
   const muted = tone === "muted";
@@ -184,6 +188,7 @@ export function createMarkdownMessageComponents(
         <LinkComponent
           className={cn("break-words", className)}
           muted={muted}
+          streaming={linkStreaming}
           href={href}
           target={isFragmentLink ? undefined : "_blank"}
           rel={isFragmentLink ? undefined : "noopener noreferrer"}

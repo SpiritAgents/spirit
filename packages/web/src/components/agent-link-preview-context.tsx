@@ -18,9 +18,11 @@ const AgentLinkPreviewContext = createContext<LoadAgentLinkPreview | null>(null)
 
 export function AgentLinkPreviewProvider({
   fetchDocument,
+  allowPrivateNetworkForTesting = false,
   children,
 }: {
   fetchDocument: FetchLinkPreviewDocument;
+  allowPrivateNetworkForTesting?: boolean;
   children: ReactNode;
 }) {
   const cacheRef = useRef(
@@ -35,12 +37,16 @@ export function AgentLinkPreviewProvider({
       if (cached?.owner === fetchDocument) return cached.pending;
       const pending = Promise.resolve()
         .then(() => fetchDocument({ url }))
-        .then(parseAgentLinkPreviewDocument)
+        .then((document) =>
+          parseAgentLinkPreviewDocument(document, {
+            allowPrivateNetwork: allowPrivateNetworkForTesting,
+          }),
+        )
         .catch(() => null);
       cacheRef.current.set(url, { owner: fetchDocument, pending });
       return pending;
     },
-    [fetchDocument],
+    [allowPrivateNetworkForTesting, fetchDocument],
   );
   return (
     <AgentLinkPreviewContext.Provider value={load}>{children}</AgentLinkPreviewContext.Provider>

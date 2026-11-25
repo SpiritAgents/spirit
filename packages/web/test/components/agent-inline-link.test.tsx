@@ -8,7 +8,12 @@ import { expect, test, vi } from "vitest";
 import { AgentLinkFavicon } from "@/components/agent-link-favicon";
 import { AgentInlineLink } from "@/components/agent-inline-link";
 import { AgentLinkPreviewProvider } from "@/components/agent-link-preview-context";
-import { agentLinkIconCandidates, parseAgentLinkPreviewDocument } from "@/lib/agent-link-preview";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import {
+  agentLinkIconCandidates,
+  parseAgentLinkPreviewDocument,
+  resolveAgentLinkAssetUrl,
+} from "@/lib/agent-link-preview";
 
 vi.mock("@/hooks/useTheme", () => ({
   useTheme: () => ({ resolvedDark: false }),
@@ -46,6 +51,52 @@ test("icon candidates follow the app theme, SVG priority, and bitmap fallbacks",
   ]);
 });
 
+test("preview assets reject private renderer targets before any image request", () => {
+  for (const url of [
+    "http://127.0.0.1/og.png",
+    "http://localhost/icon.svg",
+    "http://192.168.1.20/icon.png",
+    "http://169.254.169.254/latest",
+    "http://[fe80::1]/icon.svg",
+    "http://[::ffff:127.0.0.1]/icon.svg",
+    "http://metadata.internal/icon.svg",
+    "http://service.home.arpa/icon.svg",
+  ]) {
+    expect(resolveAgentLinkAssetUrl(url, "https://spirit.dev")).toBeUndefined();
+  }
+  const preview = parseAgentLinkPreviewDocument(
+    previewDocument(
+      '<meta property="og:image" content="http://127.0.0.1/og.png"><link rel="icon" href="http://localhost/icon.svg">',
+    ),
+  );
+  expect(preview.imageUrl).toBeUndefined();
+  expect(preview.icons).toEqual([]);
+  expect(agentLinkIconCandidates(preview, false)).toEqual(["https://spirit.dev/favicon.ico"]);
+  expect(resolveAgentLinkAssetUrl("https://cdn.example.com/og.png", "https://spirit.dev")).toBe(
+    "https://cdn.example.com/og.png",
+  );
+  expect(resolveAgentLinkAssetUrl("http://127.0.0.1/fixture", "https://spirit.dev", true)).toBe(
+    "http://127.0.0.1/fixture",
+  );
+});
+
+test("loopback preview assets are limited to the page's own origin", () => {
+  const finalUrl = "http://127.0.0.1:4175/e2e/page";
+  const preview = parseAgentLinkPreviewDocument(
+    previewDocument(
+      '<meta property="og:image" content="/og.png"><link rel="icon" href="/icon.svg">',
+      finalUrl,
+    ),
+  );
+  expect(preview.imageUrl).toBe("http://127.0.0.1:4175/og.png");
+  expect(agentLinkIconCandidates(preview, false)).toEqual([
+    "http://127.0.0.1:4175/icon.svg",
+    "http://127.0.0.1:4175/favicon.ico",
+  ]);
+  expect(resolveAgentLinkAssetUrl("http://127.0.0.1:4176/other.png", finalUrl)).toBeUndefined();
+  expect(resolveAgentLinkAssetUrl("http://localhost:4175/other.png", finalUrl)).toBeUndefined();
+});
+
 test("favicon loading falls back from declared SVG to origin bitmap and currentColor Globe", () => {
   const preview = parseAgentLinkPreviewDocument(
     previewDocument('<link rel="icon" type="image/svg+xml" href="/site.svg">'),
@@ -72,12 +123,14 @@ test("bare labels preserve the full URL and streaming animation nodes", async ()
     </span>,
   ];
   render(
-    <AgentLinkPreviewProvider fetchDocument={fetchDocument}>
-      <AgentInlineLink href="https://spirit.dev" target="_blank">
-        {children}
-      </AgentInlineLink>
-      <AgentInlineLink href="https://spirit.dev">{children}</AgentInlineLink>
-    </AgentLinkPreviewProvider>,
+    <TooltipProvider>
+      <AgentLinkPreviewProvider fetchDocument={fetchDocument}>
+        <AgentInlineLink href="https://spirit.dev" target="_blank">
+          {children}
+        </AgentInlineLink>
+        <AgentInlineLink href="https://spirit.dev">{children}</AgentInlineLink>
+      </AgentLinkPreviewProvider>
+    </TooltipProvider>,
   );
 
   await waitFor(() =>
@@ -96,10 +149,12 @@ test("bare labels preserve the full URL and streaming animation nodes", async ()
 test("custom labels and non-HTTP links retain their existing content", async () => {
   const fetchDocument = vi.fn(async () => previewDocument(""));
   const { container } = render(
-    <AgentLinkPreviewProvider fetchDocument={fetchDocument}>
-      <AgentInlineLink href="https://spirit.dev/docs">Read the documentation</AgentInlineLink>
-      <AgentInlineLink href="#local">Local section</AgentInlineLink>
-    </AgentLinkPreviewProvider>,
+    <TooltipProvider>
+      <AgentLinkPreviewProvider fetchDocument={fetchDocument}>
+        <AgentInlineLink href="https://spirit.dev/docs">Read the documentation</AgentInlineLink>
+        <AgentInlineLink href="#local">Local section</AgentInlineLink>
+      </AgentLinkPreviewProvider>
+    </TooltipProvider>,
   );
   expect(screen.getByRole("link", { name: "Read the documentation" }).textContent).toBe(
     "Read the documentation",
@@ -115,21 +170,25 @@ test("failed metadata loads are cached per URL and retain a fixed-size Globe", a
     throw new Error("unavailable");
   });
   const { container, rerender } = render(
-    <AgentLinkPreviewProvider fetchDocument={fetchDocument}>
-      <AgentInlineLink href="https://spirit.dev">https://spirit.dev</AgentInlineLink>
-      <AgentInlineLink href="https://spirit.dev">https://spirit.dev</AgentInlineLink>
-    </AgentLinkPreviewProvider>,
+    <TooltipProvider>
+      <AgentLinkPreviewProvider fetchDocument={fetchDocument}>
+        <AgentInlineLink href="https://spirit.dev">https://spirit.dev</AgentInlineLink>
+        <AgentInlineLink href="https://spirit.dev">https://spirit.dev</AgentInlineLink>
+      </AgentLinkPreviewProvider>
+    </TooltipProvider>,
   );
   await waitFor(() =>
     expect(container.querySelectorAll("[data-agent-link-favicon='fallback']")).toHaveLength(2),
   );
   expect(fetchDocument).toHaveBeenCalledTimes(1);
   rerender(
-    <AgentLinkPreviewProvider fetchDocument={fetchDocument}>
-      <AgentInlineLink href="https://spirit.dev">https://spirit.dev</AgentInlineLink>
-      <AgentInlineLink href="https://spirit.dev">https://spirit.dev</AgentInlineLink>
-      <AgentInlineLink href="https://spirit.dev">https://spirit.dev</AgentInlineLink>
-    </AgentLinkPreviewProvider>,
+    <TooltipProvider>
+      <AgentLinkPreviewProvider fetchDocument={fetchDocument}>
+        <AgentInlineLink href="https://spirit.dev">https://spirit.dev</AgentInlineLink>
+        <AgentInlineLink href="https://spirit.dev">https://spirit.dev</AgentInlineLink>
+        <AgentInlineLink href="https://spirit.dev">https://spirit.dev</AgentInlineLink>
+      </AgentLinkPreviewProvider>
+    </TooltipProvider>,
   );
   await waitFor(() =>
     expect(container.querySelectorAll("[data-agent-link-favicon='fallback']")).toHaveLength(3),

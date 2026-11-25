@@ -16,10 +16,12 @@ export function WorkspaceMarkdownLinkProvider({
   children,
   onLinkClick,
   fetchLinkPreview,
+  allowPrivateNetworkForTesting = false,
 }: {
   children: ReactNode;
   onLinkClick?: WorkspaceMarkdownLinkClickHandler;
   fetchLinkPreview?: FetchLinkPreviewDocument;
+  allowPrivateNetworkForTesting?: boolean;
 }) {
   const content = (
     <SharedWorkspaceMarkdownLinkProvider onLinkClick={onLinkClick}>
@@ -28,6 +30,11 @@ export function WorkspaceMarkdownLinkProvider({
   );
   if (!fetchLinkPreview) return content;
   return (
-    <AgentLinkPreviewProvider fetchDocument={fetchLinkPreview}>{content}</AgentLinkPreviewProvider>
+    <AgentLinkPreviewProvider
+      fetchDocument={fetchLinkPreview}
+      allowPrivateNetworkForTesting={allowPrivateNetworkForTesting}
+    >
+      {content}
+    </AgentLinkPreviewProvider>
   );
 }

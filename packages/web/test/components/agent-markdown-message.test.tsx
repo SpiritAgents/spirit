@@ -6,6 +6,8 @@ import { render, waitFor } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 
 import { AgentMarkdownMessage } from "@/components/agent-markdown-message";
+import { AgentLinkPreviewProvider } from "@/components/agent-link-preview-context";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 vi.mock("@/hooks/useTheme", () => ({
   useTheme: () => ({ resolvedDark: false }),
@@ -35,7 +37,9 @@ test("streaming Markdown preserves old blocks and animates only newly appended c
   const secondBlock = "Second paragraph";
   const initialContent = `${firstBlock}\n\n${secondBlock}`;
   const { container, rerender } = render(
-    <AgentMarkdownMessage content={initialContent} streaming />,
+    <TooltipProvider>
+      <AgentMarkdownMessage content={initialContent} streaming />
+    </TooltipProvider>,
   );
 
   await waitFor(() => {
@@ -46,7 +50,11 @@ test("streaming Markdown preserves old blocks and animates only newly appended c
   const initialFirstTailSpan = animatedSpans(initialParagraphs[1]!)[0]?.element;
 
   const secondAppend = " starts";
-  rerender(<AgentMarkdownMessage content={`${initialContent}${secondAppend}`} streaming />);
+  rerender(
+    <TooltipProvider>
+      <AgentMarkdownMessage content={`${initialContent}${secondAppend}`} streaming />
+    </TooltipProvider>,
+  );
   await waitFor(() => expect(container.textContent).toContain("Second paragraph starts"));
 
   const paragraphsAfterAppend = container.querySelectorAll("p");
@@ -62,7 +70,11 @@ test("streaming Markdown preserves old blocks and animates only newly appended c
 
   const thirdBlock = "Third paragraph";
   const withThirdBlock = `${initialContent}${secondAppend}\n\n${thirdBlock}`;
-  rerender(<AgentMarkdownMessage content={withThirdBlock} streaming />);
+  rerender(
+    <TooltipProvider>
+      <AgentMarkdownMessage content={withThirdBlock} streaming />
+    </TooltipProvider>,
+  );
   await waitFor(() => expect(container.querySelectorAll("p")).toHaveLength(3));
   const paragraphsWithThird = container.querySelectorAll("p");
   expect(paragraphsWithThird[0]).toBe(initialParagraphs[0]);
@@ -71,7 +83,11 @@ test("streaming Markdown preserves old blocks and animates only newly appended c
     expect(span.duration).toBe("160ms");
   }
 
-  rerender(<AgentMarkdownMessage content={`${withThirdBlock} arrives`} streaming />);
+  rerender(
+    <TooltipProvider>
+      <AgentMarkdownMessage content={`${withThirdBlock} arrives`} streaming />
+    </TooltipProvider>,
+  );
   await waitFor(() => expect(container.textContent).toContain("Third paragraph arrives"));
   const finalParagraphs = container.querySelectorAll("p");
   expect(finalParagraphs[0]).toBe(initialParagraphs[0]);
@@ -80,4 +96,42 @@ test("streaming Markdown preserves old blocks and animates only newly appended c
   for (const span of animatedSpans(finalParagraphs[2]!)) {
     expect(span.duration).toBe(span.offset < thirdBlock.length ? "0ms" : "160ms");
   }
+});
+
+test("streaming defers link preview requests until the final URL", async () => {
+  const initialContent = "See https://docs.example.com";
+  const fetchDocument = vi.fn(async ({ url }: { url: string }) => ({
+    url,
+    finalUrl: url,
+    headHtml: "",
+  }));
+  const { rerender } = render(
+    <AgentLinkPreviewProvider fetchDocument={fetchDocument}>
+      <TooltipProvider>
+        <AgentMarkdownMessage content={initialContent} streaming />
+      </TooltipProvider>
+    </AgentLinkPreviewProvider>,
+  );
+  await waitFor(() => expect(document.querySelector("a")).not.toBeNull());
+  expect(fetchDocument).not.toHaveBeenCalled();
+
+  rerender(
+    <AgentLinkPreviewProvider fetchDocument={fetchDocument}>
+      <TooltipProvider>
+        <AgentMarkdownMessage content={`${initialContent}/api`} streaming />
+      </TooltipProvider>
+    </AgentLinkPreviewProvider>,
+  );
+  await waitFor(() => expect(document.querySelector("a")?.getAttribute("href")).toContain("/api"));
+  expect(fetchDocument).not.toHaveBeenCalled();
+
+  rerender(
+    <AgentLinkPreviewProvider fetchDocument={fetchDocument}>
+      <TooltipProvider>
+        <AgentMarkdownMessage content={`${initialContent}/api/v2`} streaming={false} />
+      </TooltipProvider>
+    </AgentLinkPreviewProvider>,
+  );
+  await waitFor(() => expect(fetchDocument).toHaveBeenCalledTimes(1));
+  expect(fetchDocument).toHaveBeenCalledWith({ url: "https://docs.example.com/api/v2" });
 });
