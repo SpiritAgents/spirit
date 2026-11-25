@@ -1182,6 +1182,9 @@ importers:
       '@spiritagent/extension-toolkit':
         specifier: workspace:*
         version: link:../extension-toolkit
+      '@spiritagent/permissions':
+        specifier: workspace:*
+        version: link:../permissions
       '@spiritagent/product':
         specifier: workspace:*
         version: link:../product
