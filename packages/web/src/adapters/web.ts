@@ -186,6 +186,13 @@ export function createWebHostApi(): HostApi {
         window.open(request.url, "_blank", "noopener,noreferrer");
       }
     },
+    fetchLinkPreview(request: import("@spiritagent/api/types").LinkPreviewRequest) {
+      return post<import("@spiritagent/api/types").LinkPreviewDocument>(
+        baseUrl,
+        "/api/link-preview",
+        request,
+      );
+    },
     addMcpServer(request: AddMcpServerRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/mcps", request);
     },

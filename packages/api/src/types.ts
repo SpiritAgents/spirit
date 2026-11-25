@@ -470,6 +470,16 @@ export interface OpenExternalUrlRequest {
   url: string;
 }
 
+export interface LinkPreviewRequest {
+  url: string;
+}
+
+export interface LinkPreviewDocument {
+  url: string;
+  finalUrl: string;
+  headHtml: string;
+}
+
 export interface DesktopMcpCapabilityToggles {
   tools: boolean;
   resources: boolean;

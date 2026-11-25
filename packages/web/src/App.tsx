@@ -462,7 +462,10 @@ export default function App() {
   return (
     <ComposerLabelsProvider value={composerLabels}>
       <WorkspaceFileIconProvider value={WorkspaceFileIcon}>
-        <WorkspaceMarkdownLinkProvider onLinkClick={handleWorkspaceMarkdownLinkClick}>
+        <WorkspaceMarkdownLinkProvider
+          onLinkClick={handleWorkspaceMarkdownLinkClick}
+          fetchLinkPreview={runtime.fetchLinkPreview}
+        >
           <EditCommandStateProvider>
             <SessionSidebarChromeProvider apiRef={surfaceNav.sessionSidebarChromeApiRef}>
               <div

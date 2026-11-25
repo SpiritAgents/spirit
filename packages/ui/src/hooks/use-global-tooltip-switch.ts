@@ -369,7 +369,11 @@ export function useGlobalTooltipSwitch({
     }
     // Scrolling can move a different row under a stationary pointer before boundary
     // events arrive. Native hit-testing also respects clipping, portals and UI scale.
-    const hit = document.elementFromPoint(point.clientX, point.clientY);
+    // jsdom does not always implement elementFromPoint; an unavailable hit test means no hit.
+    const hit =
+      typeof document.elementFromPoint === "function"
+        ? document.elementFromPoint(point.clientX, point.clientY)
+        : null;
     for (const registrationId of pointerDismissedRegistrationsRef.current) {
       if (!hit || !triggerZonesRef.current.get(registrationId)?.contains(hit)) {
         pointerDismissedRegistrationsRef.current.delete(registrationId);
@@ -478,13 +482,27 @@ export function useGlobalTooltipSwitch({
       registrationId: string,
       item: TItem,
       getItemId: (item: TItem) => string,
-      _openDelayMs: number,
+      openDelayMs: number,
     ): AnchoredItemSwitchTriggerProps => {
       const itemId = getItemId(item);
       return {
         onPointerEnter: (event?: ReactPointerEvent) => {
           if (event) {
             recordPointer(event);
+            // Replace visible content before the next reconcile frame; waiting would briefly render
+            // the previous item while the new target is still loading its presentation.
+            if (
+              !keyboardInputRef.current &&
+              (activeItemRef.current !== null || lingerActiveItemRef.current !== null)
+            ) {
+              enterTarget({
+                registrationId,
+                itemId,
+                getItem: () => item,
+                openDelayMs,
+                element: event.currentTarget as HTMLElement,
+              });
+            }
           } else {
             schedulePointerReconcile();
           }
@@ -493,7 +511,7 @@ export function useGlobalTooltipSwitch({
         isAnchor: isTooltipAnchorSlot(registrationId, itemId),
       };
     },
-    [recordPointer, schedulePointerReconcile],
+    [enterTarget, recordPointer, schedulePointerReconcile],
   );
 
   const onTriggerZonePointerLeave = useCallback(

@@ -2,6 +2,7 @@ import { lstat, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import { fetchLinkPreviewDocument } from "@spiritagent/http/link-preview";
 import { configureServerConnector } from "@spiritagent/sessions/host/server-connector";
 import { connectOrSpawnServer } from "@spiritagent/server/client";
 import {
@@ -1847,6 +1848,12 @@ export class DesktopHostService {
     if (adapter) {
       await adapter.openExternal(parsed.href);
     }
+  }
+
+  async fetchLinkPreview(
+    request: import("@spiritagent/api/types").LinkPreviewRequest,
+  ): Promise<import("@spiritagent/api/types").LinkPreviewDocument> {
+    return fetchLinkPreviewDocument(request.url);
   }
 
   async createSkill(request: CreateSkillRequest): Promise<DesktopSnapshot> {

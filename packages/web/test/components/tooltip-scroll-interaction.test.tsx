@@ -291,6 +291,14 @@ test("keyboard scrolling retains focus until an actual pointer input takes over"
   expect(screen.getByTestId("detail").textContent).toContain("alpha");
 });
 
+test("missing elementFromPoint leaves pointer reconciliation without a hit", async () => {
+  render(<Fixture />);
+  Object.defineProperty(document, "elementFromPoint", { value: undefined, configurable: true });
+  moveTo(screen.getByTestId("alpha"));
+  await advance();
+  expect(screen.queryByTestId("detail")).toBeNull();
+});
+
 test("scroll updates menu focus and removes the previous pointer highlight", async () => {
   render(<MenuFixture />);
   await advance();

@@ -90,6 +90,7 @@ export type CommandPayloads = {
   completeChatGptOAuth: { request: import("./types.js").CompleteChatGptOAuthRequest };
   cancelChatGptOAuth: { request: import("./types.js").CancelChatGptOAuthRequest };
   openExternalUrl: { request: import("./types.js").OpenExternalUrlRequest };
+  fetchLinkPreview: { request: import("./types.js").LinkPreviewRequest };
   addMcpServer: { request: AddMcpServerRequest };
   deleteMcpServer: { request: DeleteMcpServerRequest };
   saveHookEntry: { request: SaveHookEntryRequest };

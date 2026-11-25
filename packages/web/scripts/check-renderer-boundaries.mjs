@@ -22,6 +22,7 @@ const SAFE_SUBPATHS = new Map([
       "command-payloads",
       "work-location",
       "local-file-composer-route",
+      "link-preview",
       "workspace-file-reference-query",
       "approval-level",
       "workspace-trust",

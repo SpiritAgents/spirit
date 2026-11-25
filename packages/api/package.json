@@ -40,6 +40,10 @@
       "types": "./dist/work-location.d.ts",
       "default": "./dist/work-location.js"
     },
+    "./link-preview": {
+      "types": "./dist/link-preview.d.ts",
+      "default": "./dist/link-preview.js"
+    },
     "./local-file-composer-route": {
       "types": "./dist/local-file-composer-route.d.ts",
       "default": "./dist/local-file-composer-route.js"

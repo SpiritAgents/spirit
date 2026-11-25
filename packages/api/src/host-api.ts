@@ -127,6 +127,9 @@ export interface HostApi {
     request: import("./types.js").CancelChatGptOAuthRequest,
   ): Promise<{ ok: true }>;
   openExternalUrl?(request: import("./types.js").OpenExternalUrlRequest): Promise<void>;
+  fetchLinkPreview(
+    request: import("./types.js").LinkPreviewRequest,
+  ): Promise<import("./types.js").LinkPreviewDocument>;
   addMcpServer(request: AddMcpServerRequest): Promise<DesktopSnapshot>;
   deleteMcpServer(request: DeleteMcpServerRequest): Promise<DesktopSnapshot>;
   saveHookEntry(request: SaveHookEntryRequest): Promise<DesktopSnapshot>;

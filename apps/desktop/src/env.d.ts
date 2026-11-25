@@ -93,6 +93,9 @@ declare global {
     openExternalUrl(
       request: import("@spiritagent/api/types").OpenExternalUrlRequest,
     ): Promise<void>;
+    fetchLinkPreview(
+      request: import("@spiritagent/api/types").LinkPreviewRequest,
+    ): Promise<import("@spiritagent/api/types").LinkPreviewDocument>;
     addMcpServer(request: AddMcpServerRequest): Promise<DesktopSnapshot>;
     deleteMcpServer(request: DeleteMcpServerRequest): Promise<DesktopSnapshot>;
     saveHookEntry(request: SaveHookEntryRequest): Promise<DesktopSnapshot>;
