@@ -114,6 +114,8 @@
      rest border + the interactive hover/focus step */
   --composer-edge: color-mix(in oklab, var(--ring) 30%, transparent);
   --composer-edge-hover: color-mix(in oklab, var(--ring) 40%, transparent);
+  /* Non-All-translucency Composer frosted fill base */
+  --composer-surface: var(--background);
   /* Canvas outline/card fill under All-mode translucency; light /30 so white keeps presence */
   --content-translucent-fill: color-mix(in oklab, var(--background) 30%, transparent);
   /* Settings cards stay borderless and low-contrast on the pure white / black canvas. */
@@ -179,6 +181,8 @@ html.dark,
      a bigger jump (e.g. 10%) reads like a high-contrast outline on #000000 */
   --composer-edge: color-mix(in oklab, white 6%, transparent);
   --composer-edge-hover: color-mix(in oklab, white 8%, transparent);
+  /* #151515 at 85% alpha over #000000 composites to #121212 while curbing color bleed-through */
+  --composer-surface: #151515;
   /* Dark already reads well at /10; do not match the light /30 bump */
   --content-translucent-fill: color-mix(in oklab, var(--background) 10%, transparent);
   --settings-card-fill: color-mix(in oklab, white 4%, transparent);
@@ -230,6 +234,7 @@ html.dark,
   --color-outline-fill: var(--outline-fill);
   --color-composer-edge: var(--composer-edge);
   --color-composer-edge-hover: var(--composer-edge-hover);
+  --color-composer-surface: var(--composer-surface);
   --color-content-translucent-fill: var(--content-translucent-fill);
   --color-settings-card-fill: var(--settings-card-fill);
   --color-settings-card-divider: var(--settings-card-divider);

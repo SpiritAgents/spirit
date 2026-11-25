@@ -63,8 +63,12 @@ test("desktopTranslucencyFileDetailSurfaceClass avoids stacking tint under trans
 
 test("desktopComposerSurfaceBackdropClass keeps glass when translucency is off", () => {
   assert.equal(desktopComposerSurfaceBackdropClass(false), DESKTOP_COMPOSER_SURFACE_BACKDROP);
-  assert.match(DESKTOP_COMPOSER_SURFACE_BACKDROP, /backdrop-blur/);
-  assert.match(DESKTOP_COMPOSER_SURFACE_BACKDROP, /dark:bg-input/);
+  assert.match(DESKTOP_COMPOSER_SURFACE_BACKDROP, /backdrop-blur-xl/);
+  assert.match(DESKTOP_COMPOSER_SURFACE_BACKDROP, /bg-composer-surface\/92/);
+  assert.match(
+    DESKTOP_COMPOSER_SURFACE_BACKDROP,
+    /supports-\[backdrop-filter\]:bg-composer-surface\/85/,
+  );
   assert.match(DESKTOP_COMPOSER_SURFACE_BACKDROP, /spirit-reduced-transparency-opaque/);
 });
 

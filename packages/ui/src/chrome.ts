@@ -246,11 +246,12 @@ export const DESKTOP_REDUCED_TRANSPARENCY_OPAQUE_CLASS = "spirit-reduced-transpa
 
 /**
  * Translucent background of the Composer input; shared source for non-translucency overlays.
- * Dark mode: on the pure-black `--background` canvas the fill is lifted to a deep asphalt
- * gray (~#121212 composited) so the card separates by fill, letting the border stay faint.
+ * Uses `--composer-surface` (`--background` in light, `#151515` in dark) with `backdrop-blur-xl`
+ * and high fill opacity so underlying body text reads only as a faint veil and colored
+ * content in dark mode stays restrained, while dark rest stays at ~#121212 on `#000000`.
  */
 export const DESKTOP_COMPOSER_SURFACE_BACKDROP = [
-  "bg-background/55 backdrop-blur-xl dark:bg-input/50 supports-[backdrop-filter]:bg-background/40 dark:supports-[backdrop-filter]:bg-input/45",
+  "bg-composer-surface/92 backdrop-blur-xl supports-[backdrop-filter]:bg-composer-surface/85",
   DESKTOP_REDUCED_TRANSPARENCY_OPAQUE_CLASS,
 ].join(" ");
 
