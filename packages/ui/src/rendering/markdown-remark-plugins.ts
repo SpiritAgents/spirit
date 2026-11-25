@@ -2,6 +2,8 @@ import remarkBreaks from "remark-breaks";
 import { defaultRemarkPlugins } from "streamdown";
 import type { Pluggable } from "unified";
 
+import { remarkCjkAutolinkSeparators } from "./remark-cjk-autolink-separators.js";
+
 const spiritRemarkPluginBase: Pluggable[] = Object.values(defaultRemarkPlugins);
 
 export type SpiritRemarkPluginsOptions = {
@@ -14,7 +16,7 @@ export function createSpiritRemarkPluginsForStreamdown(
   options: SpiritRemarkPluginsOptions = {},
 ): Pluggable[] {
   const singleLineBreaks = options.singleLineBreaks ?? true;
-  const plugins: Pluggable[] = [...spiritRemarkPluginBase];
+  const plugins: Pluggable[] = [...spiritRemarkPluginBase, remarkCjkAutolinkSeparators];
   if (singleLineBreaks) {
     plugins.push(remarkBreaks);
   }
