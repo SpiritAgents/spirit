@@ -506,6 +506,10 @@ export default function App() {
                       onAddModel={runtime.addModel}
                       onAddProviderModels={runtime.addProviderModels}
                       onPreviewModels={runtime.previewModels}
+                      onBeginChatGptOAuth={runtime.beginChatGptOAuth}
+                      onCompleteChatGptOAuth={runtime.completeChatGptOAuth}
+                      onCancelChatGptOAuth={runtime.cancelChatGptOAuth}
+                      onOpenExternalUrl={runtime.openExternalUrl}
                       onDone={handleOnboardingDone}
                       onPhaseChange={setOnboardingPhase}
                     />
@@ -680,6 +684,10 @@ export default function App() {
                                     onPreviewModels={runtime.previewModels}
                                     onRemoveModel={runtime.removeModel}
                                     onDisconnectProvider={runtime.disconnectProvider}
+                                    onBeginChatGptOAuth={runtime.beginChatGptOAuth}
+                                    onCompleteChatGptOAuth={runtime.completeChatGptOAuth}
+                                    onCancelChatGptOAuth={runtime.cancelChatGptOAuth}
+                                    onOpenExternalUrl={runtime.openExternalUrl}
                                     onAddMcpServer={runtime.addMcpServer}
                                     onUpdateExtensionSettings={runtime.updateExtensionSettings}
                                     onDeleteMcpServer={runtime.deleteMcpServer}

@@ -160,6 +160,32 @@ export function createWebHostApi(): HostApi {
     disconnectProvider(request: import("../types").DisconnectProviderRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/models/disconnect-provider", request);
     },
+    async beginChatGptOAuth(request?: import("@spiritagent/api/types").BeginChatGptOAuthRequest) {
+      const response = await post<import("@spiritagent/api/types").BeginChatGptOAuthResponse>(
+        baseUrl,
+        "/api/models/chatgpt-oauth/begin",
+        request ?? {},
+      );
+      if (typeof window !== "undefined") {
+        window.open(response.authorizationUrl, "_blank", "noopener,noreferrer");
+      }
+      return response;
+    },
+    completeChatGptOAuth(request: import("@spiritagent/api/types").CompleteChatGptOAuthRequest) {
+      return post<import("@spiritagent/api/types").CompleteChatGptOAuthResponse>(
+        baseUrl,
+        "/api/models/chatgpt-oauth/complete",
+        request,
+      );
+    },
+    cancelChatGptOAuth(request: import("@spiritagent/api/types").CancelChatGptOAuthRequest) {
+      return post<{ ok: true }>(baseUrl, "/api/models/chatgpt-oauth/cancel", request);
+    },
+    async openExternalUrl(request: import("@spiritagent/api/types").OpenExternalUrlRequest) {
+      if (typeof window !== "undefined") {
+        window.open(request.url, "_blank", "noopener,noreferrer");
+      }
+    },
     addMcpServer(request: AddMcpServerRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/mcps", request);
     },

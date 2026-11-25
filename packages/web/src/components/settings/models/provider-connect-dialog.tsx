@@ -2,6 +2,7 @@ import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ChatGptAuthDialog } from "@/components/settings/models/chatgpt-auth-dialog";
 import {
   connectTransportOptionSummary,
   connectTransportOptionsForProvider,
@@ -78,6 +79,16 @@ export type ProviderConnectDialogProps = {
   onAddModel: (request: AddModelRequest) => Promise<void>;
   onAddProviderModels: (request: AddProviderModelsRequest) => Promise<void>;
   onPreviewModels: (request: PreviewModelsRequest) => Promise<PreviewModelsResponse>;
+  onBeginChatGptOAuth?: (
+    request?: import("@spiritagent/api/types").BeginChatGptOAuthRequest,
+  ) => Promise<import("@spiritagent/api/types").BeginChatGptOAuthResponse>;
+  onCompleteChatGptOAuth?: (
+    request: import("@spiritagent/api/types").CompleteChatGptOAuthRequest,
+  ) => Promise<import("@spiritagent/api/types").CompleteChatGptOAuthResponse>;
+  onCancelChatGptOAuth?: (
+    request: import("@spiritagent/api/types").CancelChatGptOAuthRequest,
+  ) => Promise<{ ok: true }>;
+  onOpenExternalUrl?: (url: string) => Promise<void>;
 };
 
 /**
@@ -96,6 +107,10 @@ export function ProviderConnectDialog({
   onAddModel,
   onAddProviderModels,
   onPreviewModels,
+  onBeginChatGptOAuth,
+  onCompleteChatGptOAuth,
+  onCancelChatGptOAuth,
+  onOpenExternalUrl,
 }: ProviderConnectDialogProps) {
   const { t } = useTranslation();
   const [connectApiKey, setConnectApiKey] = useState("");
@@ -522,6 +537,32 @@ export function ProviderConnectDialog({
     });
     onOpenChange(false);
   };
+
+  if (
+    connectCredentialKind === "chatgpt-oauth" &&
+    onBeginChatGptOAuth &&
+    onCompleteChatGptOAuth &&
+    onCancelChatGptOAuth
+  ) {
+    return (
+      <ChatGptAuthDialog
+        providerId={provider}
+        open={open}
+        onOpenChange={onOpenChange}
+        onBeginChatGptOAuth={onBeginChatGptOAuth}
+        onCompleteChatGptOAuth={onCompleteChatGptOAuth}
+        onCancelChatGptOAuth={onCancelChatGptOAuth}
+        onOpenExternalUrl={
+          onOpenExternalUrl ??
+          (async (url) => {
+            if (typeof window !== "undefined") {
+              window.open(url, "_blank", "noopener,noreferrer");
+            }
+          })
+        }
+      />
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
