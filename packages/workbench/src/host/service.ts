@@ -1812,7 +1812,7 @@ export class DesktopHostService {
   async beginChatGptOAuth(
     request?: import("@spiritagent/api/types").BeginChatGptOAuthRequest,
   ): Promise<import("@spiritagent/api/types").BeginChatGptOAuthResponse> {
-    const adapter = getDesktopExtensionHostAdapter();
+    const adapter = request?.openBrowser === false ? undefined : getDesktopExtensionHostAdapter();
     return this.chatGptOAuthConnect.begin(
       request,
       adapter ? { openExternal: (url) => adapter.openExternal(url) } : undefined,

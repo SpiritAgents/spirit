@@ -436,6 +436,8 @@ export interface DisconnectProviderRequest {
 export interface BeginChatGptOAuthRequest {
   providerId?: string;
   promptConsent?: boolean;
+  /** Whether the host should open the authorization URL in the local OS browser (defaults to true; HTTP Web Host clients set false and open it client-side). */
+  openBrowser?: boolean;
 }
 
 export interface BeginChatGptOAuthResponse {

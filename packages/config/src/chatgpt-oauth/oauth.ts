@@ -130,7 +130,7 @@ export async function getOrCreateChatGptExtAgentHostId(spiritDataDir: string): P
   }
   mkdirSync(spiritDataDir, { recursive: true });
   const hostId = generateChatGptExtAgentHostId();
-  const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  const tempPath = `${filePath}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`;
   await writeFile(tempPath, `${hostId}\n`, { encoding: "utf8", mode: 0o600 });
   try {
     await chmod(tempPath, 0o600);

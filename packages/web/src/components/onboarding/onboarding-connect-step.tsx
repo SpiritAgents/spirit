@@ -2,6 +2,11 @@ import { Search } from "@spiritagent/icons/search";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  ChatGptAuthDialog,
+  isChatGptOAuthProvider,
+  useChatGptOAuthDialog,
+} from "@/components/settings/models/chatgpt-auth-dialog";
 import { ProviderConnectDialog } from "@/components/settings/models/provider-connect-dialog";
 import {
   ProviderPickerRowButton,
@@ -76,6 +81,11 @@ export function OnboardingConnectControls({
     provider: string;
     session: number;
   } | null>(null);
+  const chatGptAuth = useChatGptOAuthDialog({
+    onBeginChatGptOAuth,
+    onCompleteChatGptOAuth,
+    onCancelChatGptOAuth,
+  });
   const scrollRootRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const providerListRef = useRef<HTMLDivElement>(null);
@@ -87,6 +97,10 @@ export function OnboardingConnectControls({
   );
 
   const startConnect = (id: string) => {
+    if (isChatGptOAuthProvider(id)) {
+      chatGptAuth.start(id);
+      return;
+    }
     setConnectTarget((prev) => ({ provider: id, session: (prev?.session ?? 0) + 1 }));
     setConnectDialogOpen(true);
   };
@@ -194,12 +208,16 @@ export function OnboardingConnectControls({
           onAddModel={onAddModel}
           onAddProviderModels={onAddProviderModels}
           onPreviewModels={onPreviewModels}
-          onBeginChatGptOAuth={onBeginChatGptOAuth}
-          onCompleteChatGptOAuth={onCompleteChatGptOAuth}
-          onCancelChatGptOAuth={onCancelChatGptOAuth}
-          onOpenExternalUrl={onOpenExternalUrl}
         />
       ) : null}
+
+      <ChatGptAuthDialog
+        open={chatGptAuth.open}
+        state={chatGptAuth.state}
+        onClose={chatGptAuth.close}
+        onRetry={chatGptAuth.retry}
+        onOpenExternalUrl={onOpenExternalUrl}
+      />
     </div>
   );
 }

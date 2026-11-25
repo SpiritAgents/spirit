@@ -22,6 +22,11 @@ import {
   ModelSettingsRowButton,
   ModelSettingsRowWithHover,
 } from "@/components/settings/models/model-settings-row";
+import {
+  ChatGptAuthDialog,
+  isChatGptOAuthProvider,
+  useChatGptOAuthDialog,
+} from "@/components/settings/models/chatgpt-auth-dialog";
 import { ProviderConnectDialog } from "@/components/settings/models/provider-connect-dialog";
 import {
   ProviderPickerRowButton,
@@ -128,6 +133,11 @@ export function ModelsSettingsPanel({
   });
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [disconnectProviderTarget, setDisconnectProviderTarget] = useState<string | null>(null);
+  const chatGptAuth = useChatGptOAuthDialog({
+    onBeginChatGptOAuth,
+    onCompleteChatGptOAuth,
+    onCancelChatGptOAuth,
+  });
 
   const models = snapshot?.config.models ?? [];
   const configProviders = snapshot?.config.providers ?? [];
@@ -240,6 +250,10 @@ export function ModelsSettingsPanel({
 
   const startConnect = (id: string) => {
     setProviderDialogOpen(false);
+    if (isChatGptOAuthProvider(id)) {
+      chatGptAuth.start(id);
+      return;
+    }
     setConnectTarget((prev) => ({ provider: id, session: (prev?.session ?? 0) + 1 }));
     setConnectDialogOpen(true);
   };
@@ -978,12 +992,16 @@ export function ModelsSettingsPanel({
           onAddModel={onAddModel}
           onAddProviderModels={onAddProviderModels}
           onPreviewModels={onPreviewModels}
-          onBeginChatGptOAuth={onBeginChatGptOAuth}
-          onCompleteChatGptOAuth={onCompleteChatGptOAuth}
-          onCancelChatGptOAuth={onCancelChatGptOAuth}
-          onOpenExternalUrl={onOpenExternalUrl}
         />
       ) : null}
+
+      <ChatGptAuthDialog
+        open={chatGptAuth.open}
+        state={chatGptAuth.state}
+        onClose={chatGptAuth.close}
+        onRetry={chatGptAuth.retry}
+        onOpenExternalUrl={onOpenExternalUrl}
+      />
     </div>
   );
 }

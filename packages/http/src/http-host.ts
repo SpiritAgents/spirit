@@ -469,6 +469,8 @@ async function handleApiRequest({
         request: {
           ...(providerId ? { providerId } : {}),
           ...(promptConsent ? { promptConsent } : {}),
+          // Remote Web Host clients open the URL in their own browser via window.open.
+          openBrowser: false,
         },
       }),
     );

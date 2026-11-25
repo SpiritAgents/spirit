@@ -1,6 +1,10 @@
 import { ExternalLink } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  CUSTOM_PROVIDER_PRESET_ID,
+  findProviderPreset,
+} from "@spiritagent/agent-core/provider-presets";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,23 +24,18 @@ import type {
   CompleteChatGptOAuthResponse,
 } from "@spiritagent/api/types";
 
-type ChatGptAuthPhase =
+export type ChatGptAuthPhase =
   | { phase: "loading" }
   | { phase: "waiting"; authorizationUrl: string }
   | { phase: "connected"; email?: string }
   | { phase: "error"; message: string; code?: string };
 
-export type ChatGptAuthDialogProps = {
-  providerId?: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onBeginChatGptOAuth: (request?: BeginChatGptOAuthRequest) => Promise<BeginChatGptOAuthResponse>;
-  onCompleteChatGptOAuth: (
-    request: CompleteChatGptOAuthRequest,
-  ) => Promise<CompleteChatGptOAuthResponse>;
-  onCancelChatGptOAuth: (request: CancelChatGptOAuthRequest) => Promise<{ ok: true }>;
-  onOpenExternalUrl: (url: string) => Promise<void>;
-};
+export function isChatGptOAuthProvider(providerId: string): boolean {
+  if (providerId === CUSTOM_PROVIDER_PRESET_ID) {
+    return false;
+  }
+  return findProviderPreset(providerId)?.credentials.kind === "chatgpt-oauth";
+}
 
 function localizedAuthError(
   code: string | undefined,
@@ -59,73 +58,130 @@ function localizedAuthError(
   }
 }
 
+export interface UseChatGptOAuthDialogInput {
+  onBeginChatGptOAuth?: (request?: BeginChatGptOAuthRequest) => Promise<BeginChatGptOAuthResponse>;
+  onCompleteChatGptOAuth?: (
+    request: CompleteChatGptOAuthRequest,
+  ) => Promise<CompleteChatGptOAuthResponse>;
+  onCancelChatGptOAuth?: (request: CancelChatGptOAuthRequest) => Promise<{ ok: true }>;
+}
+
 /**
- * Browser-based OAuth authorization dialog for ChatGPT, modeled on the Vercel non-Device-Flow
- * authorization view (loading -> waiting with spinner and reopen button -> connected / error).
+ * Event-driven controller for the ChatGPT browser OAuth flow.
+ *
+ * Starting authorization in user click handlers (`start` / `retry`) instead of a mount `useEffect`
+ * ensures React StrictMode double-invocations and parent re-renders never launch duplicate browser
+ * tabs or supersede an active loopback listener.
  */
-export function ChatGptAuthDialog({
-  providerId = "chatgpt",
-  open,
-  onOpenChange,
+export function useChatGptOAuthDialog({
   onBeginChatGptOAuth,
   onCompleteChatGptOAuth,
   onCancelChatGptOAuth,
-  onOpenExternalUrl,
-}: ChatGptAuthDialogProps) {
+}: UseChatGptOAuthDialogInput) {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
   const [state, setState] = useState<ChatGptAuthPhase>({ phase: "loading" });
-  const [externalError, setExternalError] = useState<string>();
-  const [attempt, setAttempt] = useState(0);
+
+  const providerIdRef = useRef("chatgpt");
   const activeSessionIdRef = useRef<string | undefined>(undefined);
+  const runIdRef = useRef(0);
   const promptConsentNextRef = useRef(false);
 
+  const callbacksRef = useRef({
+    onBeginChatGptOAuth,
+    onCompleteChatGptOAuth,
+    onCancelChatGptOAuth,
+    t,
+  });
+  useEffect(() => {
+    callbacksRef.current = {
+      onBeginChatGptOAuth,
+      onCompleteChatGptOAuth,
+      onCancelChatGptOAuth,
+      t,
+    };
+  }, [onBeginChatGptOAuth, onCancelChatGptOAuth, onCompleteChatGptOAuth, t]);
+
   const cancelActiveSession = useCallback(() => {
+    runIdRef.current += 1;
     const sessionId = activeSessionIdRef.current;
     if (!sessionId) {
       return;
     }
     activeSessionIdRef.current = undefined;
-    void onCancelChatGptOAuth({ sessionId }).catch(() => undefined);
-  }, [onCancelChatGptOAuth]);
+    void callbacksRef.current.onCancelChatGptOAuth?.({ sessionId }).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
-    if (!open) {
-      cancelActiveSession();
+    return () => {
+      // Only cancels if a user-initiated OAuth session is actually active; initial StrictMode
+      // mount/unmount has no active session and is a no-op.
+      if (activeSessionIdRef.current !== undefined) {
+        cancelActiveSession();
+      }
+    };
+  }, [cancelActiveSession]);
+
+  const launchAttempt = useCallback((providerId: string, promptConsent: boolean) => {
+    const {
+      onBeginChatGptOAuth: begin,
+      onCompleteChatGptOAuth: complete,
+      onCancelChatGptOAuth: cancel,
+      t: translate,
+    } = callbacksRef.current;
+
+    runIdRef.current += 1;
+    const runId = runIdRef.current;
+    const previousSessionId = activeSessionIdRef.current;
+    activeSessionIdRef.current = undefined;
+    if (previousSessionId) {
+      void cancel?.({ sessionId: previousSessionId }).catch(() => undefined);
+    }
+
+    providerIdRef.current = providerId;
+    setOpen(true);
+
+    if (!begin || !complete) {
+      setState({
+        phase: "error",
+        message: translate("chatgptAuth.errorGeneric"),
+      });
       return;
     }
 
-    let cancelled = false;
-    const runAttempt = attempt;
+    setState({ phase: "loading" });
 
     void (async () => {
       try {
-        void runAttempt;
-        const promptConsent = promptConsentNextRef.current;
-        promptConsentNextRef.current = false;
-        const begun = await onBeginChatGptOAuth({
+        const begun = await begin({
           providerId,
           ...(promptConsent ? { promptConsent: true } : {}),
         });
-        if (cancelled) {
-          void onCancelChatGptOAuth({ sessionId: begun.sessionId }).catch(() => undefined);
+        if (runId !== runIdRef.current) {
+          void callbacksRef.current
+            .onCancelChatGptOAuth?.({ sessionId: begun.sessionId })
+            .catch(() => undefined);
           return;
         }
         activeSessionIdRef.current = begun.sessionId;
         setState({ phase: "waiting", authorizationUrl: begun.authorizationUrl });
 
-        const completed = await onCompleteChatGptOAuth({ sessionId: begun.sessionId });
+        const completed = await callbacksRef.current.onCompleteChatGptOAuth!({
+          sessionId: begun.sessionId,
+        });
         if (activeSessionIdRef.current === begun.sessionId) {
           activeSessionIdRef.current = undefined;
         }
-        if (cancelled) {
+        if (runId !== runIdRef.current) {
           return;
         }
         if (completed.phase === "connected") {
+          promptConsentNextRef.current = false;
           setState({
             phase: "connected",
             ...(completed.email ? { email: completed.email } : {}),
           });
-          onOpenChange(false);
+          setOpen(false);
           return;
         }
         if (completed.code === "chatpass_v2_scope_not_authorized") {
@@ -134,40 +190,91 @@ export function ChatGptAuthDialog({
         setState({
           phase: "error",
           ...(completed.code ? { code: completed.code } : {}),
-          message: localizedAuthError(completed.code, completed.message, (key) => t(key)),
+          message: localizedAuthError(completed.code, completed.message, (key) =>
+            callbacksRef.current.t(key),
+          ),
         });
       } catch (error) {
-        if (cancelled) {
+        if (runId !== runIdRef.current) {
           return;
         }
         setState({
           phase: "error",
-          message: error instanceof Error ? error.message : t("chatgptAuth.errorGeneric"),
+          message:
+            error instanceof Error
+              ? error.message
+              : callbacksRef.current.t("chatgptAuth.errorGeneric"),
         });
       }
     })();
+  }, []);
 
-    return () => {
-      cancelled = true;
-      cancelActiveSession();
-    };
-  }, [
-    attempt,
-    cancelActiveSession,
-    onBeginChatGptOAuth,
-    onCancelChatGptOAuth,
-    onCompleteChatGptOAuth,
-    onOpenChange,
+  const start = useCallback(
+    (providerId = "chatgpt") => {
+      promptConsentNextRef.current = false;
+      launchAttempt(providerId, false);
+    },
+    [launchAttempt],
+  );
+
+  const retry = useCallback(() => {
+    const promptConsent = promptConsentNextRef.current;
+    promptConsentNextRef.current = false;
+    launchAttempt(providerIdRef.current, promptConsent);
+  }, [launchAttempt]);
+
+  const close = useCallback(() => {
+    cancelActiveSession();
+    setOpen(false);
+  }, [cancelActiveSession]);
+
+  return {
     open,
-    providerId,
-    t,
-  ]);
+    state,
+    start,
+    retry,
+    close,
+  };
+}
+
+export type ChatGptAuthDialogProps = {
+  open: boolean;
+  state: ChatGptAuthPhase;
+  onClose: () => void;
+  onRetry: () => void;
+  onOpenExternalUrl?: (url: string) => Promise<void>;
+};
+
+/**
+ * Pure presentational browser OAuth dialog for ChatGPT, modeled on the Vercel non-Device-Flow
+ * authorization view (loading -> waiting with spinner and reopen button -> connected / error).
+ */
+export function ChatGptAuthDialog({
+  open,
+  state,
+  onClose,
+  onRetry,
+  onOpenExternalUrl,
+}: ChatGptAuthDialogProps) {
+  const { t } = useTranslation();
+  const [externalError, setExternalError] = useState<string>();
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
-      cancelActiveSession();
+      setExternalError(undefined);
+      onClose();
     }
-    onOpenChange(nextOpen);
+  };
+
+  const reopenExternalUrl = (url: string) => {
+    setExternalError(undefined);
+    if (onOpenExternalUrl) {
+      void onOpenExternalUrl(url).catch((error) => setExternalError(String(error)));
+      return;
+    }
+    if (typeof window !== "undefined") {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
   };
 
   return (
@@ -190,12 +297,7 @@ export function ChatGptAuthDialog({
                   size="icon-sm"
                   className="size-8"
                   aria-label={t("chatgptAuth.openAuthorizationPage")}
-                  onClick={() => {
-                    setExternalError(undefined);
-                    void onOpenExternalUrl(state.authorizationUrl).catch((error) =>
-                      setExternalError(String(error)),
-                    );
-                  }}
+                  onClick={() => reopenExternalUrl(state.authorizationUrl)}
                 >
                   <ExternalLink className="size-4" aria-hidden strokeWidth={1.75} />
                 </Button>
@@ -224,8 +326,7 @@ export function ChatGptAuthDialog({
                   size="sm"
                   onClick={() => {
                     setExternalError(undefined);
-                    setState({ phase: "loading" });
-                    setAttempt((count) => count + 1);
+                    onRetry();
                   }}
                 >
                   {t("chatgptAuth.retry")}
