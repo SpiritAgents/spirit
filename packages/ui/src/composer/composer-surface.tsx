@@ -346,7 +346,7 @@ export function ComposerSurface({
                 size="icon-sm"
                 shape="pill"
                 className={cn(
-                  "shrink-0 shadow-none [&_svg]:size-3",
+                  "shrink-0 shadow-none",
                   instantHoverMotionClass,
                   sendDisabled && "disabled:pointer-events-auto disabled:cursor-default",
                 )}
@@ -355,9 +355,9 @@ export function ComposerSurface({
                 aria-label={actionAriaLabel}
               >
                 {showAbortButton ? (
-                  <Square className="size-3" strokeWidth={2.4} aria-hidden />
+                  <Square className="size-3" strokeWidth={1.75} aria-hidden />
                 ) : showEnqueueWhileBusy || !busy ? (
-                  <ArrowUp className="size-3" strokeWidth={2.25} aria-hidden />
+                  <ArrowUp className="size-3.5" strokeWidth={1.75} aria-hidden />
                 ) : (
                   <LoaderCircle className="size-3 animate-spin" strokeWidth={1.75} />
                 )}
