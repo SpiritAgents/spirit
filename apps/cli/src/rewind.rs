@@ -192,13 +192,32 @@ pub struct ConversationMessageSnapshot {
     pub pending: bool,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnErrorDetailSnapshot {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<u16>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub param: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_id: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MessageAuxSnapshot {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thinking: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub compaction: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turn_error: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turn_error_detail: Option<TurnErrorDetailSnapshot>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -530,12 +549,20 @@ fn message_aux_snapshot_from_data(aux: &AssistantAuxData) -> Option<MessageAuxSn
         .compaction
         .clone()
         .filter(|value| !value.trim().is_empty());
-    if thinking.is_none() && compaction.is_none() {
+    let turn_error = aux.turn_error.filter(|value| *value);
+    let turn_error_detail = aux.turn_error_detail.clone();
+    if thinking.is_none()
+        && compaction.is_none()
+        && turn_error.is_none()
+        && turn_error_detail.is_none()
+    {
         None
     } else {
         Some(MessageAuxSnapshot {
             thinking,
             compaction,
+            turn_error,
+            turn_error_detail,
         })
     }
 }
@@ -549,12 +576,20 @@ fn assistant_aux_data_from_snapshot(snapshot: &MessageAuxSnapshot) -> Option<Ass
         .compaction
         .clone()
         .filter(|value| !value.trim().is_empty());
-    if thinking.is_none() && compaction.is_none() {
+    let turn_error = snapshot.turn_error.filter(|value| *value);
+    let turn_error_detail = snapshot.turn_error_detail.clone();
+    if thinking.is_none()
+        && compaction.is_none()
+        && turn_error.is_none()
+        && turn_error_detail.is_none()
+    {
         None
     } else {
         Some(AssistantAuxData {
             thinking,
             compaction,
+            turn_error,
+            turn_error_detail,
         })
     }
 }

@@ -719,6 +719,7 @@ impl TuiShell {
                         AssistantAuxData {
                             thinking,
                             compaction,
+                            ..Default::default()
                         },
                     ))
                 }

@@ -348,3 +348,18 @@ pub(crate) fn preset_supports_bulk_listing(preset_id: &str, credential_kind: &st
         .as_ref()
         .is_some_and(|catalog| catalog.endpoint.is_some())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn chatgpt_preset_loads_with_chatgpt_oauth_and_open_responses() {
+        let preset = preset_entry("chatgpt").expect("chatgpt preset must exist");
+        assert_eq!(preset.credential_kind(), "chatgpt-oauth");
+        assert_eq!(
+            preset.transport_kinds(),
+            vec![ModelTransportKind::OpenResponses]
+        );
+    }
+}
