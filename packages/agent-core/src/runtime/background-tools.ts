@@ -381,6 +381,7 @@ export async function pollPendingBackgroundToolExecution<Config, State, ToolRequ
       runtime,
       pending.toolCallId,
       pending.output.summaryText,
+      { toolName: pending.toolName, request: pending.request, failed: pending.failed },
     );
   } catch (error) {
     // On commit failure, release the slot so the finished execution is not re-committed on

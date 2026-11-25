@@ -111,7 +111,10 @@ import {
 } from "./runtime/streaming.js";
 import { performToolExecution as performToolExecutionInternal } from "./runtime/tool-execution.js";
 import { buildRuntimeToolExecution } from "./runtime/turn-machine.js";
-import { prepareAndSyncRuntimeToolResultToHistory } from "./runtime/tool-output-append.js";
+import {
+  prepareAndSyncRuntimeToolResultToHistory,
+  type RuntimeToolResultDiscoveryContext,
+} from "./runtime/tool-output-append.js";
 import type {
   AgentRuntimeOptions,
   AssistantAuxKind,
@@ -352,12 +355,16 @@ export class AgentRuntime<Config, State, ToolRequest> {
       throw new Error("Host options can only change after the foreground turn has stopped.");
     }
     const backgroundTasks = this.options.backgroundTasks;
+    const previousNestedAgentsState = this.options.nestedAgentsTracker?.snapshotState();
     this.baseToolExecutor = options.toolExecutor;
     this.baseLlmTransport = options.llmTransport;
     this.options = this.configureOptions({
       ...options,
       ...(backgroundTasks ? { backgroundTasks } : {}),
     });
+    if (previousNestedAgentsState && this.options.nestedAgentsTracker) {
+      this.options.nestedAgentsTracker.restoreState(previousNestedAgentsState);
+    }
   }
 
   private configureOptions(
@@ -542,11 +549,13 @@ export class AgentRuntime<Config, State, ToolRequest> {
     state: State,
     toolCallId: string,
     content: string,
+    discoveryContext?: RuntimeToolResultDiscoveryContext<ToolRequest>,
   ): Promise<State> {
     const preparedContent = await prepareAndSyncRuntimeToolResultToHistory(
       { options: this.options, historyStore: this.historyStore },
       toolCallId,
       content,
+      discoveryContext,
     );
     return this.options.appendToolResultMessage(state, toolCallId, preparedContent);
   }
@@ -1110,6 +1119,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
     this.clearPendingSubagentState();
     this.childSessionsStore =
       options.retainBackgroundHistory === false ? [] : this.retainedTaskChildSessions();
+    this.options.nestedAgentsTracker?.resetForCompaction();
     this.restoreLastUserInput();
   }
 
@@ -1156,6 +1166,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
       if (index < 0) this.childSessionsStore.push(record);
       else this.childSessionsStore[index] = record;
     }
+    this.options.nestedAgentsTracker?.restoreState(archive.nestedAgentsSeen ?? {});
     this.restoreLastUserInput();
   }
 
@@ -1345,6 +1356,10 @@ export class AgentRuntime<Config, State, ToolRequest> {
         })),
       })),
       loopEnabled: this.loopEnabledStore,
+      ...(() => {
+        const seen = this.options.nestedAgentsTracker?.snapshotState();
+        return seen && Object.keys(seen).length > 0 ? { nestedAgentsSeen: seen } : {};
+      })(),
     };
   }
 
@@ -1747,6 +1762,11 @@ export class AgentRuntime<Config, State, ToolRequest> {
         pending.state,
         pending.toolCallId,
         execution.output.summaryText,
+        {
+          toolName: pending.toolName,
+          request: pending.request,
+          failed: execution.failed,
+        },
       );
 
       if (pending.remainingCalls.length > 0) {
@@ -2063,6 +2083,11 @@ export class AgentRuntime<Config, State, ToolRequest> {
         resumedState,
         pending.toolCallId,
         execution.output.summaryText,
+        {
+          toolName: pending.toolName,
+          request: continuedRequest,
+          failed: execution.failed,
+        },
       );
 
       if (pending.remainingCalls.length > 0) {

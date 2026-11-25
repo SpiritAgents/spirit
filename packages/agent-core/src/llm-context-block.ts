@@ -11,6 +11,7 @@ export const LLM_CONTEXT_TAGS = {
   compact_summary: "compact_summary",
   compact_progress: "compact_progress",
   dream_collector: "dream_collector",
+  nested_agents: "nested_agents",
 } as const;
 
 export type LlmContextTag = (typeof LLM_CONTEXT_TAGS)[keyof typeof LLM_CONTEXT_TAGS];

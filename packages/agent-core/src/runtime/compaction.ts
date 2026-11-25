@@ -134,6 +134,9 @@ export async function compactHistoryImmediate<Config, State, ToolRequest>(
     undefined,
     compactionContext,
   );
+  if (result.droppedMessages > 0) {
+    runtime.options.nestedAgentsTracker?.resetForCompaction();
+  }
   const summary = runtime.options.llmTransport.compactSummaryText(runtime.historyStore);
   return buildCompactionRecord(result, summary, transcriptDirPath);
 }
@@ -294,6 +297,9 @@ export async function pollPendingHistoryCompaction<Config, State, ToolRequest>(
     }
 
     runtime.historyStore = compactedHistory;
+    if (result.droppedMessages > 0) {
+      runtime.options.nestedAgentsTracker?.resetForCompaction();
+    }
     if (!runtime.compactionTextStore.trim() && result.summary?.trim()) {
       runtime.compactionTextStore = result.summary;
       runtime.emitEvent({
@@ -361,6 +367,9 @@ export async function pollPendingHistoryCompaction<Config, State, ToolRequest>(
   }
 
   runtime.historyStore = compactedHistory;
+  if (result.droppedMessages > 0) {
+    runtime.options.nestedAgentsTracker?.resetForCompaction();
+  }
   pending.turn.compactions.push(result);
   if (!runtime.compactionTextStore.trim() && result.summary?.trim()) {
     runtime.compactionTextStore = result.summary;
