@@ -920,6 +920,7 @@ export async function executeAuthorizedToolCall<Config, State, ToolRequest>(
     runtime,
     toolCallId,
     execution.output.summaryText,
+    { toolName, request, failed: execution.failed },
   );
   const resumedState = await appendToolResultForRoundAsync(
     runtime,
@@ -1229,6 +1230,11 @@ export async function processToolCallsAsync<Config, State, ToolRequest>(
         runtime,
         call.id,
         earlyOutcome.output.summaryText,
+        {
+          toolName: call.name,
+          request: earlyOutcome.request,
+          failed: earlyOutcome.execution.failed,
+        },
       );
       currentState = await appendToolResultForRoundAsync(
         runtime,
@@ -1656,6 +1662,7 @@ export async function processToolCallsAsync<Config, State, ToolRequest>(
       runtime,
       call.id,
       execution.output.summaryText,
+      { toolName: call.name, request, failed: execution.failed },
     );
     currentState = await appendToolResultForRoundAsync(
       runtime,

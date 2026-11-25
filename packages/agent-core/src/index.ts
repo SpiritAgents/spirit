@@ -34,6 +34,7 @@ export * from "./host-tools.js";
 export * from "./plan-user-turn.js";
 export * from "./user-message-language.js";
 export * from "./shell-tool-result.js";
+export * from "./nested-agents.js";
 export * from "./unknown-tool-error.js";
 export * from "./finish-task-preview.js";
 export * from "./tool-streaming-preview-gate.js";

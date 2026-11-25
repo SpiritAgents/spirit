@@ -536,6 +536,7 @@ export interface AgentRuntimeOptions<Config, State, ToolRequest> {
   subagentSessionDelegate?: SubagentSessionDelegate;
   getApprovalLevel?: () => import("../auto-approval/types.js").SessionApprovalLevel;
   reviewToolApproval?: import("../auto-approval/types.js").ToolAutoReviewer;
+  nestedAgentsTracker?: import("../nested-agents.js").NestedAgentsTrackerPort;
 }
 
 export interface SubagentSessionExecutionRequest {

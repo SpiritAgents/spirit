@@ -1,6 +1,7 @@
 import { createLlmMessageContentFromTextAndImages, type LlmMessage } from "../ports.js";
 import { appendHookAdditionalContexts, runSubmitPromptHook } from "../hooks/integration.js";
 import { SubmitPromptHookDeniedError } from "../hooks/errors.js";
+import { formatNestedAgentsReminder } from "../nested-agents.js";
 
 import {
   formatPendingMcpResourceContext,
@@ -65,6 +66,15 @@ export async function prepareSubmittedUserTurn<Config, State, ToolRequest>(
     }
 
     runtime.recordContextMessage("system", formatPendingWorkspaceFileContext(file));
+  }
+  if (workspaceFiles.length > 0 && runtime.options.nestedAgentsTracker) {
+    const notifications = await runtime.options.nestedAgentsTracker.discoverForWorkspaceFiles(
+      workspaceFiles.map((file) => file.path),
+    );
+    const reminder = formatNestedAgentsReminder(notifications);
+    if (reminder) {
+      runtime.recordContextMessage("system", reminder);
+    }
   }
   for (const resource of resources) {
     runtime.recordContextMessage("system", formatPendingMcpResourceContext(resource));

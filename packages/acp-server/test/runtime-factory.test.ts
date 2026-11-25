@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
@@ -158,5 +158,109 @@ test("ACP conditional fast falls back and restores from real response usage", as
     await result?.dispose();
     setLlmFetchTransportOverrideForTests(undefined);
     setKeyringStoreForTests(undefined);
+  }
+});
+
+test("ACP runtime injects nested AGENTS.md reminder on read_file without re-injecting root AGENTS.md", async () => {
+  const spiritDataDir = realpathSync(mkdtempSync(join(tmpdir(), "an-")));
+  const workspaceRoot = realpathSync(mkdtempSync(join(tmpdir(), "acp-na-ws-")));
+  const rootAgents = join(workspaceRoot, "AGENTS.md");
+  const pkgAgents = join(workspaceRoot, "packages", "core", "AGENTS.md");
+  const targetFile = join(workspaceRoot, "packages", "core", "index.ts");
+  mkdirSync(join(workspaceRoot, "packages", "core"), { recursive: true });
+  writeFileSync(rootAgents, "# Root Rules\n");
+  writeFileSync(pkgAgents, "# Core Package Rules\n");
+  writeFileSync(targetFile, "export const ok = true;\n");
+  writeFileSync(
+    join(spiritDataDir, "config.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      providers: [
+        {
+          id: "local-fixture",
+          apiBase: "http://127.0.0.1:1/v1",
+          apiKey: "fixture-key",
+          transportKind: "openai-compatible",
+          models: [{ name: "fixture-model" }],
+        },
+      ],
+      activeModel: { providerId: "local-fixture", name: "fixture-model" },
+    }),
+  );
+
+  const requestBodies: Array<{ messages: Array<{ role: string; content?: unknown }> }> = [];
+  let callIndex = 0;
+  setLlmFetchTransportOverrideForTests(async (_input, init) => {
+    requestBodies.push(
+      JSON.parse(String(init?.body)) as { messages: Array<{ role: string; content?: unknown }> },
+    );
+    const step = callIndex++;
+    if (step === 0) {
+      return new Response(
+        JSON.stringify({
+          id: "chatcmpl-acp-na-1",
+          object: "chat.completion",
+          created: 0,
+          model: "fixture-model",
+          choices: [
+            {
+              index: 0,
+              message: {
+                role: "assistant",
+                content: null,
+                tool_calls: [
+                  {
+                    id: "call_acp_read",
+                    type: "function",
+                    function: {
+                      name: "read_file",
+                      arguments: JSON.stringify({ path: "packages/core/index.ts" }),
+                    },
+                  },
+                ],
+              },
+              finish_reason: "tool_calls",
+            },
+          ],
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response(
+      JSON.stringify({
+        id: "chatcmpl-acp-na-2",
+        object: "chat.completion",
+        created: 0,
+        model: "fixture-model",
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "done" },
+            finish_reason: "stop",
+          },
+        ],
+        usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  });
+
+  let result: Awaited<ReturnType<typeof createAcpRuntime>> | undefined;
+  try {
+    result = await createAcpRuntime({ workspaceRoot, spiritDataDir }, () => {});
+    const turn = await result.runtime.submitUserTurn("read core");
+    assert.equal(turn.kind, "completed");
+    const toolMsg = requestBodies[1]!.messages.find((msg) => msg.role === "tool");
+    assert.ok(toolMsg);
+    const text = String(toolMsg.content);
+    assert.ok(text.includes("<nested_agents>"));
+    assert.ok(text.includes(pkgAgents));
+    assert.ok(!text.includes(rootAgents));
+  } finally {
+    await result?.dispose();
+    setLlmFetchTransportOverrideForTests(undefined);
+    rmSync(spiritDataDir, { recursive: true, force: true });
+    rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });

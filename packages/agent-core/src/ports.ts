@@ -544,6 +544,8 @@ export interface ChatArchive {
   subagentSessions?: SubagentSessionArchiveEntry[];
   loopEnabled?: boolean;
   approvalLevel?: "default" | "auto-approval" | "bypass-approval";
+  /** Canonical path -> SHA-256 map of nested AGENTS.md files already notified in this uncompacted context. */
+  nestedAgentsSeen?: Record<string, string>;
 }
 
 export type McpStatusState = "idle" | "loading" | "ready" | "error";
