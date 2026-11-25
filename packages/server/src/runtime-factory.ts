@@ -94,6 +94,7 @@ import {
   type BackgroundTaskOwner,
 } from "@spiritagent/sessions";
 import {
+  createNestedAgentsTracker,
   extractActivePlanPathFromLlmHistory,
   loadHostInstructionMetadata,
   parseCreatePlanPathFromToolOutput,
@@ -680,6 +681,7 @@ async function prepareServerRuntime(
     const enabledSkillCatalog: LlmEnabledSkillCatalogEntry[] = [];
     let baseEnabledRules: LlmEnabledRule[] = [];
     let baseEnabledSkillCatalog: LlmEnabledSkillCatalogEntry[] = [];
+    let disabledAgentsPaths: string[] = [];
     let currentPlanMetadata: LlmPlanMetadata | undefined;
     const setActivePlanPath = (activePlanPath?: string): void => {
       currentPlanMetadata = planMetadataSnapshot(
@@ -735,6 +737,9 @@ async function prepareServerRuntime(
       );
       baseEnabledRules = [...metadata.rules.enabledRules];
       baseEnabledSkillCatalog = [...metadata.skills.enabledSkillCatalog];
+      disabledAgentsPaths = metadata.rules.entries
+        .filter((entry) => entry.exists && !entry.enabled)
+        .map((entry) => entry.source.path);
       await applyExtensionInstructionOverlay();
       currentPlanMetadata = metadata.planMetadata;
       toolExecutor.setAgentModeToolExposure(options.agentMode ?? "agent");
@@ -908,6 +913,16 @@ async function prepareServerRuntime(
           return saveGeneratedVideo.call(service, saveRequest);
         }),
       resolveWorkspaceFilesFromInput: (text) => pendingWorkspaceFilesFromInput(workspaceRoot, text),
+      ...(isDreamCollector
+        ? {}
+        : {
+            nestedAgentsTracker: createNestedAgentsTracker({
+              workspaceRoot,
+              spiritDataDir,
+              getSystemInjectedAgentsRules: () => enabledRules,
+              getDisabledAgentsPaths: () => disabledAgentsPaths,
+            }),
+          }),
       hookRunner,
       hookSessionContext,
       syncSessionTranscript: async ({ transcript, sessionKey: key }) =>
@@ -1085,6 +1100,9 @@ async function prepareServerRuntime(
             );
             baseEnabledRules = [...refreshed.rules.enabledRules];
             baseEnabledSkillCatalog = [...refreshed.skills.enabledSkillCatalog];
+            disabledAgentsPaths = refreshed.rules.entries
+              .filter((entry) => entry.exists && !entry.enabled)
+              .map((entry) => entry.source.path);
             await applyExtensionInstructionOverlay();
             currentPlanMetadata = refreshed.planMetadata;
           },

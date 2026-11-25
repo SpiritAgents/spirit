@@ -53,6 +53,7 @@ import {
 } from "@spiritagent/tools";
 import { createHostMcpService } from "@spiritagent/mcp";
 import {
+  createNestedAgentsTracker,
   loadHostInstructionMetadata,
   overlayExtensionRulesAndSkills,
 } from "@spiritagent/instructions";
@@ -417,6 +418,9 @@ async function prepareAcpRuntime(
       { planMode: initialMode === "plan", agentMode: initialMode },
     );
     const enabledRules: LlmEnabledRule[] = [...metadata.rules.enabledRules];
+    const disabledAgentsPaths: string[] = metadata.rules.entries
+      .filter((entry) => entry.exists && !entry.enabled)
+      .map((entry) => entry.source.path);
     const enabledSkillCatalog: LlmEnabledSkillCatalogEntry[] = [
       ...metadata.skills.enabledSkillCatalog,
     ];
@@ -581,6 +585,12 @@ async function prepareAcpRuntime(
           return saveGeneratedVideo.call(service, saveRequest);
         }),
       resolveWorkspaceFilesFromInput: (text) => pendingWorkspaceFilesFromInput(workspaceRoot, text),
+      nestedAgentsTracker: createNestedAgentsTracker({
+        workspaceRoot,
+        spiritDataDir,
+        getSystemInjectedAgentsRules: () => enabledRules,
+        getDisabledAgentsPaths: () => disabledAgentsPaths,
+      }),
       // Pre-existing gap: ACP wires no hookRunner, so the hookSessionContext
       // below is inert and session/tool hooks never fire in ACP mode.
       ...(sessionKey
