@@ -30,6 +30,10 @@ import {
   resolveProfileCredentialSlot,
   resolveStoredApiKeyForProfile,
 } from "./credentials/index.js";
+import {
+  createChatGptOAuthCredentialManager,
+  hasStoredChatGptOAuthCredentials,
+} from "./chatgpt-oauth/credentials.js";
 import type { SpiritModelProfile } from "./credentials/types.js";
 
 export interface ResolveTransportContext {
@@ -193,6 +197,7 @@ function buildTransportFromProfile(
 
   if (transportKind === "open-responses") {
     const sigv4 = profile.options?.auth === "aws-sigv4";
+    const chatGptOAuth = profile.options?.auth === "chatgpt-oauth";
     let bedrockMantleIam:
       | { region: string; accessKeyId: string; secretAccessKey: string }
       | undefined;
@@ -210,6 +215,19 @@ function buildTransportFromProfile(
       }
       bedrockMantleIam = { region, accessKeyId, secretAccessKey };
     }
+    const bearerAuth =
+      chatGptOAuth && !apiKey.trim()
+        ? (() => {
+            const manager = createChatGptOAuthCredentialManager({
+              providerId: profile.providerId,
+            });
+            return {
+              resolveBearerToken: () => manager.getAccessToken(),
+              refreshBearerTokenAfterUnauthorized: (rejected: string) =>
+                manager.refreshAfterUnauthorized(rejected),
+            };
+          })()
+        : undefined;
     return {
       transportKind: "open-responses",
       apiKey,
@@ -225,6 +243,7 @@ function buildTransportFromProfile(
         ? { vendorExtendedThinking: profile.thinkingEnabled }
         : {}),
       ...(bedrockMantleIam !== undefined ? { bedrockMantleIam } : {}),
+      ...bearerAuth,
       ...declarations,
     };
   }
@@ -351,6 +370,8 @@ export function tryResolveTransportConfig(
   if (!apiKey.trim()) {
     const transportKind = resolveProviderTransportKind(profile);
     const sigv4 = transportKind === "open-responses" && profile.options?.auth === "aws-sigv4";
+    const chatGptOAuth =
+      transportKind === "open-responses" && profile.options?.auth === "chatgpt-oauth";
     if (resolveProviderSdkPackageName(profile) === GOOGLE_VERTEX_SDK_PACKAGE_NAME) {
       const clientEmail = resolveProfileCredentialSlot(profile, "clientEmail");
       const privateKey = resolveProfileCredentialSlot(profile, "privateKey");
@@ -358,6 +379,13 @@ export function tryResolveTransportConfig(
         return {
           ok: false,
           error: `No Vertex credentials found for model "${profile.name}". Run setup again.`,
+        };
+      }
+    } else if (chatGptOAuth) {
+      if (!hasStoredChatGptOAuthCredentials(profile.providerId)) {
+        return {
+          ok: false,
+          error: `ChatGPT is not connected for model "${profile.name}". Sign in again.`,
         };
       }
     } else if (transportKind === "bedrock" || sigv4) {

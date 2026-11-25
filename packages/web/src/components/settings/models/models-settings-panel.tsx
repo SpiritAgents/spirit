@@ -86,6 +86,10 @@ export function ModelsSettingsPanel({
   onPreviewModels,
   onRemoveModel,
   onDisconnectProvider,
+  onBeginChatGptOAuth,
+  onCompleteChatGptOAuth,
+  onCancelChatGptOAuth,
+  onOpenExternalUrl,
 }: Pick<
   SettingsViewProps,
   | "settings"
@@ -98,6 +102,10 @@ export function ModelsSettingsPanel({
   | "onPreviewModels"
   | "onRemoveModel"
   | "onDisconnectProvider"
+  | "onBeginChatGptOAuth"
+  | "onCompleteChatGptOAuth"
+  | "onCancelChatGptOAuth"
+  | "onOpenExternalUrl"
 >) {
   const { t } = useTranslation();
   const [providerDialogOpen, setProviderDialogOpen] = useState(false);
@@ -970,6 +978,10 @@ export function ModelsSettingsPanel({
           onAddModel={onAddModel}
           onAddProviderModels={onAddProviderModels}
           onPreviewModels={onPreviewModels}
+          onBeginChatGptOAuth={onBeginChatGptOAuth}
+          onCompleteChatGptOAuth={onCompleteChatGptOAuth}
+          onCancelChatGptOAuth={onCancelChatGptOAuth}
+          onOpenExternalUrl={onOpenExternalUrl}
         />
       ) : null}
     </div>

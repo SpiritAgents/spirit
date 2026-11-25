@@ -45,6 +45,7 @@
   },
   "providers": {
     "openai": "OpenAI",
+    "chatgpt": "ChatGPT",
     "google": "Google",
     "googleVertexAi": "Google Vertex AI",
     "xai": "SpaceXAI",
@@ -1565,5 +1566,31 @@
     "toolApprovalTitle": "Approuver l’appel d’outil MCP App",
     "toolApprovalDescription": "{{app}} souhaite exécuter {{tool}} sur {{server}}. Vérifiez les arguments avant de continuer.",
     "toolApprovalAllow": "Exécuter l’outil"
+  },
+  "chatgptAuth": {
+    "title": "Connecter ChatGPT",
+    "waiting": "En attente d’autorisation dans le navigateur",
+    "openAuthorizationPage": "Ouvrir la page d’autorisation ChatGPT",
+    "connected": "Connecté à ChatGPT",
+    "connectedAs": "Connecté en tant que {{email}}",
+    "retry": "Réessayer",
+    "errorTimeout": "L’autorisation ChatGPT a expiré. Veuillez réessayer.",
+    "errorCancelled": "L’autorisation ChatGPT a été annulée.",
+    "errorDenied": "L’autorisation ChatGPT a été refusée.",
+    "errorMissingPlanScope": "L’autorisation d’utiliser l’abonnement ChatGPT n’a pas été accordée. Reconnectez-vous et autorisez l’utilisation de l’abonnement.",
+    "errorInvalidClient": "L’enregistrement du client ChatGPT n’a pas pu être vérifié. Réessayez de vous connecter.",
+    "errorGeneric": "Échec de la connexion à ChatGPT. Veuillez réessayer."
+  },
+  "chatgptErrors": {
+    "usageLimitExceeded": "Vous avez atteint la limite d’utilisation de votre abonnement ChatGPT pour cette application. Vérifiez vos limites ou réessayez plus tard.",
+    "manageUsage": "Gérer l’utilisation",
+    "userNotEligible": "Votre abonnement ou espace de travail ChatGPT actuel n’est pas éligible à cette utilisation. Passez à un abonnement supérieur ou changez de fournisseur.",
+    "upgradePlan": "Changer d’abonnement",
+    "invalidUser": "Votre connexion ChatGPT n’est plus valide. Reconnectez ChatGPT dans les paramètres pour continuer.",
+    "refreshTokenExpired": "Votre autorisation ChatGPT a expiré ou a été révoquée. Reconnectez ChatGPT dans les paramètres pour continuer.",
+    "scopeNotAuthorized": "L’utilisation de l’abonnement ChatGPT n’est pas autorisée pour cette connexion. Reconnectez ChatGPT dans les paramètres et accordez l’autorisation.",
+    "invalidClient": "Votre enregistrement client ChatGPT n’est plus valide. Déconnectez puis reconnectez ChatGPT dans les paramètres.",
+    "policyRestricted": "Cette requête a été bloquée par les restrictions de région ou de politique d’espace de travail ChatGPT.",
+    "serviceUnavailable": "Le routage d’abonnement ChatGPT est temporairement indisponible. Votre connexion est conservée ; réessayez dans un instant."
   }
 }

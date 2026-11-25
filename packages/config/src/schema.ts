@@ -108,8 +108,10 @@ export interface ProviderOptions {
   awsRegion?: string;
   project?: string;
   location?: string;
-  auth?: "aws-sigv4";
+  auth?: "aws-sigv4" | "chatgpt-oauth";
   storedState?: true;
+  /** open-responses: enforce stateless streaming-only Responses wire rules (store=false, stream=true, developer system role, omit unsupported fields). */
+  statelessStreamingResponses?: true;
   /** open-responses: upload non-image media through the declared Files channel before inference. */
   responsesFileUpload?: true;
   /** openai-compatible: enforce declared inline image and MP4 input constraints. */
@@ -364,6 +366,7 @@ const TRANSPORT_OPTION_KEYS: Record<SpiritTransportKind, readonly string[]> = {
   "open-responses": [
     "auth",
     "storedState",
+    "statelessStreamingResponses",
     "responsesFileUpload",
     "applyPatch",
     "reasoningSummary",
@@ -814,11 +817,18 @@ function validateProviderOptions(
       throw new SpiritConfigSchemaError(`${context}: "options.${key}" must be a non-empty string.`);
     }
   }
-  if (value["auth"] !== undefined && value["auth"] !== "aws-sigv4") {
-    throw new SpiritConfigSchemaError(`${context}: "options.auth" must be "aws-sigv4".`);
+  if (
+    value["auth"] !== undefined &&
+    value["auth"] !== "aws-sigv4" &&
+    value["auth"] !== "chatgpt-oauth"
+  ) {
+    throw new SpiritConfigSchemaError(
+      `${context}: "options.auth" must be "aws-sigv4" or "chatgpt-oauth".`,
+    );
   }
   for (const key of [
     "storedState",
+    "statelessStreamingResponses",
     "applyPatch",
     "toolsRejectReasoningEffort",
     "inlineImageInput",

@@ -619,7 +619,12 @@ export interface ToolAgentRoundResult<State = JsonValue> {
 
 export type ToolAgentRoundCompletion<State = JsonValue> =
   | { kind: "success"; result: ToolAgentRoundResult<State> }
-  | { kind: "failure"; error: string; requestTrace: JsonValue[] };
+  | {
+      kind: "failure";
+      error: string;
+      providerError?: import("./openai/ai-sdk-provider-error.js").ProviderErrorDetail;
+      requestTrace: JsonValue[];
+    };
 
 export type LlmStreamEvent =
   | { kind: "thinking-chunk"; text: string }
@@ -636,7 +641,11 @@ export type LlmStreamEvent =
       droppedMessages: number;
     }
   | { kind: "done" }
-  | { kind: "error"; error: string };
+  | {
+      kind: "error";
+      error: string;
+      providerError?: import("./openai/ai-sdk-provider-error.js").ProviderErrorDetail;
+    };
 
 export interface StartedToolAgentRound<State = JsonValue> {
   eventStream: AsyncIterable<LlmStreamEvent>;

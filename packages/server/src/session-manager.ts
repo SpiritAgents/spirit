@@ -72,6 +72,7 @@ export type ServerTurnResult =
   | {
       kind: "failed";
       error: string;
+      providerError?: import("@spiritagent/agent-core").ProviderErrorDetail;
       toolExecutions: unknown[];
     };
 
@@ -1128,11 +1129,23 @@ export class SessionManager {
             session.turnGeneration,
             turnResult.kind === "failed" ? "failed" : "completed",
             turnResult.kind === "failed"
-              ? {
-                  kind: "failed",
-                  error: turnResult.error,
-                  toolExecutions: turnResult.toolExecutions,
-                }
+              ? (() => {
+                  const providerId =
+                    turnResult.providerError?.providerId ?? session.runtimeResult.providerId;
+                  const providerError =
+                    turnResult.providerError || providerId
+                      ? {
+                          ...turnResult.providerError,
+                          ...(providerId ? { providerId } : {}),
+                        }
+                      : undefined;
+                  return {
+                    kind: "failed" as const,
+                    error: turnResult.error,
+                    ...(providerError ? { providerError } : {}),
+                    toolExecutions: turnResult.toolExecutions,
+                  };
+                })()
               : {
                   kind: "completed",
                   assistantText: turnResult.assistantText,

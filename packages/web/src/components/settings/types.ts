@@ -86,6 +86,16 @@ export type SettingsViewProps = {
   onPreviewModels: (request: PreviewModelsRequest) => Promise<PreviewModelsResponse>;
   onRemoveModel: (name: string) => Promise<void>;
   onDisconnectProvider: (providerId: string) => Promise<void>;
+  onBeginChatGptOAuth?: (
+    request?: import("@spiritagent/api/types").BeginChatGptOAuthRequest,
+  ) => Promise<import("@spiritagent/api/types").BeginChatGptOAuthResponse>;
+  onCompleteChatGptOAuth?: (
+    request: import("@spiritagent/api/types").CompleteChatGptOAuthRequest,
+  ) => Promise<import("@spiritagent/api/types").CompleteChatGptOAuthResponse>;
+  onCancelChatGptOAuth?: (
+    request: import("@spiritagent/api/types").CancelChatGptOAuthRequest,
+  ) => Promise<{ ok: true }>;
+  onOpenExternalUrl?: (url: string) => Promise<void>;
   onAddMcpServer: (request: AddMcpServerRequest) => Promise<void>;
   onUpdateExtensionSettings: (request: UpdateExtensionSettingsRequest) => Promise<void>;
   onDeleteMcpServer: (request: DeleteMcpServerRequest) => Promise<void>;

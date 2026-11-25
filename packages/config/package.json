@@ -36,6 +36,10 @@
       "types": "./dist/credentials/index.d.ts",
       "default": "./dist/credentials/index.js"
     },
+    "./chatgpt-oauth": {
+      "types": "./dist/chatgpt-oauth/index.d.ts",
+      "default": "./dist/chatgpt-oauth/index.js"
+    },
     "./data-paths": {
       "types": "./dist/data-paths.d.ts",
       "default": "./dist/data-paths.js"

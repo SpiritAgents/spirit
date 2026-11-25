@@ -1,6 +1,7 @@
 import { listProviderPresets } from "@spiritagent/agent-core/provider-presets";
 import { buildFormattedDisplayTitlesFromIds } from "@spiritagent/agent-core/model-catalog/id-display-title";
 import type { DesktopSnapshot } from "@spiritagent/api/types";
+import { hasStoredChatGptOAuthCredentials } from "@spiritagent/config/chatgpt-oauth";
 import { resolveProviderApiKeyResolution } from "@spiritagent/config/credentials";
 import {
   addModelCommand,
@@ -95,9 +96,14 @@ async function executeHostModelCommandInScope(
   }
   if (method === "host.hasProviderCredential") {
     const provider = params["provider"] as Record<string, unknown>;
+    const providerId = String(provider["id"] ?? provider["providerId"] ?? "");
+    const options = provider["options"] as { auth?: unknown } | undefined;
+    if (options?.auth === "chatgpt-oauth") {
+      return hasStoredChatGptOAuthCredentials(providerId);
+    }
     return (
       resolveProviderApiKeyResolution({
-        id: String(provider["id"] ?? provider["providerId"] ?? ""),
+        id: providerId,
         apiKey: (provider["apiKey"] ?? undefined) as never,
         apiKeyEnv: (provider["apiKeyEnv"] ?? undefined) as never,
         apiKeyKeyring: (provider["apiKeyKeyring"] ?? undefined) as never,

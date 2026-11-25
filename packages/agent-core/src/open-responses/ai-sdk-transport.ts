@@ -1,6 +1,8 @@
-import { generateObject, generateText, jsonSchema, streamText } from "ai";
+import { generateObject, generateText, jsonSchema, streamObject, streamText } from "ai";
 
 import { readAiSdkUsage } from "../ai-sdk-usage.js";
+import { extractAiSdkProviderErrorDetail } from "../openai/ai-sdk-provider-error.js";
+import { isStatelessStreamingResponsesConfig } from "./responses-stateless-streaming-fetch.js";
 
 import type {
   GeneratedImageFile,
@@ -162,18 +164,38 @@ export class AiSdkOpenResponsesTransport
     );
     const requestTrace = buildOpenResponsesRequestTrace(config, 1, messages, []);
 
+    const statelessStreaming = isStatelessStreamingResponsesConfig(config);
+    const maxOutputTokensOption =
+      !statelessStreaming && config.outputLimit !== undefined
+        ? { maxOutputTokens: config.outputLimit }
+        : {};
+
     try {
-      const result = await generateObject({
-        model: createResponsesLanguageModel(config) as any,
-        messages: openAiMessagesToResponsesAiSdkMessages(messages, config) as any,
-        allowSystemInMessages: true,
-        ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
-        schema: jsonSchema(request.schema as Record<string, unknown>),
-        schemaName: request.schemaName,
-        providerOptions: buildResponsesProviderOptionsWithServiceTier(config),
-        maxRetries: 2,
-      });
-      const output = cloneJsonValue(result.object as JsonValue) as T;
+      let output: T;
+      if (statelessStreaming) {
+        const streamed = streamObject({
+          model: createResponsesLanguageModel(config) as any,
+          messages: openAiMessagesToResponsesAiSdkMessages(messages, config) as any,
+          allowSystemInMessages: true,
+          schema: jsonSchema(request.schema as Record<string, unknown>),
+          schemaName: request.schemaName,
+          providerOptions: buildResponsesProviderOptionsWithServiceTier(config),
+          maxRetries: 2,
+        });
+        output = cloneJsonValue((await streamed.object) as JsonValue) as T;
+      } else {
+        const result = await generateObject({
+          model: createResponsesLanguageModel(config) as any,
+          messages: openAiMessagesToResponsesAiSdkMessages(messages, config) as any,
+          allowSystemInMessages: true,
+          ...maxOutputTokensOption,
+          schema: jsonSchema(request.schema as Record<string, unknown>),
+          schemaName: request.schemaName,
+          providerOptions: buildResponsesProviderOptionsWithServiceTier(config),
+          maxRetries: 2,
+        });
+        output = cloneJsonValue(result.object as JsonValue) as T;
+      }
 
       return {
         output,
@@ -190,6 +212,14 @@ export class AiSdkOpenResponsesTransport
     state: ToolAgentState,
     tools: JsonValue,
   ): Promise<ToolAgentRoundCompletion<ToolAgentState>> {
+    if (isStatelessStreamingResponsesConfig(config)) {
+      const started = await this.startToolAgentRoundStreaming(config, state, tools);
+      for await (const _event of started.eventStream) {
+        // Drain stream so completion settles with the collected result or failure.
+      }
+      return started.completion;
+    }
+
     const nextState: ToolAgentState = {
       messages: state.messages.map((message) => cloneJsonValue(message)),
       steps: state.steps + 1,
@@ -320,9 +350,11 @@ export class AiSdkOpenResponsesTransport
         }),
       );
     } catch (error) {
+      const providerError = extractAiSdkProviderErrorDetail(error);
       return {
         kind: "failure",
         error: renderResponsesTransportError(error),
+        ...(providerError ? { providerError } : {}),
         requestTrace: tracedRequest,
       };
     }
@@ -379,13 +411,16 @@ export class AiSdkOpenResponsesTransport
       );
       const sdkMessages = openAiMessagesToResponsesAiSdkMessages(roundInput.apiMessages, config);
       const providerToolStopWhen = buildProviderToolStopWhen(config);
+      const statelessStreaming = isStatelessStreamingResponsesConfig(config);
       const result: { stream: AsyncIterable<unknown> } & Parameters<typeof readAiSdkUsage>[0] =
         runInResponsesStoredStateRequestContextSync(roundInput.previousResponseId, () =>
           streamText({
             model: createResponsesLanguageModel(config, providerTools) as any,
             messages: sdkMessages as any,
             allowSystemInMessages: true,
-            ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
+            ...(!statelessStreaming && config.outputLimit !== undefined
+              ? { maxOutputTokens: config.outputLimit }
+              : {}),
             ...(hasGenerateTools
               ? {
                   tools: generateTools as any,
@@ -421,11 +456,13 @@ export class AiSdkOpenResponsesTransport
       };
     } catch (error) {
       endApplyPatchBridgeRound();
+      const providerError = extractAiSdkProviderErrorDetail(error);
       return {
         eventStream: emptyResponsesEventStream(),
         completion: Promise.resolve({
           kind: "failure",
           error: renderResponsesTransportError(error),
+          ...(providerError ? { providerError } : {}),
           requestTrace,
         }),
         cancel: () => abortController.abort(),
@@ -469,15 +506,16 @@ export class AiSdkOpenResponsesTransport
       model: config.compactModel ?? config.model,
     };
 
+    const statelessStreaming = isStatelessStreamingResponsesConfig(compactConfig);
     let summary = "";
-    if (onProgress) {
+    if (onProgress || statelessStreaming) {
       let emittedProgress = false;
       try {
         const streamed = streamText({
           model: createResponsesLanguageModel(compactConfig) as any,
           messages: promptMessages as any,
           allowSystemInMessages: true,
-          ...(compactConfig.outputLimit !== undefined
+          ...(!statelessStreaming && compactConfig.outputLimit !== undefined
             ? { maxOutputTokens: compactConfig.outputLimit }
             : {}),
           providerOptions: buildResponsesProviderOptionsWithServiceTier(compactConfig),
@@ -496,16 +534,16 @@ export class AiSdkOpenResponsesTransport
 
           summary += normalizedText;
           emittedProgress = true;
-          onProgress(normalizedText);
+          onProgress?.(normalizedText);
         }
       } catch (error) {
-        if (emittedProgress) {
+        if (emittedProgress || statelessStreaming) {
           throw error;
         }
       }
     }
 
-    if (!summary.trim()) {
+    if (!summary.trim() && !statelessStreaming) {
       const result = await generateText({
         model: createResponsesLanguageModel(compactConfig) as any,
         messages: promptMessages as any,

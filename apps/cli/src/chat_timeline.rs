@@ -213,7 +213,7 @@ fn row_from_assistant_message(
             return Some(PersistedTimelineRow {
                 aux: Some(MessageAuxSnapshot {
                     thinking: Some(thinking),
-                    compaction: None,
+                    ..Default::default()
                 }),
                 section: Some("before-tools".to_string()),
                 ..base("assistant-thinking", Some("before-tools"))
@@ -222,8 +222,8 @@ fn row_from_assistant_message(
         if let Some(compaction) = aux.as_ref().and_then(|value| value.compaction.clone()) {
             return Some(PersistedTimelineRow {
                 aux: Some(MessageAuxSnapshot {
-                    thinking: None,
                     compaction: Some(compaction),
+                    ..Default::default()
                 }),
                 ..base("assistant-compaction", None)
             });
@@ -657,6 +657,7 @@ fn assistant_aux_from_provider_state(
         Some(AssistantAuxData {
             thinking,
             compaction,
+            ..Default::default()
         })
     }
 }
@@ -671,12 +672,20 @@ fn sanitize_aux(aux: Option<&MessageAuxSnapshot>) -> Option<MessageAuxSnapshot> 
         .compaction
         .clone()
         .filter(|value| !value.trim().is_empty());
-    if thinking.is_none() && compaction.is_none() {
+    let turn_error = aux.turn_error.filter(|value| *value);
+    let turn_error_detail = aux.turn_error_detail.clone();
+    if thinking.is_none()
+        && compaction.is_none()
+        && turn_error.is_none()
+        && turn_error_detail.is_none()
+    {
         None
     } else {
         Some(MessageAuxSnapshot {
             thinking,
             compaction,
+            turn_error,
+            turn_error_detail,
         })
     }
 }
@@ -704,7 +713,7 @@ mod tests {
                 tool: None,
                 aux: Some(MessageAuxSnapshot {
                     thinking: Some("reasoning".to_string()),
-                    compaction: None,
+                    ..Default::default()
                 }),
                 pending: false,
             },

@@ -209,7 +209,7 @@ export interface DesktopDreamConfigUpdate {
 export type DesktopTransportKind = SpiritTransportKind;
 
 /** The wizard's credential form, forwarded to preset materialization (`apiKey` on a non-apiKey preset selects `expressApiBase`). */
-export type DesktopProviderCredentialKind = "apiKey" | "bedrock" | "vertex";
+export type DesktopProviderCredentialKind = "apiKey" | "bedrock" | "vertex" | "chatgpt-oauth";
 
 /** Model reasoning effort string; declared per model in config (`supportedReasoningEfforts`). */
 export type DesktopModelReasoningEffort = ModelReasoningEffort;
@@ -431,6 +431,41 @@ export interface RemoveModelRequest {
 
 export interface DisconnectProviderRequest {
   providerId: string;
+}
+
+export interface BeginChatGptOAuthRequest {
+  providerId?: string;
+  promptConsent?: boolean;
+}
+
+export interface BeginChatGptOAuthResponse {
+  sessionId: string;
+  authorizationUrl: string;
+}
+
+export interface CompleteChatGptOAuthRequest {
+  sessionId: string;
+}
+
+export type CompleteChatGptOAuthResponse =
+  | {
+      phase: "connected";
+      email?: string;
+      modelCount: number;
+      snapshot: DesktopSnapshot;
+    }
+  | {
+      phase: "error";
+      message: string;
+      code?: string;
+    };
+
+export interface CancelChatGptOAuthRequest {
+  sessionId: string;
+}
+
+export interface OpenExternalUrlRequest {
+  url: string;
 }
 
 export interface DesktopMcpCapabilityToggles {
@@ -1945,6 +1980,14 @@ export interface ToolBlockSnapshot {
   mcpApp?: ToolExecutionMcpAppUi;
 }
 
+export interface TurnErrorDetailSnapshot {
+  code?: string;
+  status?: number;
+  param?: string;
+  requestId?: string;
+  providerId?: string;
+}
+
 export interface MessageAuxSnapshot {
   thinking?: string;
   compaction?: string;
@@ -1952,6 +1995,8 @@ export interface MessageAuxSnapshot {
   finishTaskNotice?: string;
   /** Turn-level LLM/transport failure: show the error copy as a card instead of normal Agent body text */
   turnError?: boolean;
+  /** Structured upstream error metadata for localized error cards and recovery actions */
+  turnErrorDetail?: TurnErrorDetailSnapshot;
   /** Retryable errors such as 429: show a Loading ring and retry progress (attempt/maxAttempts) */
   turnErrorRetry?: {
     attempt: number;

@@ -1909,6 +1909,54 @@ export function useDesktopRuntime() {
     [api, applySnapshot],
   );
 
+  const beginChatGptOAuth = useCallback(
+    async (request?: import("@spiritagent/api/types").BeginChatGptOAuthRequest) => {
+      if (!api) {
+        throw new Error(i18n.t("error.hostNotReady"));
+      }
+      return api.beginChatGptOAuth(request);
+    },
+    [api],
+  );
+
+  const completeChatGptOAuth = useCallback(
+    async (request: import("@spiritagent/api/types").CompleteChatGptOAuthRequest) => {
+      if (!api) {
+        throw new Error(i18n.t("error.hostNotReady"));
+      }
+      const response = await api.completeChatGptOAuth(request);
+      if (response.phase === "connected") {
+        applySnapshot(response.snapshot);
+        setRuntimeError("");
+      }
+      return response;
+    },
+    [api, applySnapshot],
+  );
+
+  const cancelChatGptOAuth = useCallback(
+    async (request: import("@spiritagent/api/types").CancelChatGptOAuthRequest) => {
+      if (!api) {
+        return { ok: true as const };
+      }
+      return api.cancelChatGptOAuth(request);
+    },
+    [api],
+  );
+
+  const openExternalUrl = useCallback(
+    async (url: string) => {
+      if (api?.openExternalUrl) {
+        await api.openExternalUrl({ url });
+        return;
+      }
+      if (typeof window !== "undefined") {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    },
+    [api],
+  );
+
   const disconnectProvider = useCallback(
     async (providerId: string) => {
       if (!api) {
@@ -4231,6 +4279,10 @@ export function useDesktopRuntime() {
     previewModels,
     removeModel,
     disconnectProvider,
+    beginChatGptOAuth,
+    completeChatGptOAuth,
+    cancelChatGptOAuth,
+    openExternalUrl,
     addMcpServer,
     importExtension,
     installBuiltInExtension,

@@ -455,6 +455,62 @@ async function handleApiRequest({
     return;
   }
 
+  if (request.method === "POST" && pathname === "/api/models/chatgpt-oauth/begin") {
+    const providerId =
+      typeof jsonBody?.providerId === "string" && jsonBody.providerId.trim()
+        ? jsonBody.providerId.trim()
+        : undefined;
+    const promptConsent = jsonBody?.promptConsent === true ? true : undefined;
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("beginChatGptOAuth", {
+        request: {
+          ...(providerId ? { providerId } : {}),
+          ...(promptConsent ? { promptConsent } : {}),
+        },
+      }),
+    );
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/models/chatgpt-oauth/complete") {
+    const sessionId =
+      typeof jsonBody?.sessionId === "string" && jsonBody.sessionId.trim()
+        ? jsonBody.sessionId.trim()
+        : "";
+    if (!sessionId) {
+      writeJson(request, response, 400, { error: "Missing sessionId." });
+      return;
+    }
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("completeChatGptOAuth", { request: { sessionId } }),
+    );
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/models/chatgpt-oauth/cancel") {
+    const sessionId =
+      typeof jsonBody?.sessionId === "string" && jsonBody.sessionId.trim()
+        ? jsonBody.sessionId.trim()
+        : "";
+    if (!sessionId) {
+      writeJson(request, response, 400, { error: "Missing sessionId." });
+      return;
+    }
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("cancelChatGptOAuth", { request: { sessionId } }),
+    );
+    return;
+  }
+
   if (request.method === "POST" && pathname === "/api/mcps") {
     writeJson(
       request,

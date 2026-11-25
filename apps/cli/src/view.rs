@@ -75,6 +75,8 @@ pub enum AssistantAuxKind {
 pub struct AssistantAuxData {
     pub thinking: Option<String>,
     pub compaction: Option<String>,
+    pub turn_error: Option<bool>,
+    pub turn_error_detail: Option<crate::rewind::TurnErrorDetailSnapshot>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

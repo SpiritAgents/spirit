@@ -58,6 +58,10 @@ export function SettingsView({
   onPreviewModels,
   onRemoveModel,
   onDisconnectProvider,
+  onBeginChatGptOAuth,
+  onCompleteChatGptOAuth,
+  onCancelChatGptOAuth,
+  onOpenExternalUrl,
   onAddMcpServer,
   onUpdateExtensionSettings,
   onDeleteMcpServer,
@@ -155,6 +159,10 @@ export function SettingsView({
                 onPreviewModels={onPreviewModels}
                 onRemoveModel={onRemoveModel}
                 onDisconnectProvider={onDisconnectProvider}
+                onBeginChatGptOAuth={onBeginChatGptOAuth}
+                onCompleteChatGptOAuth={onCompleteChatGptOAuth}
+                onCancelChatGptOAuth={onCancelChatGptOAuth}
+                onOpenExternalUrl={onOpenExternalUrl}
               />
             ) : tab === "skills" ? (
               <SkillsSettingsPanel

@@ -45,6 +45,7 @@
   },
   "providers": {
     "openai": "OpenAI",
+    "chatgpt": "ChatGPT",
     "google": "Google",
     "googleVertexAi": "Google Vertex AI",
     "xai": "SpaceXAI",
@@ -1599,5 +1600,31 @@
     "toolApprovalTitle": "Approve MCP App Tool Call",
     "toolApprovalDescription": "{{app}} wants to run {{tool}} on {{server}}. Review the arguments before continuing.",
     "toolApprovalAllow": "Run Tool"
+  },
+  "chatgptAuth": {
+    "title": "Connect ChatGPT",
+    "waiting": "Waiting for browser authorization",
+    "openAuthorizationPage": "Open ChatGPT Authorization Page",
+    "connected": "Connected to ChatGPT",
+    "connectedAs": "Connected as {{email}}",
+    "retry": "Try Again",
+    "errorTimeout": "ChatGPT authorization timed out. Try again.",
+    "errorCancelled": "ChatGPT authorization was cancelled.",
+    "errorDenied": "ChatGPT authorization was declined.",
+    "errorMissingPlanScope": "ChatGPT plan usage permission was not granted. Sign in again and allow plan usage.",
+    "errorInvalidClient": "ChatGPT client registration could not be verified. Try connecting again.",
+    "errorGeneric": "Failed to connect ChatGPT. Try again."
+  },
+  "chatgptErrors": {
+    "usageLimitExceeded": "You have reached your ChatGPT plan usage limit for this app. Check your usage limits or try again later.",
+    "manageUsage": "Manage Usage",
+    "userNotEligible": "Your current ChatGPT plan or workspace is not eligible for plan usage here. Upgrade your plan or switch to another provider.",
+    "upgradePlan": "Upgrade Plan",
+    "invalidUser": "Your ChatGPT sign-in is no longer valid. Reconnect ChatGPT in Settings to continue.",
+    "refreshTokenExpired": "Your ChatGPT authorization has expired or been revoked. Reconnect ChatGPT in Settings to continue.",
+    "scopeNotAuthorized": "ChatGPT plan usage permission is not authorized for this connection. Reconnect ChatGPT in Settings and allow plan usage.",
+    "invalidClient": "Your ChatGPT client registration is no longer valid. Disconnect and reconnect ChatGPT in Settings.",
+    "policyRestricted": "This request was blocked by ChatGPT region or workspace policy restrictions.",
+    "serviceUnavailable": "ChatGPT plan routing is temporarily unavailable. Your connection is preserved; try again shortly."
   }
 }

@@ -117,6 +117,16 @@ export interface HostApi {
   previewModels(request: PreviewModelsRequest): Promise<PreviewModelsResponse>;
   removeModel(name: string): Promise<DesktopSnapshot>;
   disconnectProvider(request: DisconnectProviderRequest): Promise<DesktopSnapshot>;
+  beginChatGptOAuth(
+    request?: import("./types.js").BeginChatGptOAuthRequest,
+  ): Promise<import("./types.js").BeginChatGptOAuthResponse>;
+  completeChatGptOAuth(
+    request: import("./types.js").CompleteChatGptOAuthRequest,
+  ): Promise<import("./types.js").CompleteChatGptOAuthResponse>;
+  cancelChatGptOAuth(
+    request: import("./types.js").CancelChatGptOAuthRequest,
+  ): Promise<{ ok: true }>;
+  openExternalUrl?(request: import("./types.js").OpenExternalUrlRequest): Promise<void>;
   addMcpServer(request: AddMcpServerRequest): Promise<DesktopSnapshot>;
   deleteMcpServer(request: DeleteMcpServerRequest): Promise<DesktopSnapshot>;
   saveHookEntry(request: SaveHookEntryRequest): Promise<DesktopSnapshot>;

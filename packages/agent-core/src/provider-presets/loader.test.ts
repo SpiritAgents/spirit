@@ -41,11 +41,12 @@ function assertLoadThrows(data: unknown, match: RegExp): void {
   );
 }
 
-test("the bundled manifest loads with the 33 presets in picker order", () => {
+test("the bundled manifest loads with the presets in picker order", () => {
   assert.deepEqual(
     listProviderPresets().map((preset) => preset.id),
     [
       "openai",
+      "chatgpt",
       "anthropic",
       "meta",
       "google",
@@ -112,6 +113,7 @@ test("manifest catalog parser names are the coordinated shape-name set", () => {
     "baseten-models",
     "bedrock-models",
     "cerebras-models",
+    "chatgpt-models",
     "cohere-models",
     "deepinfra-models",
     "fireworks-gateway-models",

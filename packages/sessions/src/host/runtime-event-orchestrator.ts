@@ -310,6 +310,7 @@ export class DesktopRuntimeEventOrchestrator {
           const errorAux = {
             ...aux,
             turnError: true as const,
+            ...(result.providerError ? { turnErrorDetail: result.providerError } : {}),
           };
           if (this.turnErrorRetryMessageId !== undefined) {
             this.options.assistantMessages.materializeTurnErrorFailureMessage(

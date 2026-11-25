@@ -67,6 +67,18 @@ export async function createElectronHostApi(): Promise<HostApi> {
     disconnectProvider(request) {
       return bridge.disconnectProvider(request);
     },
+    beginChatGptOAuth(request) {
+      return bridge.beginChatGptOAuth(request);
+    },
+    completeChatGptOAuth(request) {
+      return bridge.completeChatGptOAuth(request);
+    },
+    cancelChatGptOAuth(request) {
+      return bridge.cancelChatGptOAuth(request);
+    },
+    openExternalUrl(request) {
+      return bridge.openExternalUrl(request);
+    },
     addMcpServer(request) {
       return bridge.addMcpServer(request);
     },

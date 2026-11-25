@@ -1151,6 +1151,7 @@ fn real_thinking_stays_before_agent_message_body() {
         AssistantAuxData {
             thinking: Some("Check the command arguments for safety first.".to_string()),
             compaction: None,
+            ..Default::default()
         },
     );
 

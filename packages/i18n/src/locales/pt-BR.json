@@ -45,6 +45,7 @@
   },
   "providers": {
     "openai": "OpenAI",
+    "chatgpt": "ChatGPT",
     "google": "Google",
     "googleVertexAi": "Google Vertex AI",
     "xai": "SpaceXAI",
@@ -1565,5 +1566,31 @@
     "toolApprovalTitle": "Aprovar chamada de ferramenta do MCP App",
     "toolApprovalDescription": "{{app}} deseja executar {{tool}} em {{server}}. Revise os argumentos antes de continuar.",
     "toolApprovalAllow": "Executar ferramenta"
+  },
+  "chatgptAuth": {
+    "title": "Conectar ChatGPT",
+    "waiting": "Aguardando autorização no navegador",
+    "openAuthorizationPage": "Abrir página de autorização do ChatGPT",
+    "connected": "Conectado ao ChatGPT",
+    "connectedAs": "Conectado como {{email}}",
+    "retry": "Tentar novamente",
+    "errorTimeout": "A autorização do ChatGPT expirou. Tente novamente.",
+    "errorCancelled": "A autorização do ChatGPT foi cancelada.",
+    "errorDenied": "A autorização do ChatGPT foi recusada.",
+    "errorMissingPlanScope": "A permissão para usar o plano do ChatGPT não foi concedida. Faça login novamente e permita o uso do plano.",
+    "errorInvalidClient": "Não foi possível verificar o registro do cliente ChatGPT. Tente conectar novamente.",
+    "errorGeneric": "Falha ao conectar ao ChatGPT. Tente novamente."
+  },
+  "chatgptErrors": {
+    "usageLimitExceeded": "Você atingiu o limite de uso do seu plano ChatGPT para este aplicativo. Verifique seus limites ou tente novamente mais tarde.",
+    "manageUsage": "Gerenciar uso",
+    "userNotEligible": "Seu plano ou workspace atual do ChatGPT não é elegível para uso do plano aqui. Faça upgrade do plano ou mude de provedor.",
+    "upgradePlan": "Fazer upgrade",
+    "invalidUser": "Seu login no ChatGPT não é mais válido. Reconecte o ChatGPT em Configurações para continuar.",
+    "refreshTokenExpired": "Sua autorização do ChatGPT expirou ou foi revogada. Reconecte o ChatGPT em Configurações para continuar.",
+    "scopeNotAuthorized": "O uso do plano do ChatGPT não está autorizado para esta conexão. Reconecte o ChatGPT em Configurações e permita o uso do plano.",
+    "invalidClient": "O registro do seu cliente ChatGPT não é mais válido. Desconecte e reconecte o ChatGPT em Configurações.",
+    "policyRestricted": "Esta solicitação foi bloqueada por restrições de região ou política do workspace do ChatGPT.",
+    "serviceUnavailable": "O roteamento do plano do ChatGPT está temporariamente indisponível. Sua conexão foi preservada; tente novamente em instantes."
   }
 }

@@ -17,6 +17,7 @@ import {
 } from "../config.js";
 
 import { keyringStore } from "./keyring-store.js";
+import { hasStoredChatGptOAuthCredentials } from "../chatgpt-oauth/credentials.js";
 import {
   KEYRING_SERVICE,
   providerInternalSlotAccount,
@@ -64,6 +65,13 @@ function hasSigV4Auth(profile: SpiritModelProfile): boolean {
   );
 }
 
+function hasChatGptOAuth(profile: SpiritModelProfile): boolean {
+  return (
+    resolveProviderTransportKind(profile) === "open-responses" &&
+    profile.options?.auth === "chatgpt-oauth"
+  );
+}
+
 /** Bearer key or IAM slots; bedrock and SigV4 (`options.auth`) entries authenticate either way. */
 function hasIamRuntimeCredentials(profile: SpiritModelProfile): boolean {
   if (resolveStoredApiKeyForProfile(profile)) {
@@ -92,6 +100,9 @@ export function hasResolvableCredentials(spiritDataDir: string): boolean {
   const transportKind = resolveProviderTransportKind(profile);
   if (transportKind === "bedrock" || hasSigV4Auth(profile)) {
     return hasIamRuntimeCredentials(profile);
+  }
+  if (hasChatGptOAuth(profile)) {
+    return hasStoredChatGptOAuthCredentials(profile.providerId);
   }
   if (resolveProviderSdkPackageName(profile) === GOOGLE_VERTEX_SDK_PACKAGE_NAME) {
     return hasGoogleVertexRuntimeCredentials(profile);

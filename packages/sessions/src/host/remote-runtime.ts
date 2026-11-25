@@ -145,7 +145,12 @@ interface SessionTurnFinishedNotification {
   stopReason: "completed" | "failed" | "cancelled";
   result?:
     | { kind: "completed"; assistantText: string; toolExecutions: unknown[] }
-    | { kind: "failed"; error: string; toolExecutions: unknown[] };
+    | {
+        kind: "failed";
+        error: string;
+        providerError?: import("@spiritagent/agent-core").ProviderErrorDetail;
+        toolExecutions: unknown[];
+      };
 }
 
 const EMPTY_SNAPSHOT: BridgeRuntimeSnapshot = {
@@ -1191,6 +1196,7 @@ export class RemoteDesktopRuntime {
       this.completedTurnResult = {
         kind: "failed",
         error: result.error,
+        ...(result.providerError ? { providerError: result.providerError } : {}),
         requestTrace: [],
         toolExecutions: result.toolExecutions as never,
         compactions: [],

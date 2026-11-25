@@ -14,6 +14,12 @@ export interface HostCommandDelegate {
   previewModels(request: CommandPayloads["previewModels"]["request"]): Promise<unknown>;
   removeModel(request: CommandPayloads["removeModel"]["request"]): Promise<unknown>;
   disconnectProvider(request: CommandPayloads["disconnectProvider"]["request"]): Promise<unknown>;
+  beginChatGptOAuth(request?: CommandPayloads["beginChatGptOAuth"]["request"]): Promise<unknown>;
+  completeChatGptOAuth(
+    request: CommandPayloads["completeChatGptOAuth"]["request"],
+  ): Promise<unknown>;
+  cancelChatGptOAuth(request: CommandPayloads["cancelChatGptOAuth"]["request"]): Promise<unknown>;
+  openExternalUrl(request: CommandPayloads["openExternalUrl"]["request"]): Promise<unknown>;
   addMcpServer(request: CommandPayloads["addMcpServer"]["request"]): Promise<unknown>;
   deleteMcpServer(request: CommandPayloads["deleteMcpServer"]["request"]): Promise<unknown>;
   saveHookEntry(request: CommandPayloads["saveHookEntry"]["request"]): Promise<unknown>;
@@ -235,6 +241,10 @@ const hostCommandDispatch = {
   previewModels: (host, payload) => host.previewModels(payload.request),
   removeModel: (host, payload) => host.removeModel(payload.request),
   disconnectProvider: (host, payload) => host.disconnectProvider(payload.request),
+  beginChatGptOAuth: (host, payload) => host.beginChatGptOAuth(payload?.request),
+  completeChatGptOAuth: (host, payload) => host.completeChatGptOAuth(payload.request),
+  cancelChatGptOAuth: (host, payload) => host.cancelChatGptOAuth(payload.request),
+  openExternalUrl: (host, payload) => host.openExternalUrl(payload.request),
   addMcpServer: (host, payload) => host.addMcpServer(payload.request),
   deleteMcpServer: (host, payload) => host.deleteMcpServer(payload.request),
   saveHookEntry: (host, payload) => host.saveHookEntry(payload.request),

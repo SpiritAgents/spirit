@@ -161,6 +161,18 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   disconnectProvider(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "disconnectProvider", { request });
   },
+  beginChatGptOAuth(request?: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "beginChatGptOAuth", { request });
+  },
+  completeChatGptOAuth(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "completeChatGptOAuth", { request });
+  },
+  cancelChatGptOAuth(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "cancelChatGptOAuth", { request });
+  },
+  openExternalUrl(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "openExternalUrl", { request });
+  },
   addMcpServer(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "addMcpServer", { request });
   },

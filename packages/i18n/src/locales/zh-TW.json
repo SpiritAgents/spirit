@@ -45,6 +45,7 @@
   },
   "providers": {
     "openai": "OpenAI",
+    "chatgpt": "ChatGPT",
     "google": "Google",
     "googleVertexAi": "Google Vertex AI",
     "xai": "SpaceXAI",
@@ -1565,5 +1566,31 @@
     "toolApprovalTitle": "核准 MCP App 工具呼叫",
     "toolApprovalDescription": "{{app}} 請求在 {{server}} 上執行 {{tool}}。繼續前請先確認參數。",
     "toolApprovalAllow": "執行工具"
+  },
+  "chatgptAuth": {
+    "title": "連接 ChatGPT",
+    "waiting": "等待瀏覽器授權",
+    "openAuthorizationPage": "開啟 ChatGPT 授權頁面",
+    "connected": "已連接 ChatGPT",
+    "connectedAs": "已連接 {{email}}",
+    "retry": "重試",
+    "errorTimeout": "ChatGPT 授權已逾時，請重試。",
+    "errorCancelled": "已取消 ChatGPT 授權。",
+    "errorDenied": "已拒絕 ChatGPT 授權。",
+    "errorMissingPlanScope": "未授予 ChatGPT 方案額度使用權限，請重新登入並允許使用方案額度。",
+    "errorInvalidClient": "無法驗證 ChatGPT 用戶端註冊資訊，請重新嘗試連接。",
+    "errorGeneric": "連接 ChatGPT 失敗，請重試。"
+  },
+  "chatgptErrors": {
+    "usageLimitExceeded": "已達到此應用程式可用的 ChatGPT 方案額度上限，請檢查用量設定或稍後再試。",
+    "manageUsage": "管理用量",
+    "userNotEligible": "目前的 ChatGPT 方案或工作區不符合在此使用方案額度的資格，請升級方案或切換其他供應商。",
+    "upgradePlan": "升級方案",
+    "invalidUser": "目前的 ChatGPT 登入狀態已失效，請在設定中重新連接 ChatGPT 後繼續。",
+    "refreshTokenExpired": "ChatGPT 授權已過期或遭到撤銷，請在設定中重新連接 ChatGPT 後繼續。",
+    "scopeNotAuthorized": "此連線未獲得 ChatGPT 方案額度使用權限，請在設定中重新連接並允許使用方案額度。",
+    "invalidClient": "ChatGPT 用戶端註冊已失效，請在設定中中斷並重新連接 ChatGPT。",
+    "policyRestricted": "此請求因 ChatGPT 地區或工作區原則限制而被封鎖。",
+    "serviceUnavailable": "ChatGPT 方案直連服務暫時無法使用，連線狀態已保留，請稍後重試。"
   }
 }

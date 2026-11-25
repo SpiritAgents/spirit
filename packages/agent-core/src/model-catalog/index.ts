@@ -1,4 +1,5 @@
 export * from "./openai-models.js";
+export * from "./chatgpt-models.js";
 export * from "./cerebras-models.js";
 export * from "./nebius-token-factory-models.js";
 export * from "./modal-models.js";

@@ -62,6 +62,10 @@ export interface OpenResponsesTransportConfig extends LlmWebToolExposure {
     secretAccessKey: string;
     sessionToken?: string;
   };
+  /** Dynamic Bearer token resolver (e.g. host-managed OAuth credentials); invoked per request. */
+  resolveBearerToken?: () => Promise<string>;
+  /** Called once after HTTP 401 with the rejected token; returning a new token retries the request once. */
+  refreshBearerTokenAfterUnauthorized?: (rejectedToken: string) => Promise<string | undefined>;
   /** Request policy profile for non-agent lightweight requests such as code completion; defaults to the agent path behavior. */
   transportRequestProfile?: TransportRequestProfile;
   /** User thinking-switch state: `false` selects the `thinkingSwitch.off` encoding. Absent = on. */

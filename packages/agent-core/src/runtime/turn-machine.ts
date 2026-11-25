@@ -556,6 +556,7 @@ export async function runTurnLoop<Config, State, ToolRequest>(
       return {
         kind: "failed",
         error: completion.error,
+        ...(completion.providerError ? { providerError: completion.providerError } : {}),
         state: currentState,
         requestTrace: [...turn.requestTrace],
         toolExecutions: [...turn.toolExecutions],
@@ -1079,6 +1080,7 @@ export async function handlePendingToolAgentRoundCompletion<Config, State, ToolR
     runtime.completeTurn({
       kind: "failed",
       error: completion.error,
+      ...(completion.providerError ? { providerError: completion.providerError } : {}),
       state: pending.state,
       requestTrace: [...pending.turn.requestTrace],
       toolExecutions: [...pending.turn.toolExecutions],

@@ -86,6 +86,16 @@ type OnboardingWizardProps = {
   onAddModel: (request: AddModelRequest) => Promise<void>;
   onAddProviderModels: (request: AddProviderModelsRequest) => Promise<void>;
   onPreviewModels: (request: PreviewModelsRequest) => Promise<PreviewModelsResponse>;
+  onBeginChatGptOAuth?: (
+    request?: import("@spiritagent/api/types").BeginChatGptOAuthRequest,
+  ) => Promise<import("@spiritagent/api/types").BeginChatGptOAuthResponse>;
+  onCompleteChatGptOAuth?: (
+    request: import("@spiritagent/api/types").CompleteChatGptOAuthRequest,
+  ) => Promise<import("@spiritagent/api/types").CompleteChatGptOAuthResponse>;
+  onCancelChatGptOAuth?: (
+    request: import("@spiritagent/api/types").CancelChatGptOAuthRequest,
+  ) => Promise<{ ok: true }>;
+  onOpenExternalUrl?: (url: string) => Promise<void>;
   /** Clicking Done: the host persists onboardingCompleted and closes the wizard. */
   onDone: () => void;
   /** Phase changes during the mount lifetime (so the host does not reveal app-body early, before leaving). */
@@ -118,6 +128,10 @@ export function OnboardingWizard({
   onAddModel,
   onAddProviderModels,
   onPreviewModels,
+  onBeginChatGptOAuth,
+  onCompleteChatGptOAuth,
+  onCancelChatGptOAuth,
+  onOpenExternalUrl,
   onDone,
   onPhaseChange,
 }: OnboardingWizardProps) {
@@ -216,6 +230,10 @@ export function OnboardingWizard({
             onAddModel={onAddModel}
             onAddProviderModels={onAddProviderModels}
             onPreviewModels={onPreviewModels}
+            onBeginChatGptOAuth={onBeginChatGptOAuth}
+            onCompleteChatGptOAuth={onCompleteChatGptOAuth}
+            onCancelChatGptOAuth={onCancelChatGptOAuth}
+            onOpenExternalUrl={onOpenExternalUrl}
             onBack={() => goToStep(2)}
             onContinue={() => goToStep(4)}
             onBottomFadeChange={options?.leaving ? undefined : handleConnectBottomFadeChange}
@@ -469,6 +487,10 @@ function OnboardingConnectStep({
   onAddModel,
   onAddProviderModels,
   onPreviewModels,
+  onBeginChatGptOAuth,
+  onCompleteChatGptOAuth,
+  onCancelChatGptOAuth,
+  onOpenExternalUrl,
   onBack,
   onContinue,
   onBottomFadeChange,
@@ -481,6 +503,16 @@ function OnboardingConnectStep({
   onAddModel: (request: AddModelRequest) => Promise<void>;
   onAddProviderModels: (request: AddProviderModelsRequest) => Promise<void>;
   onPreviewModels: (request: PreviewModelsRequest) => Promise<PreviewModelsResponse>;
+  onBeginChatGptOAuth?: (
+    request?: import("@spiritagent/api/types").BeginChatGptOAuthRequest,
+  ) => Promise<import("@spiritagent/api/types").BeginChatGptOAuthResponse>;
+  onCompleteChatGptOAuth?: (
+    request: import("@spiritagent/api/types").CompleteChatGptOAuthRequest,
+  ) => Promise<import("@spiritagent/api/types").CompleteChatGptOAuthResponse>;
+  onCancelChatGptOAuth?: (
+    request: import("@spiritagent/api/types").CancelChatGptOAuthRequest,
+  ) => Promise<{ ok: true }>;
+  onOpenExternalUrl?: (url: string) => Promise<void>;
   onBack: () => void;
   onContinue: () => void;
   onBottomFadeChange?: (hasMoreBelow: boolean) => void;
@@ -511,6 +543,10 @@ function OnboardingConnectStep({
         onAddModel={onAddModel}
         onAddProviderModels={onAddProviderModels}
         onPreviewModels={onPreviewModels}
+        onBeginChatGptOAuth={onBeginChatGptOAuth}
+        onCompleteChatGptOAuth={onCompleteChatGptOAuth}
+        onCancelChatGptOAuth={onCancelChatGptOAuth}
+        onOpenExternalUrl={onOpenExternalUrl}
         onBottomFadeChange={onBottomFadeChange}
         pinnedBottomFade={pinnedBottomFade}
         freezeBottomFade={freezeBottomFade}

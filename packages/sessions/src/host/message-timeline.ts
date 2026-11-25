@@ -2052,6 +2052,7 @@ function cloneAux(aux: MessageAuxSnapshot): MessageAuxSnapshot {
     ...(aux.compaction ? { compaction: aux.compaction } : {}),
     ...(aux.finishTaskNotice ? { finishTaskNotice: aux.finishTaskNotice } : {}),
     ...(aux.turnError ? { turnError: true } : {}),
+    ...(aux.turnErrorDetail ? { turnErrorDetail: { ...aux.turnErrorDetail } } : {}),
     ...(aux.turnErrorRetry ? { turnErrorRetry: { ...aux.turnErrorRetry } } : {}),
   };
 }
