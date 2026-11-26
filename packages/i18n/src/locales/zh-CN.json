@@ -292,8 +292,8 @@
     "skillUserDirHint": "{{product.name}} 用户目录 skills/",
     "skillWorkspaceSpiritHint": "工作区 {{product.workspaceDataFolderName}}/skills/",
     "skillWorkspaceAgentsHint": "工作区 .agents/skills/",
-    "ruleUserDirHint": "{{product.name}} 用户目录 rule.md",
-    "ruleWorkspaceSpiritHint": "工作区 {{product.workspaceDataFolderName}}/rule.md",
+    "ruleUserDirHint": "{{product.name}} 用户目录 AGENTS.md",
+    "ruleWorkspaceSpiritHint": "工作区 {{product.workspaceDataFolderName}}/AGENTS.md",
     "ruleWorkspaceAgentsHint": "工作区 AGENTS.md",
     "deleteSkill": "删除技能",
     "generateRuleTooltip": "进入主对话区，预填 /create-rule，并直接用自然语言描述需求",
@@ -1518,7 +1518,7 @@
     "compactionAssistantReply": "已根据压缩后的上下文继续：我会在设置里补“上下文压缩”样式演示入口，并核对 Compaction 区块与后续助手回复的间距。"
   },
   "slash": {
-    "createRule": "用自然语言创建或收紧规则文件（默认 {{product.workspaceDataFolderName}}/rule.md）",
+    "createRule": "用自然语言创建或收紧规则文件（默认 {{product.workspaceDataFolderName}}/AGENTS.md）",
     "createSkill": "用自然语言创建或收紧一个 SKILL.md",
     "exportSession": "导出当前会话 llm_history 与完整 API 请求轨迹并自动打开",
     "startImplementing": "读取当前 {{product.name}} 计划并开始实现",

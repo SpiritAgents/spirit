@@ -60,7 +60,7 @@ deno init --npm @spiritagent/extension
 </Tab>
 </Tabs>
 
-Der Assistent fragt nach einem Erweiterungsnamen (kebab-case), einem Anzeigenamen, einer einzeiligen Beschreibung und den zu gerüstenden Fähigkeiten. Er schreibt `package.json`, `icon.svg` und `{{product.workspaceDataFolderName}}/extension.json`, plus die Dateien zu den gewählten Fähigkeiten (`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), und gibt am Ende einen fertigen Marktplatz-Eintrag zum Einfügen aus.
+Der Assistent fragt nach einem Erweiterungsnamen (kebab-case), einem Anzeigenamen, einer einzeiligen Beschreibung und den zu gerüstenden Fähigkeiten. Er schreibt `package.json`, `icon.svg` und `{{product.workspaceDataFolderName}}/extension.json`, plus die Dateien zu den gewählten Fähigkeiten (`skills/<name>/SKILL.md`, `AGENTS.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), und gibt am Ende einen fertigen Marktplatz-Eintrag zum Einfügen aus.
 
 Für Skripte hat jede Frage ein Flag: `[target-dir]`, `--name`, `--display-name`, `--description`, `--capabilities <csv>` und `--yes` zum Überspringen der Bestätigung.
 
@@ -84,7 +84,7 @@ my-extension/
   index.mjs               # optional; der von `main` referenzierte activate-Einstieg
   mcp.json                # bei Deklaration von mcp
   hooks.json              # bei Deklaration von hooks (Agent-Hooks)
-  rule.md                 # bei Deklaration von rules
+  AGENTS.md                 # bei Deklaration von rules
   skills/<name>/SKILL.md  # bei Deklaration von skills
   styles.css              # bei Deklaration von Desktop-CSS (Pfad im Manifest referenziert)
   cli-hooks.json          # bei Deklaration von CLI-Hooks (Pfad im Manifest referenziert)
@@ -132,7 +132,7 @@ Das `manifest`-Objekt ist die Laufzeitdeklaration der Erweiterung: welche Hosts 
 | `mcp`                 | Muss mit `contributes.mcp` gepaart sein; lädt `mcp.json` im Paketstamm                   |
 | `hooks`               | Muss mit `contributes.hooks` gepaart sein; lädt `hooks.json` im Paketstamm               |
 | `skills`              | Muss mit `contributes.skills` gepaart sein; lädt `skills/<name>/SKILL.md`                |
-| `rules`               | Muss mit `contributes.rules` gepaart sein; lädt `rule.md` im Paketstamm                  |
+| `rules`               | Muss mit `contributes.rules` gepaart sein; lädt `AGENTS.md` im Paketstamm                  |
 | `approval-flow`       | Nur deklariert. Die Genehmigung wird durch den `approvalMode` jedes Tools gesteuert      |
 | `questions-flow`      | Nur deklariert. Fragen werden durch `approvalMode: need-questions` gesteuert             |
 | `settings`            | Nur deklariert. Einstellungen kommen aus `settingsSchema`                                |
@@ -235,7 +235,7 @@ Erfordert die passende Capability. `contributes.mcp`, `contributes.hooks`, `cont
 | MCP         | `mcp`      | `mcp.json` im Paketstamm (gleiches Schema wie Benutzer-/Workspace-MCP)                      |
 | Agent-Hooks | `hooks`    | `hooks.json` im Paketstamm (gleiches Schema wie Agent-Hooks; nicht `contributes.cli.hooks`) |
 | Skills      | `skills`   | `skills/<name>/SKILL.md`                                                                    |
-| Rules       | `rules`    | `rule.md` im Paketstamm                                                                     |
+| Rules       | `rules`    | `AGENTS.md` im Paketstamm                                                                     |
 
 Deklariert, aber fehlend oder ungültig: Installation schlägt fehl. Vorhandene, aber nicht deklarierte Dateien werden ignoriert und nie geladen.
 

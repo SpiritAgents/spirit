@@ -55,7 +55,7 @@ test("a valid extension package produces no findings", async () => {
   const dir = await fixture({
     "package.json": `${JSON.stringify({ name: "demo-ext", version: "1.0.0" })}\n`,
     "skills/demo/SKILL.md": VALID_SKILL,
-    "rule.md": "# Rules\n",
+    "AGENTS.md": "# Rules\n",
     "mcp.json": '{"servers": {}}\n',
   });
   assert.deepEqual(await checkExtensionPackage(dir), []);

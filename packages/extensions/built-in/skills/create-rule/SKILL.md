@@ -7,8 +7,8 @@ Create or update a rule file from the user's request. Enabled rules are injected
 
 **Scope**
 
-- Default: workspace rule at `<workspace_root>/{{product.workspaceDataFolderName}}/rule.md`
-- User rule at `<spirit_data_dir>/rule.md` only when the user explicitly asks for user-level, global, or personal rules
+- Default: workspace rule at `<workspace_root>/{{product.workspaceDataFolderName}}/AGENTS.md`
+- User rule at `<spirit_data_dir>/AGENTS.md` only when the user explicitly asks for user-level, global, or personal rules
 - If this skill is active from `<spirit_data_dir>/skills/create-rule/SKILL.md`, use that same `<spirit_data_dir>` for user scope
 
 **Content**

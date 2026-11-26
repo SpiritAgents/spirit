@@ -43,7 +43,7 @@ test("skills + rules scaffold valid files and a consistent dump", async () => {
 
   const skill = files["skills/my-ext/SKILL.md"];
   assert.ok(skill?.startsWith("---\nname: my-ext\ndescription:"));
-  assert.ok(files["rule.md"]?.includes("My Ext Rules"));
+  assert.ok(files["AGENTS.md"]?.includes("My Ext Rules"));
 
   const dump = parseExtensionDumpText(files[".spirit/extension.json"] ?? "");
   assert.equal(dump.name, "my-ext");

@@ -106,7 +106,7 @@ Agent Core は単一ランタイムの背後で複数の推論トランスポー
 
 Agent Core がモデルから見えるプロジェクト文脈を決定します：
 
-- **Rules** — `AGENTS.md`、`.spirit/rule.md`、ユーザールールスロットを system セクションにマージ。
+- **Rules** — `AGENTS.md`、`.spirit/AGENTS.md`、ユーザールールスロットを system セクションにマージ。
 - **Skills** — カタログとアクティブ Skill 注入；ホストがディスク上のファイルを探索。
 - **MCP** — Model Context Protocol クライアント、レジストリ、tool/resource/prompt ブリッジ。
 - **Mode prompts** — Agent / Plan / Ask / Debug の境界；system テキストでツールを再列挙しない。

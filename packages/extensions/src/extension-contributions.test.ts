@@ -128,7 +128,7 @@ test("collector loads declared instruction contributions from enabled extensions
       files: {
         "mcp.json": VALID_MCP_JSON,
         "hooks.json": VALID_HOOKS_JSON,
-        "rule.md": VALID_RULE_MD,
+        "AGENTS.md": VALID_RULE_MD,
         "skills/demo-skill/SKILL.md": VALID_SKILL_MD,
       },
     });
@@ -143,7 +143,7 @@ test("collector loads declared instruction contributions from enabled extensions
       files: {
         "mcp.json": VALID_MCP_JSON,
         "hooks.json": VALID_HOOKS_JSON,
-        "rule.md": VALID_RULE_MD,
+        "AGENTS.md": VALID_RULE_MD,
         "skills/other-skill/SKILL.md": `---
 name: other-skill
 description: Should be ignored.
@@ -413,7 +413,7 @@ test("overlay keeps user and workspace skills ahead of extension skills", async 
         id: "user-rule",
         scope: "user",
         title: "User rules",
-        path: "/tmp/rule.md",
+        path: "/tmp/AGENTS.md",
         content: "user",
       },
     ],
@@ -459,7 +459,7 @@ test("overlay keeps user and workspace skills ahead of extension skills", async 
           extensionName: "Demo",
           scope: "extension",
           title: "Extension Demo rules",
-          path: "/tmp/ext/rule.md",
+          path: "/tmp/ext/AGENTS.md",
           content: "ext rules",
         },
       ],

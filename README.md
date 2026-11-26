@@ -106,7 +106,7 @@ Built-in tools are defined once in Agent Core (name, description, JSON Schema). 
 
 Agent Core owns how the model sees project context:
 
-- **Rules** — `AGENTS.md`, `.spirit/rule.md`, and user rule slots merged into system sections.
+- **Rules** — `AGENTS.md`, `.spirit/AGENTS.md`, and user rule slots merged into system sections.
 - **Skills** — catalog and active-skill injection; hosts discover files on disk.
 - **MCP** — Model Context Protocol client, registry, and tool/resource/prompt bridging.
 - **Mode prompts** — Agent, Plan, Ask, and Debug boundaries without re-listing tools in system text.

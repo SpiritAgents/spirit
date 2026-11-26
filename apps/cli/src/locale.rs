@@ -138,7 +138,7 @@ mod tests {
             );
             assert_eq!(
                 path,
-                format!("{}/rule.md", crate::product::WORKSPACE_DATA_FOLDER_NAME)
+                format!("{}/AGENTS.md", crate::product::WORKSPACE_DATA_FOLDER_NAME)
             );
         }
         assert_eq!(product_text("ui.brand.title"), crate::product::NAME);

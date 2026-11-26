@@ -106,7 +106,7 @@ Agent Core는 단일 런타임 뒤에서 여러 추론 트랜스포트를 라우
 
 Agent Core가 모델이 보는 프로젝트 컨텍스트를 결정합니다:
 
-- **Rules** — `AGENTS.md`, `.spirit/rule.md`, 사용자 규칙 슬롯을 system 섹션에 병합.
+- **Rules** — `AGENTS.md`, `.spirit/AGENTS.md`, 사용자 규칙 슬롯을 system 섹션에 병합.
 - **Skills** — 카탈로그 및 활성 Skill 주입; 호스트가 디스크에서 파일 탐색.
 - **MCP** — Model Context Protocol 클라이언트, 레지스트리, tool/resource/prompt 브리지.
 - **Mode prompts** — Agent, Plan, Ask, Debug 경계; system 텍스트에서 도구 재나열 금지.

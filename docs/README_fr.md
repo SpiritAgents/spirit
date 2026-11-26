@@ -106,7 +106,7 @@ Les outils intégrés sont définis une fois dans Agent Core (nom, description, 
 
 Agent Core détermine comment le modèle voit le contexte projet :
 
-- **Rules** — `AGENTS.md`, `.spirit/rule.md` et emplacements de règles utilisateur fusionnés dans les sections system.
+- **Rules** — `AGENTS.md`, `.spirit/AGENTS.md` et emplacements de règles utilisateur fusionnés dans les sections system.
 - **Skills** — catalogue et injection de skill actif ; les hôtes découvrent les fichiers sur disque.
 - **MCP** — client Model Context Protocol, registre et pont tool/resource/prompt.
 - **Mode prompts** — frontières Agent, Plan, Ask et Debug sans relister les outils dans le texte system.

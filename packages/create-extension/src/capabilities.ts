@@ -152,7 +152,7 @@ export const CAPABILITY_DEFINITIONS: readonly CapabilityDefinition[] = [
   },
   {
     id: "rules",
-    label: "Rules (rule.md)",
+    label: "Rules (AGENTS.md)",
     requestedCapabilities: ["rules"],
     contributes: () => ({
       rules: {
@@ -161,7 +161,7 @@ export const CAPABILITY_DEFINITIONS: readonly CapabilityDefinition[] = [
       },
     }),
     files: (input) => ({
-      "rule.md": `# ${input.title} Rules\n\nWrite the rules the agent should follow here.\n`,
+      "AGENTS.md": `# ${input.title} Rules\n\nWrite the rules the agent should follow here.\n`,
     }),
   },
   {

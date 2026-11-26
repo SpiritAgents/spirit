@@ -21,7 +21,7 @@ import { assertExtensionMcpSecretSlotsDeclared } from "./mcp-secrets.js";
 /** Extension package layout contract: declared files live at these paths. */
 export const EXTENSION_MCP_CONFIG_FILE_NAME = "mcp.json";
 export const EXTENSION_HOOKS_CONFIG_FILE_NAME = "hooks.json";
-export const EXTENSION_RULE_FILE_NAME = "rule.md";
+export const EXTENSION_RULE_FILE_NAME = "AGENTS.md";
 export const EXTENSION_SKILLS_DIR_NAME = SKILLS_DIR_NAME;
 
 export interface MarketplaceInstructionContributionDeclarations {

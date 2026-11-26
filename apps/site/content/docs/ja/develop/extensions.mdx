@@ -59,7 +59,7 @@ deno init --npm @spiritagent/extension
 </Tab>
 </Tabs>
 
-ウィザードは拡張機能名（kebab-case）、表示名、一行の説明、スキャフォールドする機能を尋ねます。`package.json`、`icon.svg`、`{{product.workspaceDataFolderName}}/extension.json` を書き込み、選んだ機能に応じたファイル（`skills/<name>/SKILL.md`、`rule.md`、`mcp.json`、`hooks.json`、`styles.css`、`index.mjs`）を追加し、終了時にそのまま貼り付けられるマーケットプレイスエントリを出力します。
+ウィザードは拡張機能名（kebab-case）、表示名、一行の説明、スキャフォールドする機能を尋ねます。`package.json`、`icon.svg`、`{{product.workspaceDataFolderName}}/extension.json` を書き込み、選んだ機能に応じたファイル（`skills/<name>/SKILL.md`、`AGENTS.md`、`mcp.json`、`hooks.json`、`styles.css`、`index.mjs`）を追加し、終了時にそのまま貼り付けられるマーケットプレイスエントリを出力します。
 
 スクリプト化する場合、すべての質問にフラグがあります：`[target-dir]`、`--name`、`--display-name`、`--description`、`--capabilities <csv>`、確認をスキップする `--yes`。
 
@@ -83,7 +83,7 @@ my-extension/
   index.mjs               # 任意。`main` が参照する activate エントリ
   mcp.json                # mcp を宣言する場合
   hooks.json              # hooks を宣言する場合（agent hooks）
-  rule.md                 # rules を宣言する場合
+  AGENTS.md                 # rules を宣言する場合
   skills/<name>/SKILL.md  # skills を宣言する場合
   styles.css              # desktop CSS を宣言する場合（パスはマニフェストから参照）
   cli-hooks.json          # CLI hooks を宣言する場合（パスはマニフェストから参照）
@@ -131,7 +131,7 @@ my-extension/
 | `mcp`                 | `contributes.mcp` と対で指定し、パッケージルートの `mcp.json` を読み込みます     |
 | `hooks`               | `contributes.hooks` と対で指定し、パッケージルートの `hooks.json` を読み込みます |
 | `skills`              | `contributes.skills` と対で指定し、`skills/<name>/SKILL.md` を読み込みます       |
-| `rules`               | `contributes.rules` と対で指定し、パッケージルートの `rule.md` を読み込みます    |
+| `rules`               | `contributes.rules` と対で指定し、パッケージルートの `AGENTS.md` を読み込みます    |
 | `approval-flow`       | 宣言のみ。承認は各ツールの `approvalMode` によって行われます                     |
 | `questions-flow`      | 宣言のみ。質問は `approvalMode: need-questions` によって行われます               |
 | `settings`            | 宣言のみ。設定は `settingsSchema` から取得されます                               |
@@ -234,7 +234,7 @@ View と Tab は、JavaScript、CSS、依存関係を含む HTML ページです
 | MCP          | `mcp`      | パッケージルートの `mcp.json`（ユーザー/ワークスペース MCP と同じ schema）                           |
 | Agent フック | `hooks`    | パッケージルートの `hooks.json`（agent フックと同じ schema。`contributes.cli.hooks` ではありません） |
 | スキル       | `skills`   | `skills/<name>/SKILL.md`                                                                             |
-| Rules        | `rules`    | パッケージルートの `rule.md`                                                                         |
+| Rules        | `rules`    | パッケージルートの `AGENTS.md`                                                                         |
 
 宣言したのにファイルが無い、または不正な場合はインストールに失敗します。宣言されていないファイルは無視され、読み込まれません。
 

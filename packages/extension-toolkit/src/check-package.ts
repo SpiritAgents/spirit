@@ -16,6 +16,7 @@ import {
 } from "@spiritagent/agent-core/extension-config-files";
 
 import {
+  EXTENSION_RULE_FILE_NAME,
   EXTENSION_SKILLS_DIR_NAME,
   assertDeclaredInstructionContributionFiles,
   isValidDeclaredSkillMarkdown,
@@ -233,9 +234,12 @@ async function checkBarePackage(dir: string): Promise<CheckFinding[]> {
 
   findings.push(...(await checkSkillDirectories(dir)));
 
-  const ruleRaw = await readTextIfExists(path.join(dir, "rule.md"));
+  const ruleRaw = await readTextIfExists(path.join(dir, EXTENSION_RULE_FILE_NAME));
   if (ruleRaw !== undefined && !ruleRaw.trim()) {
-    findings.push({ path: "rule.md", message: "The extension rule.md must not be empty." });
+    findings.push({
+      path: EXTENSION_RULE_FILE_NAME,
+      message: `The extension ${EXTENSION_RULE_FILE_NAME} must not be empty.`,
+    });
   }
 
   for (const configFile of ["mcp.json", "hooks.json"] as const) {

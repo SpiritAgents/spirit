@@ -106,7 +106,7 @@ Ferramentas embutidas são definidas uma vez no Agent Core (nome, descrição, J
 
 Agent Core decide como o modelo vê o contexto do projeto:
 
-- **Rules** — `AGENTS.md`, `.spirit/rule.md` e slots de regras do usuário mesclados em seções system.
+- **Rules** — `AGENTS.md`, `.spirit/AGENTS.md` e slots de regras do usuário mesclados em seções system.
 - **Skills** — catálogo e injeção de skill ativo; hosts descobrem arquivos no disco.
 - **MCP** — cliente Model Context Protocol, registro e ponte tool/resource/prompt.
 - **Mode prompts** — limites Agent, Plan, Ask e Debug sem relistar ferramentas no texto system.

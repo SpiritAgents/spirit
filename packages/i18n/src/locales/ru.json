@@ -298,8 +298,8 @@
     "skillUserDirHint": "Пользовательская папка {{product.name}} skills/",
     "skillWorkspaceSpiritHint": "Рабочая область {{product.workspaceDataFolderName}}/skills/",
     "skillWorkspaceAgentsHint": "Рабочая область .agents/skills/",
-    "ruleUserDirHint": "Пользовательская папка {{product.name}} rule.md",
-    "ruleWorkspaceSpiritHint": "Рабочая область {{product.workspaceDataFolderName}}/rule.md",
+    "ruleUserDirHint": "Пользовательская папка {{product.name}} AGENTS.md",
+    "ruleWorkspaceSpiritHint": "Рабочая область {{product.workspaceDataFolderName}}/AGENTS.md",
     "ruleWorkspaceAgentsHint": "AGENTS.md рабочей области",
     "deleteSkill": "Удалить навык",
     "generateRuleTooltip": "Перейти в основную область чата, ввести /create-rule и описать требования на естественном языке",
@@ -1519,7 +1519,7 @@
     "compactionAssistantReply": "Продолжая на основе сжатого контекста: я добавлю демо-запись «Сжатие контекста» в настройки и проверю интервал между блоком Compaction и последующими ответами ассистента."
   },
   "slash": {
-    "createRule": "Создать или ужесточить файл правил на естественном языке (по умолчанию {{product.workspaceDataFolderName}}/rule.md)",
+    "createRule": "Создать или ужесточить файл правил на естественном языке (по умолчанию {{product.workspaceDataFolderName}}/AGENTS.md)",
     "createSkill": "Создать или ужесточить SKILL.md на естественном языке",
     "exportSession": "Экспортировать llm_history текущей сессии и полные трассировки API-запросов, открыть автоматически",
     "startImplementing": "Прочитать активный план {{product.name}} и начать реализацию",

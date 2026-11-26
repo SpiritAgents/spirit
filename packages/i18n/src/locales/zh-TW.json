@@ -292,8 +292,8 @@
     "skillUserDirHint": "{{product.name}} 使用者目錄 skills/",
     "skillWorkspaceSpiritHint": "工作區 {{product.workspaceDataFolderName}}/skills/",
     "skillWorkspaceAgentsHint": "工作區 .agents/skills/",
-    "ruleUserDirHint": "{{product.name}} 使用者目錄 rule.md",
-    "ruleWorkspaceSpiritHint": "工作區 {{product.workspaceDataFolderName}}/rule.md",
+    "ruleUserDirHint": "{{product.name}} 使用者目錄 AGENTS.md",
+    "ruleWorkspaceSpiritHint": "工作區 {{product.workspaceDataFolderName}}/AGENTS.md",
     "ruleWorkspaceAgentsHint": "工作區 AGENTS.md",
     "deleteSkill": "刪除技能",
     "generateRuleTooltip": "前往主要聊天區域，預填 /create-rule，並用自然語言描述需求",
@@ -1509,7 +1509,7 @@
     "compactionAssistantReply": "根據壓縮後的上下文繼續：我將在設定中新增「上下文壓縮」風格的示範條目，並檢查 Compaction 區塊與後續助手回覆之間的間距。"
   },
   "slash": {
-    "createRule": "以自然語言建立或強化規則檔（預設 {{product.workspaceDataFolderName}}/rule.md）",
+    "createRule": "以自然語言建立或強化規則檔（預設 {{product.workspaceDataFolderName}}/AGENTS.md）",
     "createSkill": "以自然語言建立或強化 SKILL.md",
     "exportSession": "匯出目前工作階段的 llm_history 與完整 API 請求追蹤紀錄，並自動開啟",
     "startImplementing": "讀取進行中的 {{product.name}} 計畫並開始實作",

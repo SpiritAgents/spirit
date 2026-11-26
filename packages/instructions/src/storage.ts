@@ -13,9 +13,9 @@ export {
 
 export const SPIRIT_DIR_NAME = product.workspaceDataFolderName;
 export const AGENTS_DIR_NAME = ".agents";
-export const USER_RULE_FILE_NAME = "rule.md";
+export const USER_RULE_FILE_NAME = "AGENTS.md";
 export const WORKSPACE_RULE_FILE_NAME = "AGENTS.md";
-export const WORKSPACE_SPIRIT_RULE_FILE_NAME = path.join(SPIRIT_DIR_NAME, "rule.md");
+export const WORKSPACE_SPIRIT_RULE_FILE_NAME = path.join(SPIRIT_DIR_NAME, WORKSPACE_RULE_FILE_NAME);
 export const WORKSPACE_SPIRIT_SKILLS_DIR = path.join(SPIRIT_DIR_NAME, SKILLS_DIR_NAME);
 export const WORKSPACE_SPIRIT_MCP_CONFIG = path.join(SPIRIT_DIR_NAME, "mcp.json");
 export const WORKSPACE_AGENTS_SKILLS_DIR = path.join(AGENTS_DIR_NAME, SKILLS_DIR_NAME);

@@ -8,7 +8,7 @@ test("workspaceFileDirname hides the directory for files at the workspace root",
 });
 
 test("workspaceFileDirname returns only the relative parent directory", () => {
-  assert.equal(workspaceFileDirname(".spirit/rule.md"), ".spirit");
+  assert.equal(workspaceFileDirname(".spirit/AGENTS.md"), ".spirit");
   assert.equal(
     workspaceFileDirname(".agents/skills/design-review/SKILL.md"),
     ".agents/skills/design-review",

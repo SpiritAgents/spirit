@@ -106,7 +106,7 @@ Agent Core маршрутизирует inference через несколько 
 
 Agent Core определяет, как модель видит контекст проекта:
 
-- **Rules** — `AGENTS.md`, `.spirit/rule.md` и пользовательские rule-слоты в system-секциях.
+- **Rules** — `AGENTS.md`, `.spirit/AGENTS.md` и пользовательские rule-слоты в system-секциях.
 - **Skills** — каталог и инъекция активного skill; хосты находят файлы на диске.
 - **MCP** — клиент Model Context Protocol, реестр и мост tool/resource/prompt.
 - **Mode prompts** — границы Agent, Plan, Ask и Debug без повторного перечисления инструментов в system-тексте.

@@ -59,7 +59,7 @@ deno init --npm @spiritagent/extension
 </Tab>
 </Tabs>
 
-마법사는 확장 이름(kebab-case), 표시 이름, 한 줄 설명, 스캐폴드할 기능을 묻습니다. `package.json`, `icon.svg`, `{{product.workspaceDataFolderName}}/extension.json`을 작성하고, 선택한 기능에 해당하는 파일(`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`)을 추가하며, 완료되면 바로 붙여넣을 수 있는 마켓플레이스 항목을 출력합니다.
+마법사는 확장 이름(kebab-case), 표시 이름, 한 줄 설명, 스캐폴드할 기능을 묻습니다. `package.json`, `icon.svg`, `{{product.workspaceDataFolderName}}/extension.json`을 작성하고, 선택한 기능에 해당하는 파일(`skills/<name>/SKILL.md`, `AGENTS.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`)을 추가하며, 완료되면 바로 붙여넣을 수 있는 마켓플레이스 항목을 출력합니다.
 
 스크립팅할 때는 모든 질문에 플래그가 있습니다: `[target-dir]`, `--name`, `--display-name`, `--description`, `--capabilities <csv>`, 그리고 확인을 건너뛰는 `--yes`.
 
@@ -83,7 +83,7 @@ my-extension/
   index.mjs               # 선택 사항; `main`이 참조하는 activate 엔트리
   mcp.json                # mcp 선언 시
   hooks.json              # hooks 선언 시(agent hooks)
-  rule.md                 # rules 선언 시
+  AGENTS.md                 # rules 선언 시
   skills/<name>/SKILL.md  # skills 선언 시
   styles.css              # desktop CSS 선언 시(경로는 매니페스트에서 참조)
   cli-hooks.json          # CLI hooks 선언 시(경로는 매니페스트에서 참조)
@@ -131,7 +131,7 @@ my-extension/
 | `mcp`                 | `contributes.mcp`와 함께 사용하며 패키지 루트 `mcp.json`을 로드합니다.      |
 | `hooks`               | `contributes.hooks`와 함께 사용하며 패키지 루트 `hooks.json`을 로드합니다.  |
 | `skills`              | `contributes.skills`와 함께 사용하며 `skills/<name>/SKILL.md`를 로드합니다. |
-| `rules`               | `contributes.rules`와 함께 사용하며 패키지 루트 `rule.md`를 로드합니다.     |
+| `rules`               | `contributes.rules`와 함께 사용하며 패키지 루트 `AGENTS.md`를 로드합니다.     |
 | `approval-flow`       | 선언만 가능합니다. 승인은 각 도구의 `approvalMode`에 따라 결정됩니다.       |
 | `questions-flow`      | 선언만 가능합니다. 질문은 `approvalMode: need-questions`에 따라 결정됩니다. |
 | `settings`            | 선언만 가능합니다. 설정은 `settingsSchema`에서 가져옵니다.                  |
@@ -234,7 +234,7 @@ View와 Tab은 JavaScript, CSS, 의존성을 포함하는 HTML 페이지입니�
 | MCP      | `mcp`      | 패키지 루트 `mcp.json` (사용자/워크스페이스 MCP와 동일한 schema)                       |
 | Agent 훅 | `hooks`    | 패키지 루트 `hooks.json` (agent hooks와 동일한 schema. `contributes.cli.hooks`가 아님) |
 | 스킬     | `skills`   | `skills/<name>/SKILL.md`                                                               |
-| Rules    | `rules`    | 패키지 루트 `rule.md`                                                                  |
+| Rules    | `rules`    | 패키지 루트 `AGENTS.md`                                                                  |
 
 선언했는데 파일이 없거나 잘못된 경우 설치가 실패합니다. 선언되지 않은 파일은 무시되며 로드되지 않습니다.
 

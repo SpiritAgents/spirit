@@ -292,8 +292,8 @@
     "skillUserDirHint": "{{product.name}} 사용자 디렉터리 skills/",
     "skillWorkspaceSpiritHint": "작업공간 {{product.workspaceDataFolderName}}/skills/",
     "skillWorkspaceAgentsHint": "작업공간 .agents/skills/",
-    "ruleUserDirHint": "{{product.name}} 사용자 디렉터리 rule.md",
-    "ruleWorkspaceSpiritHint": "작업공간 {{product.workspaceDataFolderName}}/rule.md",
+    "ruleUserDirHint": "{{product.name}} 사용자 디렉터리 AGENTS.md",
+    "ruleWorkspaceSpiritHint": "작업공간 {{product.workspaceDataFolderName}}/AGENTS.md",
     "ruleWorkspaceAgentsHint": "워크스페이스 AGENTS.md",
     "deleteSkill": "스킬 삭제",
     "generateRuleTooltip": "메인 채팅 영역으로 이동하여 /create-rule을 입력하고 요구사항을 자연어로 설명하세요",
@@ -1509,7 +1509,7 @@
     "compactionAssistantReply": "압축된 컨텍스트를 바탕으로 계속합니다: 설정에 \"컨텍스트 압축\" 스타일 데모 항목을 추가하고, 압축 블록과 이후 어시스턴트 답변 사이의 간격을 확인하겠습니다."
   },
   "slash": {
-    "createRule": "자연어로 규칙 파일 생성 또는 강화 (기본값 {{product.workspaceDataFolderName}}/rule.md)",
+    "createRule": "자연어로 규칙 파일 생성 또는 강화 (기본값 {{product.workspaceDataFolderName}}/AGENTS.md)",
     "createSkill": "자연어로 SKILL.md 생성 또는 강화",
     "exportSession": "현재 세션의 llm_history 및 전체 API 요청 추적을 내보내고 자동으로 열기",
     "startImplementing": "활성 {{product.name}} 계획을 읽고 구현 시작",

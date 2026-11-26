@@ -60,7 +60,7 @@ deno init --npm @spiritagent/extension
 </Tab>
 </Tabs>
 
-L'assistant demande un nom d'extension (kebab-case), un nom d'affichage, une description d'une ligne et les capacités à générer. Il écrit `package.json`, `icon.svg` et `{{product.workspaceDataFolderName}}/extension.json`, plus les fichiers des capacités choisies (`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), et affiche en terminant une entrée de marché prête à coller.
+L'assistant demande un nom d'extension (kebab-case), un nom d'affichage, une description d'une ligne et les capacités à générer. Il écrit `package.json`, `icon.svg` et `{{product.workspaceDataFolderName}}/extension.json`, plus les fichiers des capacités choisies (`skills/<name>/SKILL.md`, `AGENTS.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), et affiche en terminant une entrée de marché prête à coller.
 
 Pour les scripts, chaque question a un drapeau : `[target-dir]`, `--name`, `--display-name`, `--description`, `--capabilities <csv>`, et `--yes` pour sauter la confirmation.
 
@@ -84,7 +84,7 @@ my-extension/
   index.mjs               # facultatif ; l'entrée activate référencée par `main`
   mcp.json                # lorsque mcp est déclaré
   hooks.json              # lorsque hooks est déclaré (hooks d'agent)
-  rule.md                 # lorsque rules est déclaré
+  AGENTS.md                 # lorsque rules est déclaré
   skills/<name>/SKILL.md  # lorsque skills est déclaré
   styles.css              # lorsque le CSS desktop est déclaré (chemin référencé depuis le manifeste)
   cli-hooks.json          # lorsque les hooks CLI sont déclarés (chemin référencé depuis le manifeste)
@@ -132,7 +132,7 @@ L'objet `manifest` est la déclaration d'exécution de l'extension : quels hôte
 | `mcp`                 | Doit être associé à `contributes.mcp` ; charge `mcp.json` à la racine du paquet     |
 | `hooks`               | Doit être associé à `contributes.hooks` ; charge `hooks.json` à la racine du paquet |
 | `skills`              | Doit être associé à `contributes.skills` ; charge `skills/<name>/SKILL.md`          |
-| `rules`               | Doit être associé à `contributes.rules` ; charge `rule.md` à la racine du paquet    |
+| `rules`               | Doit être associé à `contributes.rules` ; charge `AGENTS.md` à la racine du paquet    |
 | `approval-flow`       | Déclaré uniquement. L'approbation est pilotée par `approvalMode` de chaque outil    |
 | `questions-flow`      | Déclaré uniquement. Les questions sont pilotées par `approvalMode: need-questions`  |
 | `settings`            | Déclaré uniquement. Les paramètres proviennent de `settingsSchema`                  |
@@ -235,7 +235,7 @@ Exigent la capability correspondante. `contributes.mcp`, `contributes.hooks`, `c
 | MCP          | `mcp`      | `mcp.json` à la racine du paquet (même schéma que le MCP utilisateur/workspace)                    |
 | Agent Hooks  | `hooks`    | `hooks.json` à la racine du paquet (même schéma que les Hooks agent ; pas `contributes.cli.hooks`) |
 | Skills       | `skills`   | `skills/<name>/SKILL.md`                                                                           |
-| Rules        | `rules`    | `rule.md` à la racine du paquet                                                                    |
+| Rules        | `rules`    | `AGENTS.md` à la racine du paquet                                                                    |
 
 Déclaré mais fichier manquant ou invalide : l'installation échoue. Les fichiers non déclarés sont ignorés et jamais chargés.
 

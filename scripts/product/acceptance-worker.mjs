@@ -148,8 +148,8 @@ try {
     path.join(dataDir, "skills", product.quality, "SKILL.md"),
     skill(product.quality),
   );
-  await fsp.writeFile(path.join(workspaceData, "rule.md"), "shared workspace rule");
-  await fsp.writeFile(path.join(dataDir, "rule.md"), product.quality);
+  await fsp.writeFile(path.join(workspaceData, "AGENTS.md"), "shared workspace rule");
+  await fsp.writeFile(path.join(dataDir, "AGENTS.md"), product.quality);
   const mcp = (command) =>
     JSON.stringify({ servers: { fixture: { transport: { type: "stdio", command } } } });
   await fsp.writeFile(path.join(workspaceData, "mcp.json"), mcp("workspace-command"));

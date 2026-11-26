@@ -59,7 +59,7 @@ deno init --npm @spiritagent/extension
 </Tab>
 </Tabs>
 
-向导会询问扩展名（kebab-case）、显示名、一行描述以及要脚手架的能力。它会写入 `package.json`、`icon.svg` 与 `{{product.workspaceDataFolderName}}/extension.json`，并按你选择的能力追加对应文件（`skills/<name>/SKILL.md`、`rule.md`、`mcp.json`、`hooks.json`、`styles.css`、`index.mjs`），结束时打印一段可直接粘贴的市场条目。
+向导会询问扩展名（kebab-case）、显示名、一行描述以及要脚手架的能力。它会写入 `package.json`、`icon.svg` 与 `{{product.workspaceDataFolderName}}/extension.json`，并按你选择的能力追加对应文件（`skills/<name>/SKILL.md`、`AGENTS.md`、`mcp.json`、`hooks.json`、`styles.css`、`index.mjs`），结束时打印一段可直接粘贴的市场条目。
 
 脚本化使用时，每个提问都有对应 flag：`[target-dir]`、`--name`、`--display-name`、`--description`、`--capabilities <csv>`，以及跳过确认的 `--yes`。
 
@@ -83,7 +83,7 @@ my-extension/
   index.mjs               # 可选；`main` 引用的 activate 入口
   mcp.json                # 声明 mcp 时
   hooks.json              # 声明 hooks 时（agent hooks）
-  rule.md                 # 声明 rules 时
+  AGENTS.md                 # 声明 rules 时
   skills/<name>/SKILL.md  # 声明 skills 时
   styles.css              # 声明 desktop CSS 时（路径由宣言引用）
   cli-hooks.json          # 声明 CLI hooks 时（路径由宣言引用）
@@ -131,7 +131,7 @@ my-extension/
 | `mcp`                 | 必须与 `contributes.mcp` 成对出现；加载包根 `mcp.json`                |
 | `hooks`               | 必须与 `contributes.hooks` 成对出现；加载包根 `hooks.json`            |
 | `skills`              | 必须与 `contributes.skills` 成对出现；加载 `skills/<name>/SKILL.md`   |
-| `rules`               | 必须与 `contributes.rules` 成对出现；加载包根 `rule.md`               |
+| `rules`               | 必须与 `contributes.rules` 成对出现；加载包根 `AGENTS.md`               |
 | `approval-flow`       | 仅声明。审批由各工具的 `approvalMode` 驱动                            |
 | `questions-flow`      | 仅声明。问卷由 `approvalMode: need-questions` 驱动                    |
 | `settings`            | 仅声明。设置来自 `settingsSchema`                                     |
@@ -234,7 +234,7 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 | MCP        | `mcp`    | 包根 `mcp.json`（与用户/工作区 MCP 同 schema）                            |
 | Agent 挂钩 | `hooks`  | 包根 `hooks.json`（与 agent 挂钩同 schema；不是 `contributes.cli.hooks`） |
 | 技能       | `skills` | `skills/<name>/SKILL.md`                                                  |
-| Rules      | `rules`  | 包根 `rule.md`                                                            |
+| Rules      | `rules`  | 包根 `AGENTS.md`                                                            |
 
 已声明但文件缺失或非法则安装失败。包内有文件但未声明则忽略，永不加载。
 

@@ -153,17 +153,17 @@ test("hooks declaration requires a valid hooks.json", async () => {
   );
 });
 
-test("rules declaration requires a non-empty rule.md", async () => {
+test("rules declaration requires a non-empty AGENTS.md", async () => {
   await assert.rejects(
     assertDeclaredInstructionContributionFiles(
       { rules: RULES_DECLARATION },
-      { ...readersFromFiles({ "rule.md": "  \n" }), validators: noopValidators() },
+      { ...readersFromFiles({ "AGENTS.md": "  \n" }), validators: noopValidators() },
     ),
-    /rule.md must not be empty/,
+    /AGENTS.md must not be empty/,
   );
   await assertDeclaredInstructionContributionFiles(
     { rules: RULES_DECLARATION },
-    { ...readersFromFiles({ "rule.md": VALID_RULE_MD }), validators: noopValidators() },
+    { ...readersFromFiles({ "AGENTS.md": VALID_RULE_MD }), validators: noopValidators() },
   );
 });
 

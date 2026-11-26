@@ -302,8 +302,8 @@
     "skillUserDirHint": "{{product.name}} user directory skills/",
     "skillWorkspaceSpiritHint": "Workspace {{product.workspaceDataFolderName}}/skills/",
     "skillWorkspaceAgentsHint": "Workspace .agents/skills/",
-    "ruleUserDirHint": "{{product.name}} user directory rule.md",
-    "ruleWorkspaceSpiritHint": "Workspace {{product.workspaceDataFolderName}}/rule.md",
+    "ruleUserDirHint": "{{product.name}} user directory AGENTS.md",
+    "ruleWorkspaceSpiritHint": "Workspace {{product.workspaceDataFolderName}}/AGENTS.md",
     "ruleWorkspaceAgentsHint": "Workspace AGENTS.md",
     "deleteSkill": "Delete Skill",
     "generateRuleTooltip": "Go to main chat area, prefill /create-rule, and describe requirements in natural language",
@@ -1543,7 +1543,7 @@
     "compactionAssistantReply": "Continuing based on the compacted context: I will add a \"Context Compaction\" style demo entry in Settings and check the spacing between the Compaction block and subsequent assistant replies."
   },
   "slash": {
-    "createRule": "Create or tighten a rule file in natural language (default {{product.workspaceDataFolderName}}/rule.md)",
+    "createRule": "Create or tighten a rule file in natural language (default {{product.workspaceDataFolderName}}/AGENTS.md)",
     "createSkill": "Create or tighten a SKILL.md in natural language",
     "exportSession": "Export current session llm_history and full API request traces and open automatically",
     "startImplementing": "Read the active {{product.name}} plan and start implementing",

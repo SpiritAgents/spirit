@@ -407,7 +407,7 @@ test("instruction contributions require matching capabilities and conventional f
     await writeMinimalExtensionPackage(
       emptyRuleDir,
       { requestedCapabilities: ["rules"], contributes: { rules: RULES_DECLARATION } },
-      { "rule.md": "  \n" },
+      { "AGENTS.md": "  \n" },
     );
     await assert.rejects(
       () =>
@@ -415,7 +415,7 @@ test("instruction contributions require matching capabilities and conventional f
           { spiritDataDir, hostKind: "desktop" },
           { preparedDirectoryPath: emptyRuleDir },
         ),
-      /rule.md must not be empty/,
+      /AGENTS.md must not be empty/,
     );
   } finally {
     await rm(spiritDataDir, { recursive: true, force: true });
@@ -434,7 +434,7 @@ test("undeclared instruction files are ignored and declared files install", asyn
       {
         "mcp.json": VALID_MCP_JSON,
         "hooks.json": VALID_HOOKS_JSON,
-        "rule.md": VALID_RULE_MD,
+        "AGENTS.md": VALID_RULE_MD,
         "skills/demo-skill/SKILL.md": VALID_SKILL_MD,
       },
     );
@@ -462,7 +462,7 @@ test("undeclared instruction files are ignored and declared files install", asyn
       {
         "mcp.json": VALID_MCP_JSON,
         "hooks.json": VALID_HOOKS_JSON,
-        "rule.md": VALID_RULE_MD,
+        "AGENTS.md": VALID_RULE_MD,
         "skills/demo-skill/SKILL.md": VALID_SKILL_MD,
       },
     );

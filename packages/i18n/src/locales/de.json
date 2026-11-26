@@ -292,8 +292,8 @@
     "skillUserDirHint": "{{product.name}}-Benutzerverzeichnis skills/",
     "skillWorkspaceSpiritHint": "Workspace {{product.workspaceDataFolderName}}/skills/",
     "skillWorkspaceAgentsHint": "Workspace .agents/skills/",
-    "ruleUserDirHint": "{{product.name}}-Benutzerverzeichnis rule.md",
-    "ruleWorkspaceSpiritHint": "Workspace {{product.workspaceDataFolderName}}/rule.md",
+    "ruleUserDirHint": "{{product.name}}-Benutzerverzeichnis AGENTS.md",
+    "ruleWorkspaceSpiritHint": "Workspace {{product.workspaceDataFolderName}}/AGENTS.md",
     "ruleWorkspaceAgentsHint": "Arbeitsbereichs-AGENTS.md",
     "deleteSkill": "Skill löschen",
     "generateRuleTooltip": "Gehe zum Haupt-Chatbereich, gib /create-rule ein und beschreibe die Anforderungen in natürlicher Sprache",
@@ -1509,7 +1509,7 @@
     "compactionAssistantReply": "Fortsetzung basierend auf dem kompaktierten Kontext: Ich werde einen \"Context Compaction\"-Demo-Eintrag im Stil der Einstellungen hinzufügen und den Abstand zwischen dem Kompaktierungsblock und den nachfolgenden Assistenten-Antworten überprüfen."
   },
   "slash": {
-    "createRule": "Eine Regeldatei in natürlicher Sprache erstellen oder verschärfen (Standard {{product.workspaceDataFolderName}}/rule.md)",
+    "createRule": "Eine Regeldatei in natürlicher Sprache erstellen oder verschärfen (Standard {{product.workspaceDataFolderName}}/AGENTS.md)",
     "createSkill": "Eine SKILL.md in natürlicher Sprache erstellen oder verschärfen",
     "exportSession": "Aktuelle Sitzung als llm_history und vollständige API-Anfrage-Traces exportieren und automatisch öffnen",
     "startImplementing": "Den aktiven {{product.name}}-Plan lesen und mit der Implementierung beginnen",

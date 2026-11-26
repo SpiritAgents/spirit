@@ -2533,7 +2533,7 @@ mod tests {
         };
 
         assert!(help.is_empty());
-        assert!(path.contains(".spirit") && path.ends_with("rule.md"));
+        assert!(path.contains(".spirit") && path.ends_with("AGENTS.md"));
     }
 
     #[test]
@@ -3376,14 +3376,14 @@ mod tests {
             RuleScope::Workspace => (
                 "workspace-rule",
                 "Workspace Rule",
-                ".spirit/rule.md",
-                PathBuf::from("C:/workspace/.spirit/rule.md"),
+                ".spirit/AGENTS.md",
+                PathBuf::from("C:/workspace/.spirit/AGENTS.md"),
             ),
             RuleScope::User => (
                 "user-rule",
                 "User Rule",
-                "rule.md",
-                PathBuf::from("C:/users/demo/AppData/Roaming/Spirit/rule.md"),
+                "AGENTS.md",
+                PathBuf::from("C:/users/demo/AppData/Roaming/Spirit/AGENTS.md"),
             ),
         };
 

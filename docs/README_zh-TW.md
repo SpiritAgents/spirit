@@ -106,7 +106,7 @@ Agent Core 在統一執行時背後路由多種推理傳輸層：
 
 Agent Core 決定模型如何「看見」專案上下文：
 
-- **Rules** — `AGENTS.md`、`.spirit/rule.md` 與使用者規則槽位合併進 system 段落。
+- **Rules** — `AGENTS.md`、`.spirit/AGENTS.md` 與使用者規則槽位合併進 system 段落。
 - **Skills** — 目錄與啟用 Skill 注入；宿主在磁碟上探索檔案。
 - **MCP** — Model Context Protocol 用戶端、註冊表，以及 tool/resource/prompt 橋接。
 - **模式提示詞** — Agent、Plan、Ask、Debug 邊界約束，不在 system 文字中重複列舉工具。

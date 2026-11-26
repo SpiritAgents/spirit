@@ -19,7 +19,7 @@ Declare only what the extension uses; every declared file must exist and parse.
 | Capability                            | Contribution                                                             |
 | ------------------------------------- | ------------------------------------------------------------------------ |
 | `skills`                              | `skills/<name>/SKILL.md`                                                 |
-| `rules`                               | package-root `rule.md`                                                   |
+| `rules`                               | package-root `AGENTS.md`                                                 |
 | `mcp`                                 | package-root `mcp.json`                                                  |
 | `hooks`                               | package-root `hooks.json` (agent hooks)                                  |
 | `tool-definitions` + `tool-execution` | model-callable tools declared in the manifest, implemented by `activate` |
@@ -32,7 +32,7 @@ A bundled MCP server may send `spirit/ui/open` during `tools/call` for a view th
 
 Declaration-only capabilities (`approval-flow`, `questions-flow`, `settings`, `secret-storage`, `structured-results`) tune runtime behavior; see the reference.
 
-For bundled resource formats, the sibling skills create-skill, create-hook, and create-rule carry the authoring conventions — write the files into the extension's own layout (`skills/<name>/SKILL.md`, extension-root `hooks.json` and `rule.md`), not the managed workspace or user roots.
+For bundled resource formats, the sibling skills create-skill, create-hook, and create-rule carry the authoring conventions — write the files into the extension's own layout (`skills/<name>/SKILL.md`, extension-root `hooks.json` and `AGENTS.md`), not the managed workspace or user roots.
 
 ## Publish target
 

@@ -45,9 +45,6 @@ test("walks upward past workspace root to filesystem root, skips system-prompt r
     await writeFile(pkgAgents, "# Icons Rules v1\n");
     await writeFile(leafFile, "<svg/>");
 
-    // Legacy rule.md must be ignored by nested discovery.
-    await writeFile(path.join(workspaceRoot, "packages", "icons", "rule.md"), "# Legacy\n");
-
     const systemRules = [{ path: rootAgents, content: "# Repo Root Rules\n" }];
     const tracker = createNestedAgentsTracker({
       workspaceRoot,

@@ -60,7 +60,7 @@ deno init --npm @spiritagent/extension
 </Tab>
 </Tabs>
 
-Мастер спрашивает имя расширения (kebab-case), отображаемое имя, однострочное описание и возможности для каркаса. Он записывает `package.json`, `icon.svg` и `{{product.workspaceDataFolderName}}/extension.json`, плюс файлы выбранных возможностей (`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), а в конце выводит готовую запись маркетплейса для вставки.
+Мастер спрашивает имя расширения (kebab-case), отображаемое имя, однострочное описание и возможности для каркаса. Он записывает `package.json`, `icon.svg` и `{{product.workspaceDataFolderName}}/extension.json`, плюс файлы выбранных возможностей (`skills/<name>/SKILL.md`, `AGENTS.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), а в конце выводит готовую запись маркетплейса для вставки.
 
 Для скриптов у каждого вопроса есть флаг: `[target-dir]`, `--name`, `--display-name`, `--description`, `--capabilities <csv>` и `--yes` для пропуска подтверждения.
 
@@ -84,7 +84,7 @@ my-extension/
   index.mjs               # необязательно; вход activate, на который ссылается `main`
   mcp.json                # при объявлении mcp
   hooks.json              # при объявлении hooks (хуки агента)
-  rule.md                 # при объявлении rules
+  AGENTS.md                 # при объявлении rules
   skills/<name>/SKILL.md  # при объявлении skills
   styles.css              # при объявлении CSS для desktop (путь указан в манифесте)
   cli-hooks.json          # при объявлении хуков CLI (путь указан в манифесте)
@@ -132,7 +132,7 @@ my-extension/
 | `mcp`                 | Должен использоваться вместе с `contributes.mcp`; загружает `mcp.json` в корне пакета     |
 | `hooks`               | Должен использоваться вместе с `contributes.hooks`; загружает `hooks.json` в корне пакета |
 | `skills`              | Должен использоваться вместе с `contributes.skills`; загружает `skills/<name>/SKILL.md`   |
-| `rules`               | Должен использоваться вместе с `contributes.rules`; загружает `rule.md` в корне пакета    |
+| `rules`               | Должен использоваться вместе с `contributes.rules`; загружает `AGENTS.md` в корне пакета    |
 | `approval-flow`       | Только объявлено. Одобрение определяется параметром `approvalMode` каждого инструмента    |
 | `questions-flow`      | Только объявлено. Вопросы определяются параметром `approvalMode: need-questions`          |
 | `settings`            | Только объявлено. Настройки берутся из `settingsSchema`                                   |
@@ -235,7 +235,7 @@ View и Tab — HTML-страницы с собственными JavaScript, CS
 | MCP        | `mcp`      | `mcp.json` в корне пакета (та же схема, что у пользовательского/рабочего MCP)               |
 | Agent хуки | `hooks`    | `hooks.json` в корне пакета (та же схема, что у agent хуки; это не `contributes.cli.hooks`) |
 | Навыки     | `skills`   | `skills/<name>/SKILL.md`                                                                    |
-| Rules      | `rules`    | `rule.md` в корне пакета                                                                    |
+| Rules      | `rules`    | `AGENTS.md` в корне пакета                                                                    |
 
 Объявлено, но файл отсутствует или некорректен — установка отклоняется. Необъявленные файлы игнорируются и никогда не загружаются.
 

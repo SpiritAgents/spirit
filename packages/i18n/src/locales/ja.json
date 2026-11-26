@@ -292,8 +292,8 @@
     "skillUserDirHint": "{{product.name}} ユーザーディレクトリ skills/",
     "skillWorkspaceSpiritHint": "ワークスペース {{product.workspaceDataFolderName}}/skills/",
     "skillWorkspaceAgentsHint": "ワークスペース .agents/skills/",
-    "ruleUserDirHint": "{{product.name}} ユーザーディレクトリ rule.md",
-    "ruleWorkspaceSpiritHint": "ワークスペース {{product.workspaceDataFolderName}}/rule.md",
+    "ruleUserDirHint": "{{product.name}} ユーザーディレクトリ AGENTS.md",
+    "ruleWorkspaceSpiritHint": "ワークスペース {{product.workspaceDataFolderName}}/AGENTS.md",
     "ruleWorkspaceAgentsHint": "ワークスペース AGENTS.md",
     "deleteSkill": "スキルを削除",
     "generateRuleTooltip": "メインチャットエリアに移動し、/create-rule を入力して要件を自然言語で記述します",
@@ -1509,7 +1509,7 @@
     "compactionAssistantReply": "圧縮されたコンテキストに基づいて続行します: 設定に「コンテキスト圧縮」スタイルのデモエントリを追加し、圧縮ブロックと後続のアシスタント返信間のスペースを確認します。"
   },
   "slash": {
-    "createRule": "自然言語でルールファイルを作成または強化（デフォルト {{product.workspaceDataFolderName}}/rule.md）",
+    "createRule": "自然言語でルールファイルを作成または強化（デフォルト {{product.workspaceDataFolderName}}/AGENTS.md）",
     "createSkill": "自然言語でSKILL.mdを作成または強化",
     "exportSession": "現在のセッションのllm_historyと完全なAPIリクエストトレースをエクスポートして自動的に開く",
     "startImplementing": "アクティブな{{product.name}}計画を読み込み、実装を開始",

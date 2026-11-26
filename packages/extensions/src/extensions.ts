@@ -52,7 +52,7 @@ import {
   PERSONAL_MARKETPLACE_SOURCE_ID,
 } from "./marketplace/types.js";
 import { SKILLS_DIR_NAME } from "@spiritagent/instructions/skill-paths";
-import { SPIRIT_DIR_NAME, USER_RULE_FILE_NAME } from "@spiritagent/instructions/storage";
+import { SPIRIT_DIR_NAME } from "@spiritagent/instructions/storage";
 import {
   createAtomicExtensionStateStore,
   createFileExtensionStateStore,
@@ -109,7 +109,7 @@ export const SUPPORTED_HOST_EXTENSION_REQUESTED_CAPABILITIES = [
 
 export const EXTENSION_MCP_CONFIG_FILE_NAME = MCP_CONFIG_FILE_NAME;
 export const EXTENSION_HOOKS_CONFIG_FILE_NAME = HOOKS_CONFIG_FILE_NAME;
-export const EXTENSION_RULE_FILE_NAME = USER_RULE_FILE_NAME;
+export { EXTENSION_RULE_FILE_NAME } from "@spiritagent/extension-toolkit";
 export const EXTENSION_SKILLS_DIR_NAME = SKILLS_DIR_NAME;
 
 export const SUPPORTED_HOST_EXTENSION_TOOL_APPROVAL_MODES = [
@@ -188,7 +188,7 @@ export interface HostExtensionContributionSet {
   hooks?: Array<{ event: string; displayName: string }>;
   /** Declared skills contribution; files live under package-root skills/<name>/SKILL.md. */
   skills?: Array<{ name: string; displayName: string; summary: string }>;
-  /** Declared rules contribution; files live at the package-root rule.md. */
+  /** Declared rules contribution; files live at the package-root AGENTS.md. */
   rules?: { displayName: string; summary: string };
 }
 

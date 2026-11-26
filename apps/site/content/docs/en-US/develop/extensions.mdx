@@ -60,7 +60,7 @@ deno init --npm @spiritagent/extension
 </Tab>
 </Tabs>
 
-The wizard asks for an extension name (kebab-case), a display name, a one-line description, and the capabilities to scaffold. It writes `package.json`, `icon.svg`, and `{{product.workspaceDataFolderName}}/extension.json`, plus the files for the capabilities you picked (`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), and prints a ready-to-paste marketplace entry when it finishes.
+The wizard asks for an extension name (kebab-case), a display name, a one-line description, and the capabilities to scaffold. It writes `package.json`, `icon.svg`, and `{{product.workspaceDataFolderName}}/extension.json`, plus the files for the capabilities you picked (`skills/<name>/SKILL.md`, `AGENTS.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), and prints a ready-to-paste marketplace entry when it finishes.
 
 For scripting, every prompt has a flag: `[target-dir]`, `--name`, `--display-name`, `--description`, `--capabilities <csv>`, and `--yes` to skip confirmation.
 
@@ -84,7 +84,7 @@ my-extension/
   index.mjs               # optional; the activate entry referenced by `main`
   mcp.json                # when declaring mcp
   hooks.json              # when declaring hooks (agent hooks)
-  rule.md                 # when declaring rules
+  AGENTS.md                 # when declaring rules
   skills/<name>/SKILL.md  # when declaring skills
   styles.css              # when declaring desktop CSS (path referenced from the manifest)
   cli-hooks.json          # when declaring CLI hooks (path referenced from the manifest)
@@ -132,7 +132,7 @@ The `manifest` object is the extension's runtime declaration: which hosts it sup
 | `mcp`                 | Must be paired with `contributes.mcp`; loads package-root `mcp.json`      |
 | `hooks`               | Must be paired with `contributes.hooks`; loads package-root `hooks.json`  |
 | `skills`              | Must be paired with `contributes.skills`; loads `skills/<name>/SKILL.md`  |
-| `rules`               | Must be paired with `contributes.rules`; loads package-root `rule.md`     |
+| `rules`               | Must be paired with `contributes.rules`; loads package-root `AGENTS.md`     |
 | `approval-flow`       | Declared only. Approval is driven by each tool's `approvalMode`           |
 | `questions-flow`      | Declared only. Questions are driven by `approvalMode: need-questions`     |
 | `settings`            | Declared only. Settings come from `settingsSchema`                        |
@@ -235,7 +235,7 @@ Requires the matching capability. `contributes.mcp`, `contributes.hooks`, `contr
 | MCP          | `mcp`      | Package-root `mcp.json` (same schema as user/workspace MCP)                         |
 | Agent hooks  | `hooks`    | Package-root `hooks.json` (same schema as agent hooks; not `contributes.cli.hooks`) |
 | Skills       | `skills`   | `skills/<name>/SKILL.md`                                                            |
-| Rules        | `rules`    | Package-root `rule.md`                                                              |
+| Rules        | `rules`    | Package-root `AGENTS.md`                                                              |
 
 Declared but missing or invalid files fail install. Files in the package that are not declared are ignored and never loaded.
 

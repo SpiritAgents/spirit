@@ -292,8 +292,8 @@
     "skillUserDirHint": "Répertoire utilisateur {{product.name}} skills/",
     "skillWorkspaceSpiritHint": "Espace de travail {{product.workspaceDataFolderName}}/skills/",
     "skillWorkspaceAgentsHint": "Espace de travail .agents/skills/",
-    "ruleUserDirHint": "Répertoire utilisateur {{product.name}} rule.md",
-    "ruleWorkspaceSpiritHint": "Espace de travail {{product.workspaceDataFolderName}}/rule.md",
+    "ruleUserDirHint": "Répertoire utilisateur {{product.name}} AGENTS.md",
+    "ruleWorkspaceSpiritHint": "Espace de travail {{product.workspaceDataFolderName}}/AGENTS.md",
     "ruleWorkspaceAgentsHint": "AGENTS.md de l'espace de travail",
     "deleteSkill": "Supprimer la Skill",
     "generateRuleTooltip": "Aller dans la zone de chat principale, pré-remplir /create-rule et décrire les besoins en langage naturel",
@@ -1509,7 +1509,7 @@
     "compactionAssistantReply": "Pour continuer sur la base du contexte compacté : je vais ajouter une entrée de démonstration \"Compactage de contexte\" dans les paramètres et vérifier l'espacement entre le bloc de compactage et les réponses suivantes de l'assistant."
   },
   "slash": {
-    "createRule": "Créer ou renforcer un fichier de règle en langage naturel ({{product.workspaceDataFolderName}}/rule.md par défaut)",
+    "createRule": "Créer ou renforcer un fichier de règle en langage naturel ({{product.workspaceDataFolderName}}/AGENTS.md par défaut)",
     "createSkill": "Créer ou renforcer un SKILL.md en langage naturel",
     "exportSession": "Exporter l'historique llm_history de la session actuelle et les traces de requêtes API complètes, puis les ouvrir automatiquement",
     "startImplementing": "Lire le plan {{product.name}} actif et commencer à implémenter",

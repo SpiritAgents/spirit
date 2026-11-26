@@ -106,7 +106,7 @@ Eingebaute Tools werden einmal in Agent Core definiert (Name, Beschreibung, JSON
 
 Agent Core bestimmt, wie das Modell den Projektkontext sieht:
 
-- **Rules** — `AGENTS.md`, `.spirit/rule.md` und Benutzerregel-Slots in Systemabschnitten.
+- **Rules** — `AGENTS.md`, `.spirit/AGENTS.md` und Benutzerregel-Slots in Systemabschnitten.
 - **Skills** — Katalog und aktive Skill-Injektion; Hosts entdecken Dateien auf der Festplatte.
 - **MCP** — Model Context Protocol Client, Registry und Tool/Resource/Prompt-Brücke.
 - **Mode prompts** — Agent-, Plan-, Ask- und Debug-Grenzen ohne Tool-Wiederholung im Systemtext.
