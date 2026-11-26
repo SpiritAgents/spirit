@@ -1,5 +1,13 @@
 /** @vitest-environment jsdom */
 
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 import "./setup";
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
@@ -58,4 +66,40 @@ test("Hooks use real list data, relative paths, normal command text, and real de
     event: "preToolUse",
     index: 0,
   });
+});
+
+test("Hook creation separates scope from the Spirit-only type", async () => {
+  const onSaveHookEntry = vi.fn().mockResolvedValue(undefined);
+  render(
+    <HooksSettingsPanel
+      snapshot={{ hooksList: [] } as never}
+      hooksBusy={false}
+      apiReady
+      workspaceBinding="project"
+      onSaveHookEntry={onSaveHookEntry}
+      onDeleteHookEntry={vi.fn()}
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Add hook" }));
+  const dialog = screen.getByRole("dialog");
+  const scopeGroup = within(dialog).getByRole("tablist", { name: "Scope" });
+  const typeGroup = within(dialog).getByRole("tablist", { name: "Type" });
+  expect(within(typeGroup).getAllByRole("tab")).toHaveLength(1);
+  expect(within(typeGroup).getByRole("tab", { name: "Spirit" }).getAttribute("aria-selected")).toBe(
+    "true",
+  );
+  expect(within(typeGroup).queryByRole("tab", { name: "Generic" })).toBeNull();
+
+  fireEvent.click(within(scopeGroup).getByRole("tab", { name: "User" }));
+  fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+  await vi.waitFor(() =>
+    expect(onSaveHookEntry).toHaveBeenCalledWith({
+      scope: "user",
+      event: "preToolUse",
+      command: "hooks/log-hook.sh",
+      timeout: 30,
+    }),
+  );
 });

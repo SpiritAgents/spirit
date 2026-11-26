@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Code2, Sparkles } from "lucide-react";
 import { product } from "@spiritagent/product";
 
+import { InstructionLocationFields } from "@/components/settings/instruction-location-fields";
 import { SettingsListItemHeading } from "@/components/settings/settings-list-item-heading";
 import { EmptyCard } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { DESKTOP_SETTINGS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { cn } from "@/lib/utils";
-import { DESKTOP_EDITOR_TAB_CLASS, DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
+import { DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
 import type {
   DeleteHookEntryRequest,
   DesktopHookEventName,
@@ -48,19 +49,6 @@ const HOOK_EVENTS: DesktopHookEventName[] = [
   "postToolUse",
   "subagentStart",
   "subagentEnd",
-];
-
-const hookCreateScopeOptions: Array<{
-  scope: DesktopHookScope;
-  labelKey: string;
-  hintKey: string;
-}> = [
-  { scope: "user", labelKey: "settings.skillUserDirShort", hintKey: "settings.hooksUserDirHint" },
-  {
-    scope: "workspace",
-    labelKey: "settings.mcpScopeWorkspace",
-    hintKey: "settings.hooksWorkspaceDirHint",
-  },
 ];
 
 type HooksSettingsPanelProps = {
@@ -104,15 +92,6 @@ export function HooksSettingsPanel({
       ),
     [snapshot?.hooksList, workspaceBindingDisabled],
   );
-
-  const availableHookCreateScopeOptions = workspaceBindingDisabled
-    ? hookCreateScopeOptions.filter((option) => option.scope === "user")
-    : hookCreateScopeOptions;
-  const localizedHookCreateScopeOptions = availableHookCreateScopeOptions.map((option) => ({
-    ...option,
-    label: t(option.labelKey),
-    hint: t(option.hintKey),
-  }));
 
   const resetForm = () => {
     setCreateScope(workspaceBindingDisabled ? "user" : "workspace");
@@ -292,54 +271,16 @@ export function HooksSettingsPanel({
             <DialogTitle>{t("settings.hooksAdd")}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 py-1">
-            <div className="grid gap-2">
-              <Label>{t("settings.saveLocation")}</Label>
-              <RovingFocusGroup
-                asChild
-                orientation="horizontal"
-                loop
-                defaultCurrentTabStopId={createScope}
-              >
-                <div
-                  role="tablist"
-                  aria-label={t("settings.saveLocation")}
-                  className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
-                >
-                  {localizedHookCreateScopeOptions.map((opt) => (
-                    <RovingFocusItem
-                      asChild
-                      key={opt.scope}
-                      tabStopId={opt.scope}
-                      active={createScope === opt.scope}
-                      focusable={!hooksBusy}
-                    >
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={createScope === opt.scope}
-                        className={cn(
-                          DESKTOP_EDITOR_TAB_CLASS,
-                          createScope === opt.scope
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-chrome-emphasis",
-                        )}
-                        disabled={hooksBusy}
-                        title={opt.hint}
-                        onClick={() => setCreateScope(opt.scope)}
-                      >
-                        {opt.label}
-                      </button>
-                    </RovingFocusItem>
-                  ))}
-                </div>
-              </RovingFocusGroup>
-              <p className="text-xs text-muted-foreground">
-                {
-                  localizedHookCreateScopeOptions.find((option) => option.scope === createScope)
-                    ?.hint
-                }
-              </p>
-            </div>
+            <InstructionLocationFields
+              idPrefix="new-hook-location"
+              rootKind={createScope === "user" ? "user" : "workspaceSpirit"}
+              onRootKindChange={(rootKind) =>
+                setCreateScope(rootKind === "user" ? "user" : "workspace")
+              }
+              disabled={hooksBusy ?? false}
+              workspaceDisabled={workspaceBindingDisabled}
+              includeGeneric={false}
+            />
 
             <div className="grid gap-2">
               <Label htmlFor="hook-event">{t("settings.hooksEvent")}</Label>

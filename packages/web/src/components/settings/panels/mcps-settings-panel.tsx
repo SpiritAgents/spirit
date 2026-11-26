@@ -5,6 +5,7 @@ import { product } from "@spiritagent/product";
 import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
 import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
 
+import { InstructionLocationFields } from "@/components/settings/instruction-location-fields";
 import { SettingsListItemHeading } from "@/components/settings/settings-list-item-heading";
 import type { SettingsViewProps } from "@/components/settings/types";
 import { Spinner } from "@/components/ui/spinner";
@@ -77,19 +78,6 @@ function mcpCountsSummary(runtime?: McpServerRuntimeInfo): string | null {
   );
 }
 
-const mcpCreateScopeOptions: Array<{
-  scope: DesktopMcpScope;
-  labelKey: string;
-  hintKey: string;
-}> = [
-  { scope: "user", labelKey: "settings.skillUserDirShort", hintKey: "settings.mcpUserDirHint" },
-  {
-    scope: "workspace",
-    labelKey: "settings.mcpScopeWorkspace",
-    hintKey: "settings.mcpWorkspaceSpiritHint",
-  },
-];
-
 export function McpsSettingsPanel({
   snapshot,
   mcpsBusy,
@@ -145,15 +133,6 @@ export function McpsSettingsPanel({
   ) {
     setRuntimeInfo(nextRuntimeInfo);
   }
-  const availableMcpCreateScopeOptions = workspaceBindingDisabled
-    ? mcpCreateScopeOptions.filter((option) => option.scope === "user")
-    : mcpCreateScopeOptions;
-  const localizedMcpCreateScopeOptions = availableMcpCreateScopeOptions.map((option) => ({
-    ...option,
-    label: t(option.labelKey),
-    hint: t(option.hintKey),
-  }));
-
   useEffect(() => {
     let cancelled = false;
 
@@ -361,51 +340,16 @@ export function McpsSettingsPanel({
             <DialogTitle>{t("settings.addMcp")}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 py-1">
-            <div className="grid gap-2">
-              <Label>{t("settings.saveLocation")}</Label>
-              <RovingFocusGroup
-                asChild
-                orientation="horizontal"
-                loop
-                defaultCurrentTabStopId={createScope}
-              >
-                <div
-                  role="tablist"
-                  aria-label={t("settings.saveLocation")}
-                  className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
-                >
-                  {localizedMcpCreateScopeOptions.map((opt) => (
-                    <RovingFocusItem
-                      asChild
-                      key={opt.scope}
-                      tabStopId={opt.scope}
-                      active={createScope === opt.scope}
-                      focusable={!mcpsBusy}
-                    >
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={createScope === opt.scope}
-                        className={cn(
-                          DESKTOP_EDITOR_TAB_CLASS,
-                          createScope === opt.scope
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-chrome-emphasis",
-                        )}
-                        disabled={mcpsBusy}
-                        title={opt.hint}
-                        onClick={() => setCreateScope(opt.scope)}
-                      >
-                        {opt.label}
-                      </button>
-                    </RovingFocusItem>
-                  ))}
-                </div>
-              </RovingFocusGroup>
-              <p className="text-xs text-muted-foreground">
-                {localizedMcpCreateScopeOptions.find((o) => o.scope === createScope)?.hint}
-              </p>
-            </div>
+            <InstructionLocationFields
+              idPrefix="new-mcp-location"
+              rootKind={createScope === "user" ? "user" : "workspaceSpirit"}
+              onRootKindChange={(rootKind) =>
+                setCreateScope(rootKind === "user" ? "user" : "workspace")
+              }
+              disabled={mcpsBusy}
+              workspaceDisabled={workspaceBindingDisabled}
+              includeGeneric={false}
+            />
             <div className="grid gap-2">
               <Label>{t("settings.transportType")}</Label>
               <RovingFocusGroup

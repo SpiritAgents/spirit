@@ -40,7 +40,7 @@ for (const lng of ["en", "de", "es", "fr", "ja", "ko", "pt-BR", "ru", "zh-CN", "
       CONNECT_OPENAI_TITLES[lng],
     );
     assert.ok(
-      i18n.t("settings.hooksWorkspaceDirHint", { lng }).includes(product.workspaceDataFolderName),
+      i18n.t("settings.skillWorkspaceSpirit", { lng }).includes(product.workspaceDataFolderName),
     );
     const details = i18n.t("sidebar.removeWorkspaceConfirmDescription", {
       lng,

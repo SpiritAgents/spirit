@@ -27,16 +27,20 @@ use crate::{
 
 const MCP_ADD_FIELD_NAME: usize = 0;
 const MCP_ADD_FIELD_SCOPE: usize = 1;
-const MCP_ADD_FIELD_TRANSPORT: usize = 2;
-const MCP_ADD_FIELD_ENDPOINT: usize = 3;
-const MCP_ADD_FIELD_METADATA: usize = 4;
+#[cfg(test)]
+const MCP_ADD_FIELD_TYPE: usize = 2;
+const MCP_ADD_FIELD_TRANSPORT: usize = 3;
+const MCP_ADD_FIELD_ENDPOINT: usize = 4;
+const MCP_ADD_FIELD_METADATA: usize = 5;
 
 const HOOK_ADD_FIELD_SCOPE: usize = 0;
-const HOOK_ADD_FIELD_EVENT: usize = 1;
-const HOOK_ADD_FIELD_COMMAND: usize = 2;
-const HOOK_ADD_FIELD_TIMEOUT: usize = 3;
-const HOOK_ADD_FIELD_MATCHER: usize = 4;
-const HOOK_ADD_FIELD_FAIL_CLOSED: usize = 5;
+#[cfg(test)]
+const HOOK_ADD_FIELD_TYPE: usize = 1;
+const HOOK_ADD_FIELD_EVENT: usize = 2;
+const HOOK_ADD_FIELD_COMMAND: usize = 3;
+const HOOK_ADD_FIELD_TIMEOUT: usize = 4;
+const HOOK_ADD_FIELD_MATCHER: usize = 5;
+const HOOK_ADD_FIELD_FAIL_CLOSED: usize = 6;
 
 const HOOK_EVENTS: &[&str] = &[
     "sessionStart",
@@ -81,13 +85,21 @@ pub(crate) fn new_mcp_add_form() -> BottomFormView {
                 },
             },
             BottomFormFieldView {
-                label: t!("form.mcp.field.scope.label").into_owned(),
+                label: t!("form.instruction.field.scope.label").into_owned(),
                 help: String::new(),
                 editor: BottomFormFieldEditorView::Choice {
                     options: vec![
-                        crate::locale::product_text("form.mcp.field.scope.workspace").into_owned(),
-                        t!("form.mcp.field.scope.user").into_owned(),
+                        t!("form.instruction.field.scope.workspace").into_owned(),
+                        t!("form.instruction.field.scope.user").into_owned(),
                     ],
+                    selected: 0,
+                },
+            },
+            BottomFormFieldView {
+                label: t!("form.instruction.field.type.label").into_owned(),
+                help: String::new(),
+                editor: BottomFormFieldEditorView::Choice {
+                    options: vec![t!("form.instruction.field.type.spirit").into_owned()],
                     selected: 0,
                 },
             },
@@ -214,11 +226,11 @@ pub(crate) fn remote_pair_form_apply_request(form: &mut BottomFormView, request:
 pub(crate) fn new_hook_add_form(workspace_scope_available: bool) -> BottomFormView {
     let scope_options = if workspace_scope_available {
         vec![
-            crate::locale::product_text("form.hooks.field.scope.workspace").into_owned(),
-            t!("form.hooks.field.scope.user").into_owned(),
+            t!("form.instruction.field.scope.workspace").into_owned(),
+            t!("form.instruction.field.scope.user").into_owned(),
         ]
     } else {
-        vec![t!("form.hooks.field.scope.user").into_owned()]
+        vec![t!("form.instruction.field.scope.user").into_owned()]
     };
 
     BottomFormView {
@@ -226,10 +238,18 @@ pub(crate) fn new_hook_add_form(workspace_scope_available: bool) -> BottomFormVi
         title: t!("form.hooks.title").into_owned(),
         fields: vec![
             BottomFormFieldView {
-                label: t!("form.hooks.field.scope.label").into_owned(),
+                label: t!("form.instruction.field.scope.label").into_owned(),
                 help: String::new(),
                 editor: BottomFormFieldEditorView::Choice {
                     options: scope_options,
+                    selected: 0,
+                },
+            },
+            BottomFormFieldView {
+                label: t!("form.instruction.field.type.label").into_owned(),
+                help: String::new(),
+                editor: BottomFormFieldEditorView::Choice {
+                    options: vec![t!("form.instruction.field.type.spirit").into_owned()],
                     selected: 0,
                 },
             },
@@ -1695,7 +1715,7 @@ fn selected_hook_scope(form: &BottomFormView) -> Option<&'static str> {
             let option = options.get((*selected).min(options.len().saturating_sub(1)))?;
             // Options are built from the localized scope labels, so compare against the
             // current locale's "user" label instead of hardcoding any single language.
-            if option.as_str() == t!("form.hooks.field.scope.user").as_ref() {
+            if option.as_str() == t!("form.instruction.field.scope.user").as_ref() {
                 Some("user")
             } else {
                 Some("workspace")
@@ -2162,7 +2182,7 @@ fn selected_mcp_scope(form: &BottomFormView) -> Option<McpScope> {
             .map(|value| {
                 // Options are built from the localized scope labels, so compare against the
                 // current locale's "user" label instead of hardcoding any single language.
-                if value.as_str() == t!("form.mcp.field.scope.user").as_ref() {
+                if value.as_str() == t!("form.instruction.field.scope.user").as_ref() {
                     McpScope::User
                 } else {
                     McpScope::Workspace
@@ -2333,12 +2353,14 @@ mod tests {
     }
 
     use super::{
-        HOOK_ADD_FIELD_COMMAND, HOOK_ADD_FIELD_FAIL_CLOSED, HOOK_ADD_FIELD_TIMEOUT,
-        MetadataFieldKind, activate, hook_add_form_enter_toggles_checkbox, insert_text,
-        model_add_picker_index_of, move_right, new_extensions_form, new_hook_add_form,
-        new_mcp_add_form, new_mcp_prompt_form, new_model_add_form, new_rules_form, new_skills_form,
-        parse_metadata_map, parse_model_add_connection, prompt_user_message, rules_form_overrides,
-        select_next_field, skills_form_overrides, sync_model_add_form_fields, to_hook_save_request,
+        HOOK_ADD_FIELD_COMMAND, HOOK_ADD_FIELD_FAIL_CLOSED, HOOK_ADD_FIELD_SCOPE,
+        HOOK_ADD_FIELD_TIMEOUT, HOOK_ADD_FIELD_TYPE, MCP_ADD_FIELD_ENDPOINT,
+        MCP_ADD_FIELD_METADATA, MCP_ADD_FIELD_SCOPE, MCP_ADD_FIELD_TYPE, MetadataFieldKind,
+        activate, hook_add_form_enter_toggles_checkbox, insert_text, model_add_picker_index_of,
+        move_right, new_extensions_form, new_hook_add_form, new_mcp_add_form, new_mcp_prompt_form,
+        new_model_add_form, new_rules_form, new_skills_form, parse_metadata_map,
+        parse_model_add_connection, prompt_user_message, rules_form_overrides, select_next_field,
+        skills_form_overrides, sync_model_add_form_fields, to_hook_save_request,
         to_prompt_args_json,
     };
     use crate::model_registry::ModelTransportKind;
@@ -2383,13 +2405,31 @@ mod tests {
         let form = new_mcp_add_form();
 
         assert_eq!(
-            form.fields[3].label,
+            form.fields[MCP_ADD_FIELD_SCOPE].label,
+            t!("form.instruction.field.scope.label")
+        );
+        assert_eq!(
+            form.fields[MCP_ADD_FIELD_TYPE].label,
+            t!("form.instruction.field.type.label")
+        );
+        assert_eq!(
+            form.fields[MCP_ADD_FIELD_ENDPOINT].label,
             t!("form.mcp.field.endpoint.command.label")
         );
         assert_eq!(
-            form.fields[4].label,
+            form.fields[MCP_ADD_FIELD_METADATA].label,
             t!("form.mcp.field.metadata.env.label")
         );
+        match &form.fields[MCP_ADD_FIELD_TYPE].editor {
+            BottomFormFieldEditorView::Choice { options, selected } => {
+                assert_eq!(
+                    options,
+                    &vec![t!("form.instruction.field.type.spirit").into_owned()]
+                );
+                assert_eq!(*selected, 0);
+            }
+            _ => panic!("expected Spirit type choice"),
+        }
     }
 
     #[test]
@@ -3506,6 +3546,24 @@ mod tests {
         let form = new_hook_add_form(true);
 
         assert!(matches!(form.kind, crate::view::BottomFormKind::HookAdd));
+        assert_eq!(
+            form.fields[HOOK_ADD_FIELD_SCOPE].label,
+            t!("form.instruction.field.scope.label")
+        );
+        assert_eq!(
+            form.fields[HOOK_ADD_FIELD_TYPE].label,
+            t!("form.instruction.field.type.label")
+        );
+        match &form.fields[HOOK_ADD_FIELD_TYPE].editor {
+            BottomFormFieldEditorView::Choice { options, selected } => {
+                assert_eq!(
+                    options,
+                    &vec![t!("form.instruction.field.type.spirit").into_owned()]
+                );
+                assert_eq!(*selected, 0);
+            }
+            _ => panic!("expected Spirit type choice"),
+        }
         assert_eq!(
             match &form.fields[HOOK_ADD_FIELD_COMMAND].editor {
                 BottomFormFieldEditorView::Text { value, .. } => value.as_str(),

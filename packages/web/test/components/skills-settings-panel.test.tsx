@@ -2,7 +2,7 @@
 
 import "./setup";
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 
 import { SkillsSettingsPanel } from "@/components/settings/panels/skills-settings-panel";
@@ -73,4 +73,52 @@ test("Skills use real list data, readable titles, stripped paths, and real delet
     name: "design-review",
     rootKind: "workspaceAgents",
   });
+});
+
+test("Skill creation selects scope and type in separate groups", async () => {
+  const onCreateSkill = vi.fn().mockResolvedValue(undefined);
+  render(
+    <SkillsSettingsPanel
+      snapshot={{ workspaceBinding: "project", skillsList: [] } as never}
+      skillsBusy={false}
+      apiReady={false}
+      onCreateSkill={onCreateSkill}
+      onDeleteSkill={vi.fn()}
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "New Skill" }));
+  const dialog = screen.getByRole("dialog");
+  const scopeGroup = within(dialog).getByRole("tablist", { name: "Scope" });
+  const typeGroup = within(dialog).getByRole("tablist", { name: "Type" });
+  expect(within(scopeGroup).getByRole("tab", { name: "User" }).getAttribute("aria-selected")).toBe(
+    "true",
+  );
+  expect(within(typeGroup).getByRole("tab", { name: "Spirit" }).getAttribute("aria-selected")).toBe(
+    "true",
+  );
+  expect(within(typeGroup).queryByRole("tab", { name: "Generic" })).toBeNull();
+
+  fireEvent.click(within(scopeGroup).getByRole("tab", { name: "Workspace" }));
+  const workspaceTypeGroup = within(dialog).getByRole("tablist", { name: "Type" });
+  fireEvent.click(within(workspaceTypeGroup).getByRole("tab", { name: "Generic" }));
+  fireEvent.change(within(dialog).getByLabelText("Name"), {
+    target: { value: "code-review" },
+  });
+  fireEvent.change(within(dialog).getByLabelText("Description"), {
+    target: { value: "Review code changes" },
+  });
+  fireEvent.change(within(dialog).getByLabelText("Content"), {
+    target: { value: "Check the diff for correctness." },
+  });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
+
+  await waitFor(() =>
+    expect(onCreateSkill).toHaveBeenCalledWith({
+      name: "code-review",
+      rootKind: "workspaceAgents",
+      summary: "Review code changes",
+      content: "Check the diff for correctness.",
+    }),
+  );
 });

@@ -99,3 +99,48 @@ test("MCP inspection shows a title-leading spinner while connecting", () => {
 
   expect(screen.getByLabelText("Connecting…")).toBeTruthy();
 });
+
+test("MCP creation separates scope from the Spirit-only type", async () => {
+  const onAddMcpServer = vi.fn().mockResolvedValue(undefined);
+  render(
+    <McpsSettingsPanel
+      snapshot={{ workspaceBinding: "project", mcpServers: [] } as never}
+      mcpsBusy={false}
+      onAddMcpServer={onAddMcpServer}
+      onDeleteMcpServer={vi.fn()}
+      onInspectMcpServer={vi.fn()}
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Add MCP" }));
+  const dialog = screen.getByRole("dialog");
+  const scopeGroup = within(dialog).getByRole("tablist", { name: "Scope" });
+  const typeGroup = within(dialog).getByRole("tablist", { name: "Type" });
+  expect(
+    within(scopeGroup).getByRole("tab", { name: "Workspace" }).getAttribute("aria-selected"),
+  ).toBe("true");
+  expect(within(typeGroup).getAllByRole("tab")).toHaveLength(1);
+  expect(within(typeGroup).getByRole("tab", { name: "Spirit" }).getAttribute("aria-selected")).toBe(
+    "true",
+  );
+  expect(within(typeGroup).queryByRole("tab", { name: "Generic" })).toBeNull();
+
+  fireEvent.click(within(scopeGroup).getByRole("tab", { name: "User" }));
+  fireEvent.change(within(dialog).getByLabelText("Name"), {
+    target: { value: "workspace-files" },
+  });
+  fireEvent.change(within(dialog).getByLabelText("Command"), {
+    target: { value: "spirit-mcp workspace-files" },
+  });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
+
+  await vi.waitFor(() =>
+    expect(onAddMcpServer).toHaveBeenCalledWith({
+      name: "workspace-files",
+      scope: "user",
+      transportType: "stdio",
+      endpoint: "spirit-mcp workspace-files",
+      metadata: "",
+    }),
+  );
+});

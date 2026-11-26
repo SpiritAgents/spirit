@@ -2,8 +2,8 @@ import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BookText, Sparkles } from "lucide-react";
-import { product } from "@spiritagent/product";
 
+import { InstructionLocationFields } from "@/components/settings/instruction-location-fields";
 import { skillRootKindLabel } from "@/components/settings/skill-rule-labels";
 import { SettingsListItemHeading } from "@/components/settings/settings-list-item-heading";
 import type { SettingsViewProps } from "@/components/settings/types";
@@ -24,44 +24,10 @@ import { Label } from "@/components/ui/label";
 import { DESKTOP_SETTINGS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { markdownToPlainText } from "@/lib/markdown-plain-text";
 import { cn } from "@/lib/utils";
-import i18n from "@/lib/i18n";
 import type { CreateRuleRequest, DesktopRuleListItem, DesktopSkillRootKind } from "@/types";
-import { DESKTOP_EDITOR_TAB_CLASS, DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
-
-const ruleCreateRootOptions: Array<{
-  kind: DesktopSkillRootKind;
-  labelKey?: string;
-  labelFallback: string;
-  hintKey: string;
-}> = [
-  {
-    kind: "user",
-    labelKey: "settings.skillUserDirShort",
-    labelFallback: "User",
-    hintKey: "settings.ruleUserDirHint",
-  },
-  {
-    kind: "workspaceSpirit",
-    labelFallback: product.workspaceDataFolderName,
-    hintKey: "settings.ruleWorkspaceSpiritHint",
-  },
-  {
-    kind: "workspaceAgents",
-    labelFallback: "AGENTS.md",
-    hintKey: "settings.ruleWorkspaceAgentsHint",
-  },
-];
+import { DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
 
 function ruleLocationLabel(item: DesktopRuleListItem): string {
-  if (item.rootKind === "user") {
-    return i18n.t("settings.skillUserDir");
-  }
-  if (item.rootKind === "workspaceSpirit") {
-    return i18n.t("settings.skillWorkspaceSpirit");
-  }
-  if (item.rootKind === "workspaceAgents") {
-    return i18n.t("settings.ruleWorkspaceAgentsHint");
-  }
   return skillRootKindLabel(item.rootKind);
 }
 
@@ -90,14 +56,6 @@ export function RulesSettingsPanel({
 
   const workspaceBindingDisabled = snapshot?.workspaceBinding === "none";
   const items = snapshot?.rulesList ?? [];
-  const availableRuleCreateRootOptions = workspaceBindingDisabled
-    ? ruleCreateRootOptions.filter((option) => option.kind === "user")
-    : ruleCreateRootOptions;
-  const localizedRuleCreateRootOptions = availableRuleCreateRootOptions.map((option) => ({
-    ...option,
-    label: option.labelKey ? t(option.labelKey) : option.labelFallback,
-    hint: t(option.hintKey),
-  }));
 
   const resetForm = () => {
     setNewDescription("");
@@ -234,51 +192,13 @@ export function RulesSettingsPanel({
             <DialogTitle>{t("settings.newRule")}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 py-1">
-            <div className="grid gap-2">
-              <Label>{t("settings.saveLocation")}</Label>
-              <RovingFocusGroup
-                asChild
-                orientation="horizontal"
-                loop
-                defaultCurrentTabStopId={createRootKind}
-              >
-                <div
-                  role="tablist"
-                  aria-label={t("settings.saveLocation")}
-                  className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
-                >
-                  {localizedRuleCreateRootOptions.map((opt) => (
-                    <RovingFocusItem
-                      asChild
-                      key={opt.kind}
-                      tabStopId={opt.kind}
-                      active={createRootKind === opt.kind}
-                      focusable={!rulesBusy}
-                    >
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={createRootKind === opt.kind}
-                        className={cn(
-                          DESKTOP_EDITOR_TAB_CLASS,
-                          createRootKind === opt.kind
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-chrome-emphasis",
-                        )}
-                        disabled={rulesBusy}
-                        title={opt.hint}
-                        onClick={() => setCreateRootKind(opt.kind)}
-                      >
-                        {opt.label}
-                      </button>
-                    </RovingFocusItem>
-                  ))}
-                </div>
-              </RovingFocusGroup>
-              <p className="text-xs text-muted-foreground">
-                {localizedRuleCreateRootOptions.find((o) => o.kind === createRootKind)?.hint}
-              </p>
-            </div>
+            <InstructionLocationFields
+              idPrefix="new-rule-location"
+              rootKind={createRootKind}
+              onRootKindChange={setCreateRootKind}
+              disabled={rulesBusy}
+              workspaceDisabled={workspaceBindingDisabled}
+            />
             <div className="grid gap-2">
               <Label htmlFor="new-rule-content">{t("settings.content")}</Label>
               <DesktopFormTextarea
