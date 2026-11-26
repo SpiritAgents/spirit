@@ -1139,6 +1139,7 @@ async function createMainWindow(): Promise<BrowserWindow> {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      scrollBounce: true,
       spellcheck: false,
       webviewTag: true,
     },
