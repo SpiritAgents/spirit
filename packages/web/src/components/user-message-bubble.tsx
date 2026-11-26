@@ -507,7 +507,7 @@ export function UserMessageBubble({
     userBubbleClassName,
     queued && "opacity-60",
     canStartRewind &&
-      "cursor-pointer transition-colors hover:bg-canvas-hover focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
+      "cursor-pointer transition-colors hover:bg-canvas-hover focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none dark:hover:bg-muted/80",
   );
 
   const handleRewindKeyDown = (event: KeyboardEvent) => {

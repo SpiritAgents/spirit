@@ -33,7 +33,6 @@ import { UserMessageBubble } from "@/components/user-message-bubble";
 import { shouldShowAssistantCompactionCollapsible } from "@/lib/conversation-compaction-ui";
 import { isTurnErrorAssistantMessage } from "@/lib/conversation-turn-error-ui";
 import { conversationMessageStableId } from "@/lib/conversation-list-scope";
-import { DESKTOP_ELEVATION_SHADOW_SM } from "@/lib/desktop-chrome";
 import { isSubagentStatusSurfaceMessage } from "@/lib/subagent-display";
 import { cn } from "@/lib/utils";
 import type { EditorFileTarget } from "@/lib/workspace-editor-navigation";
@@ -210,10 +209,7 @@ function MessageCardImpl({
   const isQueuedUser = isUser && message.queued === true && typeof message.queueId === "string";
   const canStartRewind =
     isUser && message.canRewind === true && !message.pending && message.queued !== true;
-  const userBubble = cn(
-    "rounded-2xl rounded-br-md border border-ring/30 bg-background px-3 py-2.5 dark:border-border/50 dark:bg-muted",
-    DESKTOP_ELEVATION_SHADOW_SM,
-  );
+  const userBubble = "rounded-2xl rounded-br-md bg-muted px-3 py-2";
   const subagentStatusSurface =
     !isUser && message.content.trim() ? isSubagentStatusSurfaceMessage(message) : false;
   const turnErrorSurface = !isUser && isTurnErrorAssistantMessage(message);
