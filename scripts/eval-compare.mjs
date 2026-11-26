@@ -463,6 +463,7 @@ async function runCandidate(params) {
   const context = {
     workspaceRoot: params.workspacePath,
     spiritDataDir,
+    userAgentsDir: path.join(params.workspacePath, '.agents-eval-data'),
   };
   const hostMetadata = await loadHostInstructionMetadata(context);
   const hostToolService = new NodeHostToolService(context, {

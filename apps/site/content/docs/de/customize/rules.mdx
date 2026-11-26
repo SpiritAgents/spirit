@@ -4,13 +4,14 @@ description: AGENTS.md, {{product.workspaceDataFolderName}}/AGENTS.md und Ihre
   Benutzerregel AGENTS.md.
 ---
 
-Regeln sind Markdown, die der Agent immer berücksichtigt. Es gibt drei Slots:
+Regeln sind Markdown, die der Agent immer berücksichtigt. Es gibt vier Slots:
 
 | Geltungsbereich          | Pfad                      |
 | ------------------------ | ------------------------- | --------------------------------------------------------- |
 | Workspace-Agents-Datei   | `{workspace}/AGENTS.md`   |
 | Workspace-{{product.name|mdx}}-Regel               | `{workspace}/{{product.workspaceDataFolderName}}/AGENTS.md` |
 | Benutzerregel            | `{spiritDataDir}/AGENTS.md` |
+| Benutzer-Agents | `~/.agents/AGENTS.md` |
 
 Schreiben Sie Projektkonventionen in `AGENTS.md`, damit jeder, der das Repo öffnet, sie sieht. Verwenden Sie `{{product.workspaceDataFolderName}}/AGENTS.md` für {{product.name|mdx}}-spezifische Hinweise, die Sie nicht in die generische Agents-Datei aufnehmen möchten. Verwenden Sie die Benutzerregel für Einstellungen, die Ihnen über alle Workspaces hinweg folgen.
 

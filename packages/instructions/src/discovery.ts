@@ -39,7 +39,7 @@ const SKILL_PREVIEW_MAX_CHARS = 1_200;
 
 export type HostRuleScope = "workspace" | "user" | "extension";
 export type HostSkillScope = "workspace" | "user" | "extension";
-export type HostSkillRootKind = "workspaceSpirit" | "workspaceAgents" | "user";
+export type HostSkillRootKind = "workspaceSpirit" | "workspaceAgents" | "user" | "userAgents";
 
 export type HostRuleRootKind = HostSkillRootKind;
 
@@ -209,6 +209,13 @@ export async function discoverRuleEntries(
   const sources = await Promise.all([
     ...workspaceSources,
     buildRuleSource(paths.userRuleFile, "user", "user", "User rules", USER_RULE_FILE_NAME),
+    buildRuleSource(
+      paths.userAgentsRuleFile,
+      "user",
+      "userAgents",
+      "User AGENTS rules",
+      `~/${AGENTS_DIR_NAME}/${WORKSPACE_RULE_FILE_NAME}`,
+    ),
   ]);
 
   return Promise.all(
@@ -285,6 +292,11 @@ export async function discoverSkillEntries(
       rootPath: paths.userSkillsDir,
       scope: "user" as const,
       rootKind: "user" as const,
+    },
+    {
+      rootPath: paths.userAgentsSkillsDir,
+      scope: "user" as const,
+      rootKind: "userAgents" as const,
     },
   ];
 
@@ -499,6 +511,8 @@ function shortLabelForSkill(rootKind: HostSkillRootKind, skillName: string): str
       return `${AGENTS_DIR_NAME}/${SKILLS_DIR_NAME}/${skillName}/${SKILL_FILE_NAME}`;
     case "user":
       return `${SKILLS_DIR_NAME}/${skillName}/${SKILL_FILE_NAME}`;
+    case "userAgents":
+      return `~/${AGENTS_DIR_NAME}/${SKILLS_DIR_NAME}/${skillName}/${SKILL_FILE_NAME}`;
   }
 }
 

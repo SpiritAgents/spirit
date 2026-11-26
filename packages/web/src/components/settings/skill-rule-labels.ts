@@ -5,6 +5,9 @@ export function skillRootKindLabel(rootKind: DesktopSkillRootKind): string {
   if (rootKind === "user") {
     return i18n.t("settings.skillUserDir");
   }
+  if (rootKind === "userAgents") {
+    return i18n.t("settings.skillUserAgents");
+  }
   if (rootKind === "workspaceSpirit") {
     return i18n.t("settings.skillWorkspaceSpirit");
   }

@@ -15,6 +15,7 @@ pub enum SkillRootKind {
     WorkspaceSpirit,
     WorkspaceAgents,
     User,
+    UserAgents,
     Extension,
 }
 

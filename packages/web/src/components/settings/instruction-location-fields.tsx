@@ -105,8 +105,10 @@ export function InstructionLocationFields({
   includeGeneric?: boolean;
 }) {
   const { t } = useTranslation();
-  const scope: InstructionScope = rootKind === "user" ? "user" : "workspace";
-  const type: InstructionType = rootKind === "workspaceAgents" ? "generic" : "spirit";
+  const scope: InstructionScope =
+    rootKind === "user" || rootKind === "userAgents" ? "user" : "workspace";
+  const type: InstructionType =
+    rootKind === "workspaceAgents" || rootKind === "userAgents" ? "generic" : "spirit";
   const localizedScopeOptions = scopeOptions
     .filter((option) => !workspaceDisabled || option.value === "user")
     .map((option) => ({ ...option, label: t(option.labelKey) }));
@@ -124,7 +126,7 @@ export function InstructionLocationFields({
         disabled={disabled}
         onSelect={(nextScope) => {
           if (nextScope === "user") {
-            onRootKindChange("user");
+            onRootKindChange(type === "generic" ? "userAgents" : "user");
             return;
           }
           onRootKindChange(type === "generic" ? "workspaceAgents" : "workspaceSpirit");
@@ -139,7 +141,7 @@ export function InstructionLocationFields({
         disabled={disabled}
         onSelect={(nextType) => {
           if (nextType === "generic") {
-            onRootKindChange("workspaceAgents");
+            onRootKindChange(scope === "user" ? "userAgents" : "workspaceAgents");
             return;
           }
           onRootKindChange(scope === "user" ? "user" : "workspaceSpirit");

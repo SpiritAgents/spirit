@@ -4,11 +4,12 @@ description: User, {{product.workspaceDataFolderName}}, and .agents skills, plus
   built-in create-rule, create-skill, create-hook, and create-extension.
 ---
 
-A Skill is a folder with a `SKILL.md`. {{product.name|mdx}} discovers skills from three places:
+A Skill is a folder with a `SKILL.md`. {{product.name|mdx}} discovers skills from four places:
 
 | Scope                    | Path                                         |
 | ------------------------ | -------------------------------------------- | ------------------------------------------------------------------------ |
 | User                     | `{spiritDataDir}/skills/{name}/SKILL.md`     |
+| User agents | `~/.agents/skills/{name}/SKILL.md` |
 | Workspace {{product.name|mdx}}                                        | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
 | Workspace agents         | `{workspace}/.agents/skills/{name}/SKILL.md` |
 

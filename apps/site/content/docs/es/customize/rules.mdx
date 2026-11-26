@@ -3,13 +3,14 @@ title: Reglas
 description: AGENTS.md, {{product.workspaceDataFolderName}}/AGENTS.md y tu AGENTS.md de usuario.
 ---
 
-Las reglas son Markdown que el agente siempre considera. Hay tres espacios:
+Las reglas son Markdown que el agente siempre considera. Hay cuatro espacios:
 
 | Alcance                                   | Ruta                         |
 | ----------------------------------------- | ---------------------------- | --------------------------------------------------------- |
 | Archivo de agentes del espacio de trabajo | `{workspace}/AGENTS.md`      |
 | Regla de {{product.name|mdx}} del espacio de trabajo | `{workspace}/{{product.workspaceDataFolderName}}/AGENTS.md` |
 | Regla de usuario                          | `{spiritDataDir}/AGENTS.md`    |
+| Agentes de usuario | `~/.agents/AGENTS.md` |
 
 Escribe las convenciones del proyecto en `AGENTS.md` para que cualquiera que abra el repositorio las vea. Usa `{{product.workspaceDataFolderName}}/AGENTS.md` para notas específicas de {{product.name|mdx}} que no quieras en el archivo de agentes genérico. Usa la regla de usuario para preferencias que te siguen entre espacios de trabajo.
 

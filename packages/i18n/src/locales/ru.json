@@ -264,6 +264,7 @@
     "mcpConnecting": "Подключение…",
     "mcpConnectionFailed": "Не удалось подключиться",
     "skillUserDir": "Пользовательская папка",
+    "skillUserAgents": "Пользователь .agents",
     "skillWorkspaceSpirit": "Рабочая область {{product.workspaceDataFolderName}}",
     "skillWorkspaceAgents": "Рабочая область .agents",
     "webHostRunning": "Запущен",

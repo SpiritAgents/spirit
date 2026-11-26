@@ -258,6 +258,7 @@
     "mcpConnecting": "Conectando…",
     "mcpConnectionFailed": "Error de conexión",
     "skillUserDir": "Directorio de usuario",
+    "skillUserAgents": "Usuario .agents",
     "skillWorkspaceSpirit": "Workspace {{product.workspaceDataFolderName}}",
     "skillWorkspaceAgents": "Workspace .agents",
     "webHostRunning": "En ejecución",

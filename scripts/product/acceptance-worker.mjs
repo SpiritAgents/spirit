@@ -42,6 +42,7 @@ registerHooks({
 });
 const { product, PRODUCT_BUILD_ID } = await import(pathToFileURL(artifact).href);
 const dataDir = path.join(home, product.userDataFolderName);
+const userAgentsData = path.join(home, ".agents");
 const workspaceData = path.join(workspace, product.workspaceDataFolderName);
 const legacy = [
   path.join(home, "Library/Application Support", product.name),
@@ -141,6 +142,7 @@ try {
   await fsp.mkdir(dataDir, { recursive: true });
   await fsp.mkdir(path.join(workspaceData, "skills/shared"), { recursive: true });
   await fsp.mkdir(path.join(dataDir, "skills", product.quality), { recursive: true });
+  await fsp.mkdir(path.join(userAgentsData, "skills", "generic-shared"), { recursive: true });
   const skill = (name) =>
     `---\nname: ${name}\ndescription: Controlled fixture\n---\nFixture instructions\n`;
   await fsp.writeFile(path.join(workspaceData, "skills/shared/SKILL.md"), skill("shared"));
@@ -148,8 +150,13 @@ try {
     path.join(dataDir, "skills", product.quality, "SKILL.md"),
     skill(product.quality),
   );
+  await fsp.writeFile(
+    path.join(userAgentsData, "skills", "generic-shared", "SKILL.md"),
+    skill("generic-shared"),
+  );
   await fsp.writeFile(path.join(workspaceData, "AGENTS.md"), "shared workspace rule");
   await fsp.writeFile(path.join(dataDir, "AGENTS.md"), product.quality);
+  await fsp.writeFile(path.join(userAgentsData, "AGENTS.md"), "shared user generic rule");
   const mcp = (command) =>
     JSON.stringify({ servers: { fixture: { transport: { type: "stdio", command } } } });
   await fsp.writeFile(path.join(workspaceData, "mcp.json"), mcp("workspace-command"));
@@ -158,14 +165,15 @@ try {
   await fsp.writeFile(path.join(workspaceData, "hooks.json"), hooks("workspace-command"));
   await fsp.writeFile(path.join(dataDir, "hooks.json"), hooks(product.quality));
   await fsp.writeFile(path.join(workspaceData, "tasks.json"), '{"schemaVersion":1,"tasks":[]}');
-  const context = { spiritDataDir: dataDir, workspaceRoot: workspace };
+  const context = { spiritDataDir: dataDir, workspaceRoot: workspace, userAgentsDir: userAgentsData };
   const rules = await host.discoverRuleEntries(context);
   assert.ok(rules.some((rule) => rule.content === "shared workspace rule"));
   assert.ok(rules.some((rule) => rule.content === product.quality));
+  assert.ok(rules.some((rule) => rule.content === "shared user generic rule"));
   const skills = await host.discoverSkillEntries(context);
   assert.deepEqual(
     skills.map((skill) => skill.source.name).sort(),
-    [product.quality, "shared"].sort(),
+    [product.quality, "shared", "generic-shared"].sort(),
   );
   const configs = host.createMcpConfigSource(dataDir, workspace).read(true);
   assert.equal(configs.user.servers.fixture.transport.command, product.quality);

@@ -4,11 +4,12 @@ description: 사용자, {{product.workspaceDataFolderName}} 및 .agents 스킬�
   create-rule, create-skill, create-hook, create-extension 스킬.
 ---
 
-스킬은 `SKILL.md`가 포함된 폴더입니다. {{product.name|mdx}}은 세 곳에서 스킬을 발견합니다:
+스킬은 `SKILL.md`가 포함된 폴더입니다. {{product.name|mdx}}은 네 곳에서 스킬을 발견합니다:
 
 | 범위                    | 경로                                         |
 | ----------------------- | -------------------------------------------- | ------------------------------------------------------------------------ |
 | 사용자                  | `{spiritDataDir}/skills/{name}/SKILL.md`     |
+| 사용자 agents | `~/.agents/skills/{name}/SKILL.md` |
 | 작업공간 {{product.name|mdx}}                                        | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
 | 작업공간 agents         | `{workspace}/.agents/skills/{name}/SKILL.md` |
 

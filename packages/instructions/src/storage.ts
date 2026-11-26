@@ -1,4 +1,5 @@
 import { realpath } from "node:fs/promises";
+import { homedir } from "node:os";
 import path from "node:path";
 import { product } from "@spiritagent/product";
 
@@ -23,32 +24,43 @@ export const PLANS_DIR_NAME = "plans";
 export const RULES_STATE_FILE_NAME = "rules-state.json";
 export const SKILLS_STATE_FILE_NAME = "skills-state.json";
 
+export function resolveUserAgentsDir(): string {
+  return path.join(homedir(), AGENTS_DIR_NAME);
+}
+
 export interface InstructionDiscoveryContext {
   workspaceRoot: string;
   spiritDataDir: string;
   includeWorkspaceScope?: boolean;
+  /** Defaults to ~/.agents; tests can inject an isolated user-level generic root. */
+  userAgentsDir?: string | undefined;
 }
 
 export interface InstructionPaths {
   workspaceSpiritRuleFile: string;
   workspaceAgentsRuleFile: string;
   userRuleFile: string;
+  userAgentsRuleFile: string;
   workspaceSpiritSkillsDir: string;
   workspaceAgentsSkillsDir: string;
   userSkillsDir: string;
+  userAgentsSkillsDir: string;
   rulesStateFile: string;
   skillsStateFile: string;
   plansDir: string;
 }
 
 export function resolveInstructionPaths(context: InstructionDiscoveryContext): InstructionPaths {
+  const userAgentsDir = context.userAgentsDir ?? resolveUserAgentsDir();
   return {
     workspaceSpiritRuleFile: path.join(context.workspaceRoot, WORKSPACE_SPIRIT_RULE_FILE_NAME),
     workspaceAgentsRuleFile: path.join(context.workspaceRoot, WORKSPACE_RULE_FILE_NAME),
     userRuleFile: path.join(context.spiritDataDir, USER_RULE_FILE_NAME),
+    userAgentsRuleFile: path.join(userAgentsDir, WORKSPACE_RULE_FILE_NAME),
     workspaceSpiritSkillsDir: path.join(context.workspaceRoot, WORKSPACE_SPIRIT_SKILLS_DIR),
     workspaceAgentsSkillsDir: path.join(context.workspaceRoot, WORKSPACE_AGENTS_SKILLS_DIR),
     userSkillsDir: path.join(context.spiritDataDir, SKILLS_DIR_NAME),
+    userAgentsSkillsDir: path.join(userAgentsDir, SKILLS_DIR_NAME),
     rulesStateFile: path.join(context.spiritDataDir, RULES_STATE_FILE_NAME),
     skillsStateFile: path.join(context.spiritDataDir, SKILLS_STATE_FILE_NAME),
     plansDir: path.join(context.spiritDataDir, PLANS_DIR_NAME),

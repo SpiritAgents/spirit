@@ -22,9 +22,11 @@ test("Rule creation selects scope and type in separate groups", async () => {
   fireEvent.click(screen.getByRole("button", { name: "New Rule" }));
   const dialog = screen.getByRole("dialog");
   const scopeGroup = within(dialog).getByRole("tablist", { name: "Scope" });
-
-  fireEvent.click(within(scopeGroup).getByRole("tab", { name: "Workspace" }));
   const typeGroup = within(dialog).getByRole("tablist", { name: "Type" });
+
+  expect(within(scopeGroup).getByRole("tab", { name: "User" }).getAttribute("aria-selected")).toBe(
+    "true",
+  );
   fireEvent.click(within(typeGroup).getByRole("tab", { name: "Generic" }));
   fireEvent.change(within(dialog).getByLabelText("Content"), {
     target: { value: "Keep commit messages in English." },
@@ -33,7 +35,7 @@ test("Rule creation selects scope and type in separate groups", async () => {
 
   await waitFor(() =>
     expect(onCreateRule).toHaveBeenCalledWith({
-      rootKind: "workspaceAgents",
+      rootKind: "userAgents",
       description: "Keep commit messages in English.",
     }),
   );

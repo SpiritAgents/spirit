@@ -3,13 +3,14 @@ title: ルール
 description: AGENTS.md、{{product.workspaceDataFolderName}}/AGENTS.md、およびユーザールール。
 ---
 
-ルールはエージェントが常に考慮するMarkdownです。3つのスロットがあります：
+ルールはエージェントが常に考慮するMarkdownです。4つのスロットがあります：
 
 | スコープ                             | パス                                                      |
 | ------------------------------------ | --------------------------------------------------------- |
 | ワークスペースのエージェントファイル | `{workspace}/AGENTS.md`                                   |
 | ワークスペースのスピリットルール     | `{workspace}/{{product.workspaceDataFolderName}}/AGENTS.md` |
 | ユーザールール                       | `{spiritDataDir}/AGENTS.md`                                 |
+| ユーザー agents | `~/.agents/AGENTS.md` |
 
 プロジェクトの規約を `AGENTS.md` に記述して、リポジトリを開いた人が誰でも見られるようにします。スピリット固有のメモは `{{product.workspaceDataFolderName}}/AGENTS.md` を使用し、一般的なエージェントファイルには含めないでください。ユーザールールは、ワークスペースをまたいでフォローする設定に使用します。
 

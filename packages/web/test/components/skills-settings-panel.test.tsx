@@ -97,7 +97,7 @@ test("Skill creation selects scope and type in separate groups", async () => {
   expect(within(typeGroup).getByRole("tab", { name: "Spirit" }).getAttribute("aria-selected")).toBe(
     "true",
   );
-  expect(within(typeGroup).queryByRole("tab", { name: "Generic" })).toBeNull();
+  expect(within(typeGroup).getByRole("tab", { name: "Generic" })).toBeTruthy();
 
   fireEvent.click(within(scopeGroup).getByRole("tab", { name: "Workspace" }));
   const workspaceTypeGroup = within(dialog).getByRole("tablist", { name: "Type" });

@@ -258,6 +258,7 @@
     "mcpConnecting": "连接中…",
     "mcpConnectionFailed": "连接失败",
     "skillUserDir": "用户目录",
+    "skillUserAgents": "用户 .agents",
     "skillWorkspaceSpirit": "工作区 {{product.workspaceDataFolderName}}",
     "skillWorkspaceAgents": "工作区 .agents",
     "webHostRunning": "运行中",

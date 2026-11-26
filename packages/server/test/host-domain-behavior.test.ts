@@ -40,7 +40,11 @@ test("TypeScript instruction discovery preserves root precedence and name orderi
       );
     }
 
-    const entries = await discoverSkillEntries({ workspaceRoot, spiritDataDir });
+    const entries = await discoverSkillEntries({
+      workspaceRoot,
+      spiritDataDir,
+      userAgentsDir: path.join(root, "user-agents"),
+    });
     assert.deepEqual(
       entries.map((entry) => [entry.source.name, entry.source.rootKind]),
       [

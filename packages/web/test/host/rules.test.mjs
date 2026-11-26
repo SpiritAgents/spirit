@@ -47,6 +47,7 @@ test("deleteRuleFile removes managed rule file", async () => {
       mod.discoverRuleEntries({
         workspaceRoot,
         spiritDataDir,
+        userAgentsDir: join(workspaceRoot, "user-agents"),
       }),
     );
     const entry = entries.find((item) => item.source.rootKind === "workspaceSpirit");

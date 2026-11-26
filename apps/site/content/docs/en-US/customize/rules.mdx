@@ -3,13 +3,14 @@ title: Rules
 description: AGENTS.md, {{product.workspaceDataFolderName}}/AGENTS.md, and your user AGENTS.md.
 ---
 
-Rules are Markdown the agent always considers. There are three slots:
+Rules are Markdown the agent always considers. There are four slots:
 
 | Scope                    | Path                      |
 | ------------------------ | ------------------------- | --------------------------------------------------------- |
 | Workspace agents file    | `{workspace}/AGENTS.md`   |
 | Workspace {{product.name|mdx}} rule                | `{workspace}/{{product.workspaceDataFolderName}}/AGENTS.md` |
 | User rule                | `{spiritDataDir}/AGENTS.md` |
+| User agents | `~/.agents/AGENTS.md` |
 
 Write project conventions in `AGENTS.md` so anyone who opens the repo sees them. Use `{{product.workspaceDataFolderName}}/AGENTS.md` for {{product.name|mdx}}-specific notes you do not want in the generic agents file. Use the user rule for preferences that follow you across workspaces.
 

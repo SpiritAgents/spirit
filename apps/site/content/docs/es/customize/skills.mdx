@@ -5,11 +5,12 @@ description: Skills de usuario, {{product.workspaceDataFolderName}} y
   integrados.
 ---
 
-Una Skill es una carpeta con un `SKILL.md`. {{product.name|mdx}} descubre Skills desde tres lugares:
+Una Skill es una carpeta con un `SKILL.md`. {{product.name|mdx}} descubre Skills desde cuatro lugares:
 
 | Alcance                         | Ruta                                                                     |
 | ------------------------------- | ------------------------------------------------------------------------ |
 | Usuario                         | `{spiritDataDir}/skills/{name}/SKILL.md`                                 |
+| Agentes de usuario | `~/.agents/skills/{name}/SKILL.md` |
 | Espíritu del espacio de trabajo | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
 | agentes del espacio de trabajo  | `{workspace}/.agents/skills/{name}/SKILL.md`                             |
 

@@ -11,8 +11,10 @@ A skill is a directory. `SKILL.md` is required; optional companions include `scr
 **Scope**
 
 - Default: workspace skill at `<workspace_root>/{{product.workspaceDataFolderName}}/skills/<skill_name>/`
-- User skill at `<spirit_data_dir>/skills/<skill_name>/` only when the user explicitly asks for user-level, global, cross-repo reuse, or writing to the user directory
-- If this skill is active from `<spirit_data_dir>/skills/create-skill/SKILL.md`, use that same `<spirit_data_dir>` for user scope
+- Generic workspace skill at `<workspace_root>/.agents/skills/<skill_name>/` when the user asks for a generic or all-agent workspace skill
+- Spirit user skill at `<spirit_data_dir>/skills/<skill_name>/` when the user explicitly asks for user-level, global, cross-repo reuse, or writing to the Spirit user directory without requesting the generic root
+- Generic user skill at `~/.agents/skills/<skill_name>/` when the user asks for a generic or all-agent user skill
+- If this skill is active from `<spirit_data_dir>/skills/create-skill/SKILL.md`, use that same `<spirit_data_dir>` for Spirit user scope
 
 **Layout**
 

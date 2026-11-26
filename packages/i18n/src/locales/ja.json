@@ -258,6 +258,7 @@
     "mcpConnecting": "接続中…",
     "mcpConnectionFailed": "接続に失敗しました",
     "skillUserDir": "ユーザーディレクトリ",
+    "skillUserAgents": "ユーザー .agents",
     "skillWorkspaceSpirit": "ワークスペース {{product.workspaceDataFolderName}}",
     "skillWorkspaceAgents": "ワークスペース .agents",
     "webHostRunning": "実行中",

@@ -4,11 +4,12 @@ description: Benutzer-, {{product.workspaceDataFolderName}}- und .agents-Skills,
   create-rule, create-skill, create-hook und create-extension.
 ---
 
-Ein Skill ist ein Ordner mit einer `SKILL.md`. {{product.name|mdx}} entdeckt Skills an drei Orten:
+Ein Skill ist ein Ordner mit einer `SKILL.md`. {{product.name|mdx}} entdeckt Skills an vier Orten:
 
 | Bereich                  | Pfad                                         |
 | ------------------------ | -------------------------------------------- | ------------------------------------------------------------------------ |
 | Benutzer                 | `{spiritDataDir}/skills/{name}/SKILL.md`     |
+| Benutzer-Agents | `~/.agents/skills/{name}/SKILL.md` |
 | Workspace {{product.name|mdx}}                                        | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
 | Workspace agents         | `{workspace}/.agents/skills/{name}/SKILL.md` |
 

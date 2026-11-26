@@ -2959,8 +2959,15 @@ function isInsideSpiritManagedUserArea(
   const paths = resolveInstructionPaths({
     workspaceRoot: context.workspaceRoot,
     spiritDataDir: context.spiritDataDir,
+    userAgentsDir: context.userAgentsDir,
   });
-  return [paths.userRuleFile, paths.plansDir, paths.userSkillsDir]
+  return [
+    paths.userRuleFile,
+    paths.userAgentsRuleFile,
+    paths.plansDir,
+    paths.userSkillsDir,
+    paths.userAgentsSkillsDir,
+  ]
     .map((allowed) => path.resolve(allowed))
     .some((allowed) => pathHasPrefix(resolvedPath, allowed));
 }

@@ -37,9 +37,13 @@ function isInsideSpiritManagedUserArea(
   context: InstructionDiscoveryContext,
 ): boolean {
   const paths = resolveInstructionPaths(context);
-  const allowed = [paths.userRuleFile, paths.plansDir, paths.userSkillsDir].map((entry) =>
-    path.resolve(entry),
-  );
+  const allowed = [
+    paths.userRuleFile,
+    paths.userAgentsRuleFile,
+    paths.plansDir,
+    paths.userSkillsDir,
+    paths.userAgentsSkillsDir,
+  ].map((entry) => path.resolve(entry));
   return allowed.some((allowedPath) => pathHasPrefix(resolvedPath, allowedPath));
 }
 

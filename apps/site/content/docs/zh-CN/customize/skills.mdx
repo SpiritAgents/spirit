@@ -4,11 +4,12 @@ description: 用户、{{product.workspaceDataFolderName}}、.agents 下的技能
   create-rule、create-skill、create-hook、create-extension。
 ---
 
-技能是带 `SKILL.md` 的文件夹。{{product.name|mdx}} 从三处发现：
+技能是带 `SKILL.md` 的文件夹。{{product.name|mdx}} 从四处发现：
 
 | 范围                  | 路径                                         |
 | --------------------- | -------------------------------------------- | ------------------------------------------------------------------------ |
 | 用户                  | `{spiritDataDir}/skills/{name}/SKILL.md`     |
+| 用户 agents | `~/.agents/skills/{name}/SKILL.md` |
 | 工作区 {{product.name|mdx}}                                        | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
 | 工作区 agents         | `{workspace}/.agents/skills/{name}/SKILL.md` |
 

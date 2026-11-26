@@ -2079,8 +2079,10 @@ function handleMcpAppSandboxRequest(
   response.end(html);
 }
 
-function parseSkillRootKind(value: unknown): "user" | "workspaceSpirit" | "workspaceAgents" {
-  if (value === "workspaceSpirit" || value === "workspaceAgents") {
+function parseSkillRootKind(
+  value: unknown,
+): "user" | "userAgents" | "workspaceSpirit" | "workspaceAgents" {
+  if (value === "userAgents" || value === "workspaceSpirit" || value === "workspaceAgents") {
     return value;
   }
   return "user";

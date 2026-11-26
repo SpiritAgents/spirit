@@ -983,7 +983,7 @@ export interface DesktopMcpServerListItem {
   scope: DesktopMcpScope;
 }
 
-export type DesktopSkillRootKind = "workspaceSpirit" | "workspaceAgents" | "user";
+export type DesktopSkillRootKind = "workspaceSpirit" | "workspaceAgents" | "user" | "userAgents";
 
 /** Create `skills/<name>/SKILL.md`; `rootKind` selects the user, product workspace, or `.agents` directory. */
 export interface CreateSkillRequest {

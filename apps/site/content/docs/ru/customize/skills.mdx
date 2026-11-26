@@ -4,11 +4,12 @@ description: Навыки пользователя, {{product.workspaceDataFolde
   а также встроенные create-rule, create-skill, create-hook и create-extension.
 ---
 
-Навык — это папка с файлом `SKILL.md`. {{product.name|mdx}} обнаруживает навыки в трёх местах:
+Навык — это папка с файлом `SKILL.md`. {{product.name|mdx}} обнаруживает навыки в четырёх местах:
 
 | Область                        | Путь                                         |
 | ------------------------------ | -------------------------------------------- | ------------------------------------------------------------------------ |
 | Пользователь                   | `{spiritDataDir}/skills/{name}/SKILL.md`     |
+| Пользовательские agents | `~/.agents/skills/{name}/SKILL.md` |
 | Рабочая область {{product.name|mdx}}                                        | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
 | Агенты рабочей области         | `{workspace}/.agents/skills/{name}/SKILL.md` |
 

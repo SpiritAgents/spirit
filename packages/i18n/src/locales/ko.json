@@ -258,6 +258,7 @@
     "mcpConnecting": "연결 중…",
     "mcpConnectionFailed": "연결 실패",
     "skillUserDir": "사용자 디렉터리",
+    "skillUserAgents": "사용자 .agents",
     "skillWorkspaceSpirit": "작업공간 {{product.workspaceDataFolderName}}",
     "skillWorkspaceAgents": "작업공간 .agents",
     "webHostRunning": "실행 중",

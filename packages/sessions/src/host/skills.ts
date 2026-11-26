@@ -32,7 +32,12 @@ export function desktopInstructionPaths(workspaceRoot: string) {
 }
 
 export function parseSkillRootKind(value: unknown): DesktopSkillRootKind {
-  if (value === "user" || value === "workspaceSpirit" || value === "workspaceAgents") {
+  if (
+    value === "user" ||
+    value === "userAgents" ||
+    value === "workspaceSpirit" ||
+    value === "workspaceAgents"
+  ) {
     return value;
   }
   throw new Error(i18n.t("error.invalidSkillRootKind"));
@@ -45,6 +50,8 @@ export function resolveSkillRootDir(
   switch (rootKind) {
     case "user":
       return instructionPaths.userSkillsDir;
+    case "userAgents":
+      return instructionPaths.userAgentsSkillsDir;
     case "workspaceSpirit":
       return instructionPaths.workspaceSpiritSkillsDir;
     case "workspaceAgents":

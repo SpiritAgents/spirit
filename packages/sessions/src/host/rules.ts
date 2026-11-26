@@ -21,6 +21,8 @@ export function resolveRuleFilePath(
       return instructionPaths.workspaceAgentsRuleFile;
     case "user":
       return instructionPaths.userRuleFile;
+    case "userAgents":
+      return instructionPaths.userAgentsRuleFile;
     default: {
       const _exhaustive: never = rootKind;
       return _exhaustive;
@@ -36,17 +38,12 @@ function assertManagedRulePath(
     instructionPaths.workspaceSpiritRuleFile,
     instructionPaths.workspaceAgentsRuleFile,
     instructionPaths.userRuleFile,
+    instructionPaths.userAgentsRuleFile,
   ].map((entry) => path.resolve(entry));
   const resolved = path.resolve(targetPath);
   if (!allowed.includes(resolved)) {
     throw new Error(i18n.t("error.rulePathOutsideManaged"));
   }
-}
-
-export async function ensureWorkspaceSpiritDir(workspaceRoot: string): Promise<void> {
-  const instructionPaths = desktopInstructionPaths(workspaceRoot);
-  const spiritDir = path.dirname(instructionPaths.workspaceSpiritRuleFile);
-  await mkdir(spiritDir, { recursive: true });
 }
 
 export async function createRuleFile(
@@ -65,10 +62,6 @@ export async function createRuleFile(
     throw new Error(i18n.t("error.ruleAlreadyExists", { path: targetPath }));
   }
 
-  if (rootKind === "workspaceSpirit") {
-    await ensureWorkspaceSpiritDir(workspaceRoot);
-  }
-
   const fileContent = `# Rules
 
 ${description}
@@ -76,6 +69,7 @@ ${description}
 ${i18n.t("rules.templatePlaceholder")}
 `;
 
+  await mkdir(path.dirname(targetPath), { recursive: true });
   await writeFile(targetPath, fileContent, "utf8");
 }
 
