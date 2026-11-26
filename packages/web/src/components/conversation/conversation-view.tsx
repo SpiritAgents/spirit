@@ -53,6 +53,7 @@ import type {
 import type { ApprovalPreviewDemoEntry } from "@/lib/approval-preview-demo";
 import { ToolCardPreviewDemoGallery } from "@/components/conversation/tool-card-preview-demo-gallery";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
+import { useConversationSendTopScroll } from "@/hooks/useConversationSendTopScroll";
 import { useConversationSessionScrollTail } from "@/hooks/useConversationSessionScrollTail";
 import { useConversationStreamScrollTail } from "@/hooks/useConversationStreamScrollTail";
 import type { ConversationRenderItem } from "@/lib/conversation-process-groups";
@@ -337,6 +338,7 @@ export function ConversationView({
   const split = useConversationSplit();
   const conversationScrollAreaRef = useRef<ComponentRef<typeof ScrollArea>>(null);
   const conversationScrollBodyRef = useRef<HTMLDivElement | null>(null);
+  const conversationSendSpacerRef = useRef<HTMLDivElement | null>(null);
   const composerSegmentsRef = useRef(composerDock.composerSegments);
   useLayoutEffect(() => {
     composerSegmentsRef.current = composerDock.composerSegments;
@@ -432,21 +434,76 @@ export function ConversationView({
         })
       : null;
 
+  const conversationContentKey = `${list.composerSessionKey || "__no-session__"}:${list.conversationListScopeKey}:e${list.conversationListRemountEpoch}`;
+  const sendTopScrollEnabled =
+    conversationMessagesVisible &&
+    !subagentViewActive &&
+    !compactionDemoActive &&
+    !longConversationListDemoActive &&
+    !approvalPreviewDemoActive &&
+    !toolCardPreviewDemoActive;
+
   const { listSettling } = useConversationSessionScrollTail({
     scrollAreaRef: conversationScrollAreaRef,
-    contentKey: `${list.composerSessionKey || "__no-session__"}:${list.conversationListScopeKey}:e${list.conversationListRemountEpoch}`,
+    contentKey: conversationContentKey,
     enabled: conversationMessagesVisible,
     streaming: snapshot?.conversation.isBusy === true,
   });
 
-  const { pinScrollToTail, followingTail, releaseTailFollow } = useConversationStreamScrollTail({
+  const enterSendTopTurnRef = useRef<(() => void) | null>(null);
+  const releaseTailFollowRef = useRef<(() => void) | null>(null);
+  const syncScrollToBottomVisibilityRef = useRef<(() => void) | null>(null);
+
+  const {
+    sendTopTriggerNonce,
+    registerAnchorResolver: registerSendTopAnchorResolver,
+    syncSendTopLayout,
+    cancelSendTop,
+    isSendTopBlockingTail,
+  } = useConversationSendTopScroll({
+    scrollAreaRef: conversationScrollAreaRef,
+    spacerRef: conversationSendSpacerRef,
+    messages: list.messages,
+    conversationRenderItems: list.conversationRenderItems,
+    contentKey: conversationContentKey,
+    bedPaddingPx: conversationScrollBedPaddingPx,
+    isBusy: snapshot?.conversation.isBusy === true,
+    enabled: sendTopScrollEnabled,
+    onActivateSendTopTurn: useCallback(() => {
+      enterSendTopTurnRef.current?.();
+    }, []),
+    onInterruptAnimation: useCallback(() => {
+      releaseTailFollowRef.current?.();
+    }, []),
+    onStateChange: useCallback(() => {
+      syncScrollToBottomVisibilityRef.current?.();
+    }, []),
+  });
+
+  const {
+    pinScrollToTail,
+    showScrollToBottom,
+    releaseTailFollow,
+    enterSendTopTurn,
+    syncScrollToBottomVisibility,
+  } = useConversationStreamScrollTail({
     scrollAreaRef: conversationScrollAreaRef,
     messages: list.messages,
     pendingAuxState: list.conversationPendingAuxState,
     isBusy: snapshot?.conversation.isBusy === true,
     scrollBedPaddingPx: conversationScrollBedPaddingPx,
     enabled: conversationMessagesVisible,
+    contentKey: conversationContentKey,
+    sendTopTriggerNonce,
+    isSendTopBlockingTail,
+    onForceStickToBottom: cancelSendTop,
   });
+
+  useLayoutEffect(() => {
+    enterSendTopTurnRef.current = enterSendTopTurn;
+    releaseTailFollowRef.current = releaseTailFollow;
+    syncScrollToBottomVisibilityRef.current = syncScrollToBottomVisibility;
+  }, [enterSendTopTurn, releaseTailFollow, syncScrollToBottomVisibility]);
   const [quoteScrollRequest, setQuoteScrollRequest] = useState<{
     messageId: number;
     behavior: ScrollBehavior;
@@ -852,53 +909,64 @@ export function ConversationView({
                         showReasonNotes={approvalDemoShowReasonNotes}
                       />
                     ) : conversationMessagesVisible ? (
-                      <ConversationList
-                        messages={list.messages}
-                        conversationRenderItems={list.conversationRenderItems}
-                        pinScrollToTail={pinScrollToTail}
-                        releaseTailFollow={releaseTailFollow}
-                        quoteScrollRequest={quoteScrollRequest}
-                        onQuoteScrollHandled={() => setQuoteScrollRequest(null)}
-                        subagentViewActive={subagentViewActive}
-                        composerSessionKey={list.composerSessionKey}
-                        conversationListScopeKey={list.conversationListScopeKey}
-                        conversationListRemountEpoch={list.conversationListRemountEpoch}
-                        conversationPendingAuxState={list.conversationPendingAuxState}
-                        processGroupManualOpen={list.processGroupManualOpen}
-                        processGroupManualOpenKey={list.processGroupManualOpenKey}
-                        onProcessGroupManualOpenChange={list.onProcessGroupManualOpenChange}
-                        shouldPlayProcessSealAnimation={list.shouldPlayProcessSealAnimation}
-                        workspaceRoot={snapshot?.workspaceRoot ?? ""}
-                        runtime={list.runtime}
-                        turnContinue={list.turnContinue}
-                        activeSessionReadOnly={list.activeSessionReadOnly}
-                        conversationIsBusy={snapshot?.conversation.isBusy === true}
-                        continueBusy={list.continueBusy}
-                        rewindDraft={list.rewindDraft}
-                        onRewindDraftChange={list.onRewindDraftChange}
-                        messageRewindComposerEnabled={list.messageRewindComposerEnabled}
-                        rewindRichInputRef={list.rewindRichInputRef}
-                        models={list.models}
-                        catalogHints={snapshot?.config.modelCatalogHints}
-                        providerPresets={snapshot?.config.providerPickerPresets}
-                        activeModel={
-                          snapshot?.config.activeModel ?? list.runtime.settings.activeModel
-                        }
-                        agentMode={list.runtime.settings.agentMode}
-                        onOpenSubagentViewer={list.onOpenSubagentViewer}
-                        onOpenReadFile={list.onOpenReadFile}
-                        onOpenPlan={list.onOpenPlan}
-                        onStartMessageRewind={list.onStartMessageRewind}
-                        onForkMessage={list.onForkMessage}
-                        onSubmitMessageRewind={list.onSubmitMessageRewind}
-                        onRewindRemoveLocalFileAttachment={list.onRewindRemoveLocalFileAttachment}
-                        onRewindPickLocalFile={list.onRewindPickLocalFile}
-                        onRewindPaste={list.onRewindPaste}
-                        onRewindDragOver={list.onRewindDragOver}
-                        onRewindDrop={list.onRewindDrop}
-                        onComposerAgentModeChange={list.onComposerAgentModeChange}
-                        moveBackgroundShortcutTarget={split.moveBackgroundShortcutTarget}
-                      />
+                      <>
+                        <ConversationList
+                          messages={list.messages}
+                          conversationRenderItems={list.conversationRenderItems}
+                          pinScrollToTail={pinScrollToTail}
+                          releaseTailFollow={releaseTailFollow}
+                          registerSendTopAnchorResolver={registerSendTopAnchorResolver}
+                          syncSendTopLayout={syncSendTopLayout}
+                          cancelSendTop={cancelSendTop}
+                          quoteScrollRequest={quoteScrollRequest}
+                          onQuoteScrollHandled={() => setQuoteScrollRequest(null)}
+                          subagentViewActive={subagentViewActive}
+                          composerSessionKey={list.composerSessionKey}
+                          conversationListScopeKey={list.conversationListScopeKey}
+                          conversationListRemountEpoch={list.conversationListRemountEpoch}
+                          conversationPendingAuxState={list.conversationPendingAuxState}
+                          processGroupManualOpen={list.processGroupManualOpen}
+                          processGroupManualOpenKey={list.processGroupManualOpenKey}
+                          onProcessGroupManualOpenChange={list.onProcessGroupManualOpenChange}
+                          shouldPlayProcessSealAnimation={list.shouldPlayProcessSealAnimation}
+                          workspaceRoot={snapshot?.workspaceRoot ?? ""}
+                          runtime={list.runtime}
+                          turnContinue={list.turnContinue}
+                          activeSessionReadOnly={list.activeSessionReadOnly}
+                          conversationIsBusy={snapshot?.conversation.isBusy === true}
+                          continueBusy={list.continueBusy}
+                          rewindDraft={list.rewindDraft}
+                          onRewindDraftChange={list.onRewindDraftChange}
+                          messageRewindComposerEnabled={list.messageRewindComposerEnabled}
+                          rewindRichInputRef={list.rewindRichInputRef}
+                          models={list.models}
+                          catalogHints={snapshot?.config.modelCatalogHints}
+                          providerPresets={snapshot?.config.providerPickerPresets}
+                          activeModel={
+                            snapshot?.config.activeModel ?? list.runtime.settings.activeModel
+                          }
+                          agentMode={list.runtime.settings.agentMode}
+                          onOpenSubagentViewer={list.onOpenSubagentViewer}
+                          onOpenReadFile={list.onOpenReadFile}
+                          onOpenPlan={list.onOpenPlan}
+                          onStartMessageRewind={list.onStartMessageRewind}
+                          onForkMessage={list.onForkMessage}
+                          onSubmitMessageRewind={list.onSubmitMessageRewind}
+                          onRewindRemoveLocalFileAttachment={list.onRewindRemoveLocalFileAttachment}
+                          onRewindPickLocalFile={list.onRewindPickLocalFile}
+                          onRewindPaste={list.onRewindPaste}
+                          onRewindDragOver={list.onRewindDragOver}
+                          onRewindDrop={list.onRewindDrop}
+                          onComposerAgentModeChange={list.onComposerAgentModeChange}
+                          moveBackgroundShortcutTarget={split.moveBackgroundShortcutTarget}
+                        />
+                        <div
+                          ref={conversationSendSpacerRef}
+                          data-spirit-surface="conversation-send-spacer"
+                          aria-hidden="true"
+                          className="pointer-events-none w-full shrink-0"
+                        />
+                      </>
                     ) : null}
                     {navPlaceholderActive ? <ConversationNavPlaceholder /> : null}
                   </div>
@@ -986,7 +1054,9 @@ export function ConversationView({
                   models={composerDock.models}
                   useTranslucency={useTranslucency}
                   onOpenGitTab={composerDock.onOpenGitTab}
-                  showScrollToBottom={!isEmptySession && !navPlaceholderActive && !followingTail}
+                  showScrollToBottom={
+                    !isEmptySession && !navPlaceholderActive && showScrollToBottom
+                  }
                   onScrollToBottom={() => pinScrollToTail(true, "smooth")}
                   getScrollViewport={getConversationScrollElement}
                   onScrollOccludeMaskStyleChange={composerDock.onScrollOccludeMaskStyleChange}

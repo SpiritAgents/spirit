@@ -4,7 +4,7 @@ import "./setup";
 
 import { act, render } from "@testing-library/react";
 import { useRef, type ComponentRef } from "react";
-import { afterEach, beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import type { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -147,60 +147,100 @@ test("idle content height growth does not slam scrollTop to bottom and releases 
   expect(latestApi.followingTail).toBe(true);
 });
 
-test("streaming content growth and idle viewport resizes still re-pin when sticking to bottom", () => {
+test("streaming content growth smoothly chases the bottom while idle viewport resizes re-pin immediately", () => {
   let latestApi!: UseConversationStreamScrollTailResult;
   let viewport!: HTMLDivElement;
+  let nowMs = 1000;
+  const rafQueue: Array<{ id: number; cb: FrameRequestCallback }> = [];
+  let nextRafId = 1;
+  vi.spyOn(performance, "now").mockImplementation(() => nowMs);
+  vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+    const id = nextRafId++;
+    rafQueue.push({ id, cb });
+    return id;
+  });
+  vi.spyOn(window, "cancelAnimationFrame").mockImplementation((id) => {
+    const index = rafQueue.findIndex((item) => item.id === id);
+    if (index >= 0) {
+      rafQueue.splice(index, 1);
+    }
+  });
+  const stepRaf = (deltaMs: number) => {
+    nowMs += deltaMs;
+    const batch = rafQueue.splice(0, rafQueue.length);
+    for (const item of batch) {
+      item.cb(nowMs);
+    }
+  };
 
-  const { rerender } = render(
-    <Harness
-      isBusy={false}
-      onReady={(api, vp) => {
-        latestApi = api;
-        viewport = vp;
-      }}
-    />,
-  );
+  try {
+    const { rerender } = render(
+      <Harness
+        isBusy={false}
+        onReady={(api, vp) => {
+          latestApi = api;
+          viewport = vp;
+        }}
+      />,
+    );
 
-  setViewportMetrics(viewport, {
-    scrollTop: 500,
-    scrollHeight: 1200,
-    clientHeight: 700,
-    clientWidth: 800,
-  });
-  act(() => {
-    triggerResizeObservers();
-  });
+    setViewportMetrics(viewport, {
+      scrollTop: 500,
+      scrollHeight: 1200,
+      clientHeight: 700,
+      clientWidth: 800,
+    });
+    act(() => {
+      stepRaf(16);
+      triggerResizeObservers();
+    });
 
-  // Viewport height shrinks while sticking in an idle session -> must re-pin (1200 - 550 = 650).
-  setViewportMetrics(viewport, {
-    scrollTop: 500,
-    scrollHeight: 1200,
-    clientHeight: 550,
-    clientWidth: 800,
-  });
-  act(() => {
-    triggerResizeObservers();
-  });
-  expect(viewport.scrollTop).toBe(650);
+    // Viewport height shrinks while sticking in an idle session -> must re-pin immediately (1200 - 550 = 650).
+    setViewportMetrics(viewport, {
+      scrollTop: 500,
+      scrollHeight: 1200,
+      clientHeight: 550,
+      clientWidth: 800,
+    });
+    act(() => {
+      triggerResizeObservers();
+    });
+    expect(viewport.scrollTop).toBe(650);
 
-  // During active streaming (isBusy=true), virtual list totalSize changes pin synchronously (1500 - 550 = 950).
-  rerender(
-    <Harness
-      isBusy={true}
-      onReady={(api, vp) => {
-        latestApi = api;
-        viewport = vp;
-      }}
-    />,
-  );
-  setViewportMetrics(viewport, {
-    scrollTop: 650,
-    scrollHeight: 1500,
-    clientHeight: 550,
-    clientWidth: 800,
-  });
-  act(() => {
-    latestApi.pinScrollToTail();
-  });
-  expect(viewport.scrollTop).toBe(950);
+    // During active streaming (isBusy=true), virtual list totalSize changes smoothly chase toward 950.
+    rerender(
+      <Harness
+        isBusy={true}
+        onReady={(api, vp) => {
+          latestApi = api;
+          viewport = vp;
+        }}
+      />,
+    );
+    setViewportMetrics(viewport, {
+      scrollTop: 650,
+      scrollHeight: 1500,
+      clientHeight: 550,
+      clientWidth: 800,
+    });
+    act(() => {
+      latestApi.pinScrollToTail();
+    });
+    // First frame advances partway (animated chase, not an instant jump).
+    act(() => {
+      stepRaf(16);
+    });
+    expect(viewport.scrollTop).toBeGreaterThan(650);
+    expect(viewport.scrollTop).toBeLessThan(950);
+
+    // Subsequent frames settle cleanly to exact bottom (950).
+    for (let i = 0; i < 40; i += 1) {
+      act(() => {
+        stepRaf(20);
+      });
+    }
+    expect(viewport.scrollTop).toBe(950);
+  } finally {
+    vi.restoreAllMocks();
+  }
 });

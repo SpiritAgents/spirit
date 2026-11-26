@@ -64,6 +64,87 @@ export function scrollAreaAnimateToLiveBottom(
   };
 }
 
+const STREAM_CHASE_TAU_MS = 85;
+const STREAM_CHASE_MIN_DT_MS = 8;
+const STREAM_CHASE_MAX_DT_MS = 48;
+const STREAM_CHASE_SETTLE_EPSILON_PX = 0.5;
+
+/**
+ * Continuous exponential ease-out chase toward the live bottom while streaming.
+ * Unlike restarting a fixed-duration ease on every token delta, exponential damping maintains
+ * smooth velocity across irregular streaming chunks and settles cleanly when output pauses.
+ */
+export function scrollAreaAnimateChaseLiveBottom(
+  viewport: HTMLElement,
+  options?: {
+    shouldStop?: () => boolean;
+    onDone?: () => void;
+  },
+): () => void {
+  const resolveLiveBottom = () => Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+
+  if (prefersReducedMotion()) {
+    if (!options?.shouldStop?.()) {
+      const target = resolveLiveBottom();
+      if (target > viewport.scrollTop) {
+        viewport.scrollTop = target;
+      }
+    }
+    options?.onDone?.();
+    return () => {};
+  }
+
+  let cancelled = false;
+  let rafId = 0;
+  let lastNow = performance.now();
+
+  const finish = () => {
+    if (cancelled) {
+      return;
+    }
+    cancelled = true;
+    options?.onDone?.();
+  };
+
+  const step = () => {
+    if (cancelled) {
+      return;
+    }
+    if (options?.shouldStop?.()) {
+      finish();
+      return;
+    }
+    const now = performance.now();
+    const dtMs = Math.min(STREAM_CHASE_MAX_DT_MS, Math.max(STREAM_CHASE_MIN_DT_MS, now - lastNow));
+    lastNow = now;
+
+    const liveTarget = resolveLiveBottom();
+    const currentTop = viewport.scrollTop;
+    const remaining = liveTarget - currentTop;
+    if (remaining <= STREAM_CHASE_SETTLE_EPSILON_PX) {
+      if (remaining > 0) {
+        viewport.scrollTop = liveTarget;
+      }
+      finish();
+      return;
+    }
+
+    const alpha = 1 - Math.exp(-dtMs / STREAM_CHASE_TAU_MS);
+    const stepPx = Math.max(STREAM_CHASE_SETTLE_EPSILON_PX, remaining * alpha);
+    viewport.scrollTop = remaining <= 1 ? liveTarget : Math.min(liveTarget, currentTop + stepPx);
+    rafId = requestAnimationFrame(step);
+  };
+
+  rafId = requestAnimationFrame(step);
+  return () => {
+    if (cancelled) {
+      return;
+    }
+    cancelled = true;
+    cancelAnimationFrame(rafId);
+  };
+}
+
 export function scrollDistanceFromBottom(viewport: HTMLElement): number {
   return viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
 }

@@ -62,6 +62,8 @@ import {
   conversationRenderItemGapBeforePxAt,
   estimateConversationRenderItemHeight,
 } from "@/lib/conversation-virtual-row-size";
+import { computeSendTopTargetScrollTop } from "@/lib/conversation-send-scroll";
+import type { SendTopAnchorResolver } from "@/hooks/useConversationSendTopScroll";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 
 type DesktopRuntime = ReturnType<typeof useDesktopRuntime>;
@@ -78,6 +80,9 @@ export type ConversationListProps = {
   /** Synchronously pins to the bottom while tail-following (stream tail owns the stick semantics); called on every commit where totalSize changes */
   pinScrollToTail: () => void;
   releaseTailFollow?: () => void;
+  registerSendTopAnchorResolver?: (resolver: SendTopAnchorResolver | null) => void;
+  syncSendTopLayout?: () => void;
+  cancelSendTop?: () => void;
   quoteScrollRequest?: { messageId: number; behavior: ScrollBehavior; nonce: number } | null;
   onQuoteScrollHandled?: () => void;
   subagentViewActive: boolean;
@@ -126,6 +131,9 @@ export function ConversationList({
   conversationRenderItems,
   pinScrollToTail,
   releaseTailFollow,
+  registerSendTopAnchorResolver,
+  syncSendTopLayout,
+  cancelSendTop,
   quoteScrollRequest,
   onQuoteScrollHandled,
   subagentViewActive,
@@ -336,6 +344,8 @@ export function ConversationList({
   // yet at the bottom suddenly jumps to the bottom".
   const lastPinnedTotalSizeRef = useRef(-1);
   const suppressTailPinRef = useRef(false);
+  const syncSendTopLayoutRef = useRef(syncSendTopLayout);
+  syncSendTopLayoutRef.current = syncSendTopLayout;
   const pendingAsyncResizeByKeyRef = useRef<Map<string | number | bigint, PendingAsyncRowResize>>(
     new Map(),
   );
@@ -354,6 +364,7 @@ export function ConversationList({
         return;
       }
       lastPinnedTotalSizeRef.current = totalSize;
+      syncSendTopLayoutRef.current?.();
       if (suppressTailPinRef.current) {
         return;
       }
@@ -388,6 +399,72 @@ export function ConversationList({
   getItemKeyRef.current = getItemKey;
   const scrollElementRef = useRef(scrollElement);
   scrollElementRef.current = scrollElement;
+  const conversationRenderItemsRef = useRef(conversationRenderItems);
+  conversationRenderItemsRef.current = conversationRenderItems;
+  const scrollMarginRef = useRef(scrollMargin);
+  scrollMarginRef.current = scrollMargin;
+  const virtualizerRef = useRef(virtualizer);
+  virtualizerRef.current = virtualizer;
+
+  useLayoutEffect(() => {
+    if (!registerSendTopAnchorResolver) {
+      return;
+    }
+    const resolveAnchor: SendTopAnchorResolver = (anchor) => {
+      const viewport = scrollElementRef.current;
+      if (!viewport) {
+        return null;
+      }
+      const currentMessages = messagesRef.current;
+      const currentItems = conversationRenderItemsRef.current;
+      const renderIndex = currentItems.findIndex(
+        (item) => item.kind === "message" && item.messageIndex === anchor.messageIndex,
+      );
+      if (renderIndex < 0) {
+        return null;
+      }
+      const rowGapBeforePx = conversationRenderItemGapBeforePxAt(
+        renderIndex,
+        currentItems,
+        currentMessages,
+      );
+      const currentScrollMargin = scrollMarginRef.current;
+      const listEl = sizingRef.current;
+      const rowEl = listEl?.querySelector<HTMLElement>(`[data-index="${renderIndex}"]`);
+      const messageEl =
+        rowEl?.querySelector<HTMLElement>('[data-spirit-surface="message-row"]') ?? null;
+      if (messageEl) {
+        const viewportRect = viewport.getBoundingClientRect();
+        const messageRect = messageEl.getBoundingClientRect();
+        const bubbleTopPx = messageRect.top - viewportRect.top + viewport.scrollTop;
+        return {
+          targetScrollTop: computeSendTopTargetScrollTop({
+            bubbleTopPx,
+            scrollMarginPx: currentScrollMargin,
+            rowGapBeforePx,
+          }),
+          renderIndex,
+          exactDom: true,
+        };
+      }
+      const measurement = virtualizerRef.current.measurementsCache[renderIndex];
+      if (!measurement) {
+        return null;
+      }
+      const bubbleTopPx = measurement.start + rowGapBeforePx;
+      return {
+        targetScrollTop: computeSendTopTargetScrollTop({
+          bubbleTopPx,
+          scrollMarginPx: currentScrollMargin,
+          rowGapBeforePx,
+        }),
+        renderIndex,
+        exactDom: false,
+      };
+    };
+    registerSendTopAnchorResolver(resolveAnchor);
+    return () => registerSendTopAnchorResolver(null);
+  }, [registerSendTopAnchorResolver]);
 
   const asyncBlockScrollAnchorValue = useMemo<AsyncBlockScrollAnchorValue>(
     () => ({
@@ -461,6 +538,7 @@ export function ConversationList({
       onProcessGroupManualOpenChange(found.processGroupId, true);
     }
     suppressTailPinRef.current = true;
+    cancelSendTop?.();
     releaseTailFollow?.();
     virtualizer.scrollToIndex(found.renderIndex, {
       align: "start",
@@ -473,6 +551,7 @@ export function ConversationList({
     }, delayMs);
     return () => window.clearTimeout(timer);
   }, [
+    cancelSendTop,
     conversationRenderItems,
     messages,
     onProcessGroupManualOpenChange,
@@ -723,6 +802,7 @@ export function ConversationList({
   // card expands, cards shake vertically"). The layout effect runs in the same JS task as this
   // reflow and is unaffected by the RO loop limit; it is a no-op when not tail-following.
   useLayoutEffect(() => {
+    syncSendTopLayoutRef.current?.();
     pinScrollToTail();
   }, [virtualTotalSize, pinScrollToTail]);
 

@@ -11,6 +11,7 @@ import {
 import type { ScrollArea } from "@/components/ui/scroll-area";
 import {
   isScrollNearBottom,
+  scrollAreaAnimateChaseLiveBottom,
   scrollAreaAnimateToLiveBottom,
   scrollAreaToBottom,
   scrollAreaViewport,
@@ -21,6 +22,22 @@ import type { ConversationMessageSnapshot, PendingAssistantAux } from "@/types";
 const STICK_TO_BOTTOM_THRESHOLD_PX = 48;
 /** Keep tail pinning active briefly after streaming ends so final markdown/process-group settlement stays pinned. */
 const POST_STREAM_SETTLE_MS = 450;
+/** Window after Tab or scroll-up keydown during which an upward scrollTop move releases tail-follow. */
+const KEYBOARD_NAV_UNSTICK_WINDOW_MS = 250;
+const KEYBOARD_SCROLL_UP_KEYS = new Set(["ArrowUp", "PageUp", "Home"]);
+
+function isEditableKeyboardTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  const tagName = target.tagName;
+  return (
+    tagName === "INPUT" ||
+    tagName === "TEXTAREA" ||
+    tagName === "SELECT" ||
+    target.isContentEditable
+  );
+}
 
 export type UseConversationStreamScrollTailOptions = {
   scrollAreaRef: RefObject<ComponentRef<typeof ScrollArea> | null>;
@@ -29,6 +46,14 @@ export type UseConversationStreamScrollTailOptions = {
   isBusy: boolean;
   scrollBedPaddingPx: number;
   enabled: boolean;
+  /** Session/scope key; changing it resets turn-level auto-stick suppression. */
+  contentKey?: string;
+  /** Increments on render when a send-to-top turn is triggered so child layout effects do not pre-pin to bottom. */
+  sendTopTriggerNonce?: number;
+  /** Returns true while send-top animation or temporary bottom compensation is active. */
+  isSendTopBlockingTail?: () => boolean;
+  /** Called when the user explicitly forces tail-following (e.g. clicking "Scroll to bottom"). */
+  onForceStickToBottom?: () => void;
 };
 
 export type UseConversationStreamScrollTailResult = {
@@ -36,8 +61,14 @@ export type UseConversationStreamScrollTailResult = {
   pinScrollToTail: (forceStick?: boolean, behavior?: ScrollBehavior) => void;
   /** The user is still following the tail; false means they scrolled up and "back to bottom" can be shown. */
   followingTail: boolean;
+  /** Whether the "Scroll to bottom" button should be shown (suppressed while send-top holds the viewport without overflow below). */
+  showScrollToBottom: boolean;
   /** Stop auto-pinning so a programmatic scroll (quote jump) is not pulled back to the tail. */
   releaseTailFollow: () => void;
+  /** Prepare tail-follow state for a new send-top turn: keep tail-follow armed so once compensation is consumed, streaming smoothly follows to bottom unless the user scrolled up. */
+  enterSendTopTurn: () => void;
+  /** Recompute showScrollToBottom after send-top animation or compensation state changes. */
+  syncScrollToBottomVisibility: () => void;
 };
 
 function buildStreamContentSig(
@@ -67,50 +98,113 @@ export function useConversationStreamScrollTail({
   isBusy,
   scrollBedPaddingPx,
   enabled,
+  contentKey,
+  sendTopTriggerNonce = 0,
+  isSendTopBlockingTail,
+  onForceStickToBottom,
 }: UseConversationStreamScrollTailOptions): UseConversationStreamScrollTailResult {
   const stickToBottomRef = useRef(true);
-  /** A smooth "back to bottom" animation is in progress: suppress instant auto pinning from streaming/RO/virtual list. */
+  /** A smooth "back to bottom" animation is in progress: suppress streaming chase/instant pins until it completes. */
   const suppressInstantPinRef = useRef(false);
   const cancelLiveSmoothRef = useRef<(() => void) | null>(null);
+  const cancelStreamChaseRef = useRef<(() => void) | null>(null);
   const [followingTail, setFollowingTail] = useState(true);
+  const [scrollToBottomAllowed, setScrollToBottomAllowed] = useState(false);
   const isBusyRef = useRef(isBusy);
   const postStreamSettleUntilRef = useRef(0);
   const prevBusyRef = useRef(false);
   const prevContentSigRef = useRef("");
+  const prevContentKeyRef = useRef<string | undefined>(contentKey);
   const previousLayoutRef = useRef<{ enabled: boolean; paddingPx: number } | null>(null);
+  /** True when the user explicitly scrolled up while send-top compensation/animation was active, preventing ResizeObserver from auto-re-arming stick when compensation later hits 0. */
+  const detachedWhileSendTopRef = useRef(false);
+  const lastProcessedSendTopNonceRef = useRef(sendTopTriggerNonce);
+  const isSendTopBlockingTailRef = useRef(isSendTopBlockingTail);
+  const onForceStickToBottomRef = useRef(onForceStickToBottom);
+  useLayoutEffect(() => {
+    isSendTopBlockingTailRef.current = isSendTopBlockingTail;
+    onForceStickToBottomRef.current = onForceStickToBottom;
+  }, [isSendTopBlockingTail, onForceStickToBottom]);
+
+  const stopStreamChase = useCallback(() => {
+    cancelStreamChaseRef.current?.();
+    cancelStreamChaseRef.current = null;
+  }, []);
 
   const isStreamTailPinActive = useCallback(
     () => isBusyRef.current || performance.now() <= postStreamSettleUntilRef.current,
     [],
   );
 
-  const setStickToBottom = useCallback((next: boolean) => {
-    if (stickToBottomRef.current === next) {
+  const syncScrollToBottomVisibility = useCallback(() => {
+    if (stickToBottomRef.current) {
+      setScrollToBottomAllowed(false);
       return;
     }
-    stickToBottomRef.current = next;
-    if (!next) {
-      suppressInstantPinRef.current = false;
-      cancelLiveSmoothRef.current?.();
-      cancelLiveSmoothRef.current = null;
+    if (isSendTopBlockingTailRef.current?.()) {
+      setScrollToBottomAllowed(false);
+      return;
     }
-    setFollowingTail(next);
-  }, []);
+    if (detachedWhileSendTopRef.current) {
+      const viewport = scrollAreaViewport(scrollAreaRef.current);
+      if (!viewport) {
+        setScrollToBottomAllowed(false);
+        return;
+      }
+      setScrollToBottomAllowed(scrollDistanceFromBottom(viewport) > STICK_TO_BOTTOM_THRESHOLD_PX);
+      return;
+    }
+    setScrollToBottomAllowed(true);
+  }, [scrollAreaRef]);
+
+  const setStickToBottom = useCallback(
+    (next: boolean) => {
+      if (!next && isSendTopBlockingTailRef.current?.()) {
+        detachedWhileSendTopRef.current = true;
+      }
+      if (next) {
+        detachedWhileSendTopRef.current = false;
+      }
+      if (stickToBottomRef.current !== next) {
+        stickToBottomRef.current = next;
+        if (!next) {
+          suppressInstantPinRef.current = false;
+          cancelLiveSmoothRef.current?.();
+          cancelLiveSmoothRef.current = null;
+          stopStreamChase();
+        }
+        setFollowingTail(next);
+      }
+      syncScrollToBottomVisibility();
+    },
+    [stopStreamChase, syncScrollToBottomVisibility],
+  );
+
+  const enterSendTopTurn = useCallback(() => {
+    detachedWhileSendTopRef.current = false;
+    postStreamSettleUntilRef.current = 0;
+    suppressInstantPinRef.current = false;
+    cancelLiveSmoothRef.current?.();
+    cancelLiveSmoothRef.current = null;
+    stopStreamChase();
+    setStickToBottom(true);
+  }, [setStickToBottom, stopStreamChase]);
 
   const pinViewportToBottom = useCallback(
-    (behavior: ScrollBehavior = "auto") => {
+    (behavior: ScrollBehavior | "chase" = "auto") => {
       const viewport = scrollAreaViewport(scrollAreaRef.current);
       if (!viewport) {
         return;
       }
       if (behavior === "smooth") {
+        stopStreamChase();
         suppressInstantPinRef.current = true;
         cancelLiveSmoothRef.current?.();
         cancelLiveSmoothRef.current = scrollAreaAnimateToLiveBottom(viewport, {
           onDone: () => {
             cancelLiveSmoothRef.current = null;
             suppressInstantPinRef.current = false;
-            if (stickToBottomRef.current) {
+            if (stickToBottomRef.current && !isSendTopBlockingTailRef.current?.()) {
               scrollAreaToBottom(viewport, "auto");
             }
           },
@@ -120,24 +214,50 @@ export function useConversationStreamScrollTail({
       if (suppressInstantPinRef.current) {
         return;
       }
+      if (behavior === "chase") {
+        if (cancelStreamChaseRef.current) {
+          // Existing rAF chase loop already tracks live scrollHeight smoothly.
+          return;
+        }
+        const liveTarget = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+        if (liveTarget - viewport.scrollTop <= 0.5) {
+          return;
+        }
+        cancelStreamChaseRef.current = scrollAreaAnimateChaseLiveBottom(viewport, {
+          shouldStop: () =>
+            !stickToBottomRef.current || Boolean(isSendTopBlockingTailRef.current?.()),
+          onDone: () => {
+            cancelStreamChaseRef.current = null;
+          },
+        });
+        return;
+      }
+      stopStreamChase();
       scrollAreaToBottom(viewport, behavior);
     },
-    [scrollAreaRef],
+    [scrollAreaRef, stopStreamChase],
   );
 
   const scrollToTail = useCallback(
-    (forceStick = false, behavior: ScrollBehavior = "auto") => {
+    (forceStick = false, behavior?: ScrollBehavior) => {
       if (forceStick) {
+        detachedWhileSendTopRef.current = false;
+        onForceStickToBottomRef.current?.();
         setStickToBottom(true);
-        pinViewportToBottom(behavior);
+        pinViewportToBottom(behavior ?? "auto");
         return;
       }
-      if (!stickToBottomRef.current || !isStreamTailPinActive()) {
+      if (
+        sendTopTriggerNonce !== lastProcessedSendTopNonceRef.current ||
+        isSendTopBlockingTailRef.current?.() ||
+        !stickToBottomRef.current ||
+        !isStreamTailPinActive()
+      ) {
         return;
       }
-      pinViewportToBottom(behavior);
+      pinViewportToBottom(behavior ?? "chase");
     },
-    [isStreamTailPinActive, pinViewportToBottom, setStickToBottom],
+    [isStreamTailPinActive, pinViewportToBottom, sendTopTriggerNonce, setStickToBottom],
   );
 
   useEffect(() => {
@@ -243,21 +363,52 @@ export function useConversationStreamScrollTail({
       touchDragTracking = false;
     };
     let lastScrollTop = viewport.scrollTop;
+    let lastKeyboardNavAt = -Infinity;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const isTab = event.key === "Tab";
+      const isScrollUpKey =
+        !isEditableKeyboardTarget(event.target) &&
+        (KEYBOARD_SCROLL_UP_KEYS.has(event.key) || (event.key === " " && event.shiftKey));
+      if (!isTab && !isScrollUpKey) {
+        return;
+      }
+      lastKeyboardNavAt = performance.now();
+    };
+    const onFocusIn = () => {
+      if (viewport.scrollHeight - viewport.clientHeight <= 0) {
+        return;
+      }
+      const top = viewport.scrollTop;
+      const movedUp = top < lastScrollTop - 0.5;
+      const awayFromBottom = !isScrollNearBottom(viewport, STICK_TO_BOTTOM_THRESHOLD_PX);
+      if (movedUp || awayFromBottom) {
+        lastScrollTop = top;
+        setStickToBottom(false);
+      }
+    };
     const onScroll = () => {
       const top = viewport.scrollTop;
       const movedTowardBottom = top > lastScrollTop;
       const movedTowardTop = top < lastScrollTop;
+      const recentKeyboardNav =
+        performance.now() - lastKeyboardNavAt <= KEYBOARD_NAV_UNSTICK_WINDOW_MS;
       lastScrollTop = top;
-      if ((pointerHeld || touchActive) && movedTowardTop) {
+      if ((pointerHeld || touchActive || recentKeyboardNav) && movedTowardTop) {
         setStickToBottom(false);
         return;
       }
       if (
         !stickToBottomRef.current &&
         movedTowardBottom &&
+        !isSendTopBlockingTailRef.current?.() &&
         isScrollNearBottom(viewport, STICK_TO_BOTTOM_THRESHOLD_PX)
       ) {
+        detachedWhileSendTopRef.current = false;
         setStickToBottom(true);
+        return;
+      }
+      if (!stickToBottomRef.current && detachedWhileSendTopRef.current) {
+        syncScrollToBottomVisibility();
       }
     };
 
@@ -271,8 +422,12 @@ export function useConversationStreamScrollTail({
     window.addEventListener("pointercancel", onPointerEnd, { passive: true });
     window.addEventListener("touchend", onTouchEnd, { passive: true });
     window.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    window.addEventListener("keydown", onKeyDown, { passive: true });
+    viewport.addEventListener("focusin", onFocusIn, { passive: true });
     viewport.addEventListener("scroll", onScroll, { passive: true });
     return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      viewport.removeEventListener("focusin", onFocusIn);
       viewport.removeEventListener("wheel", onWheel);
       root.removeEventListener("pointerdown", onPointerDown);
       viewport.removeEventListener("pointermove", onPointerMove);
@@ -284,9 +439,27 @@ export function useConversationStreamScrollTail({
       window.removeEventListener("touchcancel", onTouchEnd);
       viewport.removeEventListener("scroll", onScroll);
     };
-  }, [enabled, scrollAreaRef, setStickToBottom]);
+  }, [enabled, scrollAreaRef, setStickToBottom, syncScrollToBottomVisibility]);
 
   useLayoutEffect(() => {
+    if (prevContentKeyRef.current !== contentKey) {
+      prevContentKeyRef.current = contentKey;
+      detachedWhileSendTopRef.current = false;
+      postStreamSettleUntilRef.current = 0;
+      stopStreamChase();
+      setStickToBottom(true);
+    }
+    if (!enabled) {
+      detachedWhileSendTopRef.current = false;
+      stopStreamChase();
+      setStickToBottom(true);
+    }
+  }, [contentKey, enabled, setStickToBottom, stopStreamChase]);
+
+  useLayoutEffect(() => {
+    const sendTopTriggeredThisCommit = sendTopTriggerNonce !== lastProcessedSendTopNonceRef.current;
+    lastProcessedSendTopNonceRef.current = sendTopTriggerNonce;
+
     isBusyRef.current = isBusy;
     if (!enabled) {
       prevBusyRef.current = isBusy;
@@ -304,9 +477,17 @@ export function useConversationStreamScrollTail({
       return;
     }
     postStreamSettleUntilRef.current = 0;
+    if (sendTopTriggeredThisCommit || isSendTopBlockingTailRef.current?.()) {
+      return;
+    }
     scrollToTail(true);
-    requestAnimationFrame(() => scrollToTail(true));
-  }, [enabled, isBusy, scrollToTail]);
+    requestAnimationFrame(() => {
+      if (isSendTopBlockingTailRef.current?.() || !stickToBottomRef.current) {
+        return;
+      }
+      scrollToTail();
+    });
+  }, [enabled, isBusy, scrollToTail, sendTopTriggerNonce]);
 
   const contentSig = buildStreamContentSig(messages, pendingAuxState);
 
@@ -328,16 +509,29 @@ export function useConversationStreamScrollTail({
     const layoutChanged =
       previous?.enabled !== enabled || previous.paddingPx !== scrollBedPaddingPx;
     previousLayoutRef.current = { enabled, paddingPx: scrollBedPaddingPx };
-    if (!enabled || !layoutChanged || !stickToBottomRef.current) {
+    if (
+      !enabled ||
+      !layoutChanged ||
+      !stickToBottomRef.current ||
+      isSendTopBlockingTailRef.current?.()
+    ) {
       return;
     }
     pinViewportToBottom("auto");
     requestAnimationFrame(() => {
-      if (stickToBottomRef.current) {
+      if (stickToBottomRef.current && !isSendTopBlockingTailRef.current?.()) {
         pinViewportToBottom("auto");
       }
     });
   }, [enabled, pinViewportToBottom, scrollBedPaddingPx]);
+
+  useEffect(() => {
+    return () => {
+      cancelLiveSmoothRef.current?.();
+      cancelLiveSmoothRef.current = null;
+      stopStreamChase();
+    };
+  }, [stopStreamChase]);
 
   useEffect(() => {
     if (!enabled) {
@@ -353,11 +547,11 @@ export function useConversationStreamScrollTail({
     let lastViewportHeight = viewport.clientHeight;
 
     // Re-evaluate the tail state on layout changes:
-    // - viewport resized while sticking → re-pin so shrinking the window keeps the newest messages in view;
-    // - content resized during active streaming / post-stream settle while sticking → re-pin;
+    // - viewport resized while sticking → re-pin immediately so shrinking the window keeps the newest messages in view;
+    // - content resized during active streaming / post-stream settle while sticking (and not held by send-top compensation) → smoothly chase the growing bottom;
     // - content resized while idle (e.g. user manually expanded/collapsed a thinking, tool, or MCP App card)
     //   → never slam the viewport to the bottom; release tail-follow when expansion pushes content below the fold;
-    // - released → re-arm when a layout change puts the viewport back at the bottom (distance ≤ 1).
+    // - released → re-arm when a layout change puts the viewport back at the bottom (distance ≤ 1), unless detached during send-top compensation.
     const observer = new ResizeObserver(() => {
       const viewportResized =
         viewport.clientWidth !== lastViewportWidth || viewport.clientHeight !== lastViewportHeight;
@@ -365,8 +559,15 @@ export function useConversationStreamScrollTail({
       lastViewportHeight = viewport.clientHeight;
 
       if (stickToBottomRef.current) {
-        if (viewportResized || isStreamTailPinActive()) {
+        if (isSendTopBlockingTailRef.current?.()) {
+          return;
+        }
+        if (viewportResized) {
           pinViewportToBottom("auto");
+          return;
+        }
+        if (isStreamTailPinActive()) {
+          pinViewportToBottom("chase");
           return;
         }
         if (scrollDistanceFromBottom(viewport) > STICK_TO_BOTTOM_THRESHOLD_PX) {
@@ -374,18 +575,36 @@ export function useConversationStreamScrollTail({
         }
         return;
       }
-      if (scrollDistanceFromBottom(viewport) <= 1) {
+      if (
+        !detachedWhileSendTopRef.current &&
+        !isSendTopBlockingTailRef.current?.() &&
+        scrollDistanceFromBottom(viewport) <= 1
+      ) {
         setStickToBottom(true);
+        return;
+      }
+      if (detachedWhileSendTopRef.current) {
+        syncScrollToBottomVisibility();
       }
     });
     observer.observe(content);
     observer.observe(viewport);
     return () => observer.disconnect();
-  }, [enabled, isStreamTailPinActive, pinViewportToBottom, scrollAreaRef, setStickToBottom]);
+  }, [
+    enabled,
+    isStreamTailPinActive,
+    pinViewportToBottom,
+    scrollAreaRef,
+    setStickToBottom,
+    syncScrollToBottomVisibility,
+  ]);
 
   return {
     pinScrollToTail: scrollToTail,
     followingTail,
+    showScrollToBottom: !followingTail && scrollToBottomAllowed,
     releaseTailFollow: () => setStickToBottom(false),
+    enterSendTopTurn,
+    syncScrollToBottomVisibility,
   };
 }
