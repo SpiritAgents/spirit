@@ -25,16 +25,18 @@ export function providerPickerLabel(
   return String(t(labelKey, { defaultValue: fallbackLabel }));
 }
 
-/** Picker rows: the snapshot's preset rows (manifest order), with the custom connection last. */
+/** Picker rows sorted by localized display name, independently of manifest order; custom stays last. */
 export function localizedProviderRows(
   t: ProviderLabelTranslate,
   presets: readonly ProviderPickerPresetRow[],
 ): LocalizedProviderRow[] {
   return [
-    ...presets.map((preset) => ({
-      id: preset.id,
-      label: providerPickerLabel(t, preset.id, presets),
-    })),
+    ...presets
+      .map((preset) => ({
+        id: preset.id,
+        label: providerPickerLabel(t, preset.id, presets),
+      }))
+      .sort((left, right) => left.label.localeCompare(right.label)),
     {
       id: CUSTOM_PROVIDER_PRESET_ID,
       label: String(t(providerLabelKey(CUSTOM_PROVIDER_PRESET_ID), { defaultValue: "Custom" })),

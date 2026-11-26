@@ -48,7 +48,7 @@ export interface ProviderPresetCatalog {
   endpoint?: string;
 }
 
-/** One built-in provider preset; array order in the manifest is picker order. */
+/** One built-in provider preset; manifest entries are sorted alphabetically by display label. */
 export interface ProviderPreset {
   id: string;
   label: string;

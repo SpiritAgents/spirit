@@ -2731,8 +2731,24 @@ mod tests {
     fn model_add_provider_choice_does_not_overwrite_api_key_with_mcp_command_label() {
         let mut form = new_model_add_form();
         let expected_key_label = t!("form.model.field.api_key.label").into_owned();
-        move_right(&mut form);
-        assert_eq!(form.fields[2].label, expected_key_label);
+        let provider_count = match &form.fields[0].editor {
+            BottomFormFieldEditorView::Choice { options, .. } => options.len(),
+            _ => panic!("expected provider choices"),
+        };
+        let mut saw_api_key_field = false;
+        for _ in 0..provider_count {
+            move_right(&mut form);
+            assert!(
+                form.fields
+                    .iter()
+                    .all(|field| field.label != t!("form.mcp.field.endpoint.command.label"))
+            );
+            saw_api_key_field |= form
+                .fields
+                .iter()
+                .any(|field| field.label == expected_key_label);
+        }
+        assert!(saw_api_key_field);
     }
 
     #[test]
