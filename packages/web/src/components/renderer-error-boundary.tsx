@@ -21,7 +21,11 @@ export class RendererErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    reportFatalRendererError(error, info.componentStack ?? undefined);
+    // Keep the Vite document alive so React Refresh can retry after the next
+    // edit. Navigating to the native crash page would disconnect the HMR client.
+    if (import.meta.env.PROD || !import.meta.hot) {
+      reportFatalRendererError(error, info.componentStack ?? undefined);
+    }
   }
 
   render() {
