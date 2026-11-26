@@ -8,8 +8,14 @@ if (typeof globalThis.ResizeObserver === "undefined") {
   };
 }
 
+type IntersectionCallback = (entries: Array<{ isIntersecting: boolean }>) => void;
+let lastIntersectionCallback: IntersectionCallback | null = null;
+
 if (typeof globalThis.IntersectionObserver === "undefined") {
   globalThis.IntersectionObserver = class {
+    constructor(callback: IntersectionCallback) {
+      lastIntersectionCallback = callback;
+    }
     observe() {}
     unobserve() {}
     disconnect() {}
@@ -19,14 +25,14 @@ if (typeof globalThis.IntersectionObserver === "undefined") {
     root = null;
     rootMargin = "";
     thresholds = [];
-  };
+  } as unknown as typeof IntersectionObserver;
 }
 
 import "./setup";
 
 import { act, render } from "@testing-library/react";
 import { StrictMode } from "react";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { MarketplaceView } from "@/components/marketplace-view";
 
@@ -86,5 +92,52 @@ describe("MarketplaceView search focus", () => {
     await flushScheduledFocus();
 
     expect(document.activeElement).toBe(addButton);
+  });
+
+  test("moves the header host atomically between the in-flow anchor and overlay slots on pin transitions", async () => {
+    const { container, getByPlaceholderText } = render(<MarketplaceView {...viewProps} />);
+    await flushScheduledFocus();
+
+    const searchInput = getByPlaceholderText("Search extensions");
+    const scrollArea = container.querySelector('[data-slot="scroll-area"]');
+    const inFlowSlot = container.querySelector(".spirit-marketplace-header-anchor") as
+      | (HTMLElement & { moveBefore?: (node: Node, child: Node | null) => void })
+      | null;
+    const overlaySlot = container.querySelector(".spirit-marketplace-header-overlay") as
+      | (HTMLElement & { moveBefore?: (node: Node, child: Node | null) => void })
+      | null;
+
+    expect(scrollArea).not.toBeNull();
+    expect(inFlowSlot).not.toBeNull();
+    expect(overlaySlot).not.toBeNull();
+    expect(inFlowSlot?.contains(searchInput)).toBe(true);
+    expect(scrollArea?.contains(searchInput)).toBe(true);
+
+    const overlayMoveBefore = vi.fn((node: Node, child: Node | null) => {
+      overlaySlot!.insertBefore(node, child);
+    });
+    const inFlowMoveBefore = vi.fn((node: Node, child: Node | null) => {
+      inFlowSlot!.insertBefore(node, child);
+    });
+    overlaySlot!.moveBefore = overlayMoveBefore;
+    inFlowSlot!.moveBefore = inFlowMoveBefore;
+
+    act(() => {
+      lastIntersectionCallback?.([{ isIntersecting: false }]);
+    });
+
+    expect(overlayMoveBefore).toHaveBeenCalledTimes(1);
+    expect(overlaySlot?.contains(searchInput)).toBe(true);
+    expect(scrollArea?.contains(searchInput)).toBe(false);
+    expect(getByPlaceholderText("Search extensions")).toBe(searchInput);
+
+    act(() => {
+      lastIntersectionCallback?.([{ isIntersecting: true }]);
+    });
+
+    expect(inFlowMoveBefore).toHaveBeenCalledTimes(1);
+    expect(inFlowSlot?.contains(searchInput)).toBe(true);
+    expect(scrollArea?.contains(searchInput)).toBe(true);
+    expect(getByPlaceholderText("Search extensions")).toBe(searchInput);
   });
 });

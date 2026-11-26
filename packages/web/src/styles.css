@@ -945,3 +945,24 @@ html.spirit-clickable-pointer :is(.workspace-terminal-xterm, .shell-tool-xterm) 
   opacity: 0;
   animation: spirit-nav-placeholder-fade 160ms ease-out 160ms forwards;
 }
+
+/*
+ * Marketplace docking search bar: tether the overlay header outside the ScrollArea to an
+ * in-flow `position: sticky; top: 0` placeholder inside it. Both sticky pinning (including
+ * staying pinned on bottom rubber-band overscroll) and unpinned top rubber-band overscroll
+ * stay on the compositor, while the ScrollArea's occlusion clip-path/mask clips only the list.
+ */
+[data-spirit-surface="marketplace-shell"] {
+  anchor-scope: --marketplace-header;
+}
+
+.spirit-marketplace-header-anchor {
+  anchor-name: --marketplace-header;
+}
+
+.spirit-marketplace-header-overlay {
+  position-anchor: --marketplace-header;
+  top: anchor(top);
+  left: anchor(left);
+  width: anchor-size(width);
+}
