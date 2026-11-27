@@ -30,6 +30,13 @@
       "defaultInstalled": false
     },
     {
+      "name": "parallel",
+      "source": "./extensions/parallel",
+      "icon": "./extensions/parallel/icon.svg",
+      "reviewStatus": "verified",
+      "defaultInstalled": false
+    },
+    {
       "name": "vercel",
       "source": "./extensions/vercel",
       "icon": "./extensions/vercel/icon.svg",

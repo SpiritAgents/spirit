@@ -54,6 +54,7 @@
     "@spiritagent/instructions": "workspace:*",
     "@spiritagent/linear": "workspace:*",
     "@spiritagent/notion": "workspace:*",
+    "@spiritagent/parallel": "workspace:*",
     "@spiritagent/product": "workspace:*",
     "@spiritagent/vercel": "workspace:*",
     "@types/node": "26.6.6",

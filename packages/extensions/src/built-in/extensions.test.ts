@@ -1,15 +1,19 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "vitest";
 
+import { McpService } from "@spiritagent/agent-core";
 import { parseMarketplaceIndexText, readExtensionMessage } from "@spiritagent/extension-toolkit";
 import { VALID_LANGUAGES } from "@spiritagent/i18n";
 import { localizedTestFields } from "@spiritagent/extension-toolkit/test-localization";
 
+import { collectEnabledExtensionInstructionContributions } from "../extension-contributions.js";
 import { createHostExtensionManager, installPreparedExtensionDirectory } from "../extensions.js";
 import { loadBuiltInState } from "./state.js";
 import {
@@ -200,6 +204,255 @@ test("Notion is an opt-in built-in that contributes only its authorized MCP serv
       [{ id: "oauth", action: "authorize" }],
     );
   } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+  }
+});
+
+test("Parallel is an opt-in built-in that contributes only its keyless-capable OAuth MCP server", async () => {
+  const index = await readBuiltInMarketplaceIndex();
+  const parallel = index.extensions.find((entry) => entry.name === "parallel");
+  assert.ok(parallel);
+  assert.equal(parallel.defaultInstalled, false);
+  assert.equal(parallel.icon, "extensions/parallel/icon.svg");
+  assert.equal(readExtensionMessage(parallel, parallel.description, "zh-CN"), "搜索与抓取。");
+  assert.deepEqual(Object.keys(parallel.manifest.contributes ?? {}).sort(), [
+    "authorizations",
+    "desktop",
+    "mcp",
+  ]);
+  assert.ok(existsSync(join(resolveBuiltInRegistryRoot(), "extensions/parallel/mcp.json")));
+
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-parallel-opt-in-"));
+  try {
+    const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
+    const seeded = await ensureBuiltInExtensions({ spiritDataDir, hostKind: "desktop", manager });
+    assert.equal(
+      seeded.some((item) => item.id === "built-in/parallel"),
+      false,
+    );
+    const installed = await installBuiltInExtension({
+      spiritDataDir,
+      hostKind: "desktop",
+      extensionId: "built-in/parallel",
+    });
+    assert.equal(installed.id, "built-in/parallel");
+    const listed = (await manager.list()).find((item) => item.id === "built-in/parallel");
+    assert.deepEqual(
+      listed?.manifest.contributes?.authorizations?.map(({ id, action }) => ({ id, action })),
+      [{ id: "oauth", action: "authorize" }],
+    );
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+  }
+});
+
+test("Parallel built artifact transitions Keyless -> OAuth -> Keyless against a local Streamable HTTP MCP server", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-parallel-loopback-"));
+  const recordedAuthHeaders: Array<{ method: string; authorization: string | undefined }> = [];
+  const server = createServer(async (req, res) => {
+    if (req.method === "DELETE") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+    if (req.method === "GET") {
+      res.writeHead(405);
+      res.end();
+      return;
+    }
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const message = JSON.parse(Buffer.concat(chunks).toString("utf8")) as {
+      id?: number | string;
+      method?: string;
+    };
+    const authorization =
+      typeof req.headers.authorization === "string" ? req.headers.authorization : undefined;
+    if (message.method === "notifications/initialized") {
+      res.writeHead(202);
+      res.end();
+      return;
+    }
+    if (message.method === "initialize") {
+      recordedAuthHeaders.push({ method: "initialize", authorization });
+      res.writeHead(200, { "Content-Type": "application/json", "Mcp-Session-Id": "parallel-sess" });
+      res.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: message.id,
+          result: {
+            protocolVersion: "2025-03-26",
+            capabilities: { tools: {} },
+            serverInfo: { name: "parallel-mock", version: "1.0.0" },
+          },
+        }),
+      );
+      return;
+    }
+    if (message.method === "tools/list") {
+      recordedAuthHeaders.push({ method: "tools/list", authorization });
+      res.writeHead(200, { "Content-Type": "application/json", "Mcp-Session-Id": "parallel-sess" });
+      res.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: message.id,
+          result: {
+            tools: [
+              {
+                name: "web_search",
+                description: "Search the web",
+                inputSchema: { type: "object" },
+              },
+            ],
+          },
+        }),
+      );
+      return;
+    }
+    if (message.method === "tools/call") {
+      recordedAuthHeaders.push({ method: "tools/call", authorization });
+      res.writeHead(200, { "Content-Type": "application/json", "Mcp-Session-Id": "parallel-sess" });
+      res.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: message.id,
+          result: {
+            content: [{ type: "text", text: authorization ? "oauth-ok" : "keyless-ok" }],
+          },
+        }),
+      );
+      return;
+    }
+    res.writeHead(404);
+    res.end();
+  });
+
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address() as AddressInfo;
+  const loopbackUrl = `http://127.0.0.1:${port}/mcp`;
+
+  let storedSecret: string | undefined;
+  let mcpService: McpService | undefined;
+  try {
+    await installBuiltInExtension({
+      spiritDataDir,
+      hostKind: "desktop",
+      extensionId: "built-in/parallel",
+    });
+    const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
+    const installed = await manager.list();
+
+    mcpService = new McpService(spiritDataDir, false, {
+      extraConfigs: async () => {
+        const collected = await collectEnabledExtensionInstructionContributions(
+          installed,
+          undefined,
+          {
+            loadSecret: async (extensionId, key) =>
+              extensionId === "built-in/parallel" && key === "oauthCredentials"
+                ? storedSecret
+                : undefined,
+          },
+        );
+        const parallel = collected.mcp.servers.parallel;
+        assert.ok(parallel);
+        assert.equal(parallel.transport.type, "http");
+        assert.equal(parallel.transport.url, "https://mcp.parallel.ai/mcp");
+        return {
+          servers: {
+            parallel: {
+              ...parallel,
+              transport: {
+                ...parallel.transport,
+                url: loopbackUrl,
+              },
+            },
+          },
+          extensionServerOwnership: collected.mcpOwnership,
+        };
+      },
+    });
+
+    // Phase 1: Keyless (no secret stored) connects without an Authorization header.
+    assert.equal(await mcpService.refreshConfig(), true);
+    const keylessTools = await mcpService.listTools("parallel");
+    assert.equal(keylessTools.length, 1);
+    const keylessCall = (await mcpService.callTool("parallel", "web_search", "{}")) as {
+      content: Array<{ text: string }>;
+    };
+    assert.equal(keylessCall.content[0]?.text, "keyless-ok");
+    assert.ok(recordedAuthHeaders.length >= 2);
+    assert.ok(recordedAuthHeaders.every((entry) => entry.authorization === undefined));
+
+    // Phase 2: OAuth credentials stored -> refreshConfig upgrades to Bearer auth.
+    recordedAuthHeaders.length = 0;
+    storedSecret = JSON.stringify({
+      accessToken: "parallel-oauth-token",
+      refreshToken: "parallel-refresh-token",
+      accessTokenExpiresAt: Date.now() + 600_000,
+      accessTokenRefreshAt: Date.now() + 480_000,
+    });
+    assert.equal(await mcpService.refreshConfig(), true);
+    const oauthCall = (await mcpService.callTool("parallel", "web_search", "{}")) as {
+      content: Array<{ text: string }>;
+    };
+    assert.equal(oauthCall.content[0]?.text, "oauth-ok");
+    assert.ok(recordedAuthHeaders.length >= 2);
+    assert.ok(
+      recordedAuthHeaders.every((entry) => entry.authorization === "Bearer parallel-oauth-token"),
+    );
+
+    // Phase 3: Expired accessToken stripped after failed refresh -> falls back to keyless while
+    // retaining refreshToken in oauthCredentials.
+    recordedAuthHeaders.length = 0;
+    storedSecret = JSON.stringify({
+      refreshToken: "parallel-refresh-token",
+      accessTokenExpiresAt: Date.now() - 1_000,
+      accessTokenRefreshAt: Date.now() - 121_000,
+    });
+    assert.equal(await mcpService.refreshConfig(), true);
+    const strippedCall = (await mcpService.callTool("parallel", "web_search", "{}")) as {
+      content: Array<{ text: string }>;
+    };
+    assert.equal(strippedCall.content[0]?.text, "keyless-ok");
+    assert.ok(recordedAuthHeaders.length >= 2);
+    assert.ok(recordedAuthHeaders.every((entry) => entry.authorization === undefined));
+
+    // Phase 4: Background refresh recovers -> upgrades back to Bearer auth.
+    recordedAuthHeaders.length = 0;
+    storedSecret = JSON.stringify({
+      accessToken: "parallel-recovered-token",
+      refreshToken: "parallel-refresh-token-2",
+      accessTokenExpiresAt: Date.now() + 600_000,
+      accessTokenRefreshAt: Date.now() + 480_000,
+    });
+    assert.equal(await mcpService.refreshConfig(), true);
+    const recoveredCall = (await mcpService.callTool("parallel", "web_search", "{}")) as {
+      content: Array<{ text: string }>;
+    };
+    assert.equal(recoveredCall.content[0]?.text, "oauth-ok");
+    assert.ok(recordedAuthHeaders.length >= 2);
+    assert.ok(
+      recordedAuthHeaders.every(
+        (entry) => entry.authorization === "Bearer parallel-recovered-token",
+      ),
+    );
+
+    // Phase 5: Disconnect clears credentials -> refreshConfig falls back to keyless.
+    recordedAuthHeaders.length = 0;
+    storedSecret = undefined;
+    assert.equal(await mcpService.refreshConfig(), true);
+    const revertedCall = (await mcpService.callTool("parallel", "web_search", "{}")) as {
+      content: Array<{ text: string }>;
+    };
+    assert.equal(revertedCall.content[0]?.text, "keyless-ok");
+    assert.ok(recordedAuthHeaders.length >= 2);
+    assert.ok(recordedAuthHeaders.every((entry) => entry.authorization === undefined));
+  } finally {
+    await mcpService?.dispose();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
     await rm(spiritDataDir, { recursive: true, force: true });
   }
 });

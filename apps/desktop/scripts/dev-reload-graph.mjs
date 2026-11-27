@@ -13,6 +13,7 @@ const EXTENSION_BUILD_PACKAGES = [
   "@spiritagent/github",
   "@spiritagent/linear",
   "@spiritagent/notion",
+  "@spiritagent/parallel",
   "@spiritagent/vercel",
 ];
 
