@@ -295,6 +295,58 @@ html.dark,
 }
 
 /*
+ * AnimatedCollapse motion (animated-collapse.tsx). It lives here, with the primitive's other
+ * defaults, so every host that imports the theme animates it, extension pages included.
+ * Without these rules the component still opens and closes, only without any animation.
+ */
+@theme inline {
+  --ease-collapsible-expand: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-collapsible-collapse: cubic-bezier(0.4, 0, 0.2, 1);
+  --animate-spirit-collapsible-down: spirit-collapsible-down 280ms var(--ease-collapsible-expand);
+  --animate-spirit-collapsible-up: spirit-collapsible-up 220ms var(--ease-collapsible-collapse);
+}
+
+/* The `from` variables are only set when an animation takes over from an interrupted one. */
+@keyframes spirit-collapsible-down {
+  from {
+    height: var(--spirit-collapsible-from-height, 0px);
+    opacity: var(--spirit-collapsible-from-opacity, 0);
+  }
+  to {
+    height: var(--spirit-collapsible-content-height);
+    opacity: 1;
+  }
+}
+
+@keyframes spirit-collapsible-up {
+  from {
+    height: var(--spirit-collapsible-from-height, var(--spirit-collapsible-content-height));
+    opacity: var(--spirit-collapsible-from-opacity, 1);
+  }
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+/* Custom properties inherit: a nested collapse must not start from its ancestor's values. */
+[data-slot="animated-collapse-content"] {
+  --spirit-collapsible-from-height: initial;
+  --spirit-collapsible-from-opacity: initial;
+}
+
+[data-slot="animated-collapse-content"][data-state="closed"] {
+  --spirit-collapsible-content-height: 0px;
+}
+
+/* Reduced motion keeps the animation and gives it no duration: it still ends, so the
+   component settles exactly as it does with motion. `animation: none` never ends, which
+   left the animation class in place to replay as soon as the setting was turned off. */
+html.spirit-reduce-motion [data-slot="animated-collapse-content"] {
+  animation-duration: 0s !important;
+}
+
+/*
   Outline button-group: 1px pad + a single inset ring. Seams live in the
   1px gap (absolute, not in either child's box). A group fill of
   --outline-border under the same-token inset ring stacked two 60%

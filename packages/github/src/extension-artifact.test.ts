@@ -76,5 +76,16 @@ test("both Native pages ship their own browser assets", async () => {
     assert.match(css, /html:not\(\.spirit-clickable-pointer\)/);
     assert.match(css, /user-select:\s*none/);
     assert.match(css, /data-spirit-selectable/);
+    if (name === "pull-requests.html") {
+      // Expanding a changed file or a review thread animates: the page must carry the
+      // utilities and keyframes itself, it shares no stylesheet with the host app.
+      for (const animation of ["spirit-collapsible-down", "spirit-collapsible-up"]) {
+        assert.match(
+          css,
+          new RegExp(String.raw`\.animate-${animation}\s*\{\s*animation:\s*${animation} `),
+        );
+        assert.match(css, new RegExp(String.raw`@keyframes ${animation}\s*\{`));
+      }
+    }
   }
 });

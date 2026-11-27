@@ -1,7 +1,7 @@
-/** Matches the `spirit-collapsible-down` duration in app theme CSS. */
+/** Matches the `spirit-collapsible-down` duration in `theme.css`. */
 export const COLLAPSIBLE_OPEN_ANIMATION_MS = 280;
 
-/** Matches the `spirit-collapsible-up` duration in app theme CSS. */
+/** Matches the `spirit-collapsible-up` duration in `theme.css`. */
 export const COLLAPSIBLE_CLOSE_ANIMATION_MS = 220;
 
 /** Unmount heavy content only after the collapse animation ends. */

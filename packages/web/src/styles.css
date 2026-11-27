@@ -471,39 +471,9 @@ html.spirit-reduce-motion.spirit-launch-splash-exiting
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: var(--spirit-ui-font-stack);
-  /* AnimatedCollapse: overrides tw-animate-css's default ease-out-only; expand/collapse use different curves */
-  --ease-collapsible-expand: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-collapsible-collapse: cubic-bezier(0.4, 0, 0.2, 1);
-  --animate-spirit-collapsible-down: spirit-collapsible-down 280ms var(--ease-collapsible-expand);
-  --animate-spirit-collapsible-up: spirit-collapsible-up 220ms var(--ease-collapsible-collapse);
+  /* Sidebar reordering moves with AnimatedCollapse's expand (tokens in @spiritagent/ui/theme.css). */
   --ease-sidebar-reorder: var(--ease-collapsible-expand);
   --duration-sidebar-reorder: 280ms;
-}
-
-@keyframes spirit-collapsible-down {
-  from {
-    height: 0;
-    opacity: 0;
-  }
-  to {
-    height: var(--spirit-collapsible-content-height);
-    opacity: 1;
-  }
-}
-
-@keyframes spirit-collapsible-up {
-  from {
-    height: var(--spirit-collapsible-content-height);
-    opacity: 1;
-  }
-  to {
-    height: 0;
-    opacity: 0;
-  }
-}
-
-[data-slot="animated-collapse-content"][data-state="closed"] {
-  --spirit-collapsible-content-height: 0px;
 }
 
 @layer base {
@@ -889,13 +859,6 @@ html.spirit-reduce-motion.spirit-launch-splash-exiting
     }
     [data-slot="collapsible-content"] {
       animation: none !important;
-    }
-    [data-slot="animated-collapse-content"] {
-      animation: none !important;
-    }
-    [data-slot="animated-collapse-content"][data-state="closed"] {
-      height: 0;
-      opacity: 0;
     }
   }
 }

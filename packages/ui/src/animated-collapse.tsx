@@ -115,11 +115,20 @@ function AnimatedCollapseContent({
   // pure layout.
   const [expandSettled, setExpandSettled] = useState(false);
   const [collapseSettled, setCollapseSettled] = useState(!open);
+  // A toggle that lands while the previous animation is still running must not restart from
+  // the keyframes' fixed ends: the content would first jump to fully open (or fully closed).
+  // The interrupted animation stays applied for one render so the height and opacity it has
+  // reached can be measured, and the opposite animation then starts from them.
+  const [handoffPending, setHandoffPending] = useState(false);
+  const [handoff, setHandoff] = useState<{ height: number; opacity: number } | null>(null);
   const collapsibleMounted = useCollapsibleChildMount(open);
   const mounted = keepMounted || collapsibleMounted;
 
   if (previousOpen !== open) {
     setPreviousOpen(open);
+    setHandoffPending(
+      allowAnimation && hasOpened && !(previousOpen ? expandSettled : collapseSettled),
+    );
     setAllowAnimation(true);
     setExpandSettled(false);
     setCollapseSettled(false);
@@ -128,6 +137,8 @@ function AnimatedCollapseContent({
     setHasOpened(true);
   }
   const shouldAnimate = allowAnimation && hasOpened;
+  /** The direction whose animation is applied: still the interrupted one while measuring. */
+  const animatedOpen = handoffPending ? !open : open;
 
   const previousStyleOpenRef = useRef(open);
 
@@ -172,6 +183,22 @@ function AnimatedCollapseContent({
     return () => observer.disconnect();
   }, [mounted, open, children]);
 
+  useLayoutEffect(() => {
+    if (!handoffPending) {
+      return;
+    }
+    const outer = outerRef.current;
+    setHandoff(
+      outer
+        ? {
+            height: outer.getBoundingClientRect().height,
+            opacity: Number(getComputedStyle(outer).opacity),
+          }
+        : null,
+    );
+    setHandoffPending(false);
+  }, [handoffPending]);
+
   if (!mounted) {
     return (
       <div
@@ -202,24 +229,32 @@ function AnimatedCollapseContent({
         } else {
           setCollapseSettled(true);
         }
+        setHandoff(null);
       }}
       className={cn(
         "overflow-hidden",
+        // The fill mode holds whichever state the element is in: an interrupted animation
+        // that has just finished must still be measured at its end, not at `height: auto`.
         shouldAnimate &&
-          open &&
+          animatedOpen &&
           !expandSettled &&
-          "animate-spirit-collapsible-down data-[state=open]:[animation-fill-mode:forwards]",
+          "animate-spirit-collapsible-down data-[state]:[animation-fill-mode:forwards]",
         shouldAnimate &&
-          !open &&
+          !animatedOpen &&
           !collapseSettled &&
-          "animate-spirit-collapsible-up data-[state=closed]:[animation-fill-mode:forwards]",
+          "animate-spirit-collapsible-up data-[state]:[animation-fill-mode:forwards]",
         !open && (!shouldAnimate || collapseSettled) && "h-0 opacity-0",
         className,
       )}
       style={
         !open && (!shouldAnimate || collapseSettled)
           ? ({ "--spirit-collapsible-content-height": "0px" } as CSSProperties)
-          : undefined
+          : handoff
+            ? ({
+                "--spirit-collapsible-from-height": `${handoff.height}px`,
+                "--spirit-collapsible-from-opacity": String(handoff.opacity),
+              } as CSSProperties)
+            : undefined
       }
     >
       <div ref={innerRef}>{children}</div>
