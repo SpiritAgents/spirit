@@ -911,10 +911,12 @@ html.spirit-clickable-pointer :is(.workspace-terminal-xterm, .shell-tool-xterm) 
 }
 
 /*
- * Marketplace docking search bar: tether the overlay header outside the ScrollArea to an
- * in-flow `position: sticky; top: 0` placeholder inside it. Both sticky pinning (including
- * staying pinned on bottom rubber-band overscroll) and unpinned top rubber-band overscroll
- * stay on the compositor, while the ScrollArea's occlusion clip-path/mask clips only the list.
+ * Marketplace docking search bar. Undocked, the live header sits in-flow in a
+ * `position: sticky; top: 0` slot, so top rubber-band overscroll moves it natively. Docked,
+ * the same DOM host moves to an overlay outside the ScrollArea, tethered to that slot, so it
+ * stays put on bottom rubber-band overscroll (elastic overscroll of a non-root scroller is
+ * invisible to anchor positioning and scroll timelines alike). The list beneath it is
+ * occluded by the shared dock clip (`@spiritagent/ui/rendering/dock-clip.css`).
  */
 [data-spirit-surface="marketplace-shell"] {
   anchor-scope: --marketplace-header;

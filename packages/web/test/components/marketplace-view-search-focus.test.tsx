@@ -30,7 +30,7 @@ if (typeof globalThis.IntersectionObserver === "undefined") {
 
 import "./setup";
 
-import { act, render } from "@testing-library/react";
+import { act, fireEvent, render } from "@testing-library/react";
 import { StrictMode } from "react";
 import { describe, expect, test, vi } from "vitest";
 
@@ -139,5 +139,61 @@ describe("MarketplaceView search focus", () => {
     expect(inFlowSlot?.contains(searchInput)).toBe(true);
     expect(scrollArea?.contains(searchInput)).toBe(true);
     expect(getByPlaceholderText("Search extensions")).toBe(searchInput);
+  });
+
+  test("clips the scrolling list under the header without waiting for pin state", async () => {
+    const entry = {
+      id: "built-in/sample",
+      sourceId: "built-in",
+      sourceName: "built-in",
+      name: "sample",
+      displayName: "Sample",
+      description: "Sample description",
+      version: "1.0.0",
+      reviewStatus: "verified" as const,
+      artifactKind: "local" as const,
+      supportedHosts: ["desktop" as const],
+      installed: false,
+      updateAvailable: false,
+    };
+    const snapshot = {
+      marketplaceSources: [
+        {
+          id: "built-in",
+          name: "built-in",
+          displayName: "Built-in",
+          kind: "local" as const,
+          locator: "built-in",
+          internal: true,
+        },
+      ],
+      marketplaceCatalogs: { "built-in": [entry] },
+      marketplaceCatalogAll: [entry],
+    };
+    const { container, getByPlaceholderText, getByRole, getByText } = render(
+      <MarketplaceView {...viewProps} snapshot={snapshot} />,
+    );
+    await flushScheduledFocus();
+
+    const searchInput = getByPlaceholderText("Search extensions");
+    const inFlowSlot = container.querySelector(".spirit-marketplace-header-anchor");
+    const dockClip = container.querySelector<HTMLElement>(".spirit-dock-clip");
+    const scrollArea = container.querySelector<HTMLElement>('[data-slot="scroll-area"]');
+
+    // Never pinned: the clip is in place from the first render, right after the header slot.
+    expect(scrollArea?.style.clipPath).toBe("");
+    expect(dockClip).not.toBeNull();
+    expect(inFlowSlot?.nextElementSibling).toBe(dockClip);
+    expect(dockClip?.childElementCount).toBe(1);
+    expect(dockClip?.contains(searchInput)).toBe(false);
+    expect(dockClip?.contains(getByRole("tablist"))).toBe(true);
+    expect(dockClip?.contains(getByText("Sample"))).toBe(true);
+
+    // Empty states center against the viewport, so they stay outside the clip.
+    fireEvent.change(searchInput, { target: { value: "no such extension" } });
+    const emptyTitle = getByText(/No results/);
+    expect(dockClip?.contains(emptyTitle)).toBe(false);
+    expect(scrollArea?.contains(emptyTitle)).toBe(true);
+    expect(dockClip?.contains(getByRole("tablist"))).toBe(true);
   });
 });

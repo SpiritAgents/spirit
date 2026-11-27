@@ -259,15 +259,16 @@ export function MarketplaceView({
   // A reveal can name an extension no catalog lists (or lists yet); the list stays up until
   // it appears.
   const detailOpen = detailItem !== undefined;
-  // Pin detection via sentinel + IntersectionObserver: the callback runs inside the
-  // rendering steps with the latest (compositor-driven) scroll offset, so the pinned
-  // styling commits in the same frame as the crossing scroll position (same pattern as
-  // the PR changes view). A scroll-event listener would commit one frame late.
+  // Pin detection via sentinel + IntersectionObserver (same pattern as the PR changes view).
+  // The pinned state still commits after the compositor has presented the crossing scroll
+  // position, so nothing that must be right on that frame may depend on it: the list under
+  // the docked search bar is occluded by the pin-state-free dock clip in the markup below.
   const headerPinned = useStickyHeaderPinned(stickySentinelRef, getListScrollViewport, !detailOpen);
 
-  // The occlusion clip applies only once the search bar is pinned: before that, the title
-  // scrolls through the top band and must stay visible. clip-path is compositor-only, so
-  // the pin-moment toggle still takes effect in the same frame (see scroll-top-band-occlusion).
+  // Root band clip for the docked steady state. The dock clip lives inside the scroller and
+  // moves with bottom rubber-band overscroll, which no scroll timeline can observe; this
+  // clip on the ScrollArea root does not, so rows never rise into the header band. It
+  // applies only once pinned: before that, the title scrolls through the top band.
   const { occlusionStyle: headerOcclusionStyle, bandHeight: headerHeight } =
     useScrollTopBandOcclusion(listScrollRoot, headerElement, headerPinned);
 
@@ -275,10 +276,10 @@ export function MarketplaceView({
   // rubber-band elastic overscroll moves it natively on the compositor (Chromium does not
   // propagate non-root elastic_overscroll to external ScrollTimeline or anchor-positioned
   // siblings). Once pinned, atomically move the same DOM host via moveBefore into the
-  // anchor-positioned overlay slot outside the ScrollArea so the occlusion clip-path/mask
-  // clips only the scrolling list while preserving Input focus, IME, and dropdown state;
-  // on fast upward unpin, anchor(top) already tracks the sticky slot on the compositor on
-  // the crossing frame before moveBefore returns the host in-flow.
+  // anchor-positioned overlay slot outside the ScrollArea so it stays docked on bottom
+  // rubber-band and escapes the root band clip, while preserving Input focus, IME, and
+  // dropdown state. Both slots coincide whenever the host moves (anchor(top) tracks the
+  // sticky slot on the compositor), so the handoff itself is never visible.
   useLayoutEffect(() => {
     if (detailOpen || !headerPortalHost) {
       headerPortalHost?.remove();
@@ -296,8 +297,8 @@ export function MarketplaceView({
     };
   }, [headerPortalHost]);
 
-  // clip-path occludes the header band; the alpha-mask fade below it (onboarding-style)
-  // softens content approaching the docked header, animating in on pin transitions.
+  // The alpha-mask fade below the header band (onboarding-style) softens content
+  // approaching the docked header, animating in on pin transitions.
   // Clear the mask immediately when unpinned so the in-flow header is never faded while
   // keeping --list-mask-top-alpha primed at 1 for the next pin fade-in.
   const listScrollRootStyle = useMemo<CSSProperties>(() => {
@@ -660,10 +661,11 @@ export function MarketplaceView({
             scrollHideDelay={450}
             style={listScrollRootStyle}
           >
-            {/* Shares the conversation message list's max width and gutter; the docking search header below uses the same to stay aligned */}
+            {/* Shares the conversation message list's max width and gutter; the docking search header below uses the same to stay aligned.
+                overflow-y-clip keeps the shifted dock clip box from extending the scroll range. */}
             <div
               className={cn(
-                "mx-auto w-full pb-8",
+                "mx-auto w-full overflow-y-clip pb-8",
                 CONVERSATION_GUTTER_X,
                 CONVERSATION_MESSAGE_LIST_MAX_W,
               )}
@@ -700,122 +702,132 @@ export function MarketplaceView({
                 )}
                 style={{ minHeight: headerHeight ?? undefined }}
               />
-              {/* Marketplace domain tabs: below the search box, scroll away with the title.
-                  Keep the existing max-width track, but let focus rings paint beyond it
-                  instead of clipping their leading edge. The row hides when empty. */}
-              {showAll ? (
-                <RovingFocusGroup
-                  asChild
-                  orientation="horizontal"
-                  loop
-                  defaultCurrentTabStopId={resolvedActiveSourceId}
-                >
-                  <div
-                    className="flex items-center gap-1 overflow-x-visible whitespace-nowrap pb-3 pt-6"
-                    role="tablist"
-                    aria-label={t("marketplace.tabsLabel")}
-                  >
-                    {/* The All tab is pinned first and is the page default; it is a
-                      pseudo source, so it carries no per-source context menu. */}
-                    <RovingFocusItem
+              {/* Everything that scrolls beneath the docked search bar. The dock clip pins its
+                  top edge under the header band on the compositor, in the same frame as the
+                  scroll (see `@spiritagent/ui/rendering/dock-clip.css`). */}
+              <div
+                className="spirit-dock-clip"
+                style={{ "--spirit-dock-clip-inset": `${headerHeight ?? 0}px` } as CSSProperties}
+              >
+                <div>
+                  {/* Marketplace domain tabs: below the search box, scroll away with the title.
+                      Keep the existing max-width track, but let focus rings paint beyond it
+                      instead of clipping their leading edge. The row hides when empty. */}
+                  {showAll ? (
+                    <RovingFocusGroup
                       asChild
-                      tabStopId="all"
-                      active={resolvedActiveSourceId === "all"}
+                      orientation="horizontal"
+                      loop
+                      defaultCurrentTabStopId={resolvedActiveSourceId}
                     >
-                      <Toggle
-                        size="sm"
-                        pressed={resolvedActiveSourceId === "all"}
-                        onPressedChange={() => setActiveSourceId("all")}
-                        role="tab"
-                        aria-selected={resolvedActiveSourceId === "all"}
-                        aria-pressed={undefined}
-                        aria-label={t("marketplace.tabAll")}
+                      <div
+                        className="flex items-center gap-1 overflow-x-visible whitespace-nowrap pb-3 pt-6"
+                        role="tablist"
+                        aria-label={t("marketplace.tabsLabel")}
                       >
-                        {t("marketplace.tabAll")}
-                      </Toggle>
-                    </RovingFocusItem>
-                    {visibleSources.map((source) => (
-                      <MarketplaceSourceTab
-                        key={source.id}
-                        source={source}
-                        active={resolvedActiveSourceId === source.id}
-                        onSelect={setActiveSourceId}
-                        onRemove={handleRemoveSource}
-                      />
-                    ))}
-                  </div>
-                </RovingFocusGroup>
-              ) : null}
+                        {/* The All tab is pinned first and is the page default; it is a
+                          pseudo source, so it carries no per-source context menu. */}
+                        <RovingFocusItem
+                          asChild
+                          tabStopId="all"
+                          active={resolvedActiveSourceId === "all"}
+                        >
+                          <Toggle
+                            size="sm"
+                            pressed={resolvedActiveSourceId === "all"}
+                            onPressedChange={() => setActiveSourceId("all")}
+                            role="tab"
+                            aria-selected={resolvedActiveSourceId === "all"}
+                            aria-pressed={undefined}
+                            aria-label={t("marketplace.tabAll")}
+                          >
+                            {t("marketplace.tabAll")}
+                          </Toggle>
+                        </RovingFocusItem>
+                        {visibleSources.map((source) => (
+                          <MarketplaceSourceTab
+                            key={source.id}
+                            source={source}
+                            active={resolvedActiveSourceId === source.id}
+                            onSelect={setActiveSourceId}
+                            onRemove={handleRemoveSource}
+                          />
+                        ))}
+                      </div>
+                    </RovingFocusGroup>
+                  ) : null}
 
-              {listEmpty ? (
-                catalog.length === 0 ? (
-                  // Center the true empty state against the whole marketplace viewport.
-                  <EmptyCard
-                    className="absolute inset-0 flex flex-col items-center justify-center"
-                    icon={<Blocks strokeWidth={1.75} />}
-                    title={t("marketplace.empty")}
-                    description={t("marketplace.emptyDescription")}
-                  />
-                ) : (
-                  <EmptyCard
-                    className="absolute inset-0 flex flex-col items-center justify-center"
-                    icon={<Search strokeWidth={1.75} />}
-                    title={t("marketplace.noMatchesTitle", { query: searchText.trim() })}
-                    description={t("marketplace.noMatchesDescription")}
-                  />
-                )
-              ) : isFiltering ? (
-                // Search flattens to a single list: no sections, and zero
-                // results still surface as the noMatches state above.
-                <RovingFocusGrid asChild>
-                  <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
-                    {filteredExtensions.map(renderExtensionRow)}
-                  </div>
-                </RovingFocusGrid>
-              ) : (
-                <>
-                  {hasSections ? (
-                    // The tab row's pb-3 plus this h-3 lands the first section
-                    // header one section-rhythm gap (24px) below the tab bar,
-                    // matching the breathing room between sections.
-                    <div className="h-3" aria-hidden />
-                  ) : null}
-                  {showFeaturedSection ? (
-                    // mb-6 steps above the page's mb-4 flow-gap rhythm: sections
-                    // read as separate blocks with breathing room between them.
-                    <MarketplaceCatalogSection
-                      ariaLabel={t("marketplace.featured")}
-                      title={t("marketplace.featured")}
-                      items={featuredExtensions}
-                      className="mb-6"
-                      renderRow={renderExtensionRow}
-                    />
-                  ) : null}
-                  {showCategorySections ? (
-                    categorySections.map((section) => {
-                      const sectionTitle = section.category
-                        ? t(`marketplace.categories.${section.category}`)
-                        : t("marketplace.categories.other");
-                      return (
+                  {listEmpty ? null : isFiltering ? (
+                    // Search flattens to a single list: no sections, and zero
+                    // results still surface as the noMatches state below.
+                    <RovingFocusGrid asChild>
+                      <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+                        {filteredExtensions.map(renderExtensionRow)}
+                      </div>
+                    </RovingFocusGrid>
+                  ) : (
+                    <>
+                      {hasSections ? (
+                        // The tab row's pb-3 plus this h-3 lands the first section
+                        // header one section-rhythm gap (24px) below the tab bar,
+                        // matching the breathing room between sections.
+                        <div className="h-3" aria-hidden />
+                      ) : null}
+                      {showFeaturedSection ? (
+                        // mb-6 steps above the page's mb-4 flow-gap rhythm: sections
+                        // read as separate blocks with breathing room between them.
                         <MarketplaceCatalogSection
-                          key={section.category ?? "other"}
-                          ariaLabel={sectionTitle}
-                          title={sectionTitle}
-                          items={section.items}
-                          className="mb-6 last:mb-0"
+                          ariaLabel={t("marketplace.featured")}
+                          title={t("marketplace.featured")}
+                          items={featuredExtensions}
+                          className="mb-6"
                           renderRow={renderExtensionRow}
                         />
-                      );
-                    })
-                  ) : restExtensions.length > 0 ? (
-                    // No category sections at all: the flat list is not
-                    // truncated — with nothing sectioned below it, a long list
-                    // hides nothing.
-                    <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
-                      {restExtensions.map(renderExtensionRow)}
-                    </div>
-                  ) : null}
-                </>
+                      ) : null}
+                      {showCategorySections ? (
+                        categorySections.map((section) => {
+                          const sectionTitle = section.category
+                            ? t(`marketplace.categories.${section.category}`)
+                            : t("marketplace.categories.other");
+                          return (
+                            <MarketplaceCatalogSection
+                              key={section.category ?? "other"}
+                              ariaLabel={sectionTitle}
+                              title={sectionTitle}
+                              items={section.items}
+                              className="mb-6 last:mb-0"
+                              renderRow={renderExtensionRow}
+                            />
+                          );
+                        })
+                      ) : restExtensions.length > 0 ? (
+                        // No category sections at all: the flat list is not
+                        // truncated — with nothing sectioned below it, a long list
+                        // hides nothing.
+                        <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+                          {restExtensions.map(renderExtensionRow)}
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              </div>
+              {/* Empty states stay outside the dock clip, whose content wrapper is a containing
+                  block: they center against the whole marketplace viewport. */}
+              {!listEmpty ? null : catalog.length === 0 ? (
+                <EmptyCard
+                  className="absolute inset-0 flex flex-col items-center justify-center"
+                  icon={<Blocks strokeWidth={1.75} />}
+                  title={t("marketplace.empty")}
+                  description={t("marketplace.emptyDescription")}
+                />
+              ) : (
+                <EmptyCard
+                  className="absolute inset-0 flex flex-col items-center justify-center"
+                  icon={<Search strokeWidth={1.75} />}
+                  title={t("marketplace.noMatchesTitle", { query: searchText.trim() })}
+                  description={t("marketplace.noMatchesDescription")}
+                />
               )}
             </div>
           </ScrollArea>
