@@ -90,9 +90,30 @@ test("optional extension MCP secret templates omit when absent and resolve when 
   assert.equal(
     await resolveExtensionMcpSecretTemplate(
       "Bearer ${extension-secret?:credentials:accessToken}",
+      async () => JSON.stringify({ refreshToken: "refresh-only" }),
+    ),
+    undefined,
+  );
+  assert.equal(
+    await resolveExtensionMcpSecretTemplate(
+      "Bearer ${extension-secret?:credentials:accessToken}",
       async () => JSON.stringify({ accessToken: "private-token" }),
     ),
     "Bearer private-token",
+  );
+  await assert.rejects(
+    resolveExtensionMcpSecretTemplate(
+      "Bearer ${extension-secret:credentials:accessToken}",
+      async () => JSON.stringify({ refreshToken: "refresh-only" }),
+    ),
+    /must be a non-empty string/,
+  );
+  await assert.rejects(
+    resolveExtensionMcpSecretTemplate(
+      "Bearer ${extension-secret?:credentials:accessToken}",
+      async () => JSON.stringify({ accessToken: "" }),
+    ),
+    /must be a non-empty string/,
   );
   await assert.rejects(
     resolveExtensionMcpSecretTemplate(
