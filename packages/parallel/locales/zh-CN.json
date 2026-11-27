@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Parallel",
+    "description": "搜索与抓取。",
+    "keywords": {
+      "search": "搜索",
+      "fetch": "抓取",
+      "research": "研究"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "parallel": {
+      "displayName": "Parallel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Parallel"
+    }
+  },
+  "parallel": {
+    "waiting": "等待浏览器授权",
+    "openAuthorizationPage": "打开 Parallel 授权页面",
+    "connected": "已连接 Parallel",
+    "disconnect": "断开连接"
+  },
+  "common": {
+    "cancel": "取消"
+  }
+}

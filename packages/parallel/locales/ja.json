@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Parallel",
+    "description": "検索と取得。",
+    "keywords": {
+      "search": "検索",
+      "fetch": "取得",
+      "research": "リサーチ"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "parallel": {
+      "displayName": "Parallel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Parallel"
+    }
+  },
+  "parallel": {
+    "waiting": "ブラウザでの認証を待機中",
+    "openAuthorizationPage": "Parallel 認証ページを開く",
+    "connected": "Parallel に接続済み",
+    "disconnect": "切断"
+  },
+  "common": {
+    "cancel": "キャンセル"
+  }
+}

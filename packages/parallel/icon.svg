@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <style>.background{fill:#fff}.label{fill:#111;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:18px;font-weight:600;letter-spacing:-0.01em}@media(prefers-color-scheme:dark){.background{fill:#000}.label{fill:#fff}}</style>
+  <rect class="background" width="100" height="100"/>
+  <text class="label" x="50" y="50" text-anchor="middle" dominant-baseline="central">Parallel</text>
+</svg>

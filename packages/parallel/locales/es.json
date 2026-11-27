@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Parallel",
+    "description": "Buscar y obtener.",
+    "keywords": {
+      "search": "búsqueda",
+      "fetch": "obtener",
+      "research": "investigación"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "parallel": {
+      "displayName": "Parallel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Parallel"
+    }
+  },
+  "parallel": {
+    "waiting": "Esperando la autorización en el navegador",
+    "openAuthorizationPage": "Abrir la página de autorización de Parallel",
+    "connected": "Conectado a Parallel",
+    "disconnect": "Desconectar"
+  },
+  "common": {
+    "cancel": "Cancelar"
+  }
+}

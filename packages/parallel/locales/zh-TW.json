@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Parallel",
+    "description": "搜尋與擷取。",
+    "keywords": {
+      "search": "搜尋",
+      "fetch": "擷取",
+      "research": "研究"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "parallel": {
+      "displayName": "Parallel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Parallel"
+    }
+  },
+  "parallel": {
+    "waiting": "等待瀏覽器授權",
+    "openAuthorizationPage": "開啟 Parallel 授權頁面",
+    "connected": "已連接 Parallel",
+    "disconnect": "中斷連接"
+  },
+  "common": {
+    "cancel": "取消"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "sourceId": "built-in",
+  "name": "parallel",
+  "version": "1.0.0",
+  "defaultLocale": "en",
+  "displayName": { "message": "metadata.displayName" },
+  "description": { "message": "metadata.description" },
+  "icon": ".spirit/icon.svg",
+  "author": {
+    "name": "Spirit",
+    "email": "hi@spirit.dev",
+    "url": "https://spirit.dev"
+  },
+  "homepage": "https://spirit.dev",
+  "category": "development",
+  "keywords": [
+    { "message": "metadata.keywords.search" },
+    { "message": "metadata.keywords.fetch" },
+    { "message": "metadata.keywords.research" }
+  ],
+  "manifest": {
+    "supportedHosts": ["desktop"],
+    "activationEvents": ["onStartup"],
+    "requestedCapabilities": ["secret-storage", "mcp", "desktop-ui"],
+    "secretSlots": ["oauthCredentials"],
+    "contributes": {
+      "mcp": [
+        {
+          "name": "parallel",
+          "displayName": { "message": "mcp.parallel.displayName" },
+          "transport": "http"
+        }
+      ],
+      "authorizations": [
+        {
+          "id": "oauth",
+          "displayName": { "message": "authorization.oauth.displayName" },
+          "action": "authorize",
+          "secretSlots": ["oauthCredentials"]
+        }
+      ],
+      "desktop": {
+        "views": [
+          {
+            "id": "authorize",
+            "path": "ui/authorize.html",
+            "title": { "message": "views.authorize.title" },
+            "width": 448,
+            "chrome": "none"
+          }
+        ]
+      }
+    }
+  }
+}
