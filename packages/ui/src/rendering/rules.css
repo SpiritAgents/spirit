@@ -1,0 +1,33 @@
+/*
+ * Rules: hairline dividers painted by the content they belong to.
+ *
+ * A rule is a pseudo-element of its row or header, so it scrolls, sticks, clips and
+ * rubber-bands with that element on the compositor. Lines that divide scrolling content must
+ * be drawn this way; a line positioned from script in a layer outside the scroller trails
+ * the scroll by a frame and never sees elastic overscroll.
+ *
+ * - `.spirit-row-rules` on a list rules off every child but the last; add
+ *   `data-trailing-rule` to rule off the last child too. Children become positioned.
+ * - `.spirit-rule-b` rules off the bottom edge of one positioned element (a section header).
+ * - `--spirit-rule-inset-start` (inherited) moves the start of the rule, e.g. to begin flush
+ *   against a vertical line that sits just outside the row's own box.
+ */
+.spirit-row-rules > * {
+  position: relative;
+}
+
+.spirit-row-rules > :not(:last-child)::after,
+.spirit-row-rules[data-trailing-rule] > :last-child::after,
+.spirit-rule-b::after {
+  content: "";
+  position: absolute;
+  inset-inline: var(--spirit-rule-inset-start, 0px) 0;
+  bottom: 0;
+  height: 1px;
+  background-color: color-mix(in oklab, var(--border) 35%, transparent);
+  pointer-events: none;
+}
+
+.spirit-rule-b::after {
+  background-color: color-mix(in oklab, var(--border) 40%, transparent);
+}

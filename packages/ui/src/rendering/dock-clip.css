@@ -1,0 +1,68 @@
+/*
+ * Dock clip: occlude scroll content that slides beneath a docked sticky header which paints
+ * no background of its own (the window material must show through it). Such content has to
+ * be clipped rather than covered, and the clip edge has to sit under the header in the very
+ * frame the compositor scrolls. Pin state held on the main thread cannot do that: it lands
+ * at least one painted frame after the scroll that needed it.
+ *
+ * The clip box's own view timeline drives two cancelling translations while it crosses the
+ * dock line: the box moves down 1:1 with the scroll and its single child moves back up. The
+ * content stays exactly where the scroll puts it; only the clip edge stays docked. Both are
+ * transform animations ticked on the compositor from its own scroll offset, the same way
+ * sticky positioning is.
+ *
+ * Contract:
+ * - Markup is `.spirit-dock-clip > one wrapper > content`, placed right after the header.
+ * - The dock line is `--spirit-dock-clip-inset` on the clip box when set, otherwise the scroll
+ *   container's `scroll-padding-top`. Prefer the property where the header itself can take
+ *   focus inside the scroller, or where sections are scrolled into view by their start edge:
+ *   scroll padding would also keep those away from the top edge.
+ * - The shifted clip box reaches past the end of the content, so an ancestor inside the
+ *   scroll container must set `overflow-y: clip` or the scroll range grows with it.
+ * - The content wrapper becomes a containing block for positioned descendants.
+ *
+ * `.spirit-dock-header` is the in-flow header for the common case: sticky at the top edge,
+ * travelling, docking, leaving with its containing block and rubber-banding like any other
+ * scroll content. It only docks where the clip can follow it; without view timelines the
+ * rules do not apply, nothing is clipped and the header simply scrolls away.
+ */
+@supports (animation-timeline: view()) {
+  .spirit-dock-header {
+    position: sticky;
+    top: 0;
+  }
+
+  .spirit-dock-clip {
+    overflow-y: clip;
+    /* The shifted clip box overlaps whatever follows it; only its content is a hit target. */
+    pointer-events: none;
+    view-timeline: --spirit-dock-clip block;
+    /* The compositor floors the clip edge to a device pixel, so the rounding error of the
+       two translations can expose one pixel row above an exact dock line. Rest a hair below
+       it. Unset, the edge is invalid and the inset falls back to `auto`. */
+    --spirit-dock-clip-edge: calc(var(--spirit-dock-clip-inset) + 0.05px);
+    view-timeline-inset: var(--spirit-dock-clip-edge, auto) auto;
+    animation: spirit-dock-clip-box linear both;
+    animation-timeline: --spirit-dock-clip;
+    animation-range: exit-crossing;
+  }
+
+  .spirit-dock-clip > * {
+    pointer-events: auto;
+    animation: spirit-dock-clip-content linear both;
+    animation-timeline: --spirit-dock-clip;
+    animation-range: exit-crossing;
+  }
+}
+
+@keyframes spirit-dock-clip-box {
+  to {
+    translate: 0 100%;
+  }
+}
+
+@keyframes spirit-dock-clip-content {
+  to {
+    translate: 0 -100%;
+  }
+}

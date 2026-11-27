@@ -259,7 +259,9 @@
     "./rendering/markdown-mermaid.css": "./src/rendering/markdown-mermaid.css",
     "./rendering/floating-action-button.css": "./src/rendering/floating-action-button.css",
     "./rendering/tool-call-diff-view.css": "./src/rendering/tool-call-diff-view.css",
-    "./rendering/animated-count.css": "./src/rendering/animated-count.css"
+    "./rendering/animated-count.css": "./src/rendering/animated-count.css",
+    "./rendering/dock-clip.css": "./src/rendering/dock-clip.css",
+    "./rendering/rules.css": "./src/rendering/rules.css"
   },
   "publishConfig": {
     "access": "public"

@@ -10,6 +10,7 @@
 @import "./styles/markdown-code-block.css";
 @import "./styles/floating-action-button.css";
 @import "@spiritagent/ui/rendering/animated-count.css";
+@import "@spiritagent/ui/rendering/dock-clip.css";
 
 @custom-variant motion-reduce (&:is(html.spirit-reduce-motion *));
 
