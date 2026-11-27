@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Exa",
+    "description": "搜尋與擷取。",
+    "keywords": {
+      "search": "搜尋",
+      "fetch": "擷取",
+      "web": "網頁"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "exa": {
+      "displayName": "Exa"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Exa"
+    }
+  },
+  "exa": {
+    "waiting": "等待瀏覽器授權",
+    "openAuthorizationPage": "開啟 Exa 授權頁面",
+    "connected": "已連接 Exa",
+    "disconnect": "中斷連接"
+  },
+  "common": {
+    "cancel": "取消"
+  }
+}

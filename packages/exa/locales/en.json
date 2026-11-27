@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Exa",
+    "description": "Search and fetch.",
+    "keywords": {
+      "search": "search",
+      "fetch": "fetch",
+      "web": "web"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "exa": {
+      "displayName": "Exa"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Exa"
+    }
+  },
+  "exa": {
+    "waiting": "Waiting for browser authorization",
+    "openAuthorizationPage": "Open Exa Authorization Page",
+    "connected": "Connected to Exa",
+    "disconnect": "Disconnect"
+  },
+  "common": {
+    "cancel": "Cancel"
+  }
+}

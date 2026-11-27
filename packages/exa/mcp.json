@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "exa": {
+      "displayName": "Exa",
+      "transport": {
+        "type": "http",
+        "url": "https://mcp.exa.ai/mcp",
+        "headers": {
+          "Authorization": "Bearer ${extension-secret?:oauthCredentials:accessToken}"
+        }
+      }
+    }
+  }
+}
