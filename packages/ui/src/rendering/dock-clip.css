@@ -42,6 +42,11 @@
        it. Unset, the edge is invalid and the inset falls back to `auto`. */
     --spirit-dock-clip-edge: calc(var(--spirit-dock-clip-inset) + 0.05px);
     view-timeline-inset: var(--spirit-dock-clip-edge, auto) auto;
+    /* Keep the compositor rasterizing at native 1:1 scale from the first frame: because
+       these view-timeline translate animations stay active, mounting inside an ancestor
+       with a transient scale animation (e.g. a dialog's enter zoom) otherwise traps the
+       tile raster scale at the initial frame's scale (< 1) and blurs text and icons. */
+    will-change: translate;
     animation: spirit-dock-clip-box linear both;
     animation-timeline: --spirit-dock-clip;
     animation-range: exit-crossing;
@@ -49,6 +54,7 @@
 
   .spirit-dock-clip > * {
     pointer-events: auto;
+    will-change: translate;
     animation: spirit-dock-clip-content linear both;
     animation-timeline: --spirit-dock-clip;
     animation-range: exit-crossing;
