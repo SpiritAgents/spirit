@@ -5,7 +5,7 @@ export function resolveEffectiveEmptySession(input: {
   longConversationListDemoActive: boolean;
   approvalPreviewDemoActive: boolean;
   toolCardPreviewDemoActive: boolean;
-  newChatBusy: boolean;
+  newThreadBusy: boolean;
 }): boolean {
   if (
     input.compactionDemoActive ||
@@ -16,7 +16,7 @@ export function resolveEffectiveEmptySession(input: {
   ) {
     return false;
   }
-  if (input.newChatBusy || input.sessionMessageCount === 0) {
+  if (input.newThreadBusy || input.sessionMessageCount === 0) {
     return true;
   }
   return false;

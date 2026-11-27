@@ -149,7 +149,7 @@ impl TuiShell {
     }
 
     fn push_marketplace_warning(&mut self, warning: &str) {
-        self.messages.push(ChatMessage {
+        self.messages.push(ThreadMessage {
             role: MessageRole::Agent,
             content: warning.to_string(),
             tool_block: None,
@@ -503,7 +503,7 @@ impl TuiShell {
                 self.marketplace
                     .step_stack
                     .retain(|step| *step != MarketplaceFlowStep::UnverifiedConfirm);
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!(
                         "tui.marketplace.installed",
@@ -736,7 +736,7 @@ impl TuiShell {
         self.language_picker_active = false;
         self.approval_picker_active = false;
         self.tui_picker_active = false;
-        self.chat_picker_active = false;
+        self.thread_picker_active = false;
         self.subagent.picker_active = false;
         self.close_subagent_view();
         self.image_picker_active = false;
@@ -754,7 +754,7 @@ impl TuiShell {
 
         if let Err(err) = self.refresh_marketplace_catalog() {
             self.marketplace.error = Some(err.to_string());
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.marketplace.read_failed", err = err).into_owned(),
                 tool_block: None,

@@ -1,4 +1,4 @@
-use crate::view::{ChatMessage, ToolUiPhase};
+use crate::view::{ThreadMessage, ToolUiPhase};
 
 const SUBAGENT_SPINNER_PREFIXES: [&str; 4] = ["| ", "/ ", "- ", "\\ "];
 
@@ -150,7 +150,7 @@ pub fn parse_pending_subagent_status_text(text: &str) -> Option<String> {
     Some(status)
 }
 
-pub fn has_active_subagent_tool_in_messages(messages: &[ChatMessage]) -> bool {
+pub fn has_active_subagent_tool_in_messages(messages: &[ThreadMessage]) -> bool {
     messages.iter().any(|message| {
         message.tool_block.as_ref().is_some_and(|tool| {
             tool.tool_name == "subagent"
@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn active_subagent_tool_hides_standalone_status_surface() {
-        let messages = vec![ChatMessage::with_tool_block(
+        let messages = vec![ThreadMessage::with_tool_block(
             MessageRole::Agent,
             String::new(),
             ToolUiBlock {

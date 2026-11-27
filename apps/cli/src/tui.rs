@@ -13,7 +13,6 @@ use std::{
 use crate::{
     adapters::{DefaultAppPaths, JsonChatRepository, JsonConfigStore},
     ask_questions::AskQuestionsResult,
-    chat_timeline::project_live_chat_from_llm_history,
     host_protocol::{
         CliExtensionCliUiHookEntry, CliExtensionEntry, CliExtensionSkillSlashEntry,
         CliMarketplaceCatalogEntry, CliMarketplaceSource,
@@ -25,7 +24,7 @@ use crate::{
     plan::PlanMetadata,
     ports::{
         AppPaths, AssistantAuxArchiveEntry, AttachChatSessionOutcome, ChatArchive, ChatRepository,
-        ChatSessionListItem, ConfigStore, SubagentSessionArchiveEntry, SubagentSessionSummary,
+        ConfigStore, SubagentSessionArchiveEntry, SubagentSessionSummary, ThreadSessionListItem,
     },
     rewind::{self, ConversationMessageSnapshot, DesktopRewindCheckpointSnapshot},
     rules::RuleEntry,
@@ -37,14 +36,15 @@ use crate::{
     },
     skills::{self, SkillEntry, SkillPreview, SkillRootKind, SkillScope, SkillSource},
     subagent_display::parse_pending_subagent_status_text,
+    thread_timeline::project_live_thread_from_llm_history,
     ui::UiRuntimeState,
     view::{
-        AssistantAuxData, BottomFormKind, ChatMessage, CliUiHookSlot, CliUiHookTokenRole,
-        CliUiHookTokensView, CliUiHookVariant, CliUiHookView, InputSuggestion, InputSuggestionKind,
-        MainInputMode, MarketplaceCatalogItemView, MarketplaceDetailView, MarketplaceFlowStep,
+        AssistantAuxData, BottomFormKind, CliUiHookSlot, CliUiHookTokenRole, CliUiHookTokensView,
+        CliUiHookVariant, CliUiHookView, InputSuggestion, InputSuggestionKind, MainInputMode,
+        MarketplaceCatalogItemView, MarketplaceDetailView, MarketplaceFlowStep,
         MarketplaceSourceTabView, MarketplaceViewModel, MessageRole, PendingAssistantAux,
         PendingSubagentApprovalView, SlashFlowItemView, SlashFlowView, SubagentApprovalInputView,
-        SubagentSessionDetailView, SubagentSessionSummaryView, TuiViewModel,
+        SubagentSessionDetailView, SubagentSessionSummaryView, ThreadMessage, TuiViewModel,
     },
 };
 
@@ -75,7 +75,7 @@ const VIEW_MODEL_MESSAGE_LIMIT: usize = 180;
 
 pub struct TuiShell {
     input: InputState,
-    messages: Vec<ChatMessage>,
+    messages: Vec<ThreadMessage>,
     assistant_aux_by_message: HashMap<usize, AssistantAuxData>,
     persisted_standalone_pending_aux: Option<PendingAssistantAux>,
     persisted_standalone_pending_aux_anchor: Option<usize>,
@@ -102,9 +102,9 @@ pub struct TuiShell {
     approval_picker_index: usize,
     tui_picker_active: bool,
     tui_picker_index: usize,
-    chat_picker_active: bool,
-    chat_picker_index: usize,
-    chat_picker_sessions: Vec<ChatSessionListItem>,
+    thread_picker_active: bool,
+    thread_picker_index: usize,
+    thread_picker_sessions: Vec<ThreadSessionListItem>,
     subagent: SubagentUiState,
     image_picker_active: bool,
     image_picker_index: usize,
@@ -133,7 +133,7 @@ pub struct TuiShell {
     file_reference_index_loading: bool,
     /// Session lifecycle notices (save/load/fork confirmations); re-appended
     /// after a live desktop timeline resync rebuilds the conversation.
-    session_notices: Vec<ChatMessage>,
+    session_notices: Vec<ThreadMessage>,
     inline_mode: bool,
     inline_scrollback: inline::InlineScrollback,
     pending_tui_mode: Option<String>,
@@ -207,9 +207,9 @@ impl TuiShell {
             approval_picker_index: 0,
             tui_picker_active: false,
             tui_picker_index: 0,
-            chat_picker_active: false,
-            chat_picker_index: 0,
-            chat_picker_sessions: vec![],
+            thread_picker_active: false,
+            thread_picker_index: 0,
+            thread_picker_sessions: vec![],
             subagent: SubagentUiState::default(),
             image_picker_active: false,
             image_picker_index: 0,
@@ -450,7 +450,7 @@ impl TuiShell {
     }
 
     pub fn push_agent_message(&mut self, content: impl Into<String>) {
-        self.messages.push(ChatMessage {
+        self.messages.push(ThreadMessage {
             role: MessageRole::Agent,
             content: content.into(),
             tool_block: None,
@@ -565,8 +565,8 @@ impl TuiShell {
         self.tui_picker_active
     }
 
-    pub fn is_chat_picker_active(&self) -> bool {
-        self.chat_picker_active
+    pub fn is_thread_picker_active(&self) -> bool {
+        self.thread_picker_active
     }
 
     pub fn is_image_picker_active(&self) -> bool {
@@ -619,7 +619,7 @@ impl TuiShell {
             Ok(updated) => {
                 locale::apply_ui_locale(&updated);
                 self.runtime.replace_config(updated);
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.language.switch_success", locale_name = locale_name)
                         .into_owned(),
@@ -627,7 +627,7 @@ impl TuiShell {
                 });
             }
             Err(err) => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!(
                         "tui.language.switch_saved_fail",
@@ -641,7 +641,7 @@ impl TuiShell {
         }
     }
 
-    fn save_current_chat(&mut self, path: Option<&str>) {
+    fn save_current_thread(&mut self, path: Option<&str>) {
         match self.export_chat_archive_for_message_count(self.messages.len()) {
             Ok(archive) => match self.chat_repository.save(path, &archive) {
                 Ok(saved_path) => {
@@ -688,7 +688,7 @@ impl TuiShell {
         self.reset_loaded_session_ui_state();
         let mut msgs = Vec::new();
         for (role, content) in &archive.messages {
-            msgs.push(ChatMessage {
+            msgs.push(ThreadMessage {
                 role: if role == "user" {
                     MessageRole::User
                 } else {
@@ -738,10 +738,10 @@ impl TuiShell {
         }
         // Degraded path (explicit): no desktop host has pushed a timeline for
         // this live session, so fall back to projecting llm_history.
-        let projection = project_live_chat_from_llm_history(&live.llm_history);
+        let projection = project_live_thread_from_llm_history(&live.llm_history);
         self.messages = projection.messages;
         self.assistant_aux_by_message = projection.assistant_aux_by_message;
-        self.messages.push(ChatMessage {
+        self.messages.push(ThreadMessage {
             role: MessageRole::Agent,
             content: t!("tui.session.live_timeline_degraded").into_owned(),
             tool_block: None,
@@ -749,7 +749,7 @@ impl TuiShell {
         Ok(())
     }
 
-    fn load_chat_by_path(&mut self, path: &str) {
+    fn load_thread_by_path(&mut self, path: &str) {
         let resolved_path = match session_paths::resolve_chat_file_path(path) {
             Ok(resolved) => resolved,
             Err(err) => {
@@ -830,7 +830,7 @@ impl TuiShell {
 
     fn push_session_notice(&mut self, content: String) {
         const SESSION_NOTICES_CAP: usize = 50;
-        let notice = ChatMessage {
+        let notice = ThreadMessage {
             role: MessageRole::Agent,
             content,
             tool_block: None,
@@ -1042,7 +1042,7 @@ impl TuiShell {
 
         let workspace_root = self.app_paths.workspace_root();
         let runtime_turn = user_turn_text_for_mode(&workspace_root, self.input.mode, trimmed);
-        self.messages.push(ChatMessage {
+        self.messages.push(ThreadMessage {
             role: MessageRole::User,
             content: trimmed.to_string(),
             tool_block: None,
@@ -1172,7 +1172,7 @@ fn apply_generated_session_title_if_allowed(
     Some((trimmed.to_string(), "llm".to_string()))
 }
 
-fn conversation_user_message_count(messages: &[ChatMessage]) -> usize {
+fn conversation_user_message_count(messages: &[ThreadMessage]) -> usize {
     messages
         .iter()
         .filter(|message| message.role == MessageRole::User)
@@ -1243,7 +1243,7 @@ fn next_persisted_standalone_pending_aux_anchor(
 }
 
 fn should_reanchor_persisted_subagent_status_on_begin_assistant_response(
-    last_message: Option<&ChatMessage>,
+    last_message: Option<&ThreadMessage>,
     persisted_standalone_pending_aux: Option<&PendingAssistantAux>,
 ) -> bool {
     last_message.is_some_and(|message| message.role == MessageRole::Agent)
@@ -1427,7 +1427,7 @@ mod tests {
         should_toggle_aux_details_on_exit_rewind_picker, user_turn_text_for_mode,
     };
     use crate::view::{
-        AssistantAuxKind, ChatMessage, MainInputMode, MessageRole, PendingAssistantAux,
+        AssistantAuxKind, MainInputMode, MessageRole, PendingAssistantAux, ThreadMessage,
     };
     use std::path::PathBuf;
 
@@ -1473,9 +1473,9 @@ mod tests {
     #[test]
     fn conversation_user_message_count_ignores_agent_notices() {
         let messages = vec![
-            ChatMessage::new(MessageRole::User, "hello"),
-            ChatMessage::new(MessageRole::Agent, "reply"),
-            ChatMessage::new(MessageRole::Agent, "saved"),
+            ThreadMessage::new(MessageRole::User, "hello"),
+            ThreadMessage::new(MessageRole::Agent, "reply"),
+            ThreadMessage::new(MessageRole::Agent, "saved"),
         ];
         assert_eq!(conversation_user_message_count(&messages), 1);
         assert_eq!(conversation_user_message_count(&[]), 0);
@@ -1561,7 +1561,7 @@ mod tests {
         };
 
         let should_reanchor = should_reanchor_persisted_subagent_status_on_begin_assistant_response(
-            Some(&ChatMessage::new(
+            Some(&ThreadMessage::new(
                 MessageRole::Agent,
                 "previous parent reply",
             )),
@@ -1580,7 +1580,7 @@ mod tests {
         };
 
         let should_reanchor = should_reanchor_persisted_subagent_status_on_begin_assistant_response(
-            Some(&ChatMessage::new(MessageRole::User, "new user input")),
+            Some(&ThreadMessage::new(MessageRole::User, "new user input")),
             Some(&persisted),
         );
 

@@ -943,7 +943,7 @@ export function buildTodoHostToolDefinitions(): JsonValue[] {
   return [
     functionTool(
       "todo_list",
-      "List todos for the current chat session. Returns the same shape as todo_write accepts.",
+      "List todos for the current thread. Returns the same shape as todo_write accepts.",
       {
         type: "object",
         properties: {

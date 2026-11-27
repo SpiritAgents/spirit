@@ -1,13 +1,13 @@
 import { useTranslation } from "react-i18next";
 import { useRef } from "react";
 import { useEditCommandState } from "@/contexts/edit-command-state-context";
-import { useSessionSidebarChrome } from "@/contexts/session-sidebar-chrome-context";
+import { useThreadSidebarChrome } from "@/contexts/thread-sidebar-chrome-context";
 import { editCommandDisabled, type EditCommand } from "@/lib/edit-command-state";
 import { useTheme } from "@/hooks/useTheme";
-import { useSessionSidebarShellRightInsetPx } from "@/hooks/useSessionSidebarShellRightInsetPx";
+import { useThreadSidebarShellRightInsetPx } from "@/hooks/useThreadSidebarShellRightInsetPx";
 import { spiritAgentTitleBarIconSrc } from "@/lib/brand-icon";
 import { siteDocsUrl } from "@/lib/docs-links";
-import { sessionSidebarShellWidth } from "@/lib/desktop-chrome";
+import { threadSidebarShellWidth } from "@/lib/desktop-chrome";
 import { desktopTranslucencyTitleBarTintClass } from "@/lib/desktop-translucency-surface";
 import { cn } from "@/lib/utils";
 import { isViteDev } from "@/lib/vite-dev";
@@ -176,7 +176,7 @@ function TitleBarMenuCluster({
           </MenubarTrigger>
           <MenubarContent>
             <MenubarItem onSelect={() => void window.spiritDesktop?.resetSession()}>
-              {t("titleBar.newChat")}
+              {t("titleBar.newThread")}
               <MenubarShortcut>Ctrl+N</MenubarShortcut>
             </MenubarItem>
             <MenubarSeparator />
@@ -294,11 +294,11 @@ export function DesktopTitleBar({
   onOpenSettings,
 }: DesktopTitleBarProps) {
   const headerRef = useRef<HTMLElement>(null);
-  const { open: sessionSidebarOpen, widthPx: sessionSidebarWidthPx } = useSessionSidebarChrome();
+  const { open: threadSidebarOpen, widthPx: threadSidebarWidthPx } = useThreadSidebarChrome();
   /** Under Blur, the trailing divider is anchored to the sidebar shell's right edge; it moves in sync with collapse/expand. */
   const partialBorder = useTranslucency;
   const solidTrailingTitleBar = useTranslucency && !useContentTranslucency;
-  const sidebarShellRightInsetPx = useSessionSidebarShellRightInsetPx(headerRef, partialBorder);
+  const sidebarShellRightInsetPx = useThreadSidebarShellRightInsetPx(headerRef, partialBorder);
 
   return (
     <header
@@ -332,8 +332,8 @@ export function DesktopTitleBar({
       <div
         className="flex h-full min-h-0 w-fit shrink-0 items-center gap-1 pl-2"
         style={
-          sessionSidebarOpen
-            ? { minWidth: sessionSidebarShellWidth(true, sessionSidebarWidthPx) }
+          threadSidebarOpen
+            ? { minWidth: threadSidebarShellWidth(true, threadSidebarWidthPx) }
             : undefined
         }
       >

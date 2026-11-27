@@ -127,7 +127,7 @@ export function AutomationHistoryTable({ runs, onOpenSession }: AutomationHistor
                       onOpenSession(row.original.sessionPath);
                     }
                   }}
-                  title={t("automations.openChat")}
+                  title={t("automations.openThread")}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell

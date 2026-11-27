@@ -53,7 +53,7 @@ test("focus-ring recipes do not animate box shadows", async () => {
     "ui/src/image-preview-dialog.tsx",
     "web/src/lib/desktop-chrome.ts",
     "web/src/lib/message-turn-actions-ui.ts",
-    "web/src/components/session-sidebar.tsx",
+    "web/src/components/thread-sidebar.tsx",
     "web/src/components/theme-preview-picker.tsx",
   ];
   for (const file of motionFiles) {

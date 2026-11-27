@@ -20,7 +20,7 @@ import {
 } from "@/lib/layout-prefs";
 import { prefersReducedMotion } from "@/lib/reduce-motion";
 
-/** Matches the SessionSidebarShell / legacy right-panel open/close animation */
+/** Matches the ThreadSidebarShell / legacy right-panel open/close animation */
 const WORKSPACE_TOOLS_SHELL_WIDTH_TRANSITION = "width 300ms cubic-bezier(0.22, 1, 0.36, 1)";
 const WORKSPACE_TOOLS_SHELL_WIDTH_TRANSITION_MS = 300;
 
@@ -37,15 +37,15 @@ type WorkspaceToolsChromeActions = {
   openTools(): void;
   enterFullScreen(): void;
   toggleFullScreen(): void;
-  dismissForNewChat(): void;
-  registerNewChatChrome(): () => void;
+  dismissForNewThread(): void;
+  registerNewThreadChrome(): () => void;
 };
 
 const WorkspaceToolsChromeOpenContext = createContext(false);
 const WorkspaceToolsChromeFullScreenContext = createContext(false);
 const WorkspaceToolsChromeFlightContext = createContext<WorkspaceToolsWidthFlight | null>(null);
 const WorkspaceToolsChromeActionsContext = createContext<WorkspaceToolsChromeActions | null>(null);
-const WorkspaceToolsNewChatChromeContext = createContext(false);
+const WorkspaceToolsNewThreadChromeContext = createContext(false);
 
 export type WorkspaceToolsChromeApi = {
   open: boolean;
@@ -54,7 +54,7 @@ export type WorkspaceToolsChromeApi = {
   enterFullScreen(): void;
   toggleFullScreen(): void;
   setOpen: (updater: boolean | ((current: boolean) => boolean)) => void;
-  dismissForNewChat(): void;
+  dismissForNewThread(): void;
 };
 
 export type WorkspaceToolsChromeProviderProps = {
@@ -163,7 +163,7 @@ export function WorkspaceToolsChromeProvider({
   const [fullScreen, setFullScreenState] = useState(readWorkspaceToolsFullScreen);
   const [open, setOpenState] = useState(() => readWorkspaceToolsFullScreen());
   const [flight, setFlight] = useState<WorkspaceToolsWidthFlight | null>(null);
-  const [newChatChromeCount, setNewChatChromeCount] = useState(0);
+  const [newThreadChromeCount, setNewThreadChromeCount] = useState(0);
   const openRef = useRef(open);
   const fullScreenRef = useRef(fullScreen);
   /** Restore snapshot of `open` taken when entering full screen; consumed by any exit path. */
@@ -282,10 +282,10 @@ export function WorkspaceToolsChromeProvider({
     enterFullScreen();
   }, [enterFullScreen, exitFullScreen]);
 
-  const dismissForNewChat = useCallback(() => {
+  const dismissForNewThread = useCallback(() => {
     // A new session is a new space: a full-screen panel collapses instantly (no reverse animation)
     // so the old space's tools do not linger. A docked panel is workspace-level and stays open, so
-    // callers can invoke this on every new-chat path without checking the state first.
+    // callers can invoke this on every new-thread path without checking the state first.
     if (!fullScreenRef.current) {
       return;
     }
@@ -301,9 +301,9 @@ export function WorkspaceToolsChromeProvider({
     writeWorkspaceToolsFullScreen(false);
   }, [updateFullScreen, updateOpen]);
 
-  const registerNewChatChrome = useCallback(() => {
-    setNewChatChromeCount((count) => count + 1);
-    return () => setNewChatChromeCount((count) => count - 1);
+  const registerNewThreadChrome = useCallback(() => {
+    setNewThreadChromeCount((count) => count + 1);
+    return () => setNewThreadChromeCount((count) => count - 1);
   }, []);
 
   const actions = useMemo(
@@ -313,14 +313,14 @@ export function WorkspaceToolsChromeProvider({
       openTools,
       enterFullScreen,
       toggleFullScreen,
-      dismissForNewChat,
-      registerNewChatChrome,
+      dismissForNewThread,
+      registerNewThreadChrome,
     }),
     [
-      dismissForNewChat,
+      dismissForNewThread,
       enterFullScreen,
       openTools,
-      registerNewChatChrome,
+      registerNewThreadChrome,
       setOpen,
       toggle,
       toggleFullScreen,
@@ -336,7 +336,7 @@ export function WorkspaceToolsChromeProvider({
         enterFullScreen,
         toggleFullScreen,
         setOpen,
-        dismissForNewChat,
+        dismissForNewThread,
       };
     }
   }, [
@@ -347,7 +347,7 @@ export function WorkspaceToolsChromeProvider({
     toggle,
     enterFullScreen,
     toggleFullScreen,
-    dismissForNewChat,
+    dismissForNewThread,
   ]);
 
   return (
@@ -355,9 +355,9 @@ export function WorkspaceToolsChromeProvider({
       <WorkspaceToolsChromeOpenContext.Provider value={open}>
         <WorkspaceToolsChromeFullScreenContext.Provider value={fullScreen}>
           <WorkspaceToolsChromeFlightContext.Provider value={flight}>
-            <WorkspaceToolsNewChatChromeContext.Provider value={newChatChromeCount > 0}>
+            <WorkspaceToolsNewThreadChromeContext.Provider value={newThreadChromeCount > 0}>
               {children}
-            </WorkspaceToolsNewChatChromeContext.Provider>
+            </WorkspaceToolsNewThreadChromeContext.Provider>
           </WorkspaceToolsChromeFlightContext.Provider>
         </WorkspaceToolsChromeFullScreenContext.Provider>
       </WorkspaceToolsChromeOpenContext.Provider>
@@ -377,8 +377,8 @@ export function useWorkspaceToolsChromeWidthFlight(): WorkspaceToolsWidthFlight 
   return useContext(WorkspaceToolsChromeFlightContext);
 }
 
-export function useWorkspaceToolsNewChatChrome(): boolean {
-  return useContext(WorkspaceToolsNewChatChromeContext);
+export function useWorkspaceToolsNewThreadChrome(): boolean {
+  return useContext(WorkspaceToolsNewThreadChromeContext);
 }
 
 export function useWorkspaceToolsChromeActions(): WorkspaceToolsChromeActions {
@@ -401,14 +401,20 @@ export function useWorkspaceToolsChrome(): {
   toggle: WorkspaceToolsChromeActions["toggle"];
   openTools: WorkspaceToolsChromeActions["openTools"];
   toggleFullScreen: WorkspaceToolsChromeActions["toggleFullScreen"];
-  dismissForNewChat: WorkspaceToolsChromeActions["dismissForNewChat"];
-  registerNewChatChrome: WorkspaceToolsChromeActions["registerNewChatChrome"];
+  dismissForNewThread: WorkspaceToolsChromeActions["dismissForNewThread"];
+  registerNewThreadChrome: WorkspaceToolsChromeActions["registerNewThreadChrome"];
 } {
   const open = useWorkspaceToolsChromeOpen();
   const fullScreen = useWorkspaceToolsChromeFullScreen();
   const flight = useWorkspaceToolsChromeWidthFlight();
-  const { setOpen, toggle, openTools, toggleFullScreen, dismissForNewChat, registerNewChatChrome } =
-    useWorkspaceToolsChromeActions();
+  const {
+    setOpen,
+    toggle,
+    openTools,
+    toggleFullScreen,
+    dismissForNewThread,
+    registerNewThreadChrome,
+  } = useWorkspaceToolsChromeActions();
   return {
     open,
     fullScreen,
@@ -417,7 +423,7 @@ export function useWorkspaceToolsChrome(): {
     toggle,
     openTools,
     toggleFullScreen,
-    dismissForNewChat,
-    registerNewChatChrome,
+    dismissForNewThread,
+    registerNewThreadChrome,
   };
 }

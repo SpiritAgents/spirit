@@ -3,7 +3,6 @@ pub mod ask_questions;
 mod background_task_display;
 pub mod bedrock_mantle;
 pub mod chat_archive;
-pub mod chat_timeline;
 pub mod cli;
 pub mod cli_bootstrap;
 #[cfg(feature = "tui")]
@@ -48,6 +47,7 @@ pub mod skills;
 pub mod subagent_display;
 #[cfg(test)]
 pub(crate) mod test_support;
+pub mod thread_timeline;
 pub mod tool_ui;
 #[cfg(feature = "tui")]
 pub mod tui;
@@ -74,4 +74,4 @@ pub use headless::run_headless_prompt;
 pub use serve::run_serve;
 #[cfg(feature = "tui")]
 pub use tui::TuiShell;
-pub use view::{ChatMessage, MessageRole, ToolUiBlock, ToolUiPhase, TuiViewModel};
+pub use view::{MessageRole, ThreadMessage, ToolUiBlock, ToolUiPhase, TuiViewModel};

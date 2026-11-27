@@ -33,7 +33,7 @@ use crate::{
     session_paths,
     skills::ActiveSkillPayload,
     tool_ui::approval_decision_from_input,
-    view::{ChatMessage, PendingAssistantAux, PendingSubagentApprovalView},
+    view::{PendingAssistantAux, PendingSubagentApprovalView, ThreadMessage},
 };
 
 use super::client::{DaemonClient, validate_product_build};
@@ -348,7 +348,7 @@ impl DaemonRuntime {
         let result: crate::host_protocol::BridgeDesktopTimelineResult =
             serde_json::from_value(value)?;
         let snapshots =
-            crate::chat_timeline::hydrate_desktop_messages_from_timeline(&result.timeline);
+            crate::thread_timeline::hydrate_desktop_messages_from_timeline(&result.timeline);
         if snapshots.is_empty() {
             return Ok(None);
         }
@@ -430,7 +430,7 @@ impl DaemonRuntime {
         }
         self.sync
             .events
-            .push_back(RuntimeEvent::PushMessage(ChatMessage::new(
+            .push_back(RuntimeEvent::PushMessage(ThreadMessage::new(
                 crate::view::MessageRole::Agent,
                 if fatal {
                     format!("daemon connection failed: {}", summary)
@@ -723,7 +723,7 @@ impl DaemonRuntime {
         if let Err(err) = self.validate_config_change(&config) {
             self.sync
                 .events
-                .push_back(RuntimeEvent::PushMessage(ChatMessage::new(
+                .push_back(RuntimeEvent::PushMessage(ThreadMessage::new(
                     crate::view::MessageRole::Agent,
                     err.to_string(),
                 )));
@@ -1951,11 +1951,11 @@ impl DaemonRuntime {
         let mut desktop_messages = bridge_archive
             .desktop_message_timeline
             .as_deref()
-            .map(crate::chat_timeline::hydrate_desktop_messages_from_timeline);
+            .map(crate::thread_timeline::hydrate_desktop_messages_from_timeline);
         if let Some(snapshots) = desktop_messages.as_ref() {
             let (messages, assistant_aux_by_message) =
                 crate::rewind::restore_conversation(snapshots);
-            let mut projection = crate::chat_timeline::LiveChatProjection {
+            let mut projection = crate::thread_timeline::LiveThreadProjection {
                 messages,
                 assistant_aux_by_message,
             };
@@ -1965,7 +1965,7 @@ impl DaemonRuntime {
                 .and_then(|journal| journal.get("entries"))
                 .and_then(Value::as_array)
             {
-                crate::chat_timeline::append_presentation_events(&mut projection, entries)
+                crate::thread_timeline::append_presentation_events(&mut projection, entries)
                     .map_err(anyhow::Error::msg)?;
             }
             desktop_messages = Some(crate::rewind::conversation_snapshots(
@@ -1974,7 +1974,7 @@ impl DaemonRuntime {
                 None,
             ));
         } else if !bridge_archive.background_task_notifications.is_empty() {
-            let projection = crate::chat_timeline::project_live_chat_with_task_notices(
+            let projection = crate::thread_timeline::project_live_thread_with_task_notices(
                 &bridge_archive.llm_history,
                 &bridge_archive.background_task_notifications,
             );
@@ -2064,7 +2064,7 @@ impl DaemonRuntime {
         }))
     }
 
-    pub fn subagent_live_messages(&self, session_id: &str) -> Vec<ChatMessage> {
+    pub fn subagent_live_messages(&self, session_id: &str) -> Vec<ThreadMessage> {
         self.sync
             .subagent_message_cache
             .get(session_id)

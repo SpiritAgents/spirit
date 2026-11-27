@@ -142,7 +142,7 @@
     "prMarkReadyForReview": "标记为可审查",
     "prMarkingReady": "正在标记…",
     "prMarkReadyFailed": "无法将拉取请求标记为可审查",
-    "addSelectionToChat": "添加到对话"
+    "addSelectionToThread": "添加到线程"
   },
   "github": {
     "connect": "连接 GitHub",

@@ -462,7 +462,10 @@ export function useWorkspaceGroupReorder({
           return;
         }
 
-        if (event.target instanceof Element && event.target.closest("[data-workspace-new-chat]")) {
+        if (
+          event.target instanceof Element &&
+          event.target.closest("[data-workspace-new-thread]")
+        ) {
           return;
         }
 

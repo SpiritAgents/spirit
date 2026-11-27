@@ -64,7 +64,7 @@ export type WorkspacePrDetailViewProps = {
   onOpenExternal: (url: string) => void;
   onMerge?: (method: GitHubPullRequestMergeMethod) => void;
   onMarkReady?: () => void;
-  onPrDiffAddToChat?: (attachment: PrDiffAttachment) => void;
+  onPrDiffAddToThread?: (attachment: PrDiffAttachment) => void;
   className?: string;
 };
 
@@ -139,7 +139,7 @@ export function WorkspacePrDetailView({
   onOpenExternal,
   onMerge,
   onMarkReady,
-  onPrDiffAddToChat,
+  onPrDiffAddToThread,
   className,
 }: WorkspacePrDetailViewProps) {
   const { readPrOverviewPaneRatio, writePrOverviewPaneRatio } = useGitHubLayoutPreferences();
@@ -443,7 +443,7 @@ export function WorkspacePrDetailView({
             hasMore={changesHasMore}
             prUrl={detail.url}
             prStatus={resolvePullRequestChipStatus(detail)}
-            onPrDiffAddToChat={onPrDiffAddToChat}
+            onPrDiffAddToThread={onPrDiffAddToThread}
             onOpenExternal={onOpenExternal}
             className="h-full min-h-0"
           />

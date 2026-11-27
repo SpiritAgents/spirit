@@ -142,7 +142,7 @@
     "prMarkReadyForReview": "Готово к ревью",
     "prMarkingReady": "Отмечаем готовность…",
     "prMarkReadyFailed": "Не удалось отметить запрос на слияние как готовый к ревью",
-    "addSelectionToChat": "Добавить в чат"
+    "addSelectionToThread": "Добавить в тред"
   },
   "github": {
     "connect": "Подключить GitHub",

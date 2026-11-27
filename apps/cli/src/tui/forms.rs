@@ -297,7 +297,7 @@ impl TuiShell {
                             self.complete_ask_questions_form(result);
                         }
                         Err(err) => {
-                            self.messages.push(ChatMessage {
+                            self.messages.push(ThreadMessage {
                                 role: MessageRole::Agent,
                                 content: err,
                                 tool_block: None,
@@ -442,7 +442,7 @@ impl TuiShell {
                     .save_hook_entry(Some(self.workspace_binding.as_str()), &request)
                 {
                     Ok(()) => {
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: t!("tui.hooks.add_saved").into_owned(),
                             tool_block: None,
@@ -450,7 +450,7 @@ impl TuiShell {
                         self.forms.active = None;
                     }
                     Err(err) => {
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: t!("tui.hooks.add_failed", err = err).into_owned(),
                             tool_block: None,
@@ -458,7 +458,7 @@ impl TuiShell {
                     }
                 },
                 Err(err) => {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.hooks.add_failed", err = err).into_owned(),
                         tool_block: None,
@@ -472,7 +472,7 @@ impl TuiShell {
             let parsed = match bottom_form::parse_model_add_connection(form) {
                 Ok(v) => v,
                 Err(err) => {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.model_add.validation_failed", err = err).into_owned(),
                         tool_block: None,
@@ -487,14 +487,14 @@ impl TuiShell {
                 match list_result {
                     Ok(preview) => match self.apply_model_add_bulk(&preview, &parsed) {
                         Ok(msg) => {
-                            self.messages.push(ChatMessage {
+                            self.messages.push(ThreadMessage {
                                 role: MessageRole::Agent,
                                 content: msg,
                                 tool_block: None,
                             });
                         }
                         Err(err) => {
-                            self.messages.push(ChatMessage {
+                            self.messages.push(ThreadMessage {
                                 role: MessageRole::Agent,
                                 content: err,
                                 tool_block: None,
@@ -502,7 +502,7 @@ impl TuiShell {
                         }
                     },
                     Err(err) => {
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: t!("tui.model_add.fetch_failed", err = err).into_owned(),
                             tool_block: None,
@@ -516,14 +516,14 @@ impl TuiShell {
                     .expect("parse_model_add_connection sets name when not bulk");
                 match self.apply_model_add_and_switch(name, &parsed) {
                     Ok(()) => {
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: t!("tui.model_add.saved", name = name).into_owned(),
                             tool_block: None,
                         });
                     }
                     Err(err) => {
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: err,
                             tool_block: None,
@@ -538,7 +538,7 @@ impl TuiShell {
             Ok((server_name, scope, config)) => {
                 match self.runtime.add_mcp_server(scope, &server_name, config) {
                     Ok(path) => {
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: t!(
                                 "tui.bottom_form.added",
@@ -552,7 +552,7 @@ impl TuiShell {
                         self.sync_mcp_status();
                     }
                     Err(err) => {
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: t!("tui.bottom_form.add_failed", err = err).into_owned(),
                             tool_block: None,
@@ -561,7 +561,7 @@ impl TuiShell {
                 }
             }
             Err(err) => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.bottom_form.add_failed", err = err).into_owned(),
                     tool_block: None,
@@ -583,7 +583,7 @@ impl TuiShell {
         match self.runtime.write_rule_state(enabled_overrides) {
             Ok(path) => match self.refresh_rules_from_disk() {
                 Ok(()) => {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.rules.saved", path = path.display()).into_owned(),
                         tool_block: None,
@@ -591,7 +591,7 @@ impl TuiShell {
                     self.forms.active = None;
                 }
                 Err(err) => {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.rules.refresh_failed", err = err).into_owned(),
                         tool_block: None,
@@ -599,7 +599,7 @@ impl TuiShell {
                 }
             },
             Err(err) => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.rules.save_failed", err = err).into_owned(),
                     tool_block: None,
@@ -626,7 +626,7 @@ impl TuiShell {
 
         for (id, enabled) in changed {
             if let Err(err) = self.runtime.set_extension_enabled(&id, enabled) {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.extensions.save_failed", err = err).into_owned(),
                     tool_block: None,
@@ -640,7 +640,7 @@ impl TuiShell {
                 self.forms.active = None;
             }
             Err(err) => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.extensions.refresh_failed", err = err).into_owned(),
                     tool_block: None,
@@ -662,7 +662,7 @@ impl TuiShell {
         match self.runtime.write_skill_state(enabled_overrides) {
             Ok(path) => match self.refresh_skills_from_disk() {
                 Ok(()) => {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.skills.saved", path = path.display()).into_owned(),
                         tool_block: None,
@@ -670,7 +670,7 @@ impl TuiShell {
                     self.forms.active = None;
                 }
                 Err(err) => {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.skills.refresh_failed", err = err).into_owned(),
                         tool_block: None,
@@ -678,7 +678,7 @@ impl TuiShell {
                 }
             },
             Err(err) => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.skills.save_failed", err = err).into_owned(),
                     tool_block: None,
@@ -733,11 +733,11 @@ impl TuiShell {
         self.language_picker_active = false;
         self.approval_picker_active = false;
         self.tui_picker_active = false;
-        self.chat_picker_active = false;
+        self.thread_picker_active = false;
         self.image_picker_active = false;
         self.set_input(String::new());
         self.refresh_suggestions();
-        self.messages.push(ChatMessage {
+        self.messages.push(ThreadMessage {
             role: MessageRole::Agent,
             content: t!("tui.hooks.add_opened").into_owned(),
             tool_block: None,
@@ -750,7 +750,7 @@ impl TuiShell {
         self.language_picker_active = false;
         self.approval_picker_active = false;
         self.tui_picker_active = false;
-        self.chat_picker_active = false;
+        self.thread_picker_active = false;
         self.image_picker_active = false;
         self.set_input(String::new());
         self.refresh_suggestions();
@@ -762,7 +762,7 @@ impl TuiShell {
         self.language_picker_active = false;
         self.approval_picker_active = false;
         self.tui_picker_active = false;
-        self.chat_picker_active = false;
+        self.thread_picker_active = false;
         self.image_picker_active = false;
         self.set_input(String::new());
         self.refresh_suggestions();
@@ -785,7 +785,7 @@ impl TuiShell {
         self.language_picker_active = false;
         self.approval_picker_active = false;
         self.tui_picker_active = false;
-        self.chat_picker_active = false;
+        self.thread_picker_active = false;
         self.image_picker_active = false;
         self.set_input(String::new());
         self.refresh_suggestions();
@@ -824,7 +824,7 @@ impl TuiShell {
         );
         let output = serde_json::to_string_pretty(&result)
             .unwrap_or_else(|_| "{\"status\":\"skipped\"}".to_string());
-        self.messages.push(ChatMessage::with_tool_block(
+        self.messages.push(ThreadMessage::with_tool_block(
             MessageRole::Agent,
             format_tool_ui_message(&request_value, &tool_name, &output),
             build_tool_result_block(
@@ -853,7 +853,7 @@ impl TuiShell {
         self.language_picker_active = false;
         self.approval_picker_active = false;
         self.tui_picker_active = false;
-        self.chat_picker_active = false;
+        self.thread_picker_active = false;
         self.image_picker_active = false;
         self.set_input(String::new());
         self.refresh_suggestions();
@@ -865,7 +865,7 @@ impl TuiShell {
         self.language_picker_active = false;
         self.approval_picker_active = false;
         self.tui_picker_active = false;
-        self.chat_picker_active = false;
+        self.thread_picker_active = false;
         self.image_picker_active = false;
         self.set_input(String::new());
         self.refresh_suggestions();
@@ -877,7 +877,7 @@ impl TuiShell {
         self.language_picker_active = false;
         self.approval_picker_active = false;
         self.tui_picker_active = false;
-        self.chat_picker_active = false;
+        self.thread_picker_active = false;
         self.image_picker_active = false;
         self.set_input(String::new());
         self.refresh_suggestions();
@@ -889,7 +889,7 @@ impl TuiShell {
         self.language_picker_active = false;
         self.approval_picker_active = false;
         self.tui_picker_active = false;
-        self.chat_picker_active = false;
+        self.thread_picker_active = false;
         self.image_picker_active = false;
         self.set_input(String::new());
         self.refresh_suggestions();
@@ -920,7 +920,7 @@ impl TuiShell {
                 }
             }
             (Err(err), _) | (_, Err(err)) => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.prompt_apply_failed", err = err).into_owned(),
                     tool_block: None,

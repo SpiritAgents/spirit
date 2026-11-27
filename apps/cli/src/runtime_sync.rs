@@ -18,7 +18,7 @@ use crate::{
     ports::SubagentSessionSummary,
     session::SessionModel,
     tool_ui::{tool_request_from_host_value, tool_request_from_streaming_preview},
-    view::{ChatMessage, MessageRole, PendingAssistantAux},
+    view::{MessageRole, PendingAssistantAux, ThreadMessage},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -36,7 +36,7 @@ pub(crate) struct RuntimeSyncState {
     pub(crate) pending_assistant_has_output: bool,
     pub(crate) is_busy_cache: bool,
     pub(crate) child_sessions_cache: Vec<SubagentSessionSummary>,
-    pub(crate) subagent_message_cache: HashMap<String, Vec<ChatMessage>>,
+    pub(crate) subagent_message_cache: HashMap<String, Vec<ThreadMessage>>,
     /// A `session.desktopTimelineUpdated` arrived; the TUI applies it once idle.
     pub(crate) desktop_timeline_resync_pending: bool,
     /// Latest `session.titleUpdated` title for this session; TUI takes and applies it.
@@ -112,7 +112,7 @@ impl RuntimeSyncState {
                         match tool_request_from_host_value(approval.request.clone()) {
                             Ok(_) => self.push_subagent_live_message(
                                 session_id,
-                                ChatMessage::with_tool_block(
+                                ThreadMessage::with_tool_block(
                                     MessageRole::Agent,
                                     approval_body.clone(),
                                     tool_approval_block(
@@ -126,7 +126,7 @@ impl RuntimeSyncState {
                             ),
                             Err(err) => self.push_subagent_live_message(
                                 session_id,
-                                ChatMessage::new(
+                                ThreadMessage::new(
                                     MessageRole::Agent,
                                     t!(
                                         "tui.tool.approval_parse_failed",
@@ -139,7 +139,7 @@ impl RuntimeSyncState {
                         }
                     } else {
                         self.events.push_back(RuntimeEvent::PushMessage(
-                            ChatMessage::with_tool_block(
+                            ThreadMessage::with_tool_block(
                                 MessageRole::Agent,
                                 approval_body,
                                 tool_approval_block(
@@ -182,7 +182,7 @@ impl RuntimeSyncState {
                     let summary = summary_preview
                         .unwrap_or_else(|| t!("tui.session.compact_summary_empty").into_owned());
                     self.events
-                        .push_back(RuntimeEvent::PushMessage(ChatMessage::new(
+                        .push_back(RuntimeEvent::PushMessage(ThreadMessage::new(
                             MessageRole::Agent,
                             t!(
                                 "tui.session.compacted",
@@ -229,7 +229,7 @@ impl RuntimeSyncState {
                         ),
                         Err(error) => {
                             self.events
-                                .push_back(RuntimeEvent::PushMessage(ChatMessage::new(
+                                .push_back(RuntimeEvent::PushMessage(ThreadMessage::new(
                                     MessageRole::Agent,
                                     error.to_string(),
                                 )))
@@ -241,7 +241,7 @@ impl RuntimeSyncState {
                 }
                 BridgeRuntimeEvent::BackgroundTaskError { error } => {
                     self.events
-                        .push_back(RuntimeEvent::PushMessage(ChatMessage::new(
+                        .push_back(RuntimeEvent::PushMessage(ThreadMessage::new(
                             MessageRole::Agent,
                             t!("tui.tool.failed", output = error).into_owned(),
                         )));
@@ -264,16 +264,15 @@ impl RuntimeSyncState {
                             .cloned()
                             .map(serde_json::from_value::<TaskOutput>)
                             .transpose();
-                        let output =
-                            match output {
-                                Ok(output) => output.unwrap_or_default(),
-                                Err(error) => {
-                                    self.events.push_back(RuntimeEvent::PushMessage(
-                                        ChatMessage::new(MessageRole::Agent, error.to_string()),
-                                    ));
-                                    continue;
-                                }
-                            };
+                        let output = match output {
+                            Ok(output) => output.unwrap_or_default(),
+                            Err(error) => {
+                                self.events.push_back(RuntimeEvent::PushMessage(
+                                    ThreadMessage::new(MessageRole::Agent, error.to_string()),
+                                ));
+                                continue;
+                            }
+                        };
                         if let Some(id) = task.get("id").and_then(Value::as_str) {
                             self.task_output.insert(id.to_string(), output.clone());
                         }
@@ -285,13 +284,9 @@ impl RuntimeSyncState {
                                 message,
                                 insert: true,
                             }),
-                            Err(error) => {
-                                self.events
-                                    .push_back(RuntimeEvent::PushMessage(ChatMessage::new(
-                                        MessageRole::Agent,
-                                        error,
-                                    )))
-                            }
+                            Err(error) => self.events.push_back(RuntimeEvent::PushMessage(
+                                ThreadMessage::new(MessageRole::Agent, error),
+                            )),
                         }
                         continue;
                     }
@@ -301,7 +296,7 @@ impl RuntimeSyncState {
                     match tool_request_from_host_value(execution.request) {
                         Ok(request) => {
                             self.events.push_back(RuntimeEvent::PushMessage(
-                                ChatMessage::with_tool_block(
+                                ThreadMessage::with_tool_block(
                                     MessageRole::Agent,
                                     if execution.failed {
                                         t!("tui.tool.failed", output = execution.output)
@@ -333,7 +328,7 @@ impl RuntimeSyncState {
                         }
                         Err(err) => {
                             self.events.push_back(RuntimeEvent::PushMessage(
-                                ChatMessage::with_tool_block(
+                                ThreadMessage::with_tool_block(
                                     MessageRole::Agent,
                                     if execution.failed {
                                         t!(
@@ -375,7 +370,7 @@ impl RuntimeSyncState {
 
     pub(crate) fn push_remote_user_turn(&mut self, text: String) {
         self.events
-            .push_back(RuntimeEvent::PushMessage(ChatMessage::new(
+            .push_back(RuntimeEvent::PushMessage(ThreadMessage::new(
                 MessageRole::User,
                 text,
             )));
@@ -392,7 +387,7 @@ impl RuntimeSyncState {
                     self.subagent_message_cache
                         .entry(session_id.to_string())
                         .or_default()
-                        .push(ChatMessage::new(MessageRole::Agent, String::new()));
+                        .push(ThreadMessage::new(MessageRole::Agent, String::new()));
                 }
                 BridgeRuntimeEvent::AssistantChunk { text } => {
                     let cache = self
@@ -405,7 +400,7 @@ impl RuntimeSyncState {
                             continue;
                         }
                     }
-                    cache.push(ChatMessage::new(MessageRole::Agent, text));
+                    cache.push(ThreadMessage::new(MessageRole::Agent, text));
                 }
                 BridgeRuntimeEvent::ReplacePendingAssistant { text } => {
                     let cache = self
@@ -418,7 +413,7 @@ impl RuntimeSyncState {
                             continue;
                         }
                     }
-                    cache.push(ChatMessage::new(MessageRole::Agent, text));
+                    cache.push(ThreadMessage::new(MessageRole::Agent, text));
                 }
                 _ => {}
             }
@@ -478,7 +473,7 @@ impl RuntimeSyncState {
         self.is_busy_cache = snapshot.is_busy;
     }
 
-    pub(crate) fn push_subagent_live_message(&mut self, session_id: &str, message: ChatMessage) {
+    pub(crate) fn push_subagent_live_message(&mut self, session_id: &str, message: ThreadMessage) {
         self.subagent_message_cache
             .entry(session_id.to_string())
             .or_default()
@@ -510,7 +505,7 @@ impl RuntimeSyncState {
                 message,
             } => {
                 self.events
-                    .push_back(RuntimeEvent::PushMessage(ChatMessage::new(
+                    .push_back(RuntimeEvent::PushMessage(ThreadMessage::new(
                         MessageRole::Agent,
                         message,
                     )));
@@ -531,7 +526,7 @@ impl RuntimeSyncState {
         match tool_request_from_host_value(request) {
             Ok(request) => {
                 self.events
-                    .push_back(RuntimeEvent::PushMessage(ChatMessage::with_tool_block(
+                    .push_back(RuntimeEvent::PushMessage(ThreadMessage::with_tool_block(
                         MessageRole::Agent,
                         if failed {
                             t!("tui.tool.failed", output = output).into_owned()
@@ -552,7 +547,7 @@ impl RuntimeSyncState {
             }
             Err(err) => {
                 self.events
-                    .push_back(RuntimeEvent::PushMessage(ChatMessage::new(
+                    .push_back(RuntimeEvent::PushMessage(ThreadMessage::new(
                         MessageRole::Agent,
                         if failed {
                             t!("tui.tool.failed_request_parse", output = output).into_owned()
@@ -586,7 +581,7 @@ impl RuntimeSyncState {
             }),
             Err(error) => self
                 .events
-                .push_back(RuntimeEvent::PushMessage(ChatMessage::new(
+                .push_back(RuntimeEvent::PushMessage(ThreadMessage::new(
                     MessageRole::Agent,
                     error,
                 ))),
@@ -598,7 +593,7 @@ impl RuntimeSyncState {
             && let Ok(request) = tool_request_from_host_value(request)
         {
             self.events
-                .push_back(RuntimeEvent::PushMessage(ChatMessage::with_tool_block(
+                .push_back(RuntimeEvent::PushMessage(ThreadMessage::with_tool_block(
                     MessageRole::Agent,
                     t!("tui.tool.failed", output = error).into_owned(),
                     tool_failed_block(&request.name, None, &t!("tui.tool.failed_headline"), error),
@@ -607,7 +602,7 @@ impl RuntimeSyncState {
         }
 
         self.events
-            .push_back(RuntimeEvent::PushMessage(ChatMessage::new(
+            .push_back(RuntimeEvent::PushMessage(ThreadMessage::new(
                 MessageRole::Agent,
                 t!("tui.tool.failed", output = error).into_owned(),
             )));

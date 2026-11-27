@@ -155,7 +155,7 @@ async function start() {
                   prRevealEnabled={Boolean(reveal)}
                   prRevealNonce={reveal ? (context.navigationRevision ?? 0) + 1 : 0}
                   prRevealRequest={reveal}
-                  onPrDiffAddToChat={(attachment) => {
+                  onPrDiffAddToThread={(attachment) => {
                     void page.addAttachment({ kind: "prDiff", ...attachment }).catch(reportError);
                   }}
                   onTitleChange={(title) =>

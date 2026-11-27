@@ -297,7 +297,7 @@ export function ShellToolXtermOutput({
     writtenDisplayRef.current = nextDisplay;
   }, [text]);
 
-  const quoteMenuEnabled = Boolean(quoteActions?.onMessageQuoteAddToChat);
+  const quoteMenuEnabled = Boolean(quoteActions?.onMessageQuoteAddToThread);
   const {
     open: quoteMenuOpen,
     setOpen: setQuoteMenuOpen,
@@ -348,8 +348,8 @@ export function ShellToolXtermOutput({
             <TextSelectionActionMenuSegmentedItems
               segments={[
                 {
-                  label: t("workspace.addSelectionToChat"),
-                  onSelect: () => confirmQuoteSelection(quoteActions.onMessageQuoteAddToChat),
+                  label: t("workspace.addSelectionToThread"),
+                  onSelect: () => confirmQuoteSelection(quoteActions.onMessageQuoteAddToThread),
                 },
                 {
                   label: t("workspace.addSelectionToSideChat"),
@@ -359,8 +359,8 @@ export function ShellToolXtermOutput({
             />
           ) : (
             <TextSelectionActionMenuItem
-              label={t("workspace.addSelectionToChat")}
-              onSelect={() => confirmQuoteSelection(quoteActions?.onMessageQuoteAddToChat)}
+              label={t("workspace.addSelectionToThread")}
+              onSelect={() => confirmQuoteSelection(quoteActions?.onMessageQuoteAddToThread)}
             />
           )}
         </TextSelectionActionMenu>

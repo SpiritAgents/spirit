@@ -12,20 +12,20 @@ import type { GitCommitRecord } from "@/types";
 export type WorkspaceGitCommitContextMenuContentProps = {
   commit: GitCommitRecord | null;
   commitRef: RefObject<GitCommitRecord | null>;
-  onAddToChat?: (commit: GitCommitRecord) => void;
-  addToChatDisabled?: boolean;
+  onAddToThread?: (commit: GitCommitRecord) => void;
+  addToThreadDisabled?: boolean;
 };
 
-/** Content of the panel-level single ContextMenu (aligned with the session-sidebar list capture pattern). */
+/** Content of the panel-level single ContextMenu (aligned with the thread-sidebar list capture pattern). */
 export function WorkspaceGitCommitContextMenuContent({
   commit,
   commitRef,
-  onAddToChat,
-  addToChatDisabled = false,
+  onAddToThread,
+  addToThreadDisabled = false,
 }: WorkspaceGitCommitContextMenuContentProps) {
   const { t } = useTranslation();
 
-  if (!onAddToChat) {
+  if (!onAddToThread) {
     return null;
   }
 
@@ -34,15 +34,15 @@ export function WorkspaceGitCommitContextMenuContent({
       section: "session",
       item: (
         <ContextMenuItem
-          disabled={addToChatDisabled}
+          disabled={addToThreadDisabled}
           onSelect={() => {
             const resolved = commitRef.current ?? commit;
             if (resolved) {
-              onAddToChat(resolved);
+              onAddToThread(resolved);
             }
           }}
         >
-          {t("workspace.addCommitToChat")}
+          {t("workspace.addCommitToThread")}
         </ContextMenuItem>
       ),
     },

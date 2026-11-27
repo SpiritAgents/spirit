@@ -142,7 +142,7 @@
     "prMarkReadyForReview": "Bereit zur Überprüfung",
     "prMarkingReady": "Markiere als bereit…",
     "prMarkReadyFailed": "Markieren des Pull Requests als bereit fehlgeschlagen",
-    "addSelectionToChat": "Zum Chat hinzufügen"
+    "addSelectionToThread": "Zum Thread hinzufügen"
   },
   "github": {
     "connect": "GitHub verbinden",

@@ -122,7 +122,7 @@ export function MessageTurnActions({
                   }}
                 >
                   <GitFork className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
-                  <span>{t("app.forkChat")}</span>
+                  <span>{t("app.forkThread")}</span>
                 </DropdownMenuItem>
               ) : null}
             </div>

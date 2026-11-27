@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { SessionSidebarChromeProvider } from "@/contexts/session-sidebar-chrome-context";
+import { ThreadSidebarChromeProvider } from "@/contexts/thread-sidebar-chrome-context";
 import { useWorkspaceToolsChromeActions } from "@/contexts/workspace-tools-chrome-context";
 import { ActionPickerDialog } from "@/components/action-picker-dialog";
 import { ExtensionViewHost } from "@/components/extension-view-host";
@@ -20,8 +20,8 @@ import { DesktopLayoutChromeBar } from "@/components/layout/desktop-layout-chrom
 import { LaunchSplash } from "@/components/launch-splash";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { MarketplaceView } from "@/components/marketplace-view";
-import { SessionSidebar } from "@/components/session-sidebar";
-import { SessionSidebarShell } from "@/components/session-sidebar-shell";
+import { ThreadSidebar } from "@/components/thread-sidebar";
+import { ThreadSidebarShell } from "@/components/thread-sidebar-shell";
 import { SettingsView } from "@/components/settings-view";
 import { TaskInstanceLimitDialog } from "@/components/task-instance-limit-dialog";
 import { WebHostPairingGate } from "@/components/web-host-pairing-gate";
@@ -129,7 +129,7 @@ export default function App() {
   const sessionMessages = snapshot?.conversation.messages ?? [];
   const sessionNavigationBusy = runtime.busyAction === "session";
   const sessionMutationBusy = runtime.busyAction === "session-mutation";
-  const newChatBusy = runtime.busyAction === "reset";
+  const newThreadBusy = runtime.busyAction === "reset";
   const conversationNavigationPending = sessionNavigationBusy || runtime.layoutNavigationPending;
   const activeFilePath =
     runtime.hostKind === "web"
@@ -174,30 +174,31 @@ export default function App() {
     longConversationListDemoActive: longConversationListDemo.active,
     approvalPreviewDemoActive: approvalPreviewDemo.active,
     toolCardPreviewDemoActive: toolCardPreviewDemo.active,
-    newChatBusy,
+    newThreadBusy,
     t,
     composerAutomationApiRef,
   });
 
-  const { dismissForNewChat: dismissWorkspaceToolsForNewChat } = useWorkspaceToolsChromeActions();
-  const surfaceHandleNewChat = surfaceNav.handleNewChat;
-  const surfaceHandleNewChatInWorkspace = surfaceNav.handleNewChatInWorkspace;
+  const { dismissForNewThread: dismissWorkspaceToolsForNewThread } =
+    useWorkspaceToolsChromeActions();
+  const surfaceHandleNewThread = surfaceNav.handleNewThread;
+  const surfaceHandleNewThreadInWorkspace = surfaceNav.handleNewThreadInWorkspace;
   const beginSessionNavigation = surfaceNav.beginSessionNavigation;
   const saveSettingsPatch = runtime.saveSettingsPatch;
   const setSelectedAutomationId = surfaceNav.setSelectedAutomationId;
   const setActiveSurface = surfaceNav.setActiveSurface;
-  // Every new-chat path (chrome bar, sidebar, keyboard shortcut, app menu) funnels through
-  // these wrappers so a full-screen tools panel never lingers into the new chat's space.
-  const handleNewChat = useCallback(() => {
-    dismissWorkspaceToolsForNewChat();
-    surfaceHandleNewChat();
-  }, [dismissWorkspaceToolsForNewChat, surfaceHandleNewChat]);
-  const handleNewChatInWorkspace = useCallback(
+  // Every new-thread path (chrome bar, sidebar, keyboard shortcut, app menu) funnels through
+  // these wrappers so a full-screen tools panel never lingers into the new thread's space.
+  const handleNewThread = useCallback(() => {
+    dismissWorkspaceToolsForNewThread();
+    surfaceHandleNewThread();
+  }, [dismissWorkspaceToolsForNewThread, surfaceHandleNewThread]);
+  const handleNewThreadInWorkspace = useCallback(
     (workspaceRoot: string) => {
-      dismissWorkspaceToolsForNewChat();
-      void surfaceHandleNewChatInWorkspace(workspaceRoot);
+      dismissWorkspaceToolsForNewThread();
+      void surfaceHandleNewThreadInWorkspace(workspaceRoot);
     },
-    [dismissWorkspaceToolsForNewChat, surfaceHandleNewChatInWorkspace],
+    [dismissWorkspaceToolsForNewThread, surfaceHandleNewThreadInWorkspace],
   );
 
   const conversation = useConversationViewState({
@@ -256,7 +257,7 @@ export default function App() {
     pendingApproval: conversation.pendingApproval,
     pendingQuestions: conversation.pendingQuestions,
     conversationInterruptible: conversation.conversationInterruptible,
-    handleNewChat,
+    handleNewThread,
     setActiveSurface: surfaceNav.setActiveSurface,
     setLastNonSettingsSurface: surfaceNav.setLastNonSettingsSurface,
     onBeginSideChat: () => {
@@ -285,8 +286,8 @@ export default function App() {
     conversationAbortShortcutEligibleRef: conversation.conversationAbortShortcutEligibleRef,
     conversationAbortShortcutTargetRef,
     moveBackgroundShortcutTargetRef,
-    sessionSidebarChromeApiRef: surfaceNav.sessionSidebarChromeApiRef,
-    handleNewChat,
+    threadSidebarChromeApiRef: surfaceNav.threadSidebarChromeApiRef,
+    handleNewThread,
     handleSelectSession,
     handleOpenSettings: surfaceNav.handleOpenSettings,
     handleCloseSettings: surfaceNav.handleCloseSettings,
@@ -374,7 +375,7 @@ export default function App() {
     snapshot != null &&
     !sessionNavigationBusy &&
     !runtime.layoutNavigationPending &&
-    !newChatBusy &&
+    !newThreadBusy &&
     !shellUnderlayHidden;
   const focusComposerEnabled = conversationSurfaceActive && focusComposerReady;
 
@@ -467,7 +468,7 @@ export default function App() {
           fetchLinkPreview={runtime.fetchLinkPreview}
         >
           <EditCommandStateProvider>
-            <SessionSidebarChromeProvider apiRef={surfaceNav.sessionSidebarChromeApiRef}>
+            <ThreadSidebarChromeProvider apiRef={surfaceNav.threadSidebarChromeApiRef}>
               <div
                 data-spirit-surface="desktop-chrome-root"
                 className="flex h-full min-h-0 flex-col text-foreground"
@@ -576,26 +577,26 @@ export default function App() {
                               <ConversationTypingFocusRedirectBridge
                                 enabled={focusComposerEnabled}
                               />
-                              <SessionSidebarShell
+                              <ThreadSidebarShell
                                 useTranslucency={useTranslucency}
                                 useContentTranslucency={useContentTranslucency}
                               >
-                                <SessionSidebar
+                                <ThreadSidebar
                                   narrow={false}
                                   mode={surfaceNav.settingsMode ? "settings" : "sessions"}
                                   userHomeDirectory={snapshot?.userHomeDirectory ?? null}
                                   sessions={runtime.sessions}
                                   activeFilePath={sidebarActiveFilePath}
-                                  onNewChat={handleNewChat}
-                                  onNewChatInWorkspace={handleNewChatInWorkspace}
+                                  onNewThread={handleNewThread}
+                                  onNewThreadInWorkspace={handleNewThreadInWorkspace}
                                   onSelectSession={handleSelectSession}
                                   onOpenMarketplace={() => {
-                                    surfaceNav.sessionSidebarChromeApiRef.current?.openSidebar();
+                                    surfaceNav.threadSidebarChromeApiRef.current?.openSidebar();
                                     surfaceNav.setLastNonSettingsSurface("marketplace");
                                     surfaceNav.setActiveSurface("marketplace");
                                   }}
                                   onOpenAutomations={() => {
-                                    surfaceNav.sessionSidebarChromeApiRef.current?.openSidebar();
+                                    surfaceNav.threadSidebarChromeApiRef.current?.openSidebar();
                                     surfaceNav.setLastNonSettingsSurface("automations");
                                     surfaceNav.setSelectedAutomationId(null);
                                     surfaceNav.setActiveSurface("automations");
@@ -615,7 +616,7 @@ export default function App() {
                                     surfaceNav.setExtensionSettingsId(id)
                                   }
                                   translucency={useTranslucency}
-                                  newChatBusy={newChatBusy}
+                                  newThreadBusy={newThreadBusy}
                                   deleteSessionBusy={sessionMutationBusy}
                                   onDeleteSession={(path) => runtime.deleteSession(path)}
                                   renameSessionBusy={sessionMutationBusy}
@@ -631,7 +632,7 @@ export default function App() {
                                   }
                                   unseenCompletedSessionPaths={runtime.unseenCompletedSessionPaths}
                                 />
-                              </SessionSidebarShell>
+                              </ThreadSidebarShell>
 
                               {surfaceNav.settingsMode ? (
                                 <div
@@ -893,8 +894,8 @@ export default function App() {
                                             paneId={pane.paneId}
                                             isFocused={pane.isFocused}
                                             isAnchorPane={pane.isAnchorPane}
-                                            isSessionSidebarAnchorPane={
-                                              pane.isSessionSidebarAnchorPane
+                                            isThreadSidebarAnchorPane={
+                                              pane.isThreadSidebarAnchorPane
                                             }
                                             useIsolatedPane={pane.useIsolatedPane}
                                             splitPaneCount={pane.splitPaneCount}
@@ -919,8 +920,8 @@ export default function App() {
                                             longConversationListDemo={longConversationListDemo}
                                             approvalPreviewDemo={approvalPreviewDemo}
                                             toolCardPreviewDemo={toolCardPreviewDemo}
-                                            newChatBusy={newChatBusy}
-                                            onNewChat={handleNewChat}
+                                            newThreadBusy={newThreadBusy}
+                                            onNewThread={handleNewThread}
                                             deleteSessionBusy={sessionMutationBusy}
                                             onDeleteSession={(path) => runtime.deleteSession(path)}
                                             renameSessionBusy={sessionMutationBusy}
@@ -1028,7 +1029,7 @@ export default function App() {
                   </div>
                 </div>
               </div>
-            </SessionSidebarChromeProvider>
+            </ThreadSidebarChromeProvider>
           </EditCommandStateProvider>
         </WorkspaceMarkdownLinkProvider>
       </WorkspaceFileIconProvider>

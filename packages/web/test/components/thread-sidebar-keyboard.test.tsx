@@ -13,7 +13,7 @@ import "./setup";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 
-import { SessionSidebar } from "@/components/session-sidebar";
+import { ThreadSidebar } from "@/components/thread-sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { SessionListItem } from "@/types";
 
@@ -26,7 +26,7 @@ const noop = () => {};
 function makeSessions(count: number): SessionListItem[] {
   return Array.from({ length: count }, (_, index) => ({
     path: `/workspace/chat-${index}.jsonl`,
-    displayName: `Chat ${index}`,
+    displayName: `Thread ${index}`,
     modifiedAtUnixMs: count - index,
     workspaceRoot: "/workspace",
     gitBranch: "main",
@@ -37,14 +37,14 @@ function makeSessions(count: number): SessionListItem[] {
 function renderSidebar(sessions: SessionListItem[]) {
   return render(
     <TooltipProvider delayDuration={0}>
-      <SessionSidebar
+      <ThreadSidebar
         narrow={false}
         sessions={sessions}
         activeFilePath={sessions[0]?.path ?? null}
         userHomeDirectory="/home/user"
         onSelectSession={noop}
-        onNewChat={noop}
-        onNewChatInWorkspace={noop}
+        onNewThread={noop}
+        onNewThreadInWorkspace={noop}
         onOpenMarketplace={noop}
         onOpenAutomations={noop}
         onOpenSettings={noop}
@@ -66,16 +66,16 @@ test("workspace and session rows keep their inline actions reachable with full i
   const workspaceGroup = workspace.closest("[data-workspace-group-id]") as HTMLElement;
   const workspaceRow = workspace.parentElement as HTMLElement;
   const group = workspaceGroup.parentElement as HTMLElement;
-  const plus = screen.getByRole("button", { name: "New Chat in workspace" });
-  const chat0 = screen.getByRole("button", { name: "Chat 0" });
-  const chat1 = screen.getByRole("button", { name: "Chat 1" });
-  const chat0Row = chat0.closest("[data-session-path]") as HTMLElement;
-  const chat1Row = chat1.closest("[data-session-path]") as HTMLElement;
-  const chat0Pin = within(chat0Row).getByRole("button", { name: "Pin" });
-  const chat1Pin = within(chat1Row).getByRole("button", { name: "Pin" });
+  const plus = screen.getByRole("button", { name: "New Thread in workspace" });
+  const thread0 = screen.getByRole("button", { name: "Thread 0" });
+  const thread1 = screen.getByRole("button", { name: "Thread 1" });
+  const thread0Row = thread0.closest("[data-session-path]") as HTMLElement;
+  const thread1Row = thread1.closest("[data-session-path]") as HTMLElement;
+  const thread0Pin = within(thread0Row).getByRole("button", { name: "Pin" });
+  const thread1Pin = within(thread1Row).getByRole("button", { name: "Pin" });
 
   act(() => group.focus());
-  expect(document.activeElement).toBe(chat0);
+  expect(document.activeElement).toBe(thread0);
   act(() => workspace.focus());
   expect(plus.tabIndex).toBe(0);
   expect(plus.className).not.toContain("hidden");
@@ -87,7 +87,7 @@ test("workspace and session rows keep their inline actions reachable with full i
   expect(workspace.className).not.toContain("focus-visible:ring");
   expect(workspaceRow.className).toContain("rounded-md");
   expect(workspaceRow.className).toContain("[data-sidebar-row-primary]:focus-visible");
-  expect(chat0Row.className).toContain("[data-sidebar-row-primary]:focus-visible");
+  expect(thread0Row.className).toContain("[data-sidebar-row-primary]:focus-visible");
 
   fireEvent.keyDown(workspace, { key: "ArrowDown" });
   await act(async () => {
@@ -95,32 +95,32 @@ test("workspace and session rows keep their inline actions reachable with full i
       setTimeout(resolve, 0);
     });
   });
-  expect(document.activeElement).toBe(chat0);
-  expect(chat0Pin.tabIndex).toBe(0);
-  expect(chat1Pin.tabIndex).toBe(-1);
-  expect(chat0Pin.className).toContain("invisible");
-  expect(chat0Pin.className).toContain("group-focus-within:visible");
-  expect(chat0Pin.className).not.toContain("opacity-0");
-  expect(chat0Pin.className).not.toContain("opacity-100");
-  expect(chat0Pin.className).toContain("ring-inset");
+  expect(document.activeElement).toBe(thread0);
+  expect(thread0Pin.tabIndex).toBe(0);
+  expect(thread1Pin.tabIndex).toBe(-1);
+  expect(thread0Pin.className).toContain("invisible");
+  expect(thread0Pin.className).toContain("group-focus-within:visible");
+  expect(thread0Pin.className).not.toContain("opacity-0");
+  expect(thread0Pin.className).not.toContain("opacity-100");
+  expect(thread0Pin.className).toContain("ring-inset");
 
-  fireEvent.keyDown(chat0, { key: "ArrowDown" });
+  fireEvent.keyDown(thread0, { key: "ArrowDown" });
   await act(async () => {
     await new Promise<void>((resolve) => {
       setTimeout(resolve, 0);
     });
   });
-  expect(document.activeElement).toBe(chat1);
-  expect(chat0Pin.tabIndex).toBe(-1);
-  expect(chat1Pin.tabIndex).toBe(0);
+  expect(document.activeElement).toBe(thread1);
+  expect(thread0Pin.tabIndex).toBe(-1);
+  expect(thread1Pin.tabIndex).toBe(0);
   expect(screen.getByRole("button", { name: "See more" }).className).toContain("ring-inset");
 });
 
 test("session details open from keyboard focus", async () => {
   renderSidebar(makeSessions(2));
-  const chat0 = screen.getByRole("button", { name: "Chat 0" });
+  const thread0 = screen.getByRole("button", { name: "Thread 0" });
   fireEvent.keyDown(document.body, { key: "Tab" });
-  act(() => chat0.focus());
+  act(() => thread0.focus());
   await act(async () => {
     await new Promise<void>((resolve) => {
       setTimeout(resolve, 350);
@@ -133,14 +133,14 @@ test("settings navigation stays in the normal Tab order and ignores arrow naviga
   const onSettingsTabChange = vi.fn();
   render(
     <TooltipProvider delayDuration={0}>
-      <SessionSidebar
+      <ThreadSidebar
         narrow={false}
         mode="settings"
         sessions={[]}
         activeFilePath={null}
         settingsTab="models"
         onSelectSession={noop}
-        onNewChat={noop}
+        onNewThread={noop}
         onOpenSettings={noop}
         onSettingsTabChange={onSettingsTabChange}
       />

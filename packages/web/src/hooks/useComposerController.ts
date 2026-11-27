@@ -55,7 +55,7 @@ import {
 import {
   isAppearanceMenuAction,
   isLocaleOptionAction,
-  isNewChatAction,
+  isNewThreadAction,
   isTaskMenuAction,
   isTaskOptionAction,
   isThemeOptionAction,
@@ -112,7 +112,7 @@ export type UseComposerControllerOptions = {
   pendingApproval: DesktopSnapshot["conversation"]["pendingToolApproval"];
   pendingQuestions: ReturnType<typeof useDesktopRuntime>["pendingQuestions"];
   conversationInterruptible: boolean;
-  handleNewChat: () => void;
+  handleNewThread: () => void;
   setActiveSurface: (
     surface: "conversation" | "settings" | "marketplace" | "automations" | "automation-detail",
   ) => void;
@@ -136,7 +136,7 @@ export function useComposerController({
   pendingApproval,
   pendingQuestions,
   conversationInterruptible,
-  handleNewChat,
+  handleNewThread,
   setActiveSurface,
   setLastNonSettingsSurface,
   paneSessionPath,
@@ -830,7 +830,7 @@ export function useComposerController({
       if (!runtime.busyAction) {
         return false;
       }
-      if (isNewChatAction(item)) {
+      if (isNewThreadAction(item)) {
         return true;
       }
       return (
@@ -855,8 +855,8 @@ export function useComposerController({
         return;
       }
       ensureConversationSurface();
-      if (isNewChatAction(item)) {
-        handleNewChat();
+      if (isNewThreadAction(item)) {
+        handleNewThread();
         return;
       }
       if (item.kind === "loop") {
@@ -898,7 +898,7 @@ export function useComposerController({
       applySideChatSlash,
       applySlashSuggestion,
       ensureConversationSurface,
-      handleNewChat,
+      handleNewThread,
       runtime,
     ],
   );
@@ -1053,12 +1053,12 @@ export function useComposerController({
     [attachLocalFilePath],
   );
 
-  const handlePrDiffAddToChat = useCallback((attachment: PrDiffAttachment) => {
+  const handlePrDiffAddToThread = useCallback((attachment: PrDiffAttachment) => {
     composerRichInputRef.current?.insertPrDiffAttachment(attachment);
     composerRichInputRef.current?.focus();
   }, []);
 
-  const handleGitCommitAddToChat = useCallback(
+  const handleGitCommitAddToThread = useCallback(
     (attachment: GitCommitAttachment) => {
       ensureConversationSurface();
       composerRichInputRef.current?.insertGitCommitAttachment(attachment);
@@ -1067,22 +1067,22 @@ export function useComposerController({
     [ensureConversationSurface],
   );
 
-  const handleTerminalAddToChat = useCallback((attachment: TerminalSnippetAttachment) => {
+  const handleTerminalAddToThread = useCallback((attachment: TerminalSnippetAttachment) => {
     composerRichInputRef.current?.insertTerminalSnippet(attachment);
     composerRichInputRef.current?.focus();
   }, []);
 
-  const handleFileSnippetAddToChat = useCallback((attachment: FileSnippetAttachment) => {
+  const handleFileSnippetAddToThread = useCallback((attachment: FileSnippetAttachment) => {
     composerRichInputRef.current?.insertFileSnippet(attachment);
     composerRichInputRef.current?.focus();
   }, []);
 
-  const handleMessageQuoteAddToChat = useCallback((attachment: MessageQuoteAttachment) => {
+  const handleMessageQuoteAddToThread = useCallback((attachment: MessageQuoteAttachment) => {
     composerRichInputRef.current?.insertMessageQuote(attachment);
     composerRichInputRef.current?.focus();
   }, []);
 
-  const handleWorkspaceFileAddToChat = useCallback(
+  const handleWorkspaceFileAddToThread = useCallback(
     (relativePath: string, sourceTabId?: string) => {
       ensureConversationSurface();
       composerRichInputRef.current?.insertWorkspaceFileAtCaret(relativePath, sourceTabId);
@@ -1589,12 +1589,12 @@ export function useComposerController({
     insertSkillTriggerFromPalette,
     removeLocalFileAttachment,
     handleBrowserElementPicked,
-    handlePrDiffAddToChat,
-    handleGitCommitAddToChat,
-    handleTerminalAddToChat,
-    handleFileSnippetAddToChat,
-    handleMessageQuoteAddToChat,
-    handleWorkspaceFileAddToChat,
+    handlePrDiffAddToThread,
+    handleGitCommitAddToThread,
+    handleTerminalAddToThread,
+    handleFileSnippetAddToThread,
+    handleMessageQuoteAddToThread,
+    handleWorkspaceFileAddToThread,
     pickLocalFileFromPalette,
     handleComposerPaste,
     handleComposerDragOver,

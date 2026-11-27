@@ -4,7 +4,7 @@ use serde_json::{Map, Value, json};
 use crate::{
     ask_questions::AskQuestionsRequest,
     host_protocol::{BridgeToolApprovalPrompt, BridgeToolApprovalRequest},
-    view::{ChatMessage, ToolUiBlock, ToolUiPhase},
+    view::{ThreadMessage, ToolUiBlock, ToolUiPhase},
 };
 
 #[derive(Clone, Debug)]
@@ -23,9 +23,9 @@ impl ToolUiRequest {
 }
 
 pub enum RuntimeEvent {
-    PushMessage(ChatMessage),
+    PushMessage(ThreadMessage),
     UpsertTaskTool {
-        message: ChatMessage,
+        message: ThreadMessage,
         insert: bool,
     },
     UpsertToolPreview {

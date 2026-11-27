@@ -21,7 +21,7 @@ test("browser and macOS fullscreen chrome preserve the shared top content paddin
   );
   assert.match(
     styles,
-    /html\.spirit-desktop-darwin\.spirit-desktop-darwin-fullscreen\s+\[data-spirit-surface="layout-chrome"]\[data-session-sidebar-open="false"] \{\s+padding-left: var\(--spirit-chrome-controls-padding\);/s,
+    /html\.spirit-desktop-darwin\.spirit-desktop-darwin-fullscreen\s+\[data-spirit-surface="layout-chrome"]\[data-thread-sidebar-open="false"] \{\s+padding-left: var\(--spirit-chrome-controls-padding\);/s,
   );
   assert.ok(
     normalizedStyles.includes(

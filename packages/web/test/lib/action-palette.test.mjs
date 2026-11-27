@@ -10,14 +10,14 @@ import {
 import { STATIC_SLASH_COMMANDS } from "@spiritagent/ui/composer";
 
 const EN_LABELS = {
-  "sidebar.newChat": "New Chat",
+  "threadSidebar.newThread": "New Thread",
   "slash.createSkill": "Create or refine a SKILL.md with natural language",
   "slash.exportSession": "Export llm_history and API trace",
-  "slash.compact": "Compact the current session context",
+  "slash.compact": "Compact the current thread context",
   "slash.loop": "Run autonomously until finish_task",
   "slash.plan": "Plan without editing code",
   "slash.ask": "Read-only help",
-  "slash.fork": "Fork the session at the latest assistant message into a new chat",
+  "slash.fork": "Fork the session at the latest assistant message into a new thread",
   "actionPalette.theme": "Theme",
   "actionPalette.language": "Language",
   "settings.themeSystem": "System",
@@ -37,7 +37,7 @@ const EN_LABELS = {
 };
 
 const ZH_LABELS = {
-  "sidebar.newChat": "新对话",
+  "threadSidebar.newThread": "新线程",
   "actionPalette.theme": "主题",
   "actionPalette.language": "语言",
   "settings.themeSystem": "跟随系统",
@@ -66,8 +66,8 @@ function tZh(key) {
 
 test("buildActionPaletteItems returns grouped root items including appearance menus", () => {
   const items = buildActionPaletteItems("", tEn);
-  assert.equal(items[0]?.kind, "new-chat");
-  assert.equal(items[0]?.group, "chat");
+  assert.equal(items[0]?.kind, "new-thread");
+  assert.equal(items[0]?.group, "thread");
   assert.equal(items.length, 1 + STATIC_SLASH_COMMANDS.length + 2);
   assert.ok(items.some((item) => item.kind === "theme-menu"));
   assert.ok(items.some((item) => item.kind === "locale-menu"));
@@ -82,11 +82,11 @@ test("buildActionPaletteItems returns grouped root items including appearance me
 
   const modeItem = items.find((item) => item.kind === "plan");
   assert.equal(modeItem?.group, "mode");
-  const sessionItem = items.find((item) => item.kind === "compact");
-  assert.equal(sessionItem?.group, "chat");
+  const threadItem = items.find((item) => item.kind === "compact");
+  assert.equal(threadItem?.group, "thread");
 });
 
-test("groupActionPaletteRootItems preserves chat mode appearance order", () => {
+test("groupActionPaletteRootItems preserves thread mode appearance order", () => {
   const items = buildActionPaletteItems("", tEn);
   const grouped = groupActionPaletteRootItems(items);
   assert.deepEqual(
@@ -190,9 +190,9 @@ test("buildActionPaletteItems filters compact by prefix", () => {
   );
 });
 
-test("buildActionPaletteItems matches localized new chat label", () => {
-  const items = buildActionPaletteItems("新对话", tZh);
-  assert.ok(items.some((item) => item.kind === "new-chat"));
+test("buildActionPaletteItems matches localized new thread label", () => {
+  const items = buildActionPaletteItems("新线程", tZh);
+  assert.ok(items.some((item) => item.kind === "new-thread"));
 });
 
 test("buildActionPaletteItems matches slash description text", () => {
@@ -205,7 +205,7 @@ test("buildActionPaletteItems theme view only returns theme options", () => {
   assert.ok(items.length >= 3);
   assert.ok(items.every((item) => item.kind === "theme-option"));
   assert.equal(
-    items.some((item) => item.kind === "new-chat"),
+    items.some((item) => item.kind === "new-thread"),
     false,
   );
 });
@@ -266,7 +266,7 @@ test("buildActionPaletteItems root search matches appearance menu labels", () =>
 
 test("buildActionPaletteItems matches English labels under Chinese UI", () => {
   assert.ok(buildActionPaletteItems("theme", tZh).some((item) => item.kind === "theme-menu"));
-  assert.ok(buildActionPaletteItems("new chat", tZh).some((item) => item.kind === "new-chat"));
+  assert.ok(buildActionPaletteItems("new thread", tZh).some((item) => item.kind === "new-thread"));
   assert.ok(buildActionPaletteItems("language", tZh).some((item) => item.kind === "locale-menu"));
 });
 

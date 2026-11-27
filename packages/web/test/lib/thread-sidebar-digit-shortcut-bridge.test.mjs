@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "vitest";
 
 import {
-  registerSessionSidebarDigitShortcut,
-  resetSessionSidebarDigitShortcutBridgeForTests,
+  registerThreadSidebarDigitShortcut,
+  resetThreadSidebarDigitShortcutBridgeForTests,
   resolveVisibleSidebarSessionsForDigitShortcut,
-  unregisterSessionSidebarDigitShortcut,
-} from "../../src/lib/session-sidebar-digit-shortcut-bridge.ts";
+  unregisterThreadSidebarDigitShortcut,
+} from "../../src/lib/thread-sidebar-digit-shortcut-bridge.ts";
 
 afterEach(() => {
-  resetSessionSidebarDigitShortcutBridgeForTests();
+  resetThreadSidebarDigitShortcutBridgeForTests();
 });
 
 test("resolveVisibleSidebarSessionsForDigitShortcut returns empty when unregistered", () => {
@@ -17,7 +17,7 @@ test("resolveVisibleSidebarSessionsForDigitShortcut returns empty when unregiste
 });
 
 test("resolveVisibleSidebarSessionsForDigitShortcut reads the registered visible list", () => {
-  registerSessionSidebarDigitShortcut({
+  registerThreadSidebarDigitShortcut({
     resolveVisibleSessions() {
       return [{ path: "/s1" }, { path: "/s2" }];
     },
@@ -28,12 +28,12 @@ test("resolveVisibleSidebarSessionsForDigitShortcut reads the registered visible
   ]);
 });
 
-test("unregisterSessionSidebarDigitShortcut clears the bridge", () => {
-  registerSessionSidebarDigitShortcut({
+test("unregisterThreadSidebarDigitShortcut clears the bridge", () => {
+  registerThreadSidebarDigitShortcut({
     resolveVisibleSessions() {
       return [{ path: "/s1" }];
     },
   });
-  unregisterSessionSidebarDigitShortcut();
+  unregisterThreadSidebarDigitShortcut();
   assert.deepEqual(resolveVisibleSidebarSessionsForDigitShortcut(), []);
 });

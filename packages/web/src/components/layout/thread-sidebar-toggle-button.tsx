@@ -2,18 +2,18 @@ import { SidebarLeft } from "@spiritagent/icons/sidebar-left";
 import { SidebarLeftCollapsed } from "@spiritagent/icons/sidebar-left-collapsed";
 import { useTranslation } from "react-i18next";
 
-import { SessionSidebarShortcutKbd } from "@/components/layout/desktop-shortcut-kbds";
+import { ThreadSidebarShortcutKbd } from "@/components/layout/desktop-shortcut-kbds";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useSessionSidebarChrome } from "@/contexts/session-sidebar-chrome-context";
+import { useThreadSidebarChrome } from "@/contexts/thread-sidebar-chrome-context";
 import { DESKTOP_CHROME_TOGGLE_ICON_BTN } from "@/lib/desktop-chrome";
 import { isMacDesktopPlatform } from "@/lib/desktop-shell";
 import { cn } from "@/lib/utils";
 
-export function SessionSidebarToggleButton({ className }: { className?: string }) {
+export function ThreadSidebarToggleButton({ className }: { className?: string }) {
   const { t } = useTranslation();
-  const { open: sessionSidebarOpen, toggle: onToggleSessionSidebar } = useSessionSidebarChrome();
-  const tooltipAlign = sessionSidebarOpen || isMacDesktopPlatform() ? "center" : "start";
+  const { open: threadSidebarOpen, toggle: onToggleThreadSidebar } = useThreadSidebarChrome();
+  const tooltipAlign = threadSidebarOpen || isMacDesktopPlatform() ? "center" : "start";
 
   return (
     <Tooltip delayDuration={300} disableHoverableContent>
@@ -23,12 +23,12 @@ export function SessionSidebarToggleButton({ className }: { className?: string }
           variant="ghost"
           size="icon"
           className={cn(DESKTOP_CHROME_TOGGLE_ICON_BTN, className)}
-          onClick={onToggleSessionSidebar}
-          aria-label={sessionSidebarOpen ? t("app.hideSidebar") : t("app.showSidebar")}
-          aria-expanded={sessionSidebarOpen}
-          {...(sessionSidebarOpen ? { "aria-controls": "session-sidebar-panel" } : {})}
+          onClick={onToggleThreadSidebar}
+          aria-label={threadSidebarOpen ? t("app.hideSidebar") : t("app.showSidebar")}
+          aria-expanded={threadSidebarOpen}
+          {...(threadSidebarOpen ? { "aria-controls": "thread-sidebar-panel" } : {})}
         >
-          {sessionSidebarOpen ? (
+          {threadSidebarOpen ? (
             <SidebarLeft className="size-3.5" aria-hidden strokeWidth={1.75} />
           ) : (
             <SidebarLeftCollapsed className="size-3.5" aria-hidden strokeWidth={1.75} />
@@ -36,8 +36,8 @@ export function SessionSidebarToggleButton({ className }: { className?: string }
         </Button>
       </TooltipTrigger>
       <TooltipContent side="top" align={tooltipAlign} sideOffset={4}>
-        {sessionSidebarOpen ? t("app.hideSidebar") : t("app.showSidebar")}{" "}
-        <SessionSidebarShortcutKbd />
+        {threadSidebarOpen ? t("app.hideSidebar") : t("app.showSidebar")}{" "}
+        <ThreadSidebarShortcutKbd />
       </TooltipContent>
     </Tooltip>
   );

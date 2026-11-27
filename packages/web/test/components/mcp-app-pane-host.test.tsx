@@ -501,7 +501,7 @@ test("fullscreen mounts pure iframe inside right-panel tabs, allows multiple ins
   expect(wrapper2.querySelector("iframe")).toBe(iframe2);
 });
 
-test("global PiP survives session switches, new chat, and non-conversation surfaces, supports multiple PiP windows with z-order focus, and returns inline without reloading", async () => {
+test("global PiP survives session switches, new thread, and non-conversation surfaces, supports multiple PiP windows with z-order focus, and returns inline without reloading", async () => {
   localStorage.clear();
   const visibleSlotRect = new DOMRect(200, 120, 640, 300);
 

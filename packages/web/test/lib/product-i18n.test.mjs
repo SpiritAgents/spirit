@@ -42,7 +42,7 @@ for (const lng of ["en", "de", "es", "fr", "ja", "ko", "pt-BR", "ru", "zh-CN", "
     assert.ok(
       i18n.t("settings.skillWorkspaceSpirit", { lng }).includes(product.workspaceDataFolderName),
     );
-    const details = i18n.t("sidebar.removeWorkspaceConfirmDescription", {
+    const details = i18n.t("threadSidebar.removeWorkspaceConfirmDescription", {
       lng,
       count: 2,
       returnDetails: true,

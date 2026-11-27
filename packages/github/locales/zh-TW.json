@@ -142,7 +142,7 @@
     "prMarkReadyForReview": "標記為準備就緒",
     "prMarkingReady": "正在標記…",
     "prMarkReadyFailed": "無法將拉取請求標記為準備就緒",
-    "addSelectionToChat": "加入對話"
+    "addSelectionToThread": "加入執行緒"
   },
   "github": {
     "connect": "連接 GitHub",

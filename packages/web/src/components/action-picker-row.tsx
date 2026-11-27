@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import {
   isAppearanceMenuAction,
   isLocaleOptionAction,
-  isNewChatAction,
+  isNewThreadAction,
   isSlashActionPaletteItem,
   isTaskMenuAction,
   isTaskOptionAction,
@@ -76,7 +76,7 @@ function TaskOptionIcon({ resolution }: { resolution: TaskIconResolution }) {
 export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProps) {
   const { t } = useTranslation();
 
-  if (isNewChatAction(item)) {
+  if (isNewThreadAction(item)) {
     return (
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         <Compose

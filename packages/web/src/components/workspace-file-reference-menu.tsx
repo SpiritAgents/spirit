@@ -96,7 +96,7 @@ export function WorkspaceFileReferenceMenu({
               key="sessions-entry"
               data-workspace-file-reference-index={index}
               selected={index === highlightedIndex}
-              title={t("composer.atReference.chats")}
+              title={t("composer.atReference.threads")}
               onMouseDown={(event) => event.preventDefault()}
               onClick={onOpenSessions}
               {...getItemPointerHandlers(index)}
@@ -104,7 +104,7 @@ export function WorkspaceFileReferenceMenu({
               <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                 <MessageCircle className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                 <span className={cn("min-w-0 truncate", DESKTOP_OVERLAY_LIST_ITEM_PRIMARY)}>
-                  {t("composer.atReference.chats")}
+                  {t("composer.atReference.threads")}
                 </span>
                 <ChevronRight
                   className="ml-auto size-3.5 shrink-0"

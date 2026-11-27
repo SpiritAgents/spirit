@@ -11,19 +11,19 @@ const en = resources.en.translation;
 
 export type ActionPaletteTranslate = (key: string) => string;
 
-export type ActionPaletteGroup = "chat" | "mode" | "workspace" | "appearance";
+export type ActionPaletteGroup = "thread" | "mode" | "workspace" | "appearance";
 
 export type ActionPaletteView = "root" | "theme" | "locale" | "tasks";
 
 export const ACTION_PALETTE_GROUP_ORDER: readonly ActionPaletteGroup[] = [
-  "chat",
+  "thread",
   "mode",
   "workspace",
   "appearance",
 ] as const;
 
 export const ACTION_PALETTE_GROUP_LABEL_KEYS: Record<ActionPaletteGroup, string> = {
-  chat: "actionPalette.group.chat",
+  thread: "actionPalette.group.thread",
   mode: "actionPalette.group.mode",
   workspace: "actionPalette.group.workspace",
   appearance: "actionPalette.group.appearance",
@@ -35,11 +35,11 @@ const THEME_OPTION_DEFS: ReadonlyArray<{ value: ThemePreference; labelKey: strin
   { value: "dark", labelKey: "settings.themeDark" },
 ];
 
-export type NewChatActionPaletteItem = {
-  id: "action:new-chat";
-  kind: "new-chat";
-  group: "chat";
-  labelKey: "sidebar.newChat";
+export type NewThreadActionPaletteItem = {
+  id: "action:new-thread";
+  kind: "new-thread";
+  group: "thread";
+  labelKey: "threadSidebar.newThread";
 };
 
 export type ThemeMenuActionPaletteItem = {
@@ -87,11 +87,11 @@ export type TaskOptionActionPaletteItem = {
 };
 
 export type SlashActionPaletteItem = SkillSlashSuggestion & {
-  group: "chat" | "mode";
+  group: "thread" | "mode";
 };
 
 export type ActionPaletteItem =
-  | NewChatActionPaletteItem
+  | NewThreadActionPaletteItem
   | SlashActionPaletteItem
   | ThemeMenuActionPaletteItem
   | LocaleMenuActionPaletteItem
@@ -100,11 +100,11 @@ export type ActionPaletteItem =
   | TaskMenuActionPaletteItem
   | TaskOptionActionPaletteItem;
 
-const NEW_CHAT_ITEM: NewChatActionPaletteItem = {
-  id: "action:new-chat",
-  kind: "new-chat",
-  group: "chat",
-  labelKey: "sidebar.newChat",
+const NEW_THREAD_ITEM: NewThreadActionPaletteItem = {
+  id: "action:new-thread",
+  kind: "new-thread",
+  group: "thread",
+  labelKey: "threadSidebar.newThread",
 };
 
 const THEME_MENU_ITEM: ThemeMenuActionPaletteItem = {
@@ -130,12 +130,12 @@ const TASK_MENU_ITEM: TaskMenuActionPaletteItem = {
 
 const MODE_SLASH_KINDS = new Set<SkillSlashSuggestion["kind"]>(["loop", "plan", "ask", "debug"]);
 
-function slashPaletteGroup(kind: SkillSlashSuggestion["kind"]): "chat" | "mode" {
-  return MODE_SLASH_KINDS.has(kind) ? "mode" : "chat";
+function slashPaletteGroup(kind: SkillSlashSuggestion["kind"]): "thread" | "mode" {
+  return MODE_SLASH_KINDS.has(kind) ? "mode" : "thread";
 }
 
 const ROOT_ITEMS: ActionPaletteItem[] = [
-  NEW_CHAT_ITEM,
+  NEW_THREAD_ITEM,
   ...STATIC_SLASH_COMMANDS.map((command): SlashActionPaletteItem => ({
     ...command,
     group: slashPaletteGroup(command.kind),
@@ -199,7 +199,7 @@ function withEnglishSearchText(localized: string, englishKey: string): string {
 }
 
 function actionPaletteSearchText(item: ActionPaletteItem, t: ActionPaletteTranslate): string {
-  if (item.kind === "new-chat" || item.kind === "theme-menu" || item.kind === "locale-menu") {
+  if (item.kind === "new-thread" || item.kind === "theme-menu" || item.kind === "locale-menu") {
     return withEnglishSearchText(t(item.labelKey), item.labelKey);
   }
 
@@ -321,8 +321,8 @@ export function groupActionPaletteRootItems(
   })).filter((entry) => entry.items.length > 0);
 }
 
-export function isNewChatAction(item: ActionPaletteItem): item is NewChatActionPaletteItem {
-  return item.kind === "new-chat";
+export function isNewThreadAction(item: ActionPaletteItem): item is NewThreadActionPaletteItem {
+  return item.kind === "new-thread";
 }
 
 export function isAppearanceMenuAction(

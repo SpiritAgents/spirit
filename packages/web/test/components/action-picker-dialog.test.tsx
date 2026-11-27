@@ -47,7 +47,7 @@ test("keeps the action picker mounted when a search has no matching commands", (
   });
 
   expect(screen.queryByText("No matching commands")).toBeNull();
-  expect(screen.getByRole("option", { name: "New Chat" }).getAttribute("data-selected")).toBe(
+  expect(screen.getByRole("option", { name: "New Thread" }).getAttribute("data-selected")).toBe(
     "true",
   );
 });

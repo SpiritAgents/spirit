@@ -236,13 +236,13 @@ pub struct ToolUiBlock {
 }
 
 #[derive(Clone, Debug)]
-pub struct ChatMessage {
+pub struct ThreadMessage {
     pub role: MessageRole,
     pub content: String,
     pub tool_block: Option<ToolUiBlock>,
 }
 
-impl ChatMessage {
+impl ThreadMessage {
     pub fn new(role: MessageRole, content: impl Into<String>) -> Self {
         Self {
             role,
@@ -276,7 +276,7 @@ pub struct SubagentSessionSummaryView {
 #[derive(Clone, Debug)]
 pub struct SubagentSessionDetailView {
     pub summary: SubagentSessionSummaryView,
-    pub messages: Vec<ChatMessage>,
+    pub messages: Vec<ThreadMessage>,
     pub pending_aux: Option<PendingAssistantAux>,
     pub final_output: Option<String>,
     pub error: Option<String>,
@@ -391,7 +391,7 @@ pub struct TuiViewModel {
     pub loop_enabled: bool,
     pub approval_level: String,
     pub history_truncated_before: usize,
-    pub messages: Vec<ChatMessage>,
+    pub messages: Vec<ThreadMessage>,
     pub assistant_aux_by_message: HashMap<usize, AssistantAuxData>,
     pub config: AppConfig,
     pub show_aux_details: bool,
@@ -410,9 +410,9 @@ pub struct TuiViewModel {
     pub approval_picker_index: usize,
     pub tui_picker_active: bool,
     pub tui_picker_index: usize,
-    pub chat_picker_active: bool,
-    pub chat_picker_index: usize,
-    pub chat_picker_sessions: Vec<crate::ports::ChatSessionListItem>,
+    pub thread_picker_active: bool,
+    pub thread_picker_index: usize,
+    pub thread_picker_sessions: Vec<crate::ports::ThreadSessionListItem>,
     pub subagent_picker_active: bool,
     pub subagent_picker_index: usize,
     pub subagent_sessions: Vec<SubagentSessionSummaryView>,

@@ -7,7 +7,7 @@ import type { CSSProperties } from "react";
  */
 export const sidebarSessionsScrollInsetClass = "pt-4 pb-6";
 
-/** List bottom-edge fade-out: shares `--chrome-mask-bottom-alpha` and the 150ms transition with session-sidebar. */
+/** List bottom-edge fade-out: shares `--chrome-mask-bottom-alpha` and the 150ms transition with thread-sidebar. */
 const LIST_BOTTOM_SCROLL_FADE_MASK =
   "linear-gradient(to bottom, black calc(100% - 56px), rgb(0 0 0 / var(--chrome-mask-bottom-alpha)) 100%)";
 
@@ -24,7 +24,7 @@ export function bottomScrollFadeMaskStyle(
   } as CSSProperties;
 }
 
-/** Shared fade length: Marketplace sticky header and session-sidebar scroll edges. */
+/** Shared fade length: Marketplace sticky header and thread-sidebar scroll edges. */
 export const SCROLL_EDGE_FADE_PX = 32;
 
 /**

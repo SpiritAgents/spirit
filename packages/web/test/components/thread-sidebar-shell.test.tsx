@@ -6,12 +6,12 @@ import { act, render, screen } from "@testing-library/react";
 import { beforeEach, expect, test } from "vitest";
 import { junctionResizeCursor, resizeCursor } from "@spiritagent/ui/resize-cursor";
 
-import { SessionSidebarShell } from "@/components/session-sidebar-shell";
+import { ThreadSidebarShell } from "@/components/thread-sidebar-shell";
 import {
-  SessionSidebarChromeProvider,
-  useSessionSidebarChrome,
-} from "@/contexts/session-sidebar-chrome-context";
-import { SESSION_SIDEBAR_MAX_WIDTH_PX, SESSION_SIDEBAR_MIN_WIDTH_PX } from "@/lib/desktop-chrome";
+  ThreadSidebarChromeProvider,
+  useThreadSidebarChrome,
+} from "@/contexts/thread-sidebar-chrome-context";
+import { THREAD_SIDEBAR_MAX_WIDTH_PX, THREAD_SIDEBAR_MIN_WIDTH_PX } from "@/lib/desktop-chrome";
 
 const WIDTH_STORAGE_KEY = "spirit-desktop-session-sidebar-width-px";
 /** Matches the Electron BrowserWindow minWidth in electron/main.ts. */
@@ -22,17 +22,17 @@ HTMLElement.prototype.setPointerCapture = () => {};
 HTMLElement.prototype.releasePointerCapture = () => {};
 
 function WidthProbe() {
-  const { widthPx } = useSessionSidebarChrome();
+  const { widthPx } = useThreadSidebarChrome();
   return <output data-testid="sidebar-width">{widthPx}</output>;
 }
 
 function renderShell() {
   return render(
-    <SessionSidebarChromeProvider>
-      <SessionSidebarShell>
+    <ThreadSidebarChromeProvider>
+      <ThreadSidebarShell>
         <WidthProbe />
-      </SessionSidebarShell>
-    </SessionSidebarChromeProvider>,
+      </ThreadSidebarShell>
+    </ThreadSidebarChromeProvider>,
   );
 }
 
@@ -63,37 +63,37 @@ beforeEach(() => {
 });
 
 test("window resize never compresses the sidebar below its minimum width", () => {
-  localStorage.setItem(WIDTH_STORAGE_KEY, String(SESSION_SIDEBAR_MIN_WIDTH_PX));
+  localStorage.setItem(WIDTH_STORAGE_KEY, String(THREAD_SIDEBAR_MIN_WIDTH_PX));
   const { container } = renderShell();
-  expect(currentWidth()).toBe(SESSION_SIDEBAR_MIN_WIDTH_PX);
+  expect(currentWidth()).toBe(THREAD_SIDEBAR_MIN_WIDTH_PX);
 
   // 40% of 360px is 144px: the viewport-capped max falls below the minimum here.
   resizeViewport(WINDOW_MIN_WIDTH_PX);
-  expect(currentWidth()).toBe(SESSION_SIDEBAR_MIN_WIDTH_PX);
-  const shell = container.querySelector('[data-spirit-surface="session-sidebar-shell"]');
-  expect(shell?.getAttribute("style")).toContain(`${SESSION_SIDEBAR_MIN_WIDTH_PX}px`);
+  expect(currentWidth()).toBe(THREAD_SIDEBAR_MIN_WIDTH_PX);
+  const shell = container.querySelector('[data-spirit-surface="thread-sidebar-shell"]');
+  expect(shell?.getAttribute("style")).toContain(`${THREAD_SIDEBAR_MIN_WIDTH_PX}px`);
 
   resizeViewport(1280);
-  expect(currentWidth()).toBe(SESSION_SIDEBAR_MIN_WIDTH_PX);
-  expect(localStorage.getItem(WIDTH_STORAGE_KEY)).toBe(String(SESSION_SIDEBAR_MIN_WIDTH_PX));
+  expect(currentWidth()).toBe(THREAD_SIDEBAR_MIN_WIDTH_PX);
+  expect(localStorage.getItem(WIDTH_STORAGE_KEY)).toBe(String(THREAD_SIDEBAR_MIN_WIDTH_PX));
 });
 
 test("window resize preserves a user-set width above the minimum", () => {
-  localStorage.setItem(WIDTH_STORAGE_KEY, String(SESSION_SIDEBAR_MAX_WIDTH_PX));
+  localStorage.setItem(WIDTH_STORAGE_KEY, String(THREAD_SIDEBAR_MAX_WIDTH_PX));
   renderShell();
-  expect(currentWidth()).toBe(SESSION_SIDEBAR_MAX_WIDTH_PX);
+  expect(currentWidth()).toBe(THREAD_SIDEBAR_MAX_WIDTH_PX);
 
   resizeViewport(WINDOW_MIN_WIDTH_PX);
-  expect(currentWidth()).toBe(SESSION_SIDEBAR_MAX_WIDTH_PX);
+  expect(currentWidth()).toBe(THREAD_SIDEBAR_MAX_WIDTH_PX);
 
   resizeViewport(1280);
-  expect(currentWidth()).toBe(SESSION_SIDEBAR_MAX_WIDTH_PX);
-  expect(localStorage.getItem(WIDTH_STORAGE_KEY)).toBe(String(SESSION_SIDEBAR_MAX_WIDTH_PX));
+  expect(currentWidth()).toBe(THREAD_SIDEBAR_MAX_WIDTH_PX);
+  expect(localStorage.getItem(WIDTH_STORAGE_KEY)).toBe(String(THREAD_SIDEBAR_MAX_WIDTH_PX));
 });
 
 test("dragging still resizes the sidebar and enforces the viewport-capped bounds", () => {
   window.innerWidth = 600; // viewport max = 240
-  localStorage.setItem(WIDTH_STORAGE_KEY, String(SESSION_SIDEBAR_MIN_WIDTH_PX));
+  localStorage.setItem(WIDTH_STORAGE_KEY, String(THREAD_SIDEBAR_MIN_WIDTH_PX));
   const { container } = renderShell();
   const separator = container.querySelector('[role="separator"]');
   expect(separator).toBeTruthy();
@@ -106,7 +106,7 @@ test("dragging still resizes the sidebar and enforces the viewport-capped bounds
   expect((separator as HTMLElement).style.cursor).toBe("w-resize");
   expect(document.head.querySelector("style")?.textContent).toContain("cursor: w-resize");
   firePointer(separator!, "pointermove", 0); // 200 - 300, below the 200 min
-  expect(currentWidth()).toBe(SESSION_SIDEBAR_MIN_WIDTH_PX);
+  expect(currentWidth()).toBe(THREAD_SIDEBAR_MIN_WIDTH_PX);
   expect(document.head.querySelector("style")?.textContent).toContain("cursor: e-resize");
   firePointer(separator!, "pointermove", 320); // 200 + 20, free range
   expect((separator as HTMLElement).style.cursor).toBe("col-resize");

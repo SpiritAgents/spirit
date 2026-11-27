@@ -25,7 +25,7 @@ use crate::{
     rewind::{DesktopRewindCheckpointSnapshot, RewindRestoreOutcome},
     session::SessionModel,
     skills::ActiveSkillPayload,
-    view::{ChatMessage, PendingAssistantAux, PendingSubagentApprovalView},
+    view::{PendingAssistantAux, PendingSubagentApprovalView, ThreadMessage},
 };
 
 #[derive(Clone, Debug)]
@@ -287,7 +287,7 @@ impl RuntimeHandle {
         self.backend.subagent_session_archive(session_id)
     }
 
-    pub fn subagent_live_messages(&self, session_id: &str) -> Vec<ChatMessage> {
+    pub fn subagent_live_messages(&self, session_id: &str) -> Vec<ThreadMessage> {
         self.backend.subagent_live_messages(session_id)
     }
 

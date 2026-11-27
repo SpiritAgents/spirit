@@ -27,7 +27,7 @@ test("all locale surfaces resolve explicit product variables", () => {
     assert.equal(messages.common.brand, product.name);
     assert.equal(resolveDesktopTranslation("tray.tooltip", locale, messages), product.name);
     assert.ok(
-      resolveDesktopTranslation("sidebar.removeWorkspaceConfirmDescription", locale, messages, {
+      resolveDesktopTranslation("threadSidebar.removeWorkspaceConfirmDescription", locale, messages, {
         count: 2,
       }).includes(product.name),
     );

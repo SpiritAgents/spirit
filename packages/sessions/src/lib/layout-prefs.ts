@@ -1,10 +1,7 @@
-import {
-  SESSION_SIDEBAR_MIN_WIDTH_PX,
-  computeSessionSidebarMaxWidthPx,
-} from "@/lib/desktop-chrome";
+import { THREAD_SIDEBAR_MIN_WIDTH_PX, computeThreadSidebarMaxWidthPx } from "@/lib/desktop-chrome";
 import { flushDesktopRendererStorage } from "@/lib/desktop-renderer-storage";
 
-const SESSION_SIDEBAR_WIDTH_STORAGE_KEY = "spirit-desktop-session-sidebar-width-px";
+const THREAD_SIDEBAR_WIDTH_STORAGE_KEY = "spirit-desktop-session-sidebar-width-px";
 
 function clampInt(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, Math.round(value)));
@@ -37,21 +34,21 @@ function writeStoredPositiveInt(key: string, value: number): void {
   }
 }
 
-export function readSessionSidebarWidthPx(): number {
-  const max = computeSessionSidebarMaxWidthPx();
+export function readThreadSidebarWidthPx(): number {
+  const max = computeThreadSidebarMaxWidthPx();
   return readStoredPositiveInt(
-    SESSION_SIDEBAR_WIDTH_STORAGE_KEY,
-    SESSION_SIDEBAR_MIN_WIDTH_PX,
-    SESSION_SIDEBAR_MIN_WIDTH_PX,
+    THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
+    THREAD_SIDEBAR_MIN_WIDTH_PX,
+    THREAD_SIDEBAR_MIN_WIDTH_PX,
     max,
   );
 }
 
-export function writeSessionSidebarWidthPx(widthPx: number): void {
-  const max = computeSessionSidebarMaxWidthPx();
+export function writeThreadSidebarWidthPx(widthPx: number): void {
+  const max = computeThreadSidebarMaxWidthPx();
   writeStoredPositiveInt(
-    SESSION_SIDEBAR_WIDTH_STORAGE_KEY,
-    clampInt(widthPx, SESSION_SIDEBAR_MIN_WIDTH_PX, max),
+    THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
+    clampInt(widthPx, THREAD_SIDEBAR_MIN_WIDTH_PX, max),
   );
 }
 
@@ -430,7 +427,7 @@ const WORKSPACE_SIDEBAR_EXPANDED_STORAGE_KEY = "spirit-desktop-workspace-sidebar
 
 const WORKSPACE_SIDEBAR_EXPANDED_MAX_ENTRIES = 200;
 
-/** `false` = collapsed; missing or `true` = expanded (consistent with SessionSidebar AnimatedCollapse). */
+/** `false` = collapsed; missing or `true` = expanded (consistent with ThreadSidebar AnimatedCollapse). */
 export type WorkspaceSidebarExpandedById = Record<string, boolean>;
 
 function sanitizeWorkspaceSidebarExpandedById(value: unknown): WorkspaceSidebarExpandedById {

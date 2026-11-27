@@ -8,10 +8,10 @@ import {
   type ReactNode,
 } from "react";
 
-import { sessionSidebarShellWidth } from "@/lib/desktop-chrome";
-import { readSessionSidebarWidthPx } from "@/lib/layout-prefs";
+import { threadSidebarShellWidth } from "@/lib/desktop-chrome";
+import { readThreadSidebarWidthPx } from "@/lib/layout-prefs";
 
-type SessionSidebarChromeContextValue = {
+type ThreadSidebarChromeContextValue = {
   open: boolean;
   widthPx: number;
   setWidthPx(next: number): void;
@@ -19,25 +19,25 @@ type SessionSidebarChromeContextValue = {
   openSidebar(): void;
 };
 
-const SessionSidebarChromeContext = createContext<SessionSidebarChromeContextValue | null>(null);
+const ThreadSidebarChromeContext = createContext<ThreadSidebarChromeContextValue | null>(null);
 
-export type SessionSidebarChromeApi = {
+export type ThreadSidebarChromeApi = {
   open: boolean;
   openSidebar(): void;
   toggle(): void;
 };
 
-export type SessionSidebarChromeProviderProps = {
+export type ThreadSidebarChromeProviderProps = {
   children: ReactNode;
-  apiRef?: React.MutableRefObject<SessionSidebarChromeApi | null>;
+  apiRef?: React.MutableRefObject<ThreadSidebarChromeApi | null>;
 };
 
-export function SessionSidebarChromeProvider({
+export function ThreadSidebarChromeProvider({
   children,
   apiRef,
-}: SessionSidebarChromeProviderProps) {
+}: ThreadSidebarChromeProviderProps) {
   const [open, setOpen] = useState(true);
-  const [widthPx, setWidthPxState] = useState(readSessionSidebarWidthPx);
+  const [widthPx, setWidthPxState] = useState(readThreadSidebarWidthPx);
 
   const setWidthPx = useCallback((next: number) => {
     setWidthPxState(next);
@@ -61,8 +61,8 @@ export function SessionSidebarChromeProvider({
     // The workspace-tools full-screen pin (Win/Linux + macOS window fullscreen) anchors its
     // fixed left offset to the main content's left edge, i.e. the sidebar shell's current width.
     document.documentElement.style.setProperty(
-      "--spirit-session-sidebar-shell-width",
-      sessionSidebarShellWidth(open, widthPx),
+      "--spirit-thread-sidebar-shell-width",
+      threadSidebarShellWidth(open, widthPx),
     );
   }, [open, widthPx]);
 
@@ -78,16 +78,16 @@ export function SessionSidebarChromeProvider({
   );
 
   return (
-    <SessionSidebarChromeContext.Provider value={value}>
+    <ThreadSidebarChromeContext.Provider value={value}>
       {children}
-    </SessionSidebarChromeContext.Provider>
+    </ThreadSidebarChromeContext.Provider>
   );
 }
 
-export function useSessionSidebarChrome(): SessionSidebarChromeContextValue {
-  const value = useContext(SessionSidebarChromeContext);
+export function useThreadSidebarChrome(): ThreadSidebarChromeContextValue {
+  const value = useContext(ThreadSidebarChromeContext);
   if (!value) {
-    throw new Error("useSessionSidebarChrome must be used within SessionSidebarChromeProvider");
+    throw new Error("useThreadSidebarChrome must be used within ThreadSidebarChromeProvider");
   }
   return value;
 }

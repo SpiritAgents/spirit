@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::{
     ports::{AssistantAuxArchiveEntry, ChatArchive},
-    view::{AssistantAuxData, ChatMessage, MessageRole, ToolUiBlock, ToolUiPhase},
+    view::{AssistantAuxData, MessageRole, ThreadMessage, ToolUiBlock, ToolUiPhase},
 };
 
 fn fresh_id() -> String {
@@ -455,7 +455,7 @@ pub fn resolve_before_checkpoint_state(
 }
 
 pub fn conversation_snapshots(
-    messages: &[ChatMessage],
+    messages: &[ThreadMessage],
     assistant_aux_by_message: &HashMap<usize, AssistantAuxData>,
     pending_assistant_msg_index: Option<usize>,
 ) -> Vec<ConversationMessageSnapshot> {
@@ -481,12 +481,12 @@ pub fn conversation_snapshots(
 
 pub fn restore_conversation(
     snapshots: &[ConversationMessageSnapshot],
-) -> (Vec<ChatMessage>, HashMap<usize, AssistantAuxData>) {
+) -> (Vec<ThreadMessage>, HashMap<usize, AssistantAuxData>) {
     let mut messages = Vec::with_capacity(snapshots.len());
     let mut assistant_aux_by_message = HashMap::new();
     for (index, snapshot) in snapshots.iter().enumerate() {
         let tool_block = snapshot.tool.as_ref().map(tool_block_from_snapshot);
-        messages.push(ChatMessage {
+        messages.push(ThreadMessage {
             role: if snapshot.role == ConversationMessageRole::User {
                 MessageRole::User
             } else {

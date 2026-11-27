@@ -11,7 +11,7 @@ test("resolveEffectiveEmptySession treats pending reset as empty even with stale
       compactionDemoActive: false,
       longConversationListDemoActive: false,
       approvalPreviewDemoActive: false,
-      newChatBusy: true,
+      newThreadBusy: true,
     }),
     true,
   );
@@ -22,7 +22,7 @@ test("resolveEffectiveEmptySession treats pending reset as empty even with stale
       compactionDemoActive: false,
       longConversationListDemoActive: false,
       approvalPreviewDemoActive: false,
-      newChatBusy: false,
+      newThreadBusy: false,
     }),
     false,
   );
@@ -33,7 +33,7 @@ test("resolveEffectiveEmptySession treats pending reset as empty even with stale
       compactionDemoActive: false,
       longConversationListDemoActive: false,
       approvalPreviewDemoActive: false,
-      newChatBusy: false,
+      newThreadBusy: false,
     }),
     true,
   );
@@ -44,7 +44,7 @@ test("resolveEffectiveEmptySession treats pending reset as empty even with stale
       compactionDemoActive: false,
       longConversationListDemoActive: true,
       approvalPreviewDemoActive: false,
-      newChatBusy: false,
+      newThreadBusy: false,
     }),
     false,
   );
@@ -58,7 +58,7 @@ test("resolveEffectiveEmptySession treats the approval preview demo as non-empty
       compactionDemoActive: false,
       longConversationListDemoActive: false,
       approvalPreviewDemoActive: true,
-      newChatBusy: false,
+      newThreadBusy: false,
     }),
     false,
   );

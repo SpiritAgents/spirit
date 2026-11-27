@@ -166,7 +166,7 @@ export type ComposerDockSectionProps = {
   onSubmitComposerMessage: () => void;
   onComposerAgentModeChange: (mode: DesktopAgentMode) => void;
   composerRichInputRef: RefObject<ComposerRichInputHandle | null>;
-  onMessageQuoteAddToChat: (attachment: MessageQuoteAttachment) => void;
+  onMessageQuoteAddToThread: (attachment: MessageQuoteAttachment) => void;
   onComposerKeyDown: (event: ReactKeyboardEvent<HTMLTextAreaElement>) => void;
   onComposerCursorCodeUnitsChange: (selectionStart: number) => void;
   onInsertFileReferenceTrigger: () => void;
@@ -198,8 +198,8 @@ export type ConversationViewProps = {
   snapshot: DesktopSnapshot | null;
   subagentViewActive: boolean;
   onExitSubagentViewer: (() => void) | undefined;
-  onNewChat: (() => void) | undefined;
-  newChatBusy: boolean;
+  onNewThread: (() => void) | undefined;
+  newThreadBusy: boolean;
   compactionDemoActive: boolean;
   onCompactionDemoStop: () => void;
   longConversationListDemoActive: boolean;
@@ -224,7 +224,7 @@ export type ConversationViewProps = {
   composerDock: ComposerDockSectionProps;
   branchCheckout?: BranchCheckoutSectionProps;
   showComposerDock?: boolean;
-  showSessionSidebarToggle?: boolean;
+  showThreadSidebarToggle?: boolean;
   showWorkspaceToggle?: boolean;
   showSplitMenu?: boolean;
   showSideChat?: boolean;
@@ -276,8 +276,8 @@ export function ConversationView({
   snapshot,
   subagentViewActive,
   onExitSubagentViewer,
-  onNewChat,
-  newChatBusy,
+  onNewThread,
+  newThreadBusy,
   compactionDemoActive,
   onCompactionDemoStop,
   longConversationListDemoActive,
@@ -297,7 +297,7 @@ export function ConversationView({
   composerDock,
   branchCheckout,
   showComposerDock = true,
-  showSessionSidebarToggle = true,
+  showThreadSidebarToggle = true,
   showWorkspaceToggle = true,
   showSplitMenu = false,
   showSideChat = false,
@@ -567,9 +567,9 @@ export function ConversationView({
     },
     [composerDock],
   );
-  const handleMessageQuoteAddToChat = useCallback(
+  const handleMessageQuoteAddToThread = useCallback(
     (attachment: MessageQuoteAttachment) => {
-      composerDock.onMessageQuoteAddToChat(attachment);
+      composerDock.onMessageQuoteAddToThread(attachment);
     },
     [composerDock],
   );
@@ -643,7 +643,7 @@ export function ConversationView({
       >
         <DesktopLayoutChromeBar
           useTranslucency={useTranslucency}
-          showSessionSidebarToggle={showSessionSidebarToggle}
+          showThreadSidebarToggle={showThreadSidebarToggle}
           showWorkspaceToggle={showWorkspaceToggle}
           showSplitMenu={showSplitMenu}
           showSideChat={showSideChat}
@@ -668,8 +668,8 @@ export function ConversationView({
           sessionTooltip={sessionTooltip}
           subagentPromptText={subagentViewActive ? snapshot?.subagentViewer?.promptText : null}
           onExitSubagentViewer={onExitSubagentViewer}
-          onNewChat={isEmptySession ? undefined : onNewChat}
-          newChatBusy={newChatBusy}
+          onNewThread={isEmptySession ? undefined : onNewThread}
+          newThreadBusy={newThreadBusy}
           showDeleteSession={showDeleteSession}
           deleteSessionPath={deleteSessionPath}
           deleteSessionDisplayName={deleteSessionDisplayName}
@@ -866,7 +866,7 @@ export function ConversationView({
                 value={{
                   ...(quoteSessionPath ? { quoteSessionPath } : {}),
                   ...(quoteOrigin ? { quoteOrigin } : {}),
-                  onMessageQuoteAddToChat: handleMessageQuoteAddToChat,
+                  onMessageQuoteAddToThread: handleMessageQuoteAddToThread,
                   ...(showSideChat && paneId
                     ? { onMessageQuoteAddToSideChat: handleMessageQuoteAddToSideChat }
                     : {}),
@@ -976,7 +976,7 @@ export function ConversationView({
                   rootRef={conversationScrollBodyRef}
                   quoteSessionPath={quoteSessionPath}
                   quoteOrigin={quoteOrigin}
-                  onMessageQuoteAddToChat={composerDock.onMessageQuoteAddToChat}
+                  onMessageQuoteAddToThread={composerDock.onMessageQuoteAddToThread}
                   onMessageQuoteAddToSideChat={
                     showSideChat && paneId ? handleMessageQuoteAddToSideChat : undefined
                   }

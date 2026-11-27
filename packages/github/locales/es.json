@@ -142,7 +142,7 @@
     "prMarkReadyForReview": "Listo para revisar",
     "prMarkingReady": "Marcando como listo…",
     "prMarkReadyFailed": "Error al marcar la solicitud de incorporación como lista para revisar",
-    "addSelectionToChat": "Agregar al chat"
+    "addSelectionToThread": "Agregar al hilo"
   },
   "github": {
     "connect": "Conectar GitHub",

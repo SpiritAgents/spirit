@@ -383,7 +383,7 @@ impl TuiShell {
         if self.runtime.has_pending_tool_approval() {
             self.scroll_history_to_bottom();
             if self.runtime.pending_subagent_approval().is_none() {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::User,
                     content: trimmed_message.to_string(),
                     tool_block: None,
@@ -400,7 +400,7 @@ impl TuiShell {
         if self.input.shell_mode_active {
             self.scroll_history_to_bottom();
             if self.runtime.is_busy() {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.busy.pending_reply").into_owned(),
                     tool_block: None,
@@ -415,7 +415,7 @@ impl TuiShell {
 
         if is_subagents_command(trimmed_message) {
             self.scroll_history_to_bottom();
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::User,
                 content: trimmed_message.to_string(),
                 tool_block: None,
@@ -438,7 +438,7 @@ impl TuiShell {
             if self.can_interrupt_current_turn() {
                 self.abort_current_turn(false);
             } else {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.busy.pending_reply").into_owned(),
                     tool_block: None,
@@ -474,7 +474,7 @@ impl TuiShell {
             user_content
                 .push_str(t!("tui.user.attached_mcp_resources", summary = summary).as_ref());
         }
-        self.messages.push(ChatMessage {
+        self.messages.push(ThreadMessage {
             role: MessageRole::User,
             content: user_content,
             tool_block: None,

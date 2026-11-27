@@ -142,7 +142,7 @@
     "prMarkReadyForReview": "レビュー可能にする",
     "prMarkingReady": "準備中…",
     "prMarkReadyFailed": "プルリクエストをレビュー可能にできませんでした",
-    "addSelectionToChat": "チャットに追加"
+    "addSelectionToThread": "スレッドに追加"
   },
   "github": {
     "connect": "GitHub に接続",

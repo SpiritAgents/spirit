@@ -48,7 +48,7 @@ pub(super) fn apply_runtime_events(shell: &mut TuiShell) {
                     );
                 shell
                     .messages
-                    .push(ChatMessage::new(MessageRole::Agent, String::new()));
+                    .push(ThreadMessage::new(MessageRole::Agent, String::new()));
                 let idx = shell.messages.len() - 1;
                 shell.assistant_aux_by_message.remove(&idx);
                 shell.pending_assistant_msg_index = Some(idx);
@@ -128,7 +128,7 @@ pub(super) fn apply_runtime_events(shell: &mut TuiShell) {
                 } else {
                     shell
                         .messages
-                        .push(ChatMessage::new(MessageRole::Agent, content));
+                        .push(ThreadMessage::new(MessageRole::Agent, content));
                 }
             }
             RuntimeEvent::AssistantResponseCompleted => {
@@ -180,7 +180,7 @@ fn upsert_tool_preview(
             return;
         }
     }
-    shell.messages.push(ChatMessage::with_tool_block(
+    shell.messages.push(ThreadMessage::with_tool_block(
         MessageRole::Agent,
         String::new(),
         block,

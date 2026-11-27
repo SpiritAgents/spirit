@@ -11,7 +11,7 @@
       "maximize": "最大化",
       "close": "關閉"
     },
-    "sessionSidebar": {
+    "threadSidebar": {
       "currentWorkspace": "目前工作區",
       "models": "模型",
       "skills": "技能",
@@ -20,14 +20,14 @@
       "mcps": "MCP",
       "appearance": "外觀",
       "settingsNavSidebarAria": "設定導覽側邊欄",
-      "sessionsSidebarAria": "對話與設定側邊欄",
+      "threadsSidebarAria": "執行緒與設定側邊欄",
       "back": "返回",
       "settingsHeading": "設定",
-      "newChat": "新對話",
+      "newThread": "新執行緒",
       "extensionsButton": "擴充功能",
       "workspacesHeading": "工作區",
       "settingsTabsAria": "設定分頁",
-      "workspaceSessionsAria": "工作區對話",
+      "workspaceThreadsAria": "工作區執行緒",
       "settingsButton": "設定",
       "basics": "基本",
       "pageNavigation": "頁面導覽"
@@ -121,7 +121,7 @@
       "commitButton": "提交",
       "collapseTools": "收起工具",
       "expandTools": "展開工具",
-      "newChat": "新對話",
+      "newThread": "新執行緒",
       "settingsPlaceholderTitle": "桌面設定檢視",
       "marketplacePlaceholderTitle": "擴充功能檢視",
       "previewEditorOnlyTextError": "預覽編輯器只能開啟文字檔。",

@@ -111,7 +111,7 @@ type DesktopWindowCopy = {
   previewEditorOnlyTextError: string;
   hostStatus: string;
   mcpReady: string;
-  newChat: string;
+  newThread: string;
 };
 
 type DesktopCommitCopy = {
@@ -142,7 +142,7 @@ type DesktopTitleBarCopy = {
   close: string;
 };
 
-type DesktopSessionSidebarCopy = {
+type DesktopThreadSidebarCopy = {
   currentWorkspace: string;
   basics: string;
   models: string;
@@ -152,15 +152,15 @@ type DesktopSessionSidebarCopy = {
   mcps: string;
   appearance: string;
   settingsNavSidebarAria: string;
-  sessionsSidebarAria: string;
+  threadsSidebarAria: string;
   back: string;
   settingsHeading: string;
   pageNavigation: string;
-  newChat: string;
+  newThread: string;
   extensionsButton: string;
   workspacesHeading: string;
   settingsTabsAria: string;
-  workspaceSessionsAria: string;
+  workspaceThreadsAria: string;
   settingsButton: string;
 };
 
@@ -324,7 +324,7 @@ export type Messages = {
   };
   desktop: {
     titleBar: DesktopTitleBarCopy;
-    sessionSidebar: DesktopSessionSidebarCopy;
+    threadSidebar: DesktopThreadSidebarCopy;
     conversation: DesktopConversationCopy;
     models: DesktopModelsCopy;
     window: DesktopWindowCopy;

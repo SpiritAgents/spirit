@@ -11,7 +11,7 @@
       "maximize": "Развернуть",
       "close": "Закрыть"
     },
-    "sessionSidebar": {
+    "threadSidebar": {
       "currentWorkspace": "Текущее рабочее пространство",
       "models": "Модели",
       "skills": "Навыки",
@@ -20,14 +20,14 @@
       "mcps": "MCP",
       "appearance": "Внешний вид",
       "settingsNavSidebarAria": "Боковая панель навигации по настройкам",
-      "sessionsSidebarAria": "Боковая панель чатов и настроек",
+      "threadsSidebarAria": "Боковая панель тредов и настроек",
       "back": "Назад",
       "settingsHeading": "Настройки",
-      "newChat": "Новый чат",
+      "newThread": "Новый тред",
       "extensionsButton": "Расширения",
       "workspacesHeading": "Рабочие пространства",
       "settingsTabsAria": "Вкладки настроек",
-      "workspaceSessionsAria": "Чаты рабочего пространства",
+      "workspaceThreadsAria": "Треды рабочего пространства",
       "settingsButton": "Настройки",
       "basics": "Основы",
       "pageNavigation": "Навигация по страницам"
@@ -121,7 +121,7 @@
       "commitButton": "Коммит",
       "collapseTools": "Свернуть инструменты",
       "expandTools": "Развернуть инструменты",
-      "newChat": "Новый чат",
+      "newThread": "Новый тред",
       "settingsPlaceholderTitle": "Просмотр настроек Desktop",
       "marketplacePlaceholderTitle": "Просмотр расширений",
       "previewEditorOnlyTextError": "В предварительном редакторе можно открывать только текстовые файлы.",

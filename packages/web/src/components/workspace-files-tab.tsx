@@ -416,8 +416,8 @@ export type WorkspaceFilesTabProps = {
   /** Currently open workspace-relative path; undefined when no workspace file is selected */
   onFilesWorkspacePathChange?: (relativePath: string | undefined) => void;
   onFilesViewModeChange?: (viewMode: WorkspaceEditorViewMode) => void;
-  onFileSnippetAddToChat?: (attachment: FileSnippetAttachment) => void;
-  onWorkspaceFileAddToChat?: (relativePath: string) => void;
+  onFileSnippetAddToThread?: (attachment: FileSnippetAttachment) => void;
+  onWorkspaceFileAddToThread?: (relativePath: string) => void;
   gitRevision?: number;
   workspaceContentInvalidation?: WorkspaceContentInvalidation;
   useTranslucency?: boolean;
@@ -455,8 +455,8 @@ export function WorkspaceFilesTab({
   onOpenWorkspaceFileInNewTab,
   onFilesWorkspacePathChange,
   onFilesViewModeChange,
-  onFileSnippetAddToChat,
-  onWorkspaceFileAddToChat,
+  onFileSnippetAddToThread,
+  onWorkspaceFileAddToThread,
   gitRevision,
   workspaceContentInvalidation,
   useTranslucency = false,
@@ -1075,7 +1075,7 @@ export function WorkspaceFilesTab({
   }, [draftText, doc?.readOnly, isPreviewVisible, savedText]);
 
   const selectionEnabled =
-    doc?.status === "ready" && Boolean(onFileSnippetAddToChat && selectedPath);
+    doc?.status === "ready" && Boolean(onFileSnippetAddToThread && selectedPath);
 
   useEffect(() => {
     onFilesViewModeChangeRef.current?.(markdownViewMode);
@@ -1299,7 +1299,7 @@ export function WorkspaceFilesTab({
                       : current,
                   );
                 }}
-                onWorkspaceFileAddToChat={onWorkspaceFileAddToChat}
+                onWorkspaceFileAddToThread={onWorkspaceFileAddToThread}
               />
             </div>
             {searchWorkspaceContent ? (
@@ -1412,7 +1412,7 @@ export function WorkspaceFilesTab({
                       <FileDomSelectionMenu
                         rootRef={previewRootRef}
                         filePath={selectedPath}
-                        onFileSnippetAddToChat={onFileSnippetAddToChat}
+                        onFileSnippetAddToThread={onFileSnippetAddToThread}
                       />
                     ) : null}
                   </>
@@ -1441,7 +1441,7 @@ export function WorkspaceFilesTab({
                         containerRef={monacoContainerRef}
                         editor={monacoEditor}
                         filePath={selectedPath}
-                        onFileSnippetAddToChat={onFileSnippetAddToChat}
+                        onFileSnippetAddToThread={onFileSnippetAddToThread}
                       />
                     ) : null}
                   </div>

@@ -48,7 +48,7 @@ export type WorkspaceGitTabProps = {
     request: ReadGitCommitMessageRequest,
   ) => Promise<import("@/types").GitCommitMessageSnapshot>;
   submitGitChip: (request: SubmitGitChipRequest) => Promise<boolean>;
-  onGitCommitAddToChat?: (attachment: GitCommitAttachment) => void;
+  onGitCommitAddToThread?: (attachment: GitCommitAttachment) => void;
   onOpenChangedFile?: (
     relativePath: string,
     options?: { viewMode?: WorkspaceEditorViewMode },
@@ -64,7 +64,7 @@ export function WorkspaceGitTab({
   readGitHistory,
   readGitCommitMessage,
   submitGitChip,
-  onGitCommitAddToChat,
+  onGitCommitAddToThread,
   onOpenChangedFile,
   className,
 }: WorkspaceGitTabProps) {
@@ -365,9 +365,9 @@ export function WorkspaceGitTab({
     [flashMergeButtonSucceeded, submitGitChip],
   );
 
-  const handleAddCommitToChat = useCallback(
+  const handleAddCommitToThread = useCallback(
     (commit: GitCommitRecord) => {
-      if (!onGitCommitAddToChat || loadingCommitMessage) {
+      if (!onGitCommitAddToThread || loadingCommitMessage) {
         return;
       }
       setCommitMessageError("");
@@ -385,7 +385,7 @@ export function WorkspaceGitTab({
             authoredAt: snapshot.authoredAt || commit.authoredAt,
             fullMessage: snapshot.fullMessage,
           };
-          onGitCommitAddToChat(attachment);
+          onGitCommitAddToThread(attachment);
         })
         .catch((error: unknown) => {
           setCommitMessageError(describeError(error));
@@ -394,7 +394,7 @@ export function WorkspaceGitTab({
           setLoadingCommitMessage(false);
         });
     },
-    [loadingCommitMessage, onGitCommitAddToChat, readGitCommitMessage, t],
+    [loadingCommitMessage, onGitCommitAddToThread, readGitCommitMessage, t],
   );
 
   const canMerge =
@@ -470,8 +470,8 @@ export function WorkspaceGitTab({
           loadingMore={loadingMoreHistory}
           hasMore={history?.hasMore === true}
           onLoadMore={loadMoreHistory}
-          onAddCommitToChat={onGitCommitAddToChat ? handleAddCommitToChat : undefined}
-          addCommitToChatDisabled={loadingCommitMessage}
+          onAddCommitToThread={onGitCommitAddToThread ? handleAddCommitToThread : undefined}
+          addCommitToThreadDisabled={loadingCommitMessage}
           error={historyError || commitMessageError || undefined}
         />
       </div>

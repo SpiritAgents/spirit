@@ -111,7 +111,7 @@
       "maximize": "Maximize",
       "close": "Close"
     },
-    "sessionSidebar": {
+    "threadSidebar": {
       "currentWorkspace": "Current Workspace",
       "basics": "Basics",
       "models": "Models",
@@ -121,15 +121,15 @@
       "mcps": "MCPs",
       "appearance": "Appearance",
       "settingsNavSidebarAria": "Settings Navigation Sidebar",
-      "sessionsSidebarAria": "Chats and Settings Sidebar",
+      "threadsSidebarAria": "Threads and Settings Sidebar",
       "back": "Back",
       "settingsHeading": "Settings",
       "pageNavigation": "Page navigation",
-      "newChat": "New Chat",
+      "newThread": "New Thread",
       "extensionsButton": "Extensions",
       "workspacesHeading": "Workspaces",
       "settingsTabsAria": "Settings Tabs",
-      "workspaceSessionsAria": "Workspace Chats",
+      "workspaceThreadsAria": "Workspace Threads",
       "settingsButton": "Settings"
     },
     "conversation": {
@@ -229,7 +229,7 @@
       "previewEditorOnlyTextError": "Only text files in the preview editor can be opened.",
       "hostStatus": "Web Hero Preview",
       "mcpReady": "MCP ready",
-      "newChat": "New Chat"
+      "newThread": "New Thread"
     },
     "commit": {
       "modeCommit": "Commit",

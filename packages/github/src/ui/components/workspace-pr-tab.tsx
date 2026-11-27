@@ -133,7 +133,7 @@ export type WorkspacePrTabProps = {
   prRevealEnabled?: boolean;
   prRevealNonce?: number;
   prRevealRequest?: GitHubPullRequestRevealRequest | null;
-  onPrDiffAddToChat?: (attachment: import("@spiritagent/ui/composer").PrDiffAttachment) => void;
+  onPrDiffAddToThread?: (attachment: import("@spiritagent/ui/composer").PrDiffAttachment) => void;
   /** Called when the current PR detail title changes ("PR #XXX" in detail view, undefined when back to the list or on load failure) */
   onTitleChange?: (title: string | undefined) => void;
   /** Called when the current PR detail state changes (undefined when back to the list or on load failure) */
@@ -161,7 +161,7 @@ export function WorkspacePrTab({
   prRevealEnabled = false,
   prRevealNonce = 0,
   prRevealRequest = null,
-  onPrDiffAddToChat,
+  onPrDiffAddToThread,
   onTitleChange,
   onPrStatusChange,
   className,
@@ -819,7 +819,7 @@ export function WorkspacePrTab({
                 onOpenExternal={openBrowserUrl}
                 onMerge={handleMergePullRequest}
                 onMarkReady={handleMarkPullRequestReady}
-                onPrDiffAddToChat={onPrDiffAddToChat}
+                onPrDiffAddToThread={onPrDiffAddToThread}
                 className="min-h-0 flex-1"
               />
             </div>

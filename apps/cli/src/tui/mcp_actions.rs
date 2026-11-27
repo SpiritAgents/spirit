@@ -3,7 +3,7 @@ use crate::ports::{McpStatusSnapshot, McpStatusState};
 
 impl TuiShell {
     pub(super) fn push_mcp_usage(&mut self) {
-        self.messages.push(ChatMessage {
+        self.messages.push(ThreadMessage {
             role: MessageRole::Agent,
             content: crate::locale::product_text("tui.mcp.usage").into_owned(),
             tool_block: None,
@@ -13,7 +13,7 @@ impl TuiShell {
     pub(super) fn push_mcp_overview(&mut self) {
         match self.runtime.list_mcp_servers() {
             Ok(servers) if servers.is_empty() => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.no_servers").into_owned(),
                     tool_block: None,
@@ -33,14 +33,14 @@ impl TuiShell {
                     })
                     .collect::<Vec<_>>()
                     .join("\n");
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.overview", summary = summary).into_owned(),
                     tool_block: None,
                 });
             }
             Err(err) => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.overview_read_failed", err = err).into_owned(),
                     tool_block: None,
@@ -52,7 +52,7 @@ impl TuiShell {
     pub(super) fn resolve_default_mcp_server(&mut self, purpose: &str) -> Option<String> {
         match self.runtime.list_mcp_servers() {
             Ok(servers) if servers.is_empty() => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.no_servers").into_owned(),
                     tool_block: None,
@@ -66,7 +66,7 @@ impl TuiShell {
                     .map(|server| server.name)
                     .collect::<Vec<_>>()
                     .join(", ");
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!(
                         "tui.mcp.server_required",
@@ -79,7 +79,7 @@ impl TuiShell {
                 None
             }
             Err(err) => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.servers_read_failed", err = err).into_owned(),
                     tool_block: None,
@@ -186,7 +186,7 @@ impl TuiShell {
                 true
             }
             Err(err) => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.prompt_apply_failed", err = err).into_owned(),
                     tool_block: None,

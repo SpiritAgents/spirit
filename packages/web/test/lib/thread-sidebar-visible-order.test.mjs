@@ -4,7 +4,7 @@ import { test } from "vitest";
 import {
   SIDEBAR_SESSION_PAGE_SIZE,
   listVisibleSidebarSessions,
-} from "../../src/lib/session-sidebar-visible-order.ts";
+} from "../../src/lib/thread-sidebar-visible-order.ts";
 
 function session(path) {
   return { path };

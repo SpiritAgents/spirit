@@ -2,7 +2,7 @@ use rust_i18n::t;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use crate::view::{ChatMessage, MessageRole, ToolUiBlock, ToolUiPhase};
+use crate::view::{MessageRole, ThreadMessage, ToolUiBlock, ToolUiPhase};
 
 #[derive(Clone, Default, Deserialize)]
 pub(crate) struct TaskOutput {
@@ -55,7 +55,7 @@ pub(crate) fn task_tool_message(
     notice: bool,
     restored: bool,
     output_error: Option<&str>,
-) -> Result<ChatMessage, String> {
+) -> Result<ThreadMessage, String> {
     let record: TaskView =
         serde_json::from_value(task.clone()).map_err(|error| error.to_string())?;
     let name = match record.kind.as_str() {
@@ -138,7 +138,7 @@ pub(crate) fn task_tool_message(
         details.join("\n"),
         output.text
     );
-    Ok(ChatMessage::with_tool_block(
+    Ok(ThreadMessage::with_tool_block(
         MessageRole::Agent,
         content,
         ToolUiBlock {

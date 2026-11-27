@@ -16,15 +16,15 @@ function TerminalSelectionMenu({
   containerRef,
   terminal,
   terminalDisplayName,
-  onTerminalAddToChat,
+  onTerminalAddToThread,
 }: {
   containerRef: RefObject<HTMLElement | null>;
   terminal: Terminal | null;
   terminalDisplayName: string;
-  onTerminalAddToChat?: (attachment: TerminalSnippetAttachment) => void;
+  onTerminalAddToThread?: (attachment: TerminalSnippetAttachment) => void;
 }) {
   const { t } = useTranslation();
-  const enabled = Boolean(onTerminalAddToChat);
+  const enabled = Boolean(onTerminalAddToThread);
   const { open, setOpen, anchor, selectionText, lineRange, dismiss } =
     useTerminalSelectionActionMenu({
       enabled,
@@ -32,9 +32,9 @@ function TerminalSelectionMenu({
       terminal,
     });
 
-  const handleAddToChat = useCallback(() => {
+  const handleAddToThread = useCallback(() => {
     const term = terminal;
-    if (!term || !onTerminalAddToChat) {
+    if (!term || !onTerminalAddToThread) {
       dismiss();
       return;
     }
@@ -53,10 +53,10 @@ function TerminalSelectionMenu({
       lineEnd: range?.lineEnd ?? 0,
       selectedText,
     };
-    onTerminalAddToChat(attachment);
+    onTerminalAddToThread(attachment);
     dismiss();
     term.clearSelection();
-  }, [dismiss, lineRange, onTerminalAddToChat, selectionText, terminal, terminalDisplayName]);
+  }, [dismiss, lineRange, onTerminalAddToThread, selectionText, terminal, terminalDisplayName]);
 
   if (!enabled) {
     return null;
@@ -69,8 +69,8 @@ function TerminalSelectionMenu({
       onOpenChange={setOpen}
     >
       <TextSelectionActionMenuItem
-        label={t("workspace.addSelectionToChat")}
-        onSelect={handleAddToChat}
+        label={t("workspace.addSelectionToThread")}
+        onSelect={handleAddToThread}
       />
     </TextSelectionActionMenu>
   );

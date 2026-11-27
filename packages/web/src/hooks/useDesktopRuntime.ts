@@ -2785,9 +2785,9 @@ export function useDesktopRuntime() {
         return false;
       }
 
-      // If a session reset (Cmd+N / New Chat) or session open is still completing on the host,
+      // If a session reset (Cmd+N / New Thread) or session open is still completing on the host,
       // wait for it to settle before reading snapshot/targetSessionPath so messages typed in the
-      // new-chat screen never leak into the previous historical session.
+      // new-thread screen never leak into the previous historical session.
       let waitedForReset = false;
       while (pendingSessionNavigationRef.current) {
         const pending = pendingSessionNavigationRef.current;

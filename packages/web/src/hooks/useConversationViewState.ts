@@ -288,7 +288,7 @@ export function useConversationViewState({
     longConversationListDemoActive: longConversationListDemo.active,
     approvalPreviewDemoActive: approvalPreviewDemo.active,
     toolCardPreviewDemoActive: toolCardPreviewDemo.active,
-    newChatBusy: false,
+    newThreadBusy: false,
   });
   const { ref: composerDockRef, heightPx: composerDockHeightPx } =
     useElementBoxHeight<HTMLDivElement>(composerLayoutHero);

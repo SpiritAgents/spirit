@@ -10,7 +10,7 @@ export function isForkableForkAnchor(message: ConversationMessageSnapshot): bool
   return Boolean(message.content.trim() || message.tool);
 }
 
-/** Stackable fork title: `My Chat` → `(1) My Chat` → `(2) My Chat`. */
+/** Stackable fork title: `My Thread` → `(1) My Thread` → `(2) My Thread`. */
 export function deriveForkedSessionDisplayName(sourceDisplayName: string): string {
   const match = sourceDisplayName.match(FORK_DISPLAY_NAME_PREFIX);
   if (match) {

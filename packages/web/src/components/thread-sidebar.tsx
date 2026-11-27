@@ -79,11 +79,11 @@ import {
   writeWorkspaceSidebarGroupOrder,
 } from "@/lib/layout-prefs";
 import { applyWorkspaceGroupOrder, workspaceGroupIdsInOrder } from "@/lib/workspace-sidebar-order";
-import { listVisibleSidebarSessions } from "@/lib/session-sidebar-visible-order";
+import { listVisibleSidebarSessions } from "@/lib/thread-sidebar-visible-order";
 import {
-  registerSessionSidebarDigitShortcut,
-  unregisterSessionSidebarDigitShortcut,
-} from "@/lib/session-sidebar-digit-shortcut-bridge";
+  registerThreadSidebarDigitShortcut,
+  unregisterThreadSidebarDigitShortcut,
+} from "@/lib/thread-sidebar-digit-shortcut-bridge";
 import { useWorkspaceGroupReorder } from "@/hooks/use-workspace-group-reorder";
 import { resolveWorkspaceGroupingRoot } from "@/lib/workspace-grouping";
 import { runAfterRadixOverlayClose } from "@/lib/overlay-motion";
@@ -108,7 +108,7 @@ import {
 } from "@/components/session-list-git-tooltip";
 
 /** Platform shortcut hint, computed at module load (the platform does not change at runtime). */
-const newChatShortcutLabel = shortcutLabel("N");
+const newThreadShortcutLabel = shortcutLabel("N");
 const settingsShortcutLabelText = settingsShortcutLabel();
 
 function describeRenameError(error: unknown): string {
@@ -119,7 +119,7 @@ function samePath(a: string, b: string): boolean {
   return a.replace(/\\/g, "/").toLowerCase() === b.replace(/\\/g, "/").toLowerCase();
 }
 
-type SessionSidebarProps = {
+type ThreadSidebarProps = {
   className?: string;
   /** Narrow rail: only swap styles / collapse the list without replacing the whole subtree, avoiding a beat mismatch with the outer width animation */
   narrow: boolean;
@@ -129,8 +129,8 @@ type SessionSidebarProps = {
   sessions: SessionListItem[];
   activeFilePath: string | null;
   onSelectSession: (path: string) => void;
-  onNewChat: () => void;
-  onNewChatInWorkspace?: (workspaceRoot: string) => void;
+  onNewThread: () => void;
+  onNewThreadInWorkspace?: (workspaceRoot: string) => void;
   onOpenMarketplace?: () => void;
   onOpenAutomations?: () => void;
   onOpenSettings: () => void;
@@ -147,7 +147,7 @@ type SessionSidebarProps = {
   onExtensionSettingsChange?: (extensionId: string) => void;
   /** Windows Mica: the sidebar needs translucency + blur so content behind the window does not show through and look smeared */
   translucency?: boolean;
-  newChatBusy?: boolean;
+  newThreadBusy?: boolean;
   deleteSessionBusy?: boolean;
   onDeleteSession?: (path: string) => void | Promise<void>;
   renameSessionBusy?: boolean;
@@ -189,7 +189,7 @@ function normalizePath(value: string): string {
 function deriveWorkspaceLabel(workspaceRoot: string | null | undefined): string {
   const trimmed = workspaceRoot?.trim();
   if (!trimmed) {
-    return i18n.t("sidebar.currentWorkspace");
+    return i18n.t("threadSidebar.currentWorkspace");
   }
   const normalized = trimmed.replace(/\\/g, "/").replace(/\/+$/g, "");
   const lastSlash = normalized.lastIndexOf("/");
@@ -297,8 +297,8 @@ type WorkspaceSessionGroupCollapsibleProps = {
   onSelectSession(path: string): void;
   onTogglePinSession?(session: SessionListItem): void;
   onLoadMore(): void;
-  onNewChatInWorkspace?: (workspaceRoot: string) => void;
-  newChatBusy?: boolean;
+  onNewThreadInWorkspace?: (workspaceRoot: string) => void;
+  newThreadBusy?: boolean;
   renamingSessionPath?: string | null;
   renameValue?: string;
   onRenameValueChange?: (value: string) => void;
@@ -418,8 +418,8 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
   onSelectSession,
   onTogglePinSession,
   onLoadMore,
-  onNewChatInWorkspace,
-  newChatBusy = false,
+  onNewThreadInWorkspace,
+  newThreadBusy = false,
   renamingSessionPath = null,
   renameValue = "",
   onRenameValueChange,
@@ -437,8 +437,8 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
   const { t } = useTranslation();
   const split = useOptionalConversationSplit();
   const workspaceRoot = group.rootPath?.trim() ?? "";
-  const workspaceNewChatDragEnabled =
-    Boolean(split) && Boolean(workspaceRoot) && !disabled && !newChatBusy;
+  const workspaceNewThreadDragEnabled =
+    Boolean(split) && Boolean(workspaceRoot) && !disabled && !newThreadBusy;
   const [workspaceRowHovered, setWorkspaceRowHovered] = useState(false);
   const [plusTooltipAnchorLocked, setPlusTooltipAnchorLocked] = useState(false);
   const showWorkspaceRowHoverChrome = workspaceRowHovered || isDragging || isPressing;
@@ -531,7 +531,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
               <span className={cn("truncate", DESKTOP_SIDEBAR_TEXT_CLASS)}>{group.label}</span>
             </AnimatedCollapseTrigger>
           </RovingFocusItem>
-          {onNewChatInWorkspace && workspaceRoot ? (
+          {onNewThreadInWorkspace && workspaceRoot ? (
             <Tooltip
               delayDuration={300}
               disableHoverableContent
@@ -543,8 +543,8 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
                     type="button"
                     variant="ghost"
                     size="icon"
-                    data-workspace-new-chat=""
-                    draggable={workspaceNewChatDragEnabled}
+                    data-workspace-new-thread=""
+                    draggable={workspaceNewThreadDragEnabled}
                     className={cn(
                       "mr-0.5 size-6 shrink-0 focus-visible:ring-2 focus-visible:ring-inset",
                       // Visibility keeps keyboard/tooltip anchors in-flow without fading.
@@ -555,11 +555,11 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
                       sidebarInteractionMotionClass,
                       sidebarItemHoverClass(translucency),
                     )}
-                    disabled={disabled || newChatBusy}
-                    aria-label={t("sidebar.newChatInWorkspace", { workspace: group.label })}
-                    onClick={() => onNewChatInWorkspace(workspaceRoot)}
+                    disabled={disabled || newThreadBusy}
+                    aria-label={t("threadSidebar.newThreadInWorkspace", { workspace: group.label })}
+                    onClick={() => onNewThreadInWorkspace(workspaceRoot)}
                     onDragStart={(event) => {
-                      if (!split || !workspaceNewChatDragEnabled) {
+                      if (!split || !workspaceNewThreadDragEnabled) {
                         event.preventDefault();
                         return;
                       }
@@ -577,7 +577,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
                 </RovingFocusAction>
               </TooltipTrigger>
               <TooltipContent side="bottom" sideOffset={4}>
-                {t("sidebar.newChatInWorkspace", { workspace: group.label })}
+                {t("threadSidebar.newThreadInWorkspace", { workspace: group.label })}
               </TooltipContent>
             </Tooltip>
           ) : null}
@@ -659,7 +659,7 @@ function SessionListLoadMore({
           disabled && "pointer-events-none opacity-50",
         )}
       >
-        {t("sidebar.loadMoreSessions")}
+        {t("threadSidebar.loadMoreThreads")}
       </button>
     </RovingFocusItem>
   );
@@ -734,7 +734,7 @@ const SessionListRow = memo(function SessionListRow({
   const sessionDragEnabled = Boolean(split) && !disabled && !isBusy && !renaming;
   const hasIndicator = (isBusy && !isBlocked) || (!selected && (isBlocked || showCompletedUnseen));
   const showGitTooltip = Boolean(gitBranch?.trim()) && gitTooltipContext !== null;
-  const pinToggleLabel = pinned ? t("sidebar.unpinSession") : t("sidebar.pinSession");
+  const pinToggleLabel = pinned ? t("threadSidebar.unpinThread") : t("threadSidebar.pinThread");
 
   useLayoutEffect(() => {
     if (!renaming) {
@@ -770,9 +770,9 @@ const SessionListRow = memo(function SessionListRow({
         {isBusy && !isBlocked ? (
           <Spinner className="size-3 shrink-0 text-foreground" aria-label={t("common.running")} />
         ) : !selected && isBlocked ? (
-          <SessionRowStatusDot tone="blocked" label={t("sidebar.sessionBlocked")} />
+          <SessionRowStatusDot tone="blocked" label={t("threadSidebar.threadBlocked")} />
         ) : !selected && showCompletedUnseen ? (
-          <SessionRowStatusDot tone="completed" label={t("sidebar.sessionCompleted")} />
+          <SessionRowStatusDot tone="completed" label={t("threadSidebar.threadCompleted")} />
         ) : null}
       </span>
     ) : null;
@@ -812,7 +812,7 @@ const SessionListRow = memo(function SessionListRow({
           ref={renameInputRef}
           value={renameValue}
           className={cn(SESSION_TITLE_RENAME_INPUT_CLASS, "flex-1 basis-0")}
-          aria-label={t("sidebar.renameSession")}
+          aria-label={t("threadSidebar.renameThread")}
           onChange={(event) => onRenameValueChange?.(event.target.value)}
           onKeyDown={handleRenameKeyDown}
           onBlur={() => {
@@ -969,14 +969,14 @@ function SessionListNav({
   const togglePinTarget = contextMenuSession;
   const togglePinTargetPinned = typeof togglePinTarget?.pinnedAtUnixMs === "number";
   const togglePinLabel = togglePinTargetPinned
-    ? t("sidebar.unpinSession")
-    : t("sidebar.pinSession");
+    ? t("threadSidebar.unpinThread")
+    : t("threadSidebar.pinThread");
 
   return (
     <ContextMenu onOpenChange={onContextMenuOpenChange}>
       <ContextMenuTrigger asChild>{nav}</ContextMenuTrigger>
       <ContextMenuContent
-        aria-label={t("sidebar.chatActions")}
+        aria-label={t("threadSidebar.threadActions")}
         onCloseAutoFocus={onContextMenuCloseAutoFocus}
       >
         {canRenameSession ? (
@@ -998,7 +998,7 @@ function SessionListNav({
             </ContextMenuItem>
             <ContextMenuItem
               disabled={renameSessionBusy || busy}
-              title={busy ? t("sidebar.cannotRenameBusyChat") : undefined}
+              title={busy ? t("threadSidebar.cannotRenameBusyThread") : undefined}
               onSelect={() => {
                 const session = contextMenuSessionRef.current ?? contextMenuSession;
                 if (session) {
@@ -1007,7 +1007,7 @@ function SessionListNav({
               }}
             >
               <Pencil aria-hidden strokeWidth={1.75} />
-              {t("sidebar.renameSession")}
+              {t("threadSidebar.renameThread")}
             </ContextMenuItem>
           </>
         ) : null}
@@ -1016,7 +1016,7 @@ function SessionListNav({
           <ContextMenuItem
             variant="destructive"
             disabled={deleteSessionBusy || busy}
-            title={busy ? t("sidebar.cannotDeleteBusyChat") : undefined}
+            title={busy ? t("threadSidebar.cannotDeleteBusyThread") : undefined}
             onSelect={() => {
               const session = contextMenuSessionRef.current ?? contextMenuSession;
               if (session) {
@@ -1102,8 +1102,8 @@ function WorkspaceListNav({
   const togglePinTarget = contextMenuSession;
   const togglePinTargetPinned = typeof togglePinTarget?.pinnedAtUnixMs === "number";
   const togglePinLabel = togglePinTargetPinned
-    ? t("sidebar.unpinSession")
-    : t("sidebar.pinSession");
+    ? t("threadSidebar.unpinThread")
+    : t("threadSidebar.pinThread");
   const showRevealInExplorer =
     isWorkspaceTarget && canRevealInExplorer && Boolean(workspaceTarget?.rootPath);
   const showRemoveWorkspace = isWorkspaceTarget && canRemoveWorkspace;
@@ -1116,7 +1116,9 @@ function WorkspaceListNav({
     <ContextMenu>
       <ContextMenuTrigger asChild>{inner}</ContextMenuTrigger>
       <ContextMenuContent
-        aria-label={isWorkspaceTarget ? t("sidebar.workspaceActions") : t("sidebar.chatActions")}
+        aria-label={
+          isWorkspaceTarget ? t("threadSidebar.workspaceActions") : t("threadSidebar.threadActions")
+        }
         onCloseAutoFocus={onContextMenuCloseAutoFocus}
       >
         {showRevealInExplorer ? (
@@ -1168,7 +1170,7 @@ function WorkspaceListNav({
             </ContextMenuItem>
             <ContextMenuItem
               disabled={renameSessionBusy || sessionBusy}
-              title={sessionBusy ? t("sidebar.cannotRenameBusyChat") : undefined}
+              title={sessionBusy ? t("threadSidebar.cannotRenameBusyThread") : undefined}
               onSelect={() => {
                 const session = contextMenuSessionRef.current ?? contextMenuSession;
                 if (session) {
@@ -1177,7 +1179,7 @@ function WorkspaceListNav({
               }}
             >
               <Pencil aria-hidden strokeWidth={1.75} />
-              {t("sidebar.renameSession")}
+              {t("threadSidebar.renameThread")}
             </ContextMenuItem>
           </>
         ) : null}
@@ -1188,7 +1190,7 @@ function WorkspaceListNav({
           <ContextMenuItem
             variant="destructive"
             disabled={deleteSessionBusy || sessionBusy}
-            title={sessionBusy ? t("sidebar.cannotDeleteBusyChat") : undefined}
+            title={sessionBusy ? t("threadSidebar.cannotDeleteBusyThread") : undefined}
             onSelect={() => {
               const session = contextMenuSessionRef.current ?? contextMenuSession;
               if (session) {
@@ -1359,7 +1361,7 @@ function sessionRowRenamingClass(_translucency?: boolean) {
   return "!bg-canvas-hover";
 }
 
-function SessionSidebarInner({
+function ThreadSidebarInner({
   className,
   narrow,
   mode = "sessions",
@@ -1367,8 +1369,8 @@ function SessionSidebarInner({
   sessions,
   activeFilePath,
   onSelectSession,
-  onNewChat,
-  onNewChatInWorkspace,
+  onNewThread,
+  onNewThreadInWorkspace,
   onOpenMarketplace,
   onOpenAutomations,
   onOpenSettings,
@@ -1381,7 +1383,7 @@ function SessionSidebarInner({
   onSettingsTabChange,
   onExtensionSettingsChange,
   translucency,
-  newChatBusy = false,
+  newThreadBusy = false,
   deleteSessionBusy = false,
   onDeleteSession,
   renameSessionBusy = false,
@@ -1391,7 +1393,7 @@ function SessionSidebarInner({
   onRemoveWorkspace,
   disabled,
   unseenCompletedSessionPaths,
-}: SessionSidebarProps) {
+}: ThreadSidebarProps) {
   const { t } = useTranslation();
   const split = useOptionalConversationSplit();
   const settingsMode = mode === "settings";
@@ -1691,20 +1693,21 @@ function SessionSidebarInner({
   const isSessionSelected = (sessionPath: string) =>
     !marketplaceActive &&
     !automationsActive &&
-    !newChatBusy &&
+    !newThreadBusy &&
     activeFilePath !== null &&
     samePath(sessionPath, activeFilePath);
 
   const isActiveSessionInSidebar =
     activeFilePath !== null && sessions.some((session) => samePath(session.path, activeFilePath));
 
-  // The New Chat item is the sidebar's location indicator whenever the current
+  // The New Thread item is the sidebar's location indicator whenever the current
   // location is not a listed session. It must hold through a frozen navigation
   // window — busy state never factors in, or the indicator would die at click
   // time while the page is still frozen on the previous content.
-  const newChatNavActive =
-    !marketplaceActive && !automationsActive && (newChatBusy || !isActiveSessionInSidebar);
-  const newChatDragEnabled = Boolean(split) && !disabled && !(newChatBusy && !newChatNavActive);
+  const newThreadNavActive =
+    !marketplaceActive && !automationsActive && (newThreadBusy || !isActiveSessionInSidebar);
+  const newThreadDragEnabled =
+    Boolean(split) && !disabled && !(newThreadBusy && !newThreadNavActive);
 
   if (activeFilePath) {
     const pinnedIndex = pinnedSessions.findIndex((session) =>
@@ -1833,7 +1836,7 @@ function SessionSidebarInner({
   }, []);
 
   useEffect(() => {
-    registerSessionSidebarDigitShortcut({
+    registerThreadSidebarDigitShortcut({
       resolveVisibleSessions() {
         return listVisibleSidebarSessions({
           pinnedSessions,
@@ -1850,7 +1853,7 @@ function SessionSidebarInner({
       },
     });
     return () => {
-      unregisterSessionSidebarDigitShortcut();
+      unregisterThreadSidebarDigitShortcut();
     };
   }, [
     collapsedWorkspaceIds,
@@ -1892,8 +1895,10 @@ function SessionSidebarInner({
         className,
       )}
       data-narrow={narrow || undefined}
-      id="session-sidebar-panel"
-      aria-label={settingsMode ? t("sidebar.settingsNavAria") : t("sidebar.chatNavAria")}
+      id="thread-sidebar-panel"
+      aria-label={
+        settingsMode ? t("threadSidebar.settingsNavAria") : t("threadSidebar.threadNavAria")
+      }
     >
       {settingsMode ? (
         <div className={cn("flex flex-col gap-2 px-1.5 pt-2.5", narrow && "items-center")}>
@@ -1923,23 +1928,23 @@ function SessionSidebarInner({
         >
           <Button
             type="button"
-            variant={sidebarNavButtonVariant(translucency, newChatNavActive)}
+            variant={sidebarNavButtonVariant(translucency, newThreadNavActive)}
             size={narrow ? "icon" : "sm"}
-            aria-current={newChatNavActive ? "page" : undefined}
-            draggable={newChatDragEnabled}
+            aria-current={newThreadNavActive ? "page" : undefined}
+            draggable={newThreadDragEnabled}
             className={cn(
               "text-xs",
               sidebarItemDefaultTextClass,
               sidebarInteractionMotionClass,
-              newChatNavActive
+              newThreadNavActive
                 ? sidebarItemSelectedClass(translucency)
                 : sidebarItemHoverClass(translucency),
               narrow ? "size-8 shrink-0" : "group h-8 w-full justify-start gap-2",
             )}
-            disabled={disabled || (newChatBusy && !newChatNavActive)}
-            onClick={onNewChat}
+            disabled={disabled || (newThreadBusy && !newThreadNavActive)}
+            onClick={onNewThread}
             onDragStart={(event) => {
-              if (!split || !newChatDragEnabled) {
+              if (!split || !newThreadDragEnabled) {
                 event.preventDefault();
                 return;
               }
@@ -1950,10 +1955,10 @@ function SessionSidebarInner({
             onDragEnd={() => split?.clearSidebarSessionDrag()}
           >
             <Compose className="size-3.5" aria-hidden strokeWidth={1.75} />
-            <span className={cn(narrow && "sr-only")}>{t("sidebar.newChat")}</span>
+            <span className={cn(narrow && "sr-only")}>{t("threadSidebar.newThread")}</span>
             {!narrow && (
               <span className={sidebarItemShortcutClass} aria-hidden>
-                {newChatShortcutLabel}
+                {newThreadShortcutLabel}
               </span>
             )}
           </Button>
@@ -1962,7 +1967,7 @@ function SessionSidebarInner({
               type="button"
               variant={sidebarNavButtonVariant(translucency, automationsActive)}
               size={narrow ? "icon" : "sm"}
-              title={narrow ? t("sidebar.automations") : undefined}
+              title={narrow ? t("threadSidebar.automations") : undefined}
               aria-current={automationsActive ? "page" : undefined}
               className={cn(
                 "text-xs",
@@ -1977,14 +1982,14 @@ function SessionSidebarInner({
               onClick={onOpenAutomations}
             >
               <Clock className="size-3.5" aria-hidden strokeWidth={1.75} />
-              <span className={cn(narrow && "sr-only")}>{t("sidebar.automations")}</span>
+              <span className={cn(narrow && "sr-only")}>{t("threadSidebar.automations")}</span>
             </Button>
           ) : null}
           <Button
             type="button"
             variant={sidebarNavButtonVariant(translucency, marketplaceActive)}
             size={narrow ? "icon" : "sm"}
-            title={narrow ? t("sidebar.extensions") : undefined}
+            title={narrow ? t("threadSidebar.extensions") : undefined}
             aria-current={marketplaceActive ? "page" : undefined}
             className={cn(
               "text-xs",
@@ -1999,7 +2004,7 @@ function SessionSidebarInner({
             onClick={onOpenMarketplace}
           >
             <Blocks className="size-3.5" aria-hidden strokeWidth={1.75} />
-            <span className={cn(narrow && "sr-only")}>{t("sidebar.extensions")}</span>
+            <span className={cn(narrow && "sr-only")}>{t("threadSidebar.extensions")}</span>
           </Button>
         </div>
       )}
@@ -2021,7 +2026,7 @@ function SessionSidebarInner({
           {settingsMode ? (
             <nav
               className="flex min-w-0 flex-col gap-0.5 p-1.5"
-              aria-label={t("sidebar.settingsTabsAria")}
+              aria-label={t("threadSidebar.settingsTabsAria")}
             >
               {(
                 [
@@ -2073,7 +2078,7 @@ function SessionSidebarInner({
                   <div className="h-2" aria-hidden />
                   {narrow ? null : (
                     <p className="px-2.5 pb-1 text-[0.65rem] text-chrome-secondary-label">
-                      {t("sidebar.extensionSettings")}
+                      {t("threadSidebar.extensionSettings")}
                     </p>
                   )}
                   {extensionSettingsItems.map((item) => {
@@ -2114,7 +2119,7 @@ function SessionSidebarInner({
             <div className={cn("min-w-0 px-1.5", sidebarSessionsScrollInsetClass)}>
               {showPinned ? (
                 <SessionListNav
-                  ariaLabel={t("sidebar.pinned")}
+                  ariaLabel={t("threadSidebar.pinned")}
                   canRenameSession={canRenameSession}
                   canDeleteSession={canDeleteSession}
                   contextMenuSession={contextMenuSession}
@@ -2129,7 +2134,7 @@ function SessionSidebarInner({
                   onRequestDelete={handleContextMenuDelete}
                 >
                   <SidebarSectionCollapsible
-                    label={t("sidebar.pinned")}
+                    label={t("threadSidebar.pinned")}
                     expanded={pinnedSectionExpanded}
                     disabled={disabled}
                     onOpenChange={setPinnedSectionExpandedPersisted}
@@ -2187,19 +2192,19 @@ function SessionSidebarInner({
               ) : null}
               {showWorkspaces ? (
                 <SidebarSectionCollapsible
-                  label={t("sidebar.workspaces")}
+                  label={t("threadSidebar.workspaces")}
                   expanded={workspaceSectionExpanded}
                   disabled={disabled}
                   onOpenChange={setWorkspaceSectionExpandedPersisted}
                   contextMenu={
                     canRemoveWorkspace
                       ? {
-                          ariaLabel: t("sidebar.sectionActions"),
+                          ariaLabel: t("threadSidebar.sectionActions"),
                           itemLabel: t("common.remove"),
                           icon: <X aria-hidden strokeWidth={1.75} />,
                           disabled: sectionBulkBusy || workspaceSectionHasBusySession,
                           disabledTitle: workspaceSectionHasBusySession
-                            ? t("sidebar.cannotRemoveBusyInSection")
+                            ? t("threadSidebar.cannotRemoveBusyInSection")
                             : undefined,
                           onSelect: () => {
                             setSectionBulkTarget("workspace-section");
@@ -2256,8 +2261,8 @@ function SessionSidebarInner({
                           onLoadMore={() =>
                             loadMoreWorkspaceGroupSessions(group.id, group.sessions.length)
                           }
-                          onNewChatInWorkspace={onNewChatInWorkspace}
-                          newChatBusy={newChatBusy}
+                          onNewThreadInWorkspace={onNewThreadInWorkspace}
+                          newThreadBusy={newThreadBusy}
                           renamingSessionPath={renamingSessionPath}
                           renameValue={renameValue}
                           onRenameValueChange={setRenameValue}
@@ -2283,7 +2288,7 @@ function SessionSidebarInner({
               ) : null}
               {showWorkspaces && showUnbound ? <div className="h-2" aria-hidden /> : null}
               <SessionListNav
-                ariaLabel={t("sidebar.workspaceChatsAria")}
+                ariaLabel={t("threadSidebar.workspaceThreadsAria")}
                 canRenameSession={canRenameSession}
                 canDeleteSession={canDeleteSession}
                 contextMenuSession={contextMenuSession}
@@ -2299,7 +2304,7 @@ function SessionSidebarInner({
               >
                 {showUnbound ? (
                   <SidebarSectionCollapsible
-                    label={t("sidebar.noWorkspaceSessions")}
+                    label={t("threadSidebar.noWorkspaceThreads")}
                     expanded={noWorkspaceSectionExpanded}
                     disabled={disabled}
                     headerClassName="pt-1"
@@ -2307,11 +2312,11 @@ function SessionSidebarInner({
                     contextMenu={
                       canDeleteSession
                         ? {
-                            ariaLabel: t("sidebar.sectionActions"),
+                            ariaLabel: t("threadSidebar.sectionActions"),
                             itemLabel: t("common.delete"),
                             disabled: sectionBulkBusy || noWorkspaceSectionHasBusySession,
                             disabledTitle: noWorkspaceSectionHasBusySession
-                              ? t("sidebar.cannotDeleteBusyInSection")
+                              ? t("threadSidebar.cannotDeleteBusyInSection")
                               : undefined,
                             onSelect: () => {
                               setSectionBulkTarget("no-workspace-section");
@@ -2432,8 +2437,10 @@ function SessionSidebarInner({
             dismissDeleteSessionDialog();
           }
         }}
-        title={t("sidebar.deleteSessionConfirmTitle", { name: deleteTarget?.displayName ?? "" })}
-        description={t("sidebar.deleteSessionConfirmDescription")}
+        title={t("threadSidebar.deleteThreadConfirmTitle", {
+          name: deleteTarget?.displayName ?? "",
+        })}
+        description={t("threadSidebar.deleteThreadConfirmDescription")}
         confirmLabel={t("common.delete")}
         cancelLabel={t("common.cancel")}
         busy={deleteSessionBusy}
@@ -2458,16 +2465,16 @@ function SessionSidebarInner({
         }}
         title={
           sectionBulkTarget === "workspace-section"
-            ? t("sidebar.removeAllWorkspacesConfirmTitle")
-            : t("sidebar.deleteAllNoWorkspaceChatsConfirmTitle")
+            ? t("threadSidebar.removeAllWorkspacesConfirmTitle")
+            : t("threadSidebar.deleteAllNoWorkspaceThreadsConfirmTitle")
         }
         description={
           sectionBulkTarget === "workspace-section"
-            ? t("sidebar.removeAllWorkspacesConfirmDescription", {
+            ? t("threadSidebar.removeAllWorkspacesConfirmDescription", {
                 workspaceCount: workspaceGroups.length,
-                chatCount: workspaceSectionSessionCount,
+                threadCount: workspaceSectionSessionCount,
               })
-            : t("sidebar.deleteAllNoWorkspaceChatsConfirmDescription", {
+            : t("threadSidebar.deleteAllNoWorkspaceThreadsConfirmDescription", {
                 count: unboundSessions.length,
               })
         }
@@ -2506,10 +2513,10 @@ function SessionSidebarInner({
             dismissRemoveWorkspaceDialog();
           }
         }}
-        title={t("sidebar.removeWorkspaceConfirmTitle", {
+        title={t("threadSidebar.removeWorkspaceConfirmTitle", {
           name: removeWorkspaceTarget?.label ?? "",
         })}
-        description={t("sidebar.removeWorkspaceConfirmDescription", {
+        description={t("threadSidebar.removeWorkspaceConfirmDescription", {
           count: removeWorkspaceTarget?.sessions.length ?? 0,
         })}
         confirmLabel={t("common.remove")}
@@ -2528,4 +2535,4 @@ function SessionSidebarInner({
   );
 }
 
-export const SessionSidebar = memo(SessionSidebarInner);
+export const ThreadSidebar = memo(ThreadSidebarInner);

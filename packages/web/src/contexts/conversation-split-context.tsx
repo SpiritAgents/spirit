@@ -25,7 +25,7 @@ import {
   findLeafByPaneId,
   findLeafBySessionPath,
   findWorkspaceToolsAnchorPaneId,
-  findSessionSidebarAnchorPaneId,
+  findThreadSidebarAnchorPaneId,
   repositionPane,
   swapAdjacentPanes,
   splitPaneAt,
@@ -104,7 +104,7 @@ type ConversationSplitContextValue = {
 
   anchorPaneId: string | null;
 
-  sessionSidebarAnchorPaneId: string | null;
+  threadSidebarAnchorPaneId: string | null;
 
   paneCount: number;
 
@@ -490,7 +490,7 @@ export function ConversationSplitProvider({
         const pendingQuote = pendingPaneMessageQuotesRef.current.get(paneId);
         if (pendingQuote) {
           pendingPaneMessageQuotesRef.current.delete(paneId);
-          handlers.handleMessageQuoteAddToChat(pendingQuote);
+          handlers.handleMessageQuoteAddToThread(pendingQuote);
         }
       } else {
         paneComposerInsertRegistryRef.current.delete(paneId);
@@ -1037,7 +1037,7 @@ export function ConversationSplitProvider({
         ? paneComposerInsertRegistryRef.current.get(candidateId)
         : undefined;
       if (candidateId && candidateId !== paneId && candidateLeaf && candidateHandlers) {
-        candidateHandlers.handleMessageQuoteAddToChat(attachment);
+        candidateHandlers.handleMessageQuoteAddToThread(attachment);
         focusPane(candidateId, candidateLeaf.sessionPath);
         return;
       }
@@ -1528,7 +1528,7 @@ export function ConversationSplitProvider({
 
       anchorPaneId: layout ? findWorkspaceToolsAnchorPaneId(layout) : null,
 
-      sessionSidebarAnchorPaneId: layout ? findSessionSidebarAnchorPaneId(layout) : null,
+      threadSidebarAnchorPaneId: layout ? findThreadSidebarAnchorPaneId(layout) : null,
 
       paneCount,
 

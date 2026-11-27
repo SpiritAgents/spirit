@@ -51,17 +51,17 @@ export function ConversationMessageSelectionMenu({
   rootRef,
   quoteSessionPath,
   quoteOrigin,
-  onMessageQuoteAddToChat,
+  onMessageQuoteAddToThread,
   onMessageQuoteAddToSideChat,
 }: {
   rootRef: RefObject<HTMLElement | null>;
   quoteSessionPath?: string;
   quoteOrigin?: QuoteChipOrigin;
-  onMessageQuoteAddToChat?: (attachment: MessageQuoteAttachment) => void;
+  onMessageQuoteAddToThread?: (attachment: MessageQuoteAttachment) => void;
   onMessageQuoteAddToSideChat?: (attachment: MessageQuoteAttachment) => void;
 }) {
   const { t } = useTranslation();
-  const enabled = Boolean(onMessageQuoteAddToChat);
+  const enabled = Boolean(onMessageQuoteAddToThread);
   const { open, setOpen, anchor, selectionText, dismiss } = useTextSelectionActionMenu({
     enabled,
     rootRef,
@@ -84,9 +84,9 @@ export function ConversationMessageSelectionMenu({
     [dismiss, quoteOrigin, quoteSessionPath, selectionText],
   );
 
-  const handleAddToChat = useCallback(() => {
-    confirmSelection(onMessageQuoteAddToChat);
-  }, [confirmSelection, onMessageQuoteAddToChat]);
+  const handleAddToThread = useCallback(() => {
+    confirmSelection(onMessageQuoteAddToThread);
+  }, [confirmSelection, onMessageQuoteAddToThread]);
 
   const handleAddToSideChat = useCallback(() => {
     confirmSelection(onMessageQuoteAddToSideChat);
@@ -105,14 +105,14 @@ export function ConversationMessageSelectionMenu({
       {onMessageQuoteAddToSideChat ? (
         <TextSelectionActionMenuSegmentedItems
           segments={[
-            { label: t("workspace.addSelectionToChat"), onSelect: handleAddToChat },
+            { label: t("workspace.addSelectionToThread"), onSelect: handleAddToThread },
             { label: t("workspace.addSelectionToSideChat"), onSelect: handleAddToSideChat },
           ]}
         />
       ) : (
         <TextSelectionActionMenuItem
-          label={t("workspace.addSelectionToChat")}
-          onSelect={handleAddToChat}
+          label={t("workspace.addSelectionToThread")}
+          onSelect={handleAddToThread}
         />
       )}
     </TextSelectionActionMenu>

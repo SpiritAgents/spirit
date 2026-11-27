@@ -85,7 +85,7 @@ pub fn fallback_session_display_name(messages: &[ConversationMessageSnapshot]) -
         })
         .map(|message| message.content.trim());
     let Some(seed) = seed else {
-        return "Chat".to_string();
+        return "Thread".to_string();
     };
     let truncated = seed.chars().take(28).collect::<String>();
     if seed.chars().count() > 28 {

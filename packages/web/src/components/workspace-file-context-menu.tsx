@@ -46,11 +46,11 @@ export type WorkspaceFileContextMenuContentProps = {
   onReveal?: (target: WorkspaceExplorerContextTarget) => void;
   onRename?: (target: WorkspaceExplorerContextTarget) => void;
   onDelete?: (target: WorkspaceExplorerContextTarget) => void;
-  onAddToChat?: (target: WorkspaceExplorerContextTarget) => void;
+  onAddToThread?: (target: WorkspaceExplorerContextTarget) => void;
   onCloseAutoFocus?: (event: Event) => void;
 };
 
-/** Content of the panel-level single ContextMenu (aligned with the session-sidebar WorkspaceListNav pattern). */
+/** Content of the panel-level single ContextMenu (aligned with the thread-sidebar WorkspaceListNav pattern). */
 export function WorkspaceFileContextMenuContent({
   target,
   targetRef,
@@ -59,7 +59,7 @@ export function WorkspaceFileContextMenuContent({
   onReveal,
   onRename,
   onDelete,
-  onAddToChat,
+  onAddToThread,
   onCloseAutoFocus,
 }: WorkspaceFileContextMenuContentProps) {
   const { t } = useTranslation();
@@ -90,7 +90,7 @@ export function WorkspaceFileContextMenuContent({
     });
   }
 
-  if (onAddToChat) {
+  if (onAddToThread) {
     menuItems.push({
       section: "session",
       item: (
@@ -98,11 +98,11 @@ export function WorkspaceFileContextMenuContent({
           onSelect={() => {
             const entry = targetRef.current ?? target;
             if (entry) {
-              onAddToChat(entry);
+              onAddToThread(entry);
             }
           }}
         >
-          {t("workspace.addFileToChat")}
+          {t("workspace.addFileToThread")}
         </ContextMenuItem>
       ),
     });

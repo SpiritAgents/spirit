@@ -36,7 +36,7 @@ export type ConversationPaneHostProps = {
   paneId: string;
   isFocused: boolean;
   isAnchorPane: boolean;
-  isSessionSidebarAnchorPane: boolean;
+  isThreadSidebarAnchorPane: boolean;
   useIsolatedPane: boolean;
   splitPaneCount: number;
   onFocusPane: () => void;
@@ -52,8 +52,8 @@ export type ConversationPaneHostProps = {
   longConversationListDemo: LongConversationListDemo;
   approvalPreviewDemo: ApprovalPreviewDemo;
   toolCardPreviewDemo: ToolCardPreviewDemo;
-  newChatBusy: boolean;
-  onNewChat?: () => void;
+  newThreadBusy: boolean;
+  onNewThread?: () => void;
   deleteSessionBusy?: boolean;
   onDeleteSession?: (path: string) => void | Promise<void>;
   renameSessionBusy?: boolean;
@@ -89,7 +89,7 @@ export function ConversationPaneHost({
   paneId,
   isFocused,
   isAnchorPane,
-  isSessionSidebarAnchorPane,
+  isThreadSidebarAnchorPane,
   useIsolatedPane,
   splitPaneCount,
   onFocusPane,
@@ -225,7 +225,7 @@ export function ConversationPaneHost({
         isEmptySession={pane.paneIsEmptySession}
         paneContentStatus={pane.paneContentStatus}
         showComposerDock
-        showSessionSidebarToggle={splitPaneCount <= 1 || isSessionSidebarAnchorPane}
+        showThreadSidebarToggle={splitPaneCount <= 1 || isThreadSidebarAnchorPane}
         showWorkspaceToggle={isAnchorPane}
         showSplitMenu
         showSideChat={showSideChat}
@@ -246,8 +246,8 @@ export function ConversationPaneHost({
         sidebarSessionDragActive={sidebarSessionDragActive}
         subagentViewActive={pane.subagentViewActive}
         onExitSubagentViewer={pane.onExitSubagentViewer}
-        onNewChat={controllerInput.onNewChat}
-        newChatBusy={controllerInput.newChatBusy}
+        onNewThread={controllerInput.onNewThread}
+        newThreadBusy={controllerInput.newThreadBusy}
         showDeleteSession={!pane.paneIsEmptySession && Boolean(controllerInput.onDeleteSession)}
         deleteSessionPath={sessionPath}
         deleteSessionDisplayName={pane.paneSnapshot?.activeSession?.displayName ?? null}

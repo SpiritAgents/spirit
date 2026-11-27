@@ -5,7 +5,7 @@ import {
   modLetterShortcutKbdKeys,
 } from "@/lib/desktop-shell";
 
-export function SessionSidebarShortcutKbd() {
+export function ThreadSidebarShortcutKbd() {
   const keys = modLetterShortcutKbdKeys("B");
 
   return (
@@ -23,7 +23,7 @@ export function SessionSidebarShortcutKbd() {
   );
 }
 
-export function NewChatShortcutKbd() {
+export function NewThreadShortcutKbd() {
   const keys = modLetterShortcutKbdKeys("N");
 
   return (

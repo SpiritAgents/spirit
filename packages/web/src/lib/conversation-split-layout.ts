@@ -112,11 +112,11 @@ export function findWorkspaceToolsAnchorPaneId(node: SplitLayoutNode): string {
 }
 
 /** Top-left pane in the layout tree; hosts the session sidebar toggle in split view. */
-export function findSessionSidebarAnchorPaneId(node: SplitLayoutNode): string {
+export function findThreadSidebarAnchorPaneId(node: SplitLayoutNode): string {
   if (node.kind === "leaf") {
     return node.paneId;
   }
-  return findSessionSidebarAnchorPaneId(node.first);
+  return findThreadSidebarAnchorPaneId(node.first);
 }
 
 export function updateLeafSessionPath(

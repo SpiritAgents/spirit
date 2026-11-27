@@ -11,7 +11,7 @@
       "maximize": "Maximieren",
       "close": "Schließen"
     },
-    "sessionSidebar": {
+    "threadSidebar": {
       "currentWorkspace": "Aktueller Workspace",
       "models": "Modelle",
       "skills": "Skills",
@@ -20,14 +20,14 @@
       "mcps": "MCPs",
       "appearance": "Aussehen",
       "settingsNavSidebarAria": "Einstellungs-Navigationsseitenleiste",
-      "sessionsSidebarAria": "Chats und Einstellungen Seitenleiste",
+      "threadsSidebarAria": "Threads und Einstellungen Seitenleiste",
       "back": "Zurück",
       "settingsHeading": "Einstellungen",
-      "newChat": "Neuer Chat",
+      "newThread": "Neuer Thread",
       "extensionsButton": "Erweiterungen",
       "workspacesHeading": "Workspaces",
       "settingsTabsAria": "Einstellungs-Tabs",
-      "workspaceSessionsAria": "Workspace-Chats",
+      "workspaceThreadsAria": "Workspace-Threads",
       "settingsButton": "Einstellungen",
       "basics": "Grundlagen",
       "pageNavigation": "Seitennavigation"
@@ -124,7 +124,7 @@
       "commitButton": "Committen",
       "collapseTools": "Werkzeuge einklappen",
       "expandTools": "Werkzeuge ausklappen",
-      "newChat": "Neuer Chat",
+      "newThread": "Neuer Thread",
       "settingsPlaceholderTitle": "Desktop-Einstellungen",
       "marketplacePlaceholderTitle": "Erweiterungsansicht",
       "previewEditorOnlyTextError": "Nur Textdateien können im Vorschau-Editor geöffnet werden.",

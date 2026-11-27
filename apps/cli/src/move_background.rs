@@ -1,10 +1,10 @@
 use std::time::{Duration, Instant};
 
-use crate::view::{ChatMessage, ToolUiPhase};
+use crate::view::{ThreadMessage, ToolUiPhase};
 
 const MOVE_BACKGROUND_HINT_DELAY: Duration = Duration::from_secs(10);
 
-pub(crate) fn first_moveable_background_tool_call_id(messages: &[ChatMessage]) -> Option<&str> {
+pub(crate) fn first_moveable_background_tool_call_id(messages: &[ThreadMessage]) -> Option<&str> {
     messages.iter().find_map(|message| {
         let tool = message.tool_block.as_ref()?;
         if !matches!(tool.tool_name.as_str(), "shell" | "subagent")
@@ -27,7 +27,7 @@ pub(crate) struct MoveBackgroundHintState {
 }
 
 impl MoveBackgroundHintState {
-    pub(crate) fn sync(&mut self, messages: &[ChatMessage], now: Instant) {
+    pub(crate) fn sync(&mut self, messages: &[ThreadMessage], now: Instant) {
         let target_id = first_moveable_background_tool_call_id(messages).map(str::to_owned);
         if self.target_id() == target_id.as_deref() {
             return;
@@ -55,8 +55,8 @@ mod tests {
     use super::*;
     use crate::view::{MessageRole, ToolUiBlock};
 
-    fn tool_message(tool_call_id: &str, tool_name: &str, phase: ToolUiPhase) -> ChatMessage {
-        ChatMessage::with_tool_block(
+    fn tool_message(tool_call_id: &str, tool_name: &str, phase: ToolUiPhase) -> ThreadMessage {
+        ThreadMessage::with_tool_block(
             MessageRole::Agent,
             "",
             ToolUiBlock {

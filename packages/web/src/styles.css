@@ -163,13 +163,13 @@ html.spirit-desktop-darwin {
 }
 
 /* Only the sidebar shifts down to avoid the top-left traffic lights; the main-area chrome shares the title bar's height and row */
-html.spirit-desktop-darwin #session-sidebar-panel {
+html.spirit-desktop-darwin #thread-sidebar-panel {
   position: relative;
   padding-top: var(--spirit-macos-titlebar-inset);
 }
 
 /* Transparent drag band along the sidebar column's top edge (absolutely positioned, not part of the flex layout) */
-html.spirit-desktop-darwin #session-sidebar-panel::before {
+html.spirit-desktop-darwin #thread-sidebar-panel::before {
   content: "";
   position: absolute;
   z-index: 0;
@@ -195,15 +195,15 @@ html.spirit-desktop-darwin [data-darwin-pinned-sidebar-toggle] {
 
 /*
  * Workspace tools full screen: the conversation column is squeezed to 0 and clips its chrome bar,
- * so the new-chat button (and on Win/Linux the sidebar toggle) is fixed-pinned above the
+ * so the new-thread button (and on Win/Linux the sidebar toggle) is fixed-pinned above the
  * panel from the first enter-full-screen frame through the exit settle. The sidebar open/close
  * width/opacity rule lives on the inner wrapper and still composes with the fixed positioning.
- * macOS windowed: pin the new-chat button in the same slot it occupies in-flow
+ * macOS windowed: pin the new-thread button in the same slot it occupies in-flow
  * (traffic-lights inset + toggle spacer w-7+mr-1). Using the toggle-inset token would sit 0.125rem
  * to the right of that slot and jump the button on the first full-screen frame.
  */
 html.spirit-desktop-darwin:not(.spirit-desktop-darwin-fullscreen)
-  [data-workspace-tools-pinned-new-chat] {
+  [data-workspace-tools-pinned-new-thread] {
   position: fixed;
   top: 0;
   left: calc(var(--spirit-macos-traffic-lights-inset-left) + 2rem);
@@ -224,15 +224,15 @@ html.spirit-desktop-darwin:not(.spirit-desktop-darwin-fullscreen)
 html:not(.spirit-desktop-darwin) [data-workspace-tools-pinned-sidebar-toggle],
 html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-sidebar-toggle] {
   position: fixed;
-  left: calc(var(--spirit-session-sidebar-shell-width, 0px) + 0.5rem);
+  left: calc(var(--spirit-thread-sidebar-shell-width, 0px) + 0.5rem);
   z-index: 50;
   transition: left 300ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-html:not(.spirit-desktop-darwin) [data-workspace-tools-pinned-new-chat],
-html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-new-chat] {
+html:not(.spirit-desktop-darwin) [data-workspace-tools-pinned-new-thread],
+html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-new-thread] {
   position: fixed;
-  left: calc(var(--spirit-session-sidebar-shell-width, 0px) + 2.5rem);
+  left: calc(var(--spirit-thread-sidebar-shell-width, 0px) + 2.5rem);
   z-index: 50;
   transition: left 300ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -240,8 +240,8 @@ html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-new-chat] {
 @media (prefers-reduced-motion: reduce) {
   html:not(.spirit-desktop-darwin) [data-workspace-tools-pinned-sidebar-toggle],
   html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-sidebar-toggle],
-  html:not(.spirit-desktop-darwin) [data-workspace-tools-pinned-new-chat],
-  html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-new-chat] {
+  html:not(.spirit-desktop-darwin) [data-workspace-tools-pinned-new-thread],
+  html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-new-thread] {
     transition: none;
   }
 }
@@ -321,19 +321,19 @@ html.spirit-desktop-darwin.spirit-desktop-darwin-conversation-split
 
 /* With the sidebar collapsed, the main-area top bar starts at the window's left edge and must shift right to avoid the traffic lights (leftmost anchor pane only) */
 html.spirit-desktop-darwin
-  [data-spirit-surface="layout-chrome"][data-session-sidebar-open="false"][data-macos-leading-inset="true"] {
+  [data-spirit-surface="layout-chrome"][data-thread-sidebar-open="false"][data-macos-leading-inset="true"] {
   padding-left: var(--spirit-macos-traffic-lights-inset-left);
 }
 
 /* Fullscreen hides the traffic lights, but collapsed chrome still needs content padding. */
 html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen
-  [data-spirit-surface="layout-chrome"][data-session-sidebar-open="false"] {
+  [data-spirit-surface="layout-chrome"][data-thread-sidebar-open="false"] {
   padding-left: var(--spirit-chrome-controls-padding);
 }
 
 /* With the sidebar open, match the title-row left padding to the traffic-light top inset */
 html.spirit-desktop-darwin:not(.spirit-desktop-darwin-fullscreen)
-  [data-spirit-surface="layout-chrome"][data-session-sidebar-open="true"][data-macos-leading-inset="true"] {
+  [data-spirit-surface="layout-chrome"][data-thread-sidebar-open="true"][data-macos-leading-inset="true"] {
   padding-left: var(--spirit-macos-titlebar-chrome-top);
 }
 
@@ -355,7 +355,7 @@ html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen {
   --spirit-macos-sidebar-toggle-inset-left: 0.375rem;
 }
 
-html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen #session-sidebar-panel::before {
+html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen #thread-sidebar-panel::before {
   content: none;
 }
 

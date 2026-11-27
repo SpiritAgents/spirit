@@ -236,7 +236,7 @@ export class SessionRegistry {
     return bundle;
   }
 
-  /** New empty session without changing the foreground active bundle (remote web new chat). */
+  /** New empty session without changing the foreground active bundle (remote web new thread). */
   beginNewBackground(workspaceRoot: string): SessionBundle {
     const provisionalPath = provisionalNewSessionPath(workspaceRoot);
     const bundle = this.activateProvisionalBackground(workspaceRoot, provisionalPath);

@@ -126,7 +126,7 @@ impl TuiShell {
         let mut config = self.runtime.config().clone();
         config.active_model = selected.clone();
         if let Err(err) = self.runtime.validate_config_change(&config) {
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: err.to_string(),
                 tool_block: None,
@@ -135,7 +135,7 @@ impl TuiShell {
             return;
         }
         if let Err(err) = self.config_store.save(&config) {
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.model_picker.switch_saved_fail", err = err).into_owned(),
                 tool_block: None,
@@ -143,7 +143,7 @@ impl TuiShell {
         } else {
             self.runtime.replace_config(config);
             self.apply_runtime_events();
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.model_picker.switch_success", model = selected.name).into_owned(),
                 tool_block: None,
@@ -195,8 +195,8 @@ impl TuiShell {
         self.tui_picker_active = false;
     }
 
-    pub fn cancel_chat_picker(&mut self) {
-        self.chat_picker_active = false;
+    pub fn cancel_thread_picker(&mut self) {
+        self.thread_picker_active = false;
     }
 
     pub fn open_subagent_picker(&mut self) {
@@ -243,35 +243,36 @@ impl TuiShell {
         self.open_subagent_view(&summary.session_id);
     }
 
-    pub fn select_next_chat(&mut self) {
-        if self.chat_picker_sessions.is_empty() {
+    pub fn select_next_thread(&mut self) {
+        if self.thread_picker_sessions.is_empty() {
             return;
         }
-        self.chat_picker_index = (self.chat_picker_index + 1) % self.chat_picker_sessions.len();
+        self.thread_picker_index =
+            (self.thread_picker_index + 1) % self.thread_picker_sessions.len();
     }
 
-    pub fn select_prev_chat(&mut self) {
-        if self.chat_picker_sessions.is_empty() {
+    pub fn select_prev_thread(&mut self) {
+        if self.thread_picker_sessions.is_empty() {
             return;
         }
-        if self.chat_picker_index == 0 {
-            self.chat_picker_index = self.chat_picker_sessions.len() - 1;
+        if self.thread_picker_index == 0 {
+            self.thread_picker_index = self.thread_picker_sessions.len() - 1;
         } else {
-            self.chat_picker_index -= 1;
+            self.thread_picker_index -= 1;
         }
     }
 
-    pub fn confirm_chat_picker(&mut self) {
+    pub fn confirm_thread_picker(&mut self) {
         let Some(selected) = self
-            .chat_picker_sessions
-            .get(self.chat_picker_index)
+            .thread_picker_sessions
+            .get(self.thread_picker_index)
             .cloned()
         else {
-            self.chat_picker_active = false;
+            self.thread_picker_active = false;
             return;
         };
-        self.chat_picker_active = false;
-        self.load_chat_by_path(&selected.path);
+        self.thread_picker_active = false;
+        self.load_thread_by_path(&selected.path);
     }
 
     pub fn cancel_image_picker(&mut self) {
@@ -288,7 +289,7 @@ impl TuiShell {
         }
         let path_str = path.to_string_lossy().to_string();
         self.runtime.add_pending_image(path_str.clone());
-        self.messages.push(super::ChatMessage {
+        self.messages.push(super::ThreadMessage {
             role: super::MessageRole::Agent,
             content: super::t!(
                 "tui.image_picker.added",
@@ -330,7 +331,7 @@ impl TuiShell {
 
         self.image_picker_active = false;
         self.runtime.add_pending_image(selected.clone());
-        self.messages.push(ChatMessage {
+        self.messages.push(ThreadMessage {
             role: MessageRole::Agent,
             content: t!(
                 "tui.image_picker.added",
@@ -349,7 +350,7 @@ impl TuiShell {
         self.language_picker_active = false;
         self.approval_picker_active = false;
         self.tui_picker_active = false;
-        self.chat_picker_active = false;
+        self.thread_picker_active = false;
         self.image_picker_active = false;
         self.forms.active = None;
         self.set_input(String::new());
@@ -358,7 +359,7 @@ impl TuiShell {
 
     pub(super) fn open_model_picker(&mut self) {
         if self.runtime.config().flatten_models().is_empty() {
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.model_picker.empty").into_owned(),
                 tool_block: None,
@@ -430,24 +431,24 @@ impl TuiShell {
         );
     }
 
-    pub(super) fn open_chat_picker(&mut self) {
+    pub(super) fn open_thread_picker(&mut self) {
         match self.chat_repository.list() {
             Ok(files) => {
                 if files.is_empty() {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.session_picker.empty").into_owned(),
                         tool_block: None,
                     });
                     return;
                 }
-                self.chat_picker_sessions = files;
-                self.chat_picker_index = 0;
+                self.thread_picker_sessions = files;
+                self.thread_picker_index = 0;
                 self.reset_primary_picker_overlay();
-                self.chat_picker_active = true;
+                self.thread_picker_active = true;
             }
             Err(err) => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.session_picker.read_failed", err = err).into_owned(),
                     tool_block: None,
@@ -460,7 +461,7 @@ impl TuiShell {
         match list_local_image_files() {
             Ok(files) => {
                 if files.is_empty() {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.image_picker.empty").into_owned(),
                         tool_block: None,
@@ -473,7 +474,7 @@ impl TuiShell {
                 self.image_picker_active = true;
             }
             Err(err) => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.image_picker.read_failed", err = err).into_owned(),
                     tool_block: None,

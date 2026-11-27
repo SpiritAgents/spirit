@@ -1,4 +1,4 @@
-import type { SettingsSidebarTab } from "@/components/session-sidebar";
+import type { SettingsSidebarTab } from "@/components/thread-sidebar";
 import type { DesktopAgentMode } from "@spiritagent/ui/composer";
 import type { FontPreference } from "@/lib/font";
 import type { TranslucencyPreference } from "@/lib/translucency";

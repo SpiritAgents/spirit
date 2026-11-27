@@ -1,4 +1,4 @@
-/** Matches the sidebar pagination default in session-sidebar.tsx. */
+/** Matches the sidebar pagination default in thread-sidebar.tsx. */
 export const SIDEBAR_SESSION_PAGE_SIZE = 10;
 
 export type SidebarVisibleSessionGroup<T> = {

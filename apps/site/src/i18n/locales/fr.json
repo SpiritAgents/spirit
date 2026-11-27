@@ -11,7 +11,7 @@
       "maximize": "Agrandir",
       "close": "Fermer"
     },
-    "sessionSidebar": {
+    "threadSidebar": {
       "currentWorkspace": "Espace de travail actuel",
       "models": "Modèles",
       "skills": "Skills",
@@ -20,14 +20,14 @@
       "mcps": "MCPs",
       "appearance": "Apparence",
       "settingsNavSidebarAria": "Barre de navigation des paramètres",
-      "sessionsSidebarAria": "Barre latérale des discussions et paramètres",
+      "threadsSidebarAria": "Barre latérale des fils et paramètres",
       "back": "Retour",
       "settingsHeading": "Paramètres",
-      "newChat": "Nouvelle discussion",
+      "newThread": "Nouveau fil",
       "extensionsButton": "Extensions",
       "workspacesHeading": "Espaces de travail",
       "settingsTabsAria": "Onglets des paramètres",
-      "workspaceSessionsAria": "Discussions de l'espace de travail",
+      "workspaceThreadsAria": "Fils de l'espace de travail",
       "settingsButton": "Paramètres",
       "basics": "Notions de base",
       "pageNavigation": "Navigation de page"
@@ -124,7 +124,7 @@
       "commitButton": "Commiter",
       "collapseTools": "Réduire les outils",
       "expandTools": "Développer les outils",
-      "newChat": "Nouvelle discussion",
+      "newThread": "Nouveau fil",
       "settingsPlaceholderTitle": "Vue des paramètres du bureau",
       "marketplacePlaceholderTitle": "Vue des extensions",
       "previewEditorOnlyTextError": "Seuls les fichiers texte peuvent être ouverts dans l'éditeur d'aperçu.",

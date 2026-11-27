@@ -5,7 +5,7 @@ fn daemon_backed_config_and_chat_repository_roundtrip() {
         adapters::{JsonChatRepository, JsonConfigStore},
         ports::{ChatArchive, ChatRepository, ConfigStore},
         rewind::conversation_snapshots,
-        view::{ChatMessage, MessageRole},
+        view::{MessageRole, ThreadMessage},
     };
     use std::{fs, process::Command};
 
@@ -29,7 +29,7 @@ fn daemon_backed_config_and_chat_repository_roundtrip() {
         approval_level: "default".to_string(),
         subagent_sessions: Vec::new(),
         desktop_messages: Some(conversation_snapshots(
-            &[ChatMessage::new(MessageRole::User, "hello")],
+            &[ThreadMessage::new(MessageRole::User, "hello")],
             &Default::default(),
             None,
         )),

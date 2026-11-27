@@ -104,16 +104,16 @@ function PrChangesSelectionMenu({
   files,
   prUrl,
   prStatus,
-  onPrDiffAddToChat,
+  onPrDiffAddToThread,
 }: {
   rootRef: RefObject<HTMLElement | null>;
   files: GitHubPullRequestChangedFile[];
   prUrl: string;
   prStatus: PullRequestChipStatus;
-  onPrDiffAddToChat?: (attachment: PrDiffAttachment) => void;
+  onPrDiffAddToThread?: (attachment: PrDiffAttachment) => void;
 }) {
   const { t } = useTranslation();
-  const enabled = Boolean(onPrDiffAddToChat && prUrl);
+  const enabled = Boolean(onPrDiffAddToThread && prUrl);
   const { open, setOpen, anchor, dismiss } = useTextSelectionActionMenu({
     enabled,
     rootRef,
@@ -121,10 +121,10 @@ function PrChangesSelectionMenu({
     readSelectionText: readDiffSelectionText,
   });
 
-  const handleAddToChat = useCallback(() => {
+  const handleAddToThread = useCallback(() => {
     const root = rootRef.current;
     const selection = typeof window !== "undefined" ? window.getSelection() : null;
-    if (!root || !selection || !onPrDiffAddToChat) {
+    if (!root || !selection || !onPrDiffAddToThread) {
       dismiss();
       return;
     }
@@ -164,10 +164,10 @@ function PrChangesSelectionMenu({
       diffText,
       status: prStatus,
     };
-    onPrDiffAddToChat(attachment);
+    onPrDiffAddToThread(attachment);
     dismiss();
     selection.removeAllRanges();
-  }, [dismiss, files, onPrDiffAddToChat, prStatus, prUrl, rootRef]);
+  }, [dismiss, files, onPrDiffAddToThread, prStatus, prUrl, rootRef]);
 
   if (!enabled) {
     return null;
@@ -176,8 +176,8 @@ function PrChangesSelectionMenu({
   return (
     <TextSelectionActionMenu open={open} anchor={anchor} onOpenChange={setOpen}>
       <TextSelectionActionMenuItem
-        label={t("workspace.addSelectionToChat")}
-        onSelect={handleAddToChat}
+        label={t("workspace.addSelectionToThread")}
+        onSelect={handleAddToThread}
       />
     </TextSelectionActionMenu>
   );
@@ -344,7 +344,7 @@ export type WorkspacePrChangesViewProps = {
   hasMore?: boolean;
   prUrl?: string;
   prStatus?: PullRequestChipStatus;
-  onPrDiffAddToChat?: (attachment: PrDiffAttachment) => void;
+  onPrDiffAddToThread?: (attachment: PrDiffAttachment) => void;
   onOpenExternal?: (url: string) => void;
   className?: string;
 };
@@ -355,7 +355,7 @@ export function WorkspacePrChangesView({
   hasMore = false,
   prUrl = "",
   prStatus = "open",
-  onPrDiffAddToChat,
+  onPrDiffAddToThread,
   onOpenExternal,
   className,
 }: WorkspacePrChangesViewProps) {
@@ -601,7 +601,7 @@ export function WorkspacePrChangesView({
         files={files}
         prUrl={prUrl}
         prStatus={prStatus}
-        onPrDiffAddToChat={onPrDiffAddToChat}
+        onPrDiffAddToThread={onPrDiffAddToThread}
       />
     </div>
   );

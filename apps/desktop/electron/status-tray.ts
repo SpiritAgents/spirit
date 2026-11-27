@@ -55,7 +55,7 @@ function buildTrayMenu(sessions: readonly SessionListItem[], deps: StatusTrayDep
     ...buildRecentSessionMenuItems(sessions, openSession),
     { type: "separator" },
     {
-      label: i18nHost.t("tray.newChat"),
+      label: i18nHost.t("tray.newThread"),
       click: () => {
         void deps.newSession();
       },

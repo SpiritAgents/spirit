@@ -83,7 +83,7 @@ export const DESKTOP_GHOST_INLINE_TRIGGER = cn(
 export const DESKTOP_GHOST_SELECT_TRIGGER =
   "min-h-0 w-auto rounded-full border-0 bg-transparent px-2 py-0 text-xs shadow-none hover:border-transparent [&_span]:justify-end [&_svg]:size-3";
 
-/** Sidebar shell / title-bar slot width transition, consistent with SessionSidebarShell */
+/** Sidebar shell / title-bar slot width transition, consistent with ThreadSidebarShell */
 export const DESKTOP_SHELL_LAYOUT_TRANSITION =
   "transition-[width,margin,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none motion-reduce:duration-0";
 
@@ -402,32 +402,32 @@ export function stopOverlayScrollPropagation(event: { stopPropagation(): void })
 }
 
 /** Draggable lower bound: the default width matches it, so first open is more compact */
-export const SESSION_SIDEBAR_MIN_WIDTH_PX = 200;
+export const THREAD_SIDEBAR_MIN_WIDTH_PX = 200;
 
 /** Default width of the left session sidebar */
-export const SESSION_SIDEBAR_DEFAULT_WIDTH_PX = SESSION_SIDEBAR_MIN_WIDTH_PX;
+export const THREAD_SIDEBAR_DEFAULT_WIDTH_PX = THREAD_SIDEBAR_MIN_WIDTH_PX;
 
 /** Draggable upper bound: only slightly wider than the default (do not use large viewport ratios for the right-side tool area) */
-export const SESSION_SIDEBAR_MAX_WIDTH_PX = 288;
+export const THREAD_SIDEBAR_MAX_WIDTH_PX = 288;
 
-const SESSION_SIDEBAR_VIEWPORT_MAX_RATIO = 0.4;
+const THREAD_SIDEBAR_VIEWPORT_MAX_RATIO = 0.4;
 
-export function computeSessionSidebarMaxWidthPx(): number {
+export function computeThreadSidebarMaxWidthPx(): number {
   if (typeof window === "undefined") {
-    return SESSION_SIDEBAR_MAX_WIDTH_PX;
+    return THREAD_SIDEBAR_MAX_WIDTH_PX;
   }
   // The viewport ratio only shrinks the drag-time upper bound; never let it drop
   // below the minimum width, or every clamp caller would compress the sidebar
   // under its own floor on narrow windows.
   return Math.max(
-    SESSION_SIDEBAR_MIN_WIDTH_PX,
+    THREAD_SIDEBAR_MIN_WIDTH_PX,
     Math.min(
-      SESSION_SIDEBAR_MAX_WIDTH_PX,
-      Math.round(window.innerWidth * SESSION_SIDEBAR_VIEWPORT_MAX_RATIO),
+      THREAD_SIDEBAR_MAX_WIDTH_PX,
+      Math.round(window.innerWidth * THREAD_SIDEBAR_VIEWPORT_MAX_RATIO),
     ),
   );
 }
 
-export function sessionSidebarShellWidth(open: boolean, widthPx: number): string {
+export function threadSidebarShellWidth(open: boolean, widthPx: number): string {
   return open ? `${widthPx}px` : "0px";
 }

@@ -329,7 +329,7 @@ pub(in crate::ui) fn should_render_standalone_pending_aux(
 
 pub(in crate::ui) fn should_hide_pending_assistant_placeholder(
     app: &TuiViewModel,
-    msg: &ChatMessage,
+    msg: &ThreadMessage,
     idx: usize,
     total: usize,
 ) -> bool {
@@ -514,7 +514,7 @@ pub(in crate::ui) fn render_standalone_pending_aux_lines(
 
 pub(in crate::ui) fn render_message_lines(
     app: &TuiViewModel,
-    msg: &ChatMessage,
+    msg: &ThreadMessage,
     message_index: usize,
 ) -> Vec<Line<'static>> {
     let message_id = message_index + 1;
@@ -1013,7 +1013,7 @@ pub(in crate::ui) fn plain_text_lines(text: &str) -> Vec<Vec<Span<'static>>> {
     }
 }
 
-pub(in crate::ui) fn visible_messages(app: &TuiViewModel) -> (&[ChatMessage], usize, usize) {
+pub(in crate::ui) fn visible_messages(app: &TuiViewModel) -> (&[ThreadMessage], usize, usize) {
     (
         &app.messages,
         app.history_truncated_before,

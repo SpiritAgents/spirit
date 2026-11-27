@@ -40,12 +40,12 @@ export function ConversationWorkspaceToolsDock({
   const widthFlight = useWorkspaceToolsChromeWidthFlight();
   const composerInsert = useFocusedPaneComposerInsertCallbacks(split.getFocusedPaneComposerInsert, {
     handleBrowserElementPicked: composer.handleBrowserElementPicked,
-    handlePrDiffAddToChat: composer.handlePrDiffAddToChat,
-    handleGitCommitAddToChat: composer.handleGitCommitAddToChat,
-    handleTerminalAddToChat: composer.handleTerminalAddToChat,
-    handleFileSnippetAddToChat: composer.handleFileSnippetAddToChat,
-    handleWorkspaceFileAddToChat: composer.handleWorkspaceFileAddToChat,
-    handleMessageQuoteAddToChat: composer.handleMessageQuoteAddToChat,
+    handlePrDiffAddToThread: composer.handlePrDiffAddToThread,
+    handleGitCommitAddToThread: composer.handleGitCommitAddToThread,
+    handleTerminalAddToThread: composer.handleTerminalAddToThread,
+    handleFileSnippetAddToThread: composer.handleFileSnippetAddToThread,
+    handleWorkspaceFileAddToThread: composer.handleWorkspaceFileAddToThread,
+    handleMessageQuoteAddToThread: composer.handleMessageQuoteAddToThread,
   });
 
   // Settled full screen: the wrapper (the conversation row's direct flex item) takes the full row
@@ -104,11 +104,11 @@ export function ConversationWorkspaceToolsDock({
         onTabsChange={workspaceTools.setWorkspaceToolTabs}
         onActiveTabIdChange={workspaceTools.setActiveWorkspaceToolTabId}
         onBrowserElementPicked={composerInsert.handleBrowserElementPicked}
-        onPrDiffAddToChat={composerInsert.handlePrDiffAddToChat}
-        onTerminalAddToChat={composerInsert.handleTerminalAddToChat}
-        onFileSnippetAddToChat={composerInsert.handleFileSnippetAddToChat}
-        onWorkspaceFileAddToChat={composerInsert.handleWorkspaceFileAddToChat}
-        onGitCommitAddToChat={composerInsert.handleGitCommitAddToChat}
+        onPrDiffAddToThread={composerInsert.handlePrDiffAddToThread}
+        onTerminalAddToThread={composerInsert.handleTerminalAddToThread}
+        onFileSnippetAddToThread={composerInsert.handleFileSnippetAddToThread}
+        onWorkspaceFileAddToThread={composerInsert.handleWorkspaceFileAddToThread}
+        onGitCommitAddToThread={composerInsert.handleGitCommitAddToThread}
         onBrowserOpenInNewTab={workspaceTools.openBrowserUrlInNewTab}
         browserTabEnabled={workspaceTools.browserTabEnabled}
 

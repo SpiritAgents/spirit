@@ -11,7 +11,7 @@
       "maximize": "Maximizar",
       "close": "Cerrar"
     },
-    "sessionSidebar": {
+    "threadSidebar": {
       "currentWorkspace": "Espacio de trabajo actual",
       "models": "Modelos",
       "skills": "Skills",
@@ -20,14 +20,14 @@
       "mcps": "MCPs",
       "appearance": "Apariencia",
       "settingsNavSidebarAria": "Barra lateral de navegación de configuración",
-      "sessionsSidebarAria": "Barra lateral de chats y configuración",
+      "threadsSidebarAria": "Barra lateral de hilos y configuración",
       "back": "Atrás",
       "settingsHeading": "Configuración",
-      "newChat": "Nuevo chat",
+      "newThread": "Nuevo hilo",
       "extensionsButton": "Extensiones",
       "workspacesHeading": "Workspaces",
       "settingsTabsAria": "Pestañas de configuración",
-      "workspaceSessionsAria": "Chats del Workspace",
+      "workspaceThreadsAria": "Hilos del Workspace",
       "settingsButton": "Configuración",
       "basics": "Básicos",
       "pageNavigation": "Navegación de página"
@@ -124,7 +124,7 @@
       "commitButton": "Commit",
       "collapseTools": "Contraer herramientas",
       "expandTools": "Expandir herramientas",
-      "newChat": "Nuevo chat",
+      "newThread": "Nuevo hilo",
       "settingsPlaceholderTitle": "Vista de ajustes de escritorio",
       "marketplacePlaceholderTitle": "Vista de extensiones",
       "previewEditorOnlyTextError": "Solo se pueden abrir archivos de texto en el editor de vista previa.",

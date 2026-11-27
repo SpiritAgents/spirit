@@ -6,14 +6,14 @@ import { SidebarRightCollapsed } from "@spiritagent/icons/sidebar-right-collapse
 
 import { useTranslation } from "@/lib/desktop-preview-i18n";
 import {
-  NewChatShortcutKbd,
-  SessionSidebarShortcutKbd,
+  NewThreadShortcutKbd,
+  ThreadSidebarShortcutKbd,
   WorkspaceToolsShortcutKbd,
 } from "@/components/layout/desktop-shortcut-kbds";
 import { SessionChromeBreadcrumb } from "@/components/session-chrome-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useSessionSidebarChrome } from "@/contexts/session-sidebar-chrome-context";
+import { useThreadSidebarChrome } from "@/contexts/thread-sidebar-chrome-context";
 import {
   DESKTOP_CHROME_TOGGLE_ICON_BTN,
   DESKTOP_SHELL_LAYOUT_TRANSITION,
@@ -30,8 +30,8 @@ export function DesktopLayoutChromeBar({
   sessionTitle,
   subagentPromptText,
   onExitSubagentViewer,
-  onNewChat,
-  newChatBusy = false,
+  onNewThread,
+  newThreadBusy = false,
 }: {
   useTranslucency: boolean;
   baseToneClassName?: string;
@@ -41,11 +41,11 @@ export function DesktopLayoutChromeBar({
   sessionTitle?: string | null;
   subagentPromptText?: string | null;
   onExitSubagentViewer?: () => void;
-  onNewChat?: () => void;
-  newChatBusy?: boolean;
+  onNewThread?: () => void;
+  newThreadBusy?: boolean;
 }) {
   const { t } = useTranslation();
-  const { open: sessionSidebarOpen, toggle: onToggleSessionSidebar } = useSessionSidebarChrome();
+  const { open: threadSidebarOpen, toggle: onToggleThreadSidebar } = useThreadSidebarChrome();
   const showTrailingActions = showWorkspaceToggle;
   const trimmedSessionTitle = sessionTitle?.trim() ?? "";
   return (
@@ -53,7 +53,7 @@ export function DesktopLayoutChromeBar({
       role="toolbar"
       aria-label={t("app.sidebarAndTools")}
       data-spirit-surface="layout-chrome"
-      data-session-sidebar-open={sessionSidebarOpen ? "true" : "false"}
+      data-thread-sidebar-open={threadSidebarOpen ? "true" : "false"}
       className={cn(
         "flex h-8 shrink-0 items-center gap-2 px-1.5",
         showTrailingActions ? "justify-between" : "justify-start",
@@ -70,12 +70,12 @@ export function DesktopLayoutChromeBar({
               variant="ghost"
               size="icon"
               className={cn(DESKTOP_CHROME_TOGGLE_ICON_BTN, "mr-1")}
-              onClick={onToggleSessionSidebar}
-              aria-label={sessionSidebarOpen ? t("app.hideSidebar") : t("app.showSidebar")}
-              aria-expanded={sessionSidebarOpen}
-              {...(sessionSidebarOpen ? { "aria-controls": "session-sidebar-panel" } : {})}
+              onClick={onToggleThreadSidebar}
+              aria-label={threadSidebarOpen ? t("app.hideSidebar") : t("app.showSidebar")}
+              aria-expanded={threadSidebarOpen}
+              {...(threadSidebarOpen ? { "aria-controls": "thread-sidebar-panel" } : {})}
             >
-              {sessionSidebarOpen ? (
+              {threadSidebarOpen ? (
                 <SidebarLeft className="size-3.5" aria-hidden strokeWidth={1.75} />
               ) : (
                 <SidebarLeftCollapsed className="size-3.5" aria-hidden strokeWidth={1.75} />
@@ -83,20 +83,18 @@ export function DesktopLayoutChromeBar({
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top" sideOffset={4}>
-            {sessionSidebarOpen ? t("app.hideSidebar") : t("app.showSidebar")}{" "}
-            <SessionSidebarShortcutKbd />
+            {threadSidebarOpen ? t("app.hideSidebar") : t("app.showSidebar")}{" "}
+            <ThreadSidebarShortcutKbd />
           </TooltipContent>
         </Tooltip>
-        {onNewChat ? (
+        {onNewThread ? (
           <div
             className={cn(
               "shrink-0 overflow-hidden",
               DESKTOP_SHELL_LAYOUT_TRANSITION,
-              sessionSidebarOpen
-                ? "pointer-events-none mr-0 w-0 opacity-0"
-                : "mr-1 w-7 opacity-100",
+              threadSidebarOpen ? "pointer-events-none mr-0 w-0 opacity-0" : "mr-1 w-7 opacity-100",
             )}
-            aria-hidden={sessionSidebarOpen}
+            aria-hidden={threadSidebarOpen}
           >
             <Tooltip delayDuration={300}>
               <TooltipTrigger asChild>
@@ -105,16 +103,16 @@ export function DesktopLayoutChromeBar({
                   variant="ghost"
                   size="icon"
                   className={DESKTOP_CHROME_TOGGLE_ICON_BTN}
-                  onClick={onNewChat}
-                  disabled={newChatBusy}
-                  tabIndex={sessionSidebarOpen ? -1 : undefined}
-                  aria-label={t("sidebar.newChat")}
+                  onClick={onNewThread}
+                  disabled={newThreadBusy}
+                  tabIndex={threadSidebarOpen ? -1 : undefined}
+                  aria-label={t("threadSidebar.newThread")}
                 >
                   <Plus className="size-3.5" aria-hidden strokeWidth={1.75} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top" sideOffset={4}>
-                {t("sidebar.newChat")} <NewChatShortcutKbd />
+                {t("threadSidebar.newThread")} <NewThreadShortcutKbd />
               </TooltipContent>
             </Tooltip>
           </div>

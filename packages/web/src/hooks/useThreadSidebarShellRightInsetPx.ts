@@ -1,10 +1,10 @@
 import { useLayoutEffect, useState, type RefObject } from "react";
 
-const SESSION_SIDEBAR_SHELL_SELECTOR = '[data-spirit-surface="session-sidebar-shell"]';
-const SESSION_SIDEBAR_DIVIDER_SELECTOR = '[data-spirit-edge="session-sidebar-divider"]';
+const THREAD_SIDEBAR_SHELL_SELECTOR = '[data-spirit-surface="thread-sidebar-shell"]';
+const THREAD_SIDEBAR_DIVIDER_SELECTOR = '[data-spirit-edge="thread-sidebar-divider"]';
 
 /** Left edge of the title bar divider: aligned with the DOM left edge of the sidebar vertical line (including collapse/expand CSS transition frames). */
-export function useSessionSidebarShellRightInsetPx(
+export function useThreadSidebarShellRightInsetPx(
   anchorRef: RefObject<HTMLElement | null>,
   enabled: boolean,
 ): number {
@@ -17,14 +17,14 @@ export function useSessionSidebarShellRightInsetPx(
 
     const sync = () => {
       const anchor = anchorRef.current;
-      const shell = document.querySelector(SESSION_SIDEBAR_SHELL_SELECTOR);
+      const shell = document.querySelector(THREAD_SIDEBAR_SHELL_SELECTOR);
       if (!anchor || !shell) {
         setInsetPx(0);
         return;
       }
       const anchorRect = anchor.getBoundingClientRect();
       const shellRect = shell.getBoundingClientRect();
-      const sidebarDivider = shell.querySelector(SESSION_SIDEBAR_DIVIDER_SELECTOR);
+      const sidebarDivider = shell.querySelector(THREAD_SIDEBAR_DIVIDER_SELECTOR);
       const sidebarDividerRect = sidebarDivider?.getBoundingClientRect();
       const dividerLeftPx = sidebarDividerRect
         ? sidebarDividerRect.left - anchorRect.left
@@ -34,7 +34,7 @@ export function useSessionSidebarShellRightInsetPx(
     };
 
     sync();
-    const shell = document.querySelector(SESSION_SIDEBAR_SHELL_SELECTOR);
+    const shell = document.querySelector(THREAD_SIDEBAR_SHELL_SELECTOR);
     if (!shell) {
       return;
     }

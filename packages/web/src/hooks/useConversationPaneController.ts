@@ -46,9 +46,9 @@ export type UseConversationPaneControllerOptions = {
   longConversationListDemo: LongConversationListDemo;
   approvalPreviewDemo: ApprovalPreviewDemo;
   toolCardPreviewDemo: ToolCardPreviewDemo;
-  newChatBusy: boolean;
+  newThreadBusy: boolean;
   splitPaneCount: number;
-  onNewChat?: () => void;
+  onNewThread?: () => void;
   onBeginSideChat?: () => void;
   workspaceTools: WorkspaceTools;
 
@@ -70,9 +70,9 @@ export function useConversationPaneController({
   longConversationListDemo,
   approvalPreviewDemo,
   toolCardPreviewDemo,
-  newChatBusy,
+  newThreadBusy,
   splitPaneCount,
-  onNewChat,
+  onNewThread,
   onBeginSideChat,
   workspaceTools,
 
@@ -110,11 +110,11 @@ export function useConversationPaneController({
       longConversationListDemoActive: paneLongConversationListDemoActive,
       approvalPreviewDemoActive: paneApprovalPreviewDemoActive,
       toolCardPreviewDemoActive: paneToolCardPreviewDemoActive,
-      newChatBusy: isFocused && splitPaneCount <= 1 ? newChatBusy : false,
+      newThreadBusy: isFocused && splitPaneCount <= 1 ? newThreadBusy : false,
     });
   }, [
     isFocused,
-    newChatBusy,
+    newThreadBusy,
     paneApprovalPreviewDemoActive,
     paneCompactionDemoActive,
     paneContentPending,
@@ -192,7 +192,7 @@ export function useConversationPaneController({
     pendingApproval: conversation.pendingApproval,
     pendingQuestions: conversation.pendingQuestions,
     conversationInterruptible: conversation.conversationInterruptible,
-    handleNewChat: onNewChat ?? (() => {}),
+    handleNewThread: onNewThread ?? (() => {}),
     setActiveSurface: () => {},
     setLastNonSettingsSurface: () => {},
     paneSessionPath: useIsolatedPane ? sessionPath : undefined,
@@ -324,7 +324,7 @@ export function useConversationPaneController({
     onSubmitComposerMessage: composer.submitComposerMessage,
     onComposerAgentModeChange: composer.handleComposerAgentModeChange,
     composerRichInputRef: composer.composerRichInputRef,
-    onMessageQuoteAddToChat: composer.handleMessageQuoteAddToChat,
+    onMessageQuoteAddToThread: composer.handleMessageQuoteAddToThread,
     onComposerKeyDown: composer.handleComposerKeyDown,
     onComposerCursorCodeUnitsChange: composer.setComposerCursorCodeUnits,
     onInsertFileReferenceTrigger: composer.insertFileReferenceTrigger,
@@ -342,21 +342,21 @@ export function useConversationPaneController({
   const composerInsertHandlers = useMemo(
     () => ({
       handleBrowserElementPicked: composer.handleBrowserElementPicked,
-      handlePrDiffAddToChat: composer.handlePrDiffAddToChat,
-      handleGitCommitAddToChat: composer.handleGitCommitAddToChat,
-      handleTerminalAddToChat: composer.handleTerminalAddToChat,
-      handleFileSnippetAddToChat: composer.handleFileSnippetAddToChat,
-      handleWorkspaceFileAddToChat: composer.handleWorkspaceFileAddToChat,
-      handleMessageQuoteAddToChat: composer.handleMessageQuoteAddToChat,
+      handlePrDiffAddToThread: composer.handlePrDiffAddToThread,
+      handleGitCommitAddToThread: composer.handleGitCommitAddToThread,
+      handleTerminalAddToThread: composer.handleTerminalAddToThread,
+      handleFileSnippetAddToThread: composer.handleFileSnippetAddToThread,
+      handleWorkspaceFileAddToThread: composer.handleWorkspaceFileAddToThread,
+      handleMessageQuoteAddToThread: composer.handleMessageQuoteAddToThread,
     }),
     [
       composer.handleBrowserElementPicked,
-      composer.handleFileSnippetAddToChat,
-      composer.handleGitCommitAddToChat,
-      composer.handleMessageQuoteAddToChat,
-      composer.handlePrDiffAddToChat,
-      composer.handleTerminalAddToChat,
-      composer.handleWorkspaceFileAddToChat,
+      composer.handleFileSnippetAddToThread,
+      composer.handleGitCommitAddToThread,
+      composer.handleMessageQuoteAddToThread,
+      composer.handlePrDiffAddToThread,
+      composer.handleTerminalAddToThread,
+      composer.handleWorkspaceFileAddToThread,
     ],
   );
 

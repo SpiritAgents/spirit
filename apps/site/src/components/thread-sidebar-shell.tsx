@@ -1,40 +1,33 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@/lib/desktop-preview-i18n";
 import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
 
 import {
-  DESKTOP_ALL_TRANSLUCENCY_SPLIT_LINE_CLASS,
-  DESKTOP_PANE_SPLIT_LINE_CLASS,
-  DESKTOP_SIDEBAR_ONLY_SPLIT_LINE_CLASS,
-  SESSION_SIDEBAR_MIN_WIDTH_PX,
-  computeSessionSidebarMaxWidthPx,
-  sessionSidebarShellWidth,
+  THREAD_SIDEBAR_MIN_WIDTH_PX,
+  computeThreadSidebarMaxWidthPx,
+  threadSidebarShellWidth,
 } from "@/lib/desktop-chrome";
-import { useSessionSidebarChrome } from "@/contexts/session-sidebar-chrome-context";
-import { DESKTOP_TRANSLUCENCY_SIDEBAR_TINT_CLASS } from "@/lib/desktop-translucency-surface";
-import { writeSessionSidebarWidthPx } from "@/lib/layout-prefs";
+import { useThreadSidebarChrome } from "@/contexts/thread-sidebar-chrome-context";
+import { writeThreadSidebarWidthPx } from "@/lib/layout-prefs";
 import { cn } from "@/lib/utils";
 
-export type SessionSidebarShellProps = {
+export type ThreadSidebarShellProps = {
   minWidthPx?: number;
   maxWidthPx?: number;
   useTranslucency?: boolean;
-  /** All-mode content tint; when false with native material on, the split uses the stronger Sidebar-only line. */
-  useContentTranslucency?: boolean;
   children: ReactNode;
   className?: string;
 };
 
-export function SessionSidebarShell({
-  minWidthPx = SESSION_SIDEBAR_MIN_WIDTH_PX,
+export function ThreadSidebarShell({
+  minWidthPx = THREAD_SIDEBAR_MIN_WIDTH_PX,
   maxWidthPx: maxWidthPxProp,
   useTranslucency = false,
-  useContentTranslucency = false,
   children,
   className,
-}: SessionSidebarShellProps) {
+}: ThreadSidebarShellProps) {
   const { t } = useTranslation();
-  const { open, widthPx, setWidthPx } = useSessionSidebarChrome();
+  const { open, widthPx, setWidthPx } = useThreadSidebarChrome();
   const [isResizing, setIsResizing] = useState(false);
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const dragCursor = useDragResizeCursor();
@@ -42,7 +35,7 @@ export function SessionSidebarShell({
   useLayoutEffect(() => {
     latestWidthPxRef.current = widthPx;
   }, [widthPx]);
-  const [viewportMaxWidthPx, setViewportMaxWidthPx] = useState(computeSessionSidebarMaxWidthPx);
+  const [viewportMaxWidthPx, setViewportMaxWidthPx] = useState(computeThreadSidebarMaxWidthPx);
   const maxWidthPx = maxWidthPxProp ?? viewportMaxWidthPx;
 
   useEffect(() => {
@@ -50,7 +43,7 @@ export function SessionSidebarShell({
       return;
     }
     const onWindowResize = () => {
-      setViewportMaxWidthPx(computeSessionSidebarMaxWidthPx());
+      setViewportMaxWidthPx(computeThreadSidebarMaxWidthPx());
     };
     window.addEventListener("resize", onWindowResize);
     return () => window.removeEventListener("resize", onWindowResize);
@@ -96,7 +89,7 @@ export function SessionSidebarShell({
       dragCursor.end();
       setIsResizing(false);
       if (dragRef.current) {
-        writeSessionSidebarWidthPx(latestWidthPxRef.current);
+        writeThreadSidebarWidthPx(latestWidthPxRef.current);
       }
       dragRef.current = null;
       try {
@@ -108,15 +101,15 @@ export function SessionSidebarShell({
     [dragCursor],
   );
 
-  const shellWidth = sessionSidebarShellWidth(open, widthPx);
+  const shellWidth = threadSidebarShellWidth(open, widthPx);
   const innerWidth = `${widthPx}px`;
 
   return (
     <div
-      data-spirit-surface="session-sidebar-shell"
+      data-spirit-surface="thread-sidebar-shell"
       className={cn(
         "relative flex h-full min-h-0 shrink-0 flex-row self-stretch overflow-hidden",
-        useTranslucency ? DESKTOP_TRANSLUCENCY_SIDEBAR_TINT_CLASS : "bg-chrome-background",
+        !useTranslucency && "bg-chrome-background",
         isResizing
           ? "transition-none"
           : "transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none motion-reduce:duration-0",
@@ -127,7 +120,7 @@ export function SessionSidebarShell({
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label={t("sidebar.resizeWidth")}
+        aria-label={t("threadSidebar.resizeWidth")}
         aria-hidden={!open}
         className={cn(
           "group absolute inset-y-0 right-0 z-10 w-1 touch-none select-none",
@@ -141,14 +134,11 @@ export function SessionSidebarShell({
         onPointerCancel={endResize}
       >
         <div
-          data-spirit-edge="session-sidebar-divider"
           className={cn(
-            "pointer-events-none absolute inset-y-0 right-0 w-px",
-            useContentTranslucency
-              ? DESKTOP_ALL_TRANSLUCENCY_SPLIT_LINE_CLASS
-              : useTranslucency
-                ? DESKTOP_SIDEBAR_ONLY_SPLIT_LINE_CLASS
-                : DESKTOP_PANE_SPLIT_LINE_CLASS,
+            "pointer-events-none absolute inset-y-0 right-0 w-px transition-colors",
+            useTranslucency
+              ? "bg-black/5 group-hover:bg-black/10 dark:bg-white/10 dark:group-hover:bg-white/14"
+              : "bg-border/40 group-hover:bg-border/55",
           )}
           aria-hidden
         />
@@ -163,7 +153,7 @@ export function SessionSidebarShell({
         inert={!open}
       >
         <div
-          data-spirit-surface="session-sidebar"
+          data-spirit-surface="thread-sidebar"
           className="h-full min-w-0 shrink-0 overflow-hidden"
           style={{ width: widthPx }}
         >

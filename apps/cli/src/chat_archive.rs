@@ -38,7 +38,7 @@ pub(crate) fn archived_llm_message_to_json(message: &ArchivedLlmMessage) -> Valu
 pub(crate) fn chat_archive_to_bridge_json(archive: &crate::ports::ChatArchive) -> Value {
     let snapshots = archive.desktop_messages.clone().unwrap_or_else(|| {
         let projection =
-            crate::chat_timeline::project_live_chat_from_llm_history(&archive.llm_history);
+            crate::thread_timeline::project_live_thread_from_llm_history(&archive.llm_history);
         crate::rewind::conversation_snapshots(
             &projection.messages,
             &projection.assistant_aux_by_message,
@@ -46,7 +46,7 @@ pub(crate) fn chat_archive_to_bridge_json(archive: &crate::ports::ChatArchive) -
         )
     });
     let mut value = json!({
-        "desktopMessageTimeline": crate::chat_timeline::build_persisted_timeline(&snapshots),
+        "desktopMessageTimeline": crate::thread_timeline::build_persisted_timeline(&snapshots),
         "messages": archive.messages.iter().map(|(role, content)| {
             json!({
                 "role": role,
@@ -120,7 +120,7 @@ mod tests {
         }))
         .unwrap();
         archive.desktop_messages = Some(crate::rewind::conversation_snapshots(
-            &[crate::view::ChatMessage::new(
+            &[crate::view::ThreadMessage::new(
                 crate::view::MessageRole::User,
                 "Original request.",
             )],
@@ -128,9 +128,9 @@ mod tests {
             None,
         ));
         let serialized = chat_archive_to_bridge_json(&archive);
-        let timeline: Vec<crate::chat_timeline::PersistedTimelineTurn> =
+        let timeline: Vec<crate::thread_timeline::PersistedTimelineTurn> =
             serde_json::from_value(serialized["desktopMessageTimeline"].clone()).unwrap();
-        let messages = crate::chat_timeline::hydrate_desktop_messages_from_timeline(&timeline);
+        let messages = crate::thread_timeline::hydrate_desktop_messages_from_timeline(&timeline);
         assert_eq!(messages.len(), 1);
         assert_eq!(messages[0].content, "Original request.");
     }
@@ -143,9 +143,9 @@ mod tests {
         }))
         .unwrap();
         let serialized = chat_archive_to_bridge_json(&archive);
-        let timeline: Vec<crate::chat_timeline::PersistedTimelineTurn> =
+        let timeline: Vec<crate::thread_timeline::PersistedTimelineTurn> =
             serde_json::from_value(serialized["desktopMessageTimeline"].clone()).unwrap();
-        let messages = crate::chat_timeline::hydrate_desktop_messages_from_timeline(&timeline);
+        let messages = crate::thread_timeline::hydrate_desktop_messages_from_timeline(&timeline);
         assert_eq!(messages[0].content, "Imported request.");
     }
 }

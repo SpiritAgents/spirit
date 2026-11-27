@@ -17,7 +17,7 @@ export type WorkspaceTerminalTabProps = {
   onTitleChange?: (title: string | undefined) => void;
   /** Terminal name used for the Chip and menu display (OSC title or the default Terminal label). */
   terminalDisplayName?: string;
-  onTerminalAddToChat?: (
+  onTerminalAddToThread?: (
     attachment: import("@spiritagent/ui/composer").TerminalSnippetAttachment,
   ) => void;
   /** True while the sidebar is being continuously drag-resized; pauses terminal fit until release. */
@@ -30,7 +30,7 @@ export function WorkspaceTerminalTab({
   workspaceRoot,
   onTitleChange,
   terminalDisplayName = "Terminal",
-  onTerminalAddToChat,
+  onTerminalAddToThread,
   suspendTerminalResize = false,
   useTranslucency = false,
 }: WorkspaceTerminalTabProps) {
@@ -158,7 +158,7 @@ export function WorkspaceTerminalTab({
         containerRef={containerRef}
         terminal={terminal}
         terminalDisplayName={terminalDisplayName}
-        onTerminalAddToChat={onTerminalAddToChat}
+        onTerminalAddToThread={onTerminalAddToThread}
       />
     </div>
   );

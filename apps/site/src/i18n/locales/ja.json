@@ -11,7 +11,7 @@
       "maximize": "最大化",
       "close": "閉じる"
     },
-    "sessionSidebar": {
+    "threadSidebar": {
       "currentWorkspace": "現在のワークスペース",
       "models": "モデル",
       "skills": "スキル",
@@ -20,14 +20,14 @@
       "mcps": "MCP",
       "appearance": "外観",
       "settingsNavSidebarAria": "設定ナビゲーションサイドバー",
-      "sessionsSidebarAria": "チャットと設定のサイドバー",
+      "threadsSidebarAria": "スレッドと設定のサイドバー",
       "back": "戻る",
       "settingsHeading": "設定",
-      "newChat": "新しいチャット",
+      "newThread": "新しいスレッド",
       "extensionsButton": "拡張機能",
       "workspacesHeading": "ワークスペース",
       "settingsTabsAria": "設定タブ",
-      "workspaceSessionsAria": "ワークスペースのチャット",
+      "workspaceThreadsAria": "ワークスペースのスレッド",
       "settingsButton": "設定",
       "basics": "基本",
       "pageNavigation": "ページナビゲーション"
@@ -124,7 +124,7 @@
       "commitButton": "コミット",
       "collapseTools": "ツールを折りたたむ",
       "expandTools": "ツールを展開",
-      "newChat": "新しいチャット",
+      "newThread": "新しいスレッド",
       "settingsPlaceholderTitle": "デスクトップ設定ビュー",
       "marketplacePlaceholderTitle": "拡張機能ビュー",
       "previewEditorOnlyTextError": "プレビューエディターではテキストファイルのみ開くことができます。",

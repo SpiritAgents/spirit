@@ -859,7 +859,7 @@ fn process_event_batch(
                     || shell.is_language_picker_active()
                     || shell.is_approval_picker_active()
                     || shell.is_tui_picker_active()
-                    || shell.is_chat_picker_active()
+                    || shell.is_thread_picker_active()
                     || shell.is_rewind_picker_active()
                     || shell.is_fork_picker_active()
                     || shell.is_subagent_picker_active()
@@ -896,7 +896,7 @@ fn process_event_batch(
                     && !shell.is_language_picker_active()
                     && !shell.is_approval_picker_active()
                     && !shell.is_tui_picker_active()
-                    && !shell.is_chat_picker_active()
+                    && !shell.is_thread_picker_active()
                     && !shell.is_rewind_picker_active()
                     && !shell.is_fork_picker_active()
                     && !shell.is_subagent_picker_active()
@@ -918,7 +918,7 @@ fn process_event_batch(
                     && !shell.is_language_picker_active()
                     && !shell.is_approval_picker_active()
                     && !shell.is_tui_picker_active()
-                    && !shell.is_chat_picker_active()
+                    && !shell.is_thread_picker_active()
                     && !shell.is_rewind_picker_active()
                     && !shell.is_fork_picker_active()
                     && !shell.is_subagent_picker_active()
@@ -1032,12 +1032,12 @@ fn process_key_event(
         return;
     }
 
-    if shell.is_chat_picker_active() {
+    if shell.is_thread_picker_active() {
         match key.code {
-            KeyCode::Esc => shell.cancel_chat_picker(),
-            KeyCode::Up => shell.select_prev_chat(),
-            KeyCode::Down => shell.select_next_chat(),
-            KeyCode::Enter => shell.confirm_chat_picker(),
+            KeyCode::Esc => shell.cancel_thread_picker(),
+            KeyCode::Up => shell.select_prev_thread(),
+            KeyCode::Down => shell.select_next_thread(),
+            KeyCode::Enter => shell.confirm_thread_picker(),
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 shell.request_quit();
             }
@@ -1629,7 +1629,7 @@ fn paste_target(shell: &TuiShell) -> Option<PasteTarget> {
         || shell.is_language_picker_active()
         || shell.is_approval_picker_active()
         || shell.is_tui_picker_active()
-        || shell.is_chat_picker_active()
+        || shell.is_thread_picker_active()
         || shell.is_rewind_picker_active()
         || shell.is_fork_picker_active()
         || shell.is_image_picker_active()

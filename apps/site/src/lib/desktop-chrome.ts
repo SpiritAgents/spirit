@@ -3,12 +3,12 @@ import { DESKTOP_OVERLAY_LIGHT_SHADOW } from "@/lib/desktop-translucency-surface
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
 /**
- * Instant hover fill — exclude background-color from transitions (session-sidebar precedent).
+ * Instant hover fill — exclude background-color from transitions (thread-sidebar precedent).
  * Keeps existing hover:bg-* overlays; only removes bg fade in/out on hover.
  */
 export const instantHoverMotionClass = "!transition-[opacity,transform,box-shadow] duration-150";
 
-/** Sidebar shell / top-bar slot width transition, aligned with SessionSidebarShell */
+/** Sidebar shell / top-bar slot width transition, aligned with ThreadSidebarShell */
 export const DESKTOP_SHELL_LAYOUT_TRANSITION =
   "transition-[width,margin,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none motion-reduce:duration-0";
 
@@ -185,37 +185,37 @@ export function stopOverlayScrollPropagation(event: { stopPropagation(): void })
 }
 
 /** Draggable lower bound: the default width matches it so the first open is more compact */
-export const SESSION_SIDEBAR_MIN_WIDTH_PX = 200;
+export const THREAD_SIDEBAR_MIN_WIDTH_PX = 200;
 
 /** Default width of the left session sidebar */
-export const SESSION_SIDEBAR_DEFAULT_WIDTH_PX = SESSION_SIDEBAR_MIN_WIDTH_PX;
+export const THREAD_SIDEBAR_DEFAULT_WIDTH_PX = THREAD_SIDEBAR_MIN_WIDTH_PX;
 
 /** Draggable upper bound: only slightly wider than the default (do not use a large viewport ratio for the right tool area) */
-export const SESSION_SIDEBAR_MAX_WIDTH_PX = 288;
+export const THREAD_SIDEBAR_MAX_WIDTH_PX = 288;
 
-const SESSION_SIDEBAR_VIEWPORT_MAX_RATIO = 0.4;
+const THREAD_SIDEBAR_VIEWPORT_MAX_RATIO = 0.4;
 
-export function computeSessionSidebarMaxWidthPx(): number {
+export function computeThreadSidebarMaxWidthPx(): number {
   if (typeof window === "undefined") {
-    return SESSION_SIDEBAR_MAX_WIDTH_PX;
+    return THREAD_SIDEBAR_MAX_WIDTH_PX;
   }
   // The viewport ratio only shrinks the drag-time upper bound; never let it drop
   // below the minimum width, or every clamp caller would compress the sidebar
   // under its own floor on narrow windows.
   return Math.max(
-    SESSION_SIDEBAR_MIN_WIDTH_PX,
+    THREAD_SIDEBAR_MIN_WIDTH_PX,
     Math.min(
-      SESSION_SIDEBAR_MAX_WIDTH_PX,
-      Math.round(window.innerWidth * SESSION_SIDEBAR_VIEWPORT_MAX_RATIO),
+      THREAD_SIDEBAR_MAX_WIDTH_PX,
+      Math.round(window.innerWidth * THREAD_SIDEBAR_VIEWPORT_MAX_RATIO),
     ),
   );
 }
 
-export function sessionSidebarShellWidth(open: boolean, widthPx: number): string {
+export function threadSidebarShellWidth(open: boolean, widthPx: number): string {
   return open ? `${widthPx}px` : "0px";
 }
 
 /** In-browser nested hero preview: narrower session rail for compact typography. */
-export const NESTED_SESSION_SIDEBAR_MIN_WIDTH_PX = 152;
-export const NESTED_SESSION_SIDEBAR_WIDTH_PX = 168;
-export const NESTED_SESSION_SIDEBAR_MAX_WIDTH_PX = 192;
+export const NESTED_THREAD_SIDEBAR_MIN_WIDTH_PX = 152;
+export const NESTED_THREAD_SIDEBAR_WIDTH_PX = 168;
+export const NESTED_THREAD_SIDEBAR_MAX_WIDTH_PX = 192;

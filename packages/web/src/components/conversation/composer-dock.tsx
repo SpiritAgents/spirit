@@ -694,7 +694,7 @@ export const ComposerDock = forwardRef<HTMLDivElement, ComposerDockProps>(functi
               composerRootRef={composerRootRef}
               ariaLabel={
                 fileReferenceMenuView === "sessions"
-                  ? t("composer.atReference.chatCandidates")
+                  ? t("composer.atReference.threadCandidates")
                   : t("composer.atReference.candidates")
               }
               onDismiss={onDismissFileReferenceSuggestions}

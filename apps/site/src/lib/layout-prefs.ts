@@ -1,4 +1,4 @@
-import { SESSION_SIDEBAR_MIN_WIDTH_PX } from "@/lib/desktop-chrome";
+import { THREAD_SIDEBAR_MIN_WIDTH_PX } from "@/lib/desktop-chrome";
 
 const DEMO_WINDOW_LAYOUT_STORAGE_KEYS = [
   "spirit-desktop-session-sidebar-width-px",
@@ -25,11 +25,11 @@ export function clearDemoWindowLayoutPrefs(): void {
   }
 }
 
-export function readSessionSidebarWidthPx(): number {
-  return SESSION_SIDEBAR_MIN_WIDTH_PX;
+export function readThreadSidebarWidthPx(): number {
+  return THREAD_SIDEBAR_MIN_WIDTH_PX;
 }
 
-export function writeSessionSidebarWidthPx(_widthPx: number): void {
+export function writeThreadSidebarWidthPx(_widthPx: number): void {
   // Demo window layout is session-only; do not persist.
 }
 
@@ -164,7 +164,7 @@ export function writePrOverviewPaneRatio(_ratio: number, _containerHeightPx?: nu
   // Demo window layout is session-only; do not persist.
 }
 
-/** `false` = collapsed; missing or `true` = expanded (aligned with the SessionSidebar AnimatedCollapse). */
+/** `false` = collapsed; missing or `true` = expanded (aligned with the ThreadSidebar AnimatedCollapse). */
 export type WorkspaceSidebarExpandedById = Record<string, boolean>;
 
 export function readWorkspaceSidebarExpandedById(): WorkspaceSidebarExpandedById {

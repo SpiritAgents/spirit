@@ -40,13 +40,13 @@ impl TuiShell {
 
     fn subagent_detail_view(
         archive: &SubagentSessionArchiveEntry,
-        live_messages: &[ChatMessage],
+        live_messages: &[ThreadMessage],
         pending_aux: Option<crate::view::PendingAssistantAux>,
     ) -> SubagentSessionDetailView {
         let mut messages = Vec::new();
         let title = archive.summary.title.trim();
         if !title.is_empty() {
-            messages.push(ChatMessage::new(MessageRole::User, title.to_string()));
+            messages.push(ThreadMessage::new(MessageRole::User, title.to_string()));
         }
 
         messages.extend(live_messages.iter().cloned());
@@ -72,7 +72,7 @@ impl TuiShell {
                     && message.content.trim() == output.trim()
             });
             if !already_present {
-                messages.push(ChatMessage::new(MessageRole::Agent, output.clone()));
+                messages.push(ThreadMessage::new(MessageRole::Agent, output.clone()));
             }
         } else if let Some(content) = fallback_assistant {
             let already_present = messages.iter().any(|message| {
@@ -81,7 +81,7 @@ impl TuiShell {
                     && message.content.trim() == content.trim()
             });
             if !already_present {
-                messages.push(ChatMessage::new(MessageRole::Agent, content));
+                messages.push(ThreadMessage::new(MessageRole::Agent, content));
             }
         }
 
@@ -244,7 +244,7 @@ impl TuiShell {
                 let pending_aux = match self.runtime.subagent_pending_aux_state(session_id) {
                     Ok(value) => value,
                     Err(err) => {
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: t!("tui.subagents.status_read_failed", err = err).into_owned(),
                             tool_block: None,
@@ -261,14 +261,14 @@ impl TuiShell {
                 self.sync_subagent_approval_input_state();
             }
             Ok(None) => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.subagents.not_found", session_id = session_id).into_owned(),
                     tool_block: None,
                 });
             }
             Err(err) => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.subagents.read_failed", err = err).into_owned(),
                     tool_block: None,
@@ -293,7 +293,7 @@ impl TuiShell {
                 let pending_aux = match self.runtime.subagent_pending_aux_state(&session_id) {
                     Ok(value) => value,
                     Err(err) => {
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: t!("tui.subagents.status_refresh_failed", err = err)
                                 .into_owned(),
@@ -313,7 +313,7 @@ impl TuiShell {
                 self.close_subagent_view();
             }
             Err(err) => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.subagents.refresh_failed", err = err).into_owned(),
                     tool_block: None,

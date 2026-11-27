@@ -8,9 +8,9 @@ import {
   type ReactNode,
 } from "react";
 
-import { readSessionSidebarWidthPx } from "@/lib/layout-prefs";
+import { readThreadSidebarWidthPx } from "@/lib/layout-prefs";
 
-type SessionSidebarChromeContextValue = {
+type ThreadSidebarChromeContextValue = {
   open: boolean;
   widthPx: number;
   setWidthPx(next: number): void;
@@ -18,31 +18,31 @@ type SessionSidebarChromeContextValue = {
   openSidebar(): void;
 };
 
-const SessionSidebarChromeContext = createContext<SessionSidebarChromeContextValue | null>(null);
+const ThreadSidebarChromeContext = createContext<ThreadSidebarChromeContextValue | null>(null);
 
-export type SessionSidebarChromeApi = {
+export type ThreadSidebarChromeApi = {
   open: boolean;
   openSidebar(): void;
   toggle(): void;
 };
 
-export type SessionSidebarChromeProviderProps = {
+export type ThreadSidebarChromeProviderProps = {
   children: ReactNode;
-  apiRef?: React.MutableRefObject<SessionSidebarChromeApi | null>;
+  apiRef?: React.MutableRefObject<ThreadSidebarChromeApi | null>;
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   initialWidthPx?: number;
 };
 
-export function SessionSidebarChromeProvider({
+export function ThreadSidebarChromeProvider({
   children,
   apiRef,
   open: openProp,
   defaultOpen = true,
   onOpenChange,
   initialWidthPx,
-}: SessionSidebarChromeProviderProps) {
+}: ThreadSidebarChromeProviderProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
   const open = openProp ?? uncontrolledOpen;
 
@@ -56,7 +56,7 @@ export function SessionSidebarChromeProvider({
     [onOpenChange, openProp],
   );
 
-  const [widthPx, setWidthPxState] = useState(() => initialWidthPx ?? readSessionSidebarWidthPx());
+  const [widthPx, setWidthPxState] = useState(() => initialWidthPx ?? readThreadSidebarWidthPx());
 
   const setWidthPx = useCallback((next: number) => {
     setWidthPxState(next);
@@ -88,16 +88,16 @@ export function SessionSidebarChromeProvider({
   );
 
   return (
-    <SessionSidebarChromeContext.Provider value={value}>
+    <ThreadSidebarChromeContext.Provider value={value}>
       {children}
-    </SessionSidebarChromeContext.Provider>
+    </ThreadSidebarChromeContext.Provider>
   );
 }
 
-export function useSessionSidebarChrome(): SessionSidebarChromeContextValue {
-  const value = useContext(SessionSidebarChromeContext);
+export function useThreadSidebarChrome(): ThreadSidebarChromeContextValue {
+  const value = useContext(ThreadSidebarChromeContext);
   if (!value) {
-    throw new Error("useSessionSidebarChrome must be used within SessionSidebarChromeProvider");
+    throw new Error("useThreadSidebarChrome must be used within ThreadSidebarChromeProvider");
   }
   return value;
 }

@@ -142,7 +142,7 @@
     "prMarkReadyForReview": "Prêt pour la revue",
     "prMarkingReady": "Marquage prêt…",
     "prMarkReadyFailed": "Échec du marquage de la demande de tirage comme prête pour la revue",
-    "addSelectionToChat": "Ajouter à la discussion"
+    "addSelectionToThread": "Ajouter au fil"
   },
   "github": {
     "connect": "Connecter GitHub",

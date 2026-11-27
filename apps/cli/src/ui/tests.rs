@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
     model_registry::AppConfig,
-    ports::{ChatSessionListItem, SubagentSessionStatus},
+    ports::{SubagentSessionStatus, ThreadSessionListItem},
     view::{
         AssistantAuxData, BottomFormFieldEditorView, BottomFormFieldView, BottomFormView,
         ForkPickerView, MainInputMode, MarketplaceCatalogItemView, MarketplaceDetailView,
@@ -65,7 +65,7 @@ fn test_image_path(label: &str) -> std::path::PathBuf {
     std::env::temp_dir().join(format!("spirit-ui-{label}-{short}.png"))
 }
 
-fn build_view_model(message: ChatMessage) -> TuiViewModel {
+fn build_view_model(message: ThreadMessage) -> TuiViewModel {
     TuiViewModel {
         input: String::new(),
         input_cursor: 0,
@@ -95,9 +95,9 @@ fn build_view_model(message: ChatMessage) -> TuiViewModel {
         approval_picker_index: 0,
         tui_picker_active: false,
         tui_picker_index: 0,
-        chat_picker_active: false,
-        chat_picker_index: 0,
-        chat_picker_sessions: vec![],
+        thread_picker_active: false,
+        thread_picker_index: 0,
+        thread_picker_sessions: vec![],
         subagent_picker_active: false,
         subagent_picker_index: 0,
         subagent_sessions: vec![],
@@ -190,20 +190,20 @@ fn build_bottom_form_view(value: &str, footer_hint: &str) -> BottomFormView {
     }
 }
 
-fn chat_picker_item(path: &str, display_name: &str) -> ChatSessionListItem {
-    ChatSessionListItem {
+fn thread_picker_item(path: &str, display_name: &str) -> ThreadSessionListItem {
+    ThreadSessionListItem {
         path: path.to_string(),
         display_name: display_name.to_string(),
         modified_at_unix_ms: 0,
     }
 }
 
-fn chat_picker_item_at(
+fn thread_picker_item_at(
     path: &str,
     display_name: &str,
     modified_at_unix_ms: u128,
-) -> ChatSessionListItem {
-    ChatSessionListItem {
+) -> ThreadSessionListItem {
+    ThreadSessionListItem {
         path: path.to_string(),
         display_name: display_name.to_string(),
         modified_at_unix_ms,
@@ -254,7 +254,7 @@ fn bottom_form_block_height_grows_for_wrapped_footer_hint() {
 
 #[test]
 fn input_cursor_matches_wrapped_render_for_exact_width_line_before_newline() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::Agent, "welcome"));
     app.input = "你好你好\nA".to_string();
     app.input_cursor = app.input.chars().count();
 
@@ -267,7 +267,7 @@ fn input_cursor_matches_wrapped_render_for_exact_width_line_before_newline() {
 
 #[test]
 fn input_cursor_moves_to_trailing_empty_row_when_last_line_fills_width() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::Agent, "welcome"));
     app.input = "你好你好".to_string();
     app.input_cursor = app.input.chars().count();
 
@@ -301,11 +301,11 @@ fn agent_mode_input_softens_only_border_text_stays_white() {
 #[test]
 fn footer_shows_mode_without_tab_toggle_hint() {
     let agent_footer = render_text_lines(vec![build_footer_line(
-        &build_view_model(ChatMessage::new(MessageRole::Agent, "welcome")),
+        &build_view_model(ThreadMessage::new(MessageRole::Agent, "welcome")),
         80,
     )]);
 
-    let mut plan_app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
+    let mut plan_app = build_view_model(ThreadMessage::new(MessageRole::Agent, "welcome"));
     plan_app.input_mode = MainInputMode::Plan;
     let plan_footer = render_text_lines(vec![build_footer_line(&plan_app, 80)]);
 
@@ -329,7 +329,7 @@ fn footer_shows_mode_without_tab_toggle_hint() {
 
 #[test]
 fn footer_prioritizes_the_move_background_hint_after_a_long_running_tool() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "working"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::Agent, "working"));
     app.move_background_hint_visible = true;
     app.pending_response_active = true;
     app.pending_aux = Some(PendingAssistantAux {
@@ -350,7 +350,7 @@ fn footer_prioritizes_the_move_background_hint_after_a_long_running_tool() {
 
 #[test]
 fn footer_auto_approval_uses_blue_style() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::Agent, "welcome"));
     app.approval_level = "auto-approval".to_string();
     let line = build_footer_line(&app, 80);
     assert!(
@@ -362,7 +362,7 @@ fn footer_auto_approval_uses_blue_style() {
 
 #[test]
 fn footer_bypass_approval_uses_yellow_style() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::Agent, "welcome"));
     app.approval_level = "bypass-approval".to_string();
     let line = build_footer_line(&app, 80);
     assert!(
@@ -409,13 +409,13 @@ fn slice_styled_runs_from_display_column_skips_and_limits_width() {
 
 #[test]
 fn sessions_picker_reuses_inline_picker_styles_and_scroll_window() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/session"));
-    app.chat_picker_sessions = (0..7)
-        .map(|idx| chat_picker_item(&format!("session-{idx}.json"), &format!("session-{idx}")))
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::User, "/session"));
+    app.thread_picker_sessions = (0..7)
+        .map(|idx| thread_picker_item(&format!("session-{idx}.json"), &format!("session-{idx}")))
         .collect();
-    app.chat_picker_index = 3;
+    app.thread_picker_index = 3;
 
-    let lines = build_chat_picker_lines(&app, 5);
+    let lines = build_thread_picker_lines(&app, 5);
     let text = render_text_lines(lines.clone());
 
     assert!(text[0].starts_with("  session-1 "));
@@ -426,7 +426,7 @@ fn sessions_picker_reuses_inline_picker_styles_and_scroll_window() {
 
 #[test]
 fn subagent_picker_reuses_inline_picker_styles_and_scroll_window() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/subagent"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::User, "/subagent"));
     app.subagent_sessions = (0..7)
         .map(|idx| SubagentSessionSummaryView {
             session_id: format!("subagent-{idx}"),
@@ -449,7 +449,7 @@ fn subagent_picker_reuses_inline_picker_styles_and_scroll_window() {
 
 #[test]
 fn subagent_picker_uses_inline_layout_without_border_or_title() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/subagent"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::User, "/subagent"));
     app.subagent_picker_active = true;
     app.subagent_sessions = vec![
         SubagentSessionSummaryView {
@@ -477,14 +477,14 @@ fn subagent_picker_uses_inline_layout_without_border_or_title() {
 
 #[test]
 fn sessions_picker_uses_inline_layout_without_footer_or_title() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/session"));
-    app.chat_picker_active = true;
-    app.chat_picker_sessions = vec![
-        chat_picker_item("session-0.json", "session-0"),
-        chat_picker_item("session-1.json", "session-1"),
-        chat_picker_item("session-2.json", "session-2"),
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::User, "/session"));
+    app.thread_picker_active = true;
+    app.thread_picker_sessions = vec![
+        thread_picker_item("session-0.json", "session-0"),
+        thread_picker_item("session-1.json", "session-1"),
+        thread_picker_item("session-2.json", "session-2"),
     ];
-    app.chat_picker_index = 1;
+    app.thread_picker_index = 1;
 
     let lines = render_ui_lines(&app, 80, 20);
 
@@ -503,23 +503,23 @@ fn sessions_picker_uses_inline_layout_without_footer_or_title() {
 
 #[test]
 fn sessions_picker_shows_relative_time_without_parentheses() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/session"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::User, "/session"));
     app.config.ui_locale = Some("en".to_string());
     let now_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|duration| duration.as_millis())
         .unwrap_or(0);
-    app.chat_picker_sessions = vec![
-        chat_picker_item_at(
+    app.thread_picker_sessions = vec![
+        thread_picker_item_at(
             "session.json",
             "My session",
             now_ms.saturating_sub(3 * 60 * 1000),
         ),
-        chat_picker_item("other.json", "Other"),
+        thread_picker_item("other.json", "Other"),
     ];
-    app.chat_picker_index = 1;
+    app.thread_picker_index = 1;
 
-    let lines = build_chat_picker_lines(&app, 5);
+    let lines = build_thread_picker_lines(&app, 5);
     let text = render_text_lines(lines.clone());
 
     assert!(
@@ -537,7 +537,7 @@ fn sessions_picker_shows_relative_time_without_parentheses() {
 
 #[test]
 fn slash_suggestions_reuse_inline_picker_styles_and_scroll_window() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::User, "/"));
     app.input_suggestion_kind = Some(InputSuggestionKind::Slash);
     app.slash_suggestions = (0..7)
         .map(|idx| InputSuggestion {
@@ -561,7 +561,7 @@ fn slash_suggestions_reuse_inline_picker_styles_and_scroll_window() {
 
 #[test]
 fn slash_suggestions_use_inline_layout_without_footer_or_title() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::User, "/"));
     app.input_suggestion_kind = Some(InputSuggestionKind::Slash);
     app.slash_suggestions = vec![
         InputSuggestion::simple("/help"),
@@ -587,7 +587,7 @@ fn slash_suggestions_use_inline_layout_without_footer_or_title() {
 
 #[test]
 fn marketplace_view_renders_source_bar_and_catalog_rows() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::Agent, "welcome"));
     app.marketplace_view = Some(MarketplaceViewModel {
         step: MarketplaceFlowStep::CatalogPicker,
         query: String::new(),
@@ -671,7 +671,7 @@ fn marketplace_view_renders_source_bar_and_catalog_rows() {
 
 #[test]
 fn marketplace_view_hides_source_bar_when_no_source_tab_is_visible() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::Agent, "welcome"));
     app.marketplace_view = Some(MarketplaceViewModel {
         step: MarketplaceFlowStep::CatalogPicker,
         query: String::new(),
@@ -706,7 +706,7 @@ fn marketplace_view_hides_source_bar_when_no_source_tab_is_visible() {
 
 #[test]
 fn marketplace_catalog_windows_items_to_keep_the_selection_visible() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::Agent, "welcome"));
     app.marketplace_view = Some(MarketplaceViewModel {
         step: MarketplaceFlowStep::CatalogPicker,
         query: String::new(),
@@ -756,7 +756,7 @@ fn marketplace_catalog_windows_items_to_keep_the_selection_visible() {
 
 #[test]
 fn marketplace_detail_page_hugs_content_and_hides_id() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::Agent, "welcome"));
     app.marketplace_view = Some(MarketplaceViewModel {
         step: MarketplaceFlowStep::DetailActions,
         query: String::new(),
@@ -888,7 +888,7 @@ fn marketplace_detail_page_hugs_content_and_hides_id() {
 
 #[test]
 fn single_slash_suggestion_details_align_with_usage_heading() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/model"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::User, "/model"));
     app.input_suggestion_kind = Some(InputSuggestionKind::Slash);
     app.slash_suggestions = vec![InputSuggestion::simple("/model")];
 
@@ -916,7 +916,7 @@ fn start_implementing_slash_suggestion_shows_summary() {
 
 #[test]
 fn file_reference_suggestions_reuse_inline_picker_styles_and_scroll_window() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "@src/"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::User, "@src/"));
     app.input_suggestion_kind = Some(InputSuggestionKind::FileReference);
     app.slash_suggestions = (0..7)
         .map(|idx| InputSuggestion {
@@ -940,7 +940,7 @@ fn file_reference_suggestions_reuse_inline_picker_styles_and_scroll_window() {
 
 #[test]
 fn file_reference_suggestions_use_inline_layout_without_footer_or_title() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "@src/"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::User, "@src/"));
     app.input_suggestion_kind = Some(InputSuggestionKind::FileReference);
     app.slash_suggestions = vec![InputSuggestion::simple("src/ui.rs")];
 
@@ -980,15 +980,15 @@ fn truncate_from_left_keeps_combining_marks_on_tail() {
 
 #[test]
 fn rewind_picker_renders_selected_message_in_history_panel() {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::User,
         "Confirm requirements first",
     ));
-    app.messages.push(ChatMessage::new(
+    app.messages.push(ThreadMessage::new(
         MessageRole::Agent,
         "Let me look at the context first.",
     ));
-    app.messages.push(ChatMessage::new(
+    app.messages.push(ThreadMessage::new(
         MessageRole::User,
         "Then organize the implementation plan",
     ));
@@ -1027,7 +1027,7 @@ fn rewind_picker_renders_selected_message_in_history_panel() {
 
 #[test]
 fn rewind_picker_deemphasizes_assistant_messages() {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "Let me look at the context first.",
     ));
@@ -1048,7 +1048,7 @@ fn rewind_picker_deemphasizes_assistant_messages() {
 
 #[test]
 fn rewind_picker_deemphasizes_tool_messages() {
-    let mut app = build_view_model(ChatMessage::with_tool_block(
+    let mut app = build_view_model(ThreadMessage::with_tool_block(
         MessageRole::Agent,
         "",
         ToolUiBlock {
@@ -1081,8 +1081,8 @@ fn rewind_picker_deemphasizes_tool_messages() {
 
 #[test]
 fn rewind_picker_deemphasizes_non_selectable_user_messages() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/session"));
-    app.messages.push(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::User, "/session"));
+    app.messages.push(ThreadMessage::new(
         MessageRole::User,
         "The message actually sent to the model",
     ));
@@ -1103,11 +1103,11 @@ fn rewind_picker_deemphasizes_non_selectable_user_messages() {
 
 #[test]
 fn streaming_tool_preview_renders_tool_card_on_separate_message_row() {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "I'll run this command for you.",
     ));
-    app.messages.push(ChatMessage::with_tool_block(
+    app.messages.push(ThreadMessage::with_tool_block(
         MessageRole::Agent,
         String::new(),
         ToolUiBlock {
@@ -1142,7 +1142,7 @@ fn streaming_tool_preview_renders_tool_card_on_separate_message_row() {
 
 #[test]
 fn real_thinking_stays_before_agent_message_body() {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "I'll run this command for you.",
     ));
@@ -1170,7 +1170,7 @@ fn real_thinking_stays_before_agent_message_body() {
 
 #[test]
 fn embedded_thinking_renders_in_aux_details_without_raw_tags() {
-    let app = build_view_model(ChatMessage::new(
+    let app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "<think>Let me review the project structure first.</think>\n\nI've finished reviewing the main modules.",
     ));
@@ -1192,7 +1192,7 @@ fn embedded_thinking_renders_in_aux_details_without_raw_tags() {
 
 #[test]
 fn embedded_thinking_is_hidden_when_aux_details_collapsed() {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "<think>Let me review the project structure first.</think>\n\nI've finished reviewing the main modules.",
     ));
@@ -1215,7 +1215,7 @@ fn embedded_thinking_is_hidden_when_aux_details_collapsed() {
 
 #[test]
 fn thinking_only_message_stays_invisible_when_aux_details_collapsed() {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "<think>Let me review the project structure first.</think>",
     ));
@@ -1228,7 +1228,7 @@ fn thinking_only_message_stays_invisible_when_aux_details_collapsed() {
 
 #[test]
 fn pending_thinking_detail_is_hidden_when_aux_details_collapsed() {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "I'll handle this issue.",
     ));
@@ -1258,7 +1258,7 @@ fn pending_thinking_detail_is_hidden_when_aux_details_collapsed() {
 
 #[test]
 fn pending_thinking_detail_is_visible_when_aux_details_expanded() {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "I'll handle this issue.",
     ));
@@ -1282,7 +1282,7 @@ fn pending_thinking_detail_is_visible_when_aux_details_expanded() {
 
 #[test]
 fn pending_thinking_spinner_is_drawn_by_cli_ui() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, ""));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::Agent, ""));
     app.pending_response_active = true;
     app.pending_assistant_msg_index = Some(0);
     app.pending_aux = Some(PendingAssistantAux {
@@ -1302,7 +1302,10 @@ fn pending_thinking_spinner_is_drawn_by_cli_ui() {
 
 #[test]
 fn standalone_subagent_pending_aux_renders_in_history() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "Processing started."));
+    let mut app = build_view_model(ThreadMessage::new(
+        MessageRole::Agent,
+        "Processing started.",
+    ));
     app.pending_response_active = true;
     app.pending_assistant_msg_index = None;
     app.pending_aux = Some(PendingAssistantAux {
@@ -1332,7 +1335,10 @@ fn standalone_subagent_pending_aux_renders_in_history() {
 
 #[test]
 fn standalone_pending_aux_hides_detail_when_collapsed() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "Processing started."));
+    let mut app = build_view_model(ThreadMessage::new(
+        MessageRole::Agent,
+        "Processing started.",
+    ));
     app.show_aux_details = false;
     app.pending_response_active = true;
     app.pending_assistant_msg_index = None;
@@ -1354,7 +1360,7 @@ fn standalone_pending_aux_hides_detail_when_collapsed() {
 
 #[test]
 fn persisted_standalone_subagent_pending_aux_renders_after_completion() {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "The subagent has finished the task.",
     ));
@@ -1384,12 +1390,12 @@ fn persisted_standalone_subagent_pending_aux_renders_after_completion() {
 
 #[test]
 fn persisted_subagent_status_wins_over_generic_pending_thinking() {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "The parent session is about to summarize results.",
     ));
     app.messages
-        .push(ChatMessage::new(MessageRole::Agent, String::new()));
+        .push(ThreadMessage::new(MessageRole::Agent, String::new()));
     app.pending_response_active = true;
     app.pending_assistant_msg_index = Some(1);
     app.pending_aux = Some(PendingAssistantAux {
@@ -1419,11 +1425,11 @@ fn persisted_subagent_status_wins_over_generic_pending_thinking() {
 
 #[test]
 fn persisted_subagent_status_renders_before_parent_streaming_reply() {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "The subagent has finished the task.",
     ));
-    app.messages.push(ChatMessage::new(
+    app.messages.push(ThreadMessage::new(
         MessageRole::Agent,
         "Tool call succeeded! The subagent returned structured results.",
     ));
@@ -1463,11 +1469,11 @@ fn persisted_subagent_status_renders_before_parent_streaming_reply() {
 
 #[test]
 fn persisted_subagent_status_stays_above_parent_reply_after_completion() {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "The subagent has finished the task.",
     ));
-    app.messages.push(ChatMessage::new(
+    app.messages.push(ThreadMessage::new(
         MessageRole::Agent,
         "Developer debug test task: subagent test task executed successfully.",
     ));
@@ -1498,16 +1504,16 @@ fn persisted_subagent_status_stays_above_parent_reply_after_completion() {
 
 #[test]
 fn persisted_subagent_status_stays_anchored_after_later_user_message() {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "The subagent has finished the task.",
     ));
-    app.messages.push(ChatMessage::new(
+    app.messages.push(ThreadMessage::new(
         MessageRole::Agent,
         "Developer debug test task: subagent test task executed successfully.",
     ));
     app.messages
-        .push(ChatMessage::new(MessageRole::User, "/model"));
+        .push(ThreadMessage::new(MessageRole::User, "/model"));
     app.pending_response_active = false;
     app.pending_assistant_msg_index = None;
     app.pending_aux = None;
@@ -1541,16 +1547,16 @@ fn persisted_subagent_status_stays_anchored_after_later_user_message() {
 #[test]
 fn persisted_subagent_status_renders_as_separate_message_before_parent_reply_after_later_user_message()
  {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "The subagent has finished the task.",
     ));
-    app.messages.push(ChatMessage::new(
+    app.messages.push(ThreadMessage::new(
         MessageRole::Agent,
         "Developer debug test task: subagent test task executed successfully.",
     ));
     app.messages
-        .push(ChatMessage::new(MessageRole::User, "/model"));
+        .push(ThreadMessage::new(MessageRole::User, "/model"));
     app.pending_response_active = false;
     app.pending_assistant_msg_index = None;
     app.pending_aux = None;
@@ -1629,7 +1635,7 @@ fn subagent_tool_card_hides_output_when_aux_details_collapsed() {
         metadata: Default::default(),
         suppress_expand: None,
     };
-    let message = ChatMessage::with_tool_block(MessageRole::Agent, String::new(), tool);
+    let message = ThreadMessage::with_tool_block(MessageRole::Agent, String::new(), tool);
 
     let lines = render_text_lines(render_subagent_message_lines(&message, false));
 
@@ -1653,7 +1659,7 @@ fn subagent_tool_card_shows_output_when_aux_details_expanded() {
         metadata: Default::default(),
         suppress_expand: None,
     };
-    let message = ChatMessage::with_tool_block(MessageRole::Agent, String::new(), tool);
+    let message = ThreadMessage::with_tool_block(MessageRole::Agent, String::new(), tool);
 
     let lines = render_text_lines(render_subagent_message_lines(&message, true));
 
@@ -1664,7 +1670,7 @@ fn subagent_tool_card_shows_output_when_aux_details_expanded() {
 
 #[test]
 fn shell_pending_approval_title_line_shows_reason_instead_of_call_id() {
-    let app = build_view_model(ChatMessage::with_tool_block(
+    let app = build_view_model(ThreadMessage::with_tool_block(
         MessageRole::Agent,
         String::new(),
         ToolUiBlock {
@@ -1696,7 +1702,7 @@ fn shell_pending_approval_title_line_shows_reason_instead_of_call_id() {
 
 #[test]
 fn generate_image_tool_card_shows_structured_path_when_aux_details_collapsed() {
-    let mut app = build_view_model(ChatMessage::with_tool_block(
+    let mut app = build_view_model(ThreadMessage::with_tool_block(
         MessageRole::Agent,
         String::new(),
         ToolUiBlock {
@@ -1740,7 +1746,7 @@ fn generate_image_tool_card_shows_structured_path_when_aux_details_collapsed() {
 
 #[test]
 fn generate_video_tool_card_shows_managed_uri_when_aux_details_collapsed() {
-    let mut app = build_view_model(ChatMessage::with_tool_block(
+    let mut app = build_view_model(ThreadMessage::with_tool_block(
         MessageRole::Agent,
         String::new(),
         ToolUiBlock {
@@ -1777,7 +1783,7 @@ fn generate_video_tool_card_shows_managed_uri_when_aux_details_collapsed() {
 
 #[test]
 fn generate_image_tool_card_keeps_rail_on_wrapped_path_lines() {
-    let mut app = build_view_model(ChatMessage::with_tool_block(
+    let mut app = build_view_model(ThreadMessage::with_tool_block(
         MessageRole::Agent,
         String::new(),
         ToolUiBlock {
@@ -1820,7 +1826,7 @@ fn generate_image_tool_card_keeps_rail_on_wrapped_path_lines() {
 
 #[test]
 fn generate_image_tool_card_selection_highlights_wrapped_rail_consistently() {
-    let mut app = build_view_model(ChatMessage::with_tool_block(
+    let mut app = build_view_model(ThreadMessage::with_tool_block(
         MessageRole::Agent,
         String::new(),
         ToolUiBlock {
@@ -1889,7 +1895,7 @@ fn generate_image_tool_card_selection_highlights_wrapped_rail_consistently() {
 
 #[test]
 fn generate_image_history_render_reserves_image_block() {
-    let app = build_view_model(ChatMessage::with_tool_block(
+    let app = build_view_model(ThreadMessage::with_tool_block(
         MessageRole::Agent,
         String::new(),
         ToolUiBlock {
@@ -1923,7 +1929,7 @@ fn generate_image_ui_renders_halfblock_preview_from_local_file() {
     let image = image::RgbaImage::from_pixel(16, 16, image::Rgba([255, 0, 0, 255]));
     image.save(&file_path).expect("save temp image");
 
-    let app = build_view_model(ChatMessage::with_tool_block(
+    let app = build_view_model(ThreadMessage::with_tool_block(
         MessageRole::Agent,
         String::new(),
         ToolUiBlock {
@@ -1972,7 +1978,7 @@ fn generate_image_ui_renders_halfblock_preview_from_local_file() {
 
 #[test]
 fn assistant_prefix_stays_with_first_wrapped_cjk_line() {
-    let app = build_view_model(ChatMessage::new(
+    let app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "我注意到您使用了中文表达情绪。请问有什么我可以帮助您解决的问题吗？",
     ));
@@ -1990,7 +1996,7 @@ fn assistant_prefix_stays_with_first_wrapped_cjk_line() {
 
 #[test]
 fn assistant_soft_wrap_continuation_aligns_with_text_column() {
-    let app = build_view_model(ChatMessage::new(
+    let app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "我理解您可能感到沮丧或生气，但使用粗口并不能帮助我们解决问题。如果您遇到了什么困难或需要帮助，请告诉我具体的情况，我会尽力为您提供有用的支持和建议。",
     ));
@@ -2009,7 +2015,7 @@ fn assistant_soft_wrap_continuation_aligns_with_text_column() {
 
 #[test]
 fn inline_mode_pins_input_below_live_content_not_window_bottom() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "hello"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::User, "hello"));
     app.inline_mode = true;
     app.committed_history_lines = usize::MAX;
     app.input = "typed".to_string();
@@ -2030,7 +2036,7 @@ fn inline_mode_pins_input_below_live_content_not_window_bottom() {
 
 #[test]
 fn inline_mode_skips_tool_image_blocks() {
-    let mut app = build_view_model(ChatMessage::with_tool_block(
+    let mut app = build_view_model(ThreadMessage::with_tool_block(
         MessageRole::Agent,
         String::new(),
         ToolUiBlock {
@@ -2055,7 +2061,7 @@ fn inline_mode_skips_tool_image_blocks() {
 
 #[test]
 fn inline_mode_keeps_input_below_uncommitted_live_tail() {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::Agent,
         "streaming reply that should sit above the composer",
     ));
@@ -2078,7 +2084,7 @@ fn inline_mode_keeps_input_below_uncommitted_live_tail() {
 
 #[test]
 fn inline_mode_keeps_footer_directly_below_input() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "hello"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::User, "hello"));
     app.inline_mode = true;
     app.committed_history_lines = usize::MAX;
 
@@ -2109,15 +2115,15 @@ fn inline_mode_keeps_footer_directly_below_input() {
 
 #[test]
 fn inline_rewind_picker_shows_committed_history() {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::User,
         "Confirm requirements first",
     ));
-    app.messages.push(ChatMessage::new(
+    app.messages.push(ThreadMessage::new(
         MessageRole::Agent,
         "Let me look at the context first.",
     ));
-    app.messages.push(ChatMessage::new(
+    app.messages.push(ThreadMessage::new(
         MessageRole::User,
         "Then organize the implementation plan",
     ));
@@ -2143,11 +2149,11 @@ fn inline_rewind_picker_shows_committed_history() {
 
 #[test]
 fn inline_fork_picker_shows_committed_history() {
-    let mut app = build_view_model(ChatMessage::new(
+    let mut app = build_view_model(ThreadMessage::new(
         MessageRole::User,
         "Confirm requirements first",
     ));
-    app.messages.push(ChatMessage::new(
+    app.messages.push(ThreadMessage::new(
         MessageRole::Agent,
         "Let me look at the context first.",
     ));
@@ -2169,7 +2175,7 @@ fn inline_fork_picker_shows_committed_history() {
 
 #[test]
 fn inline_mode_renders_subagent_viewer_and_approval() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "hello"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::User, "hello"));
     app.inline_mode = true;
     app.committed_history_lines = usize::MAX;
     app.subagent_view = Some(SubagentSessionDetailView {
@@ -2180,7 +2186,7 @@ fn inline_mode_renders_subagent_viewer_and_approval() {
             updated_at_unix_ms: 1,
             latest_message: None,
         },
-        messages: vec![ChatMessage::new(MessageRole::Agent, "subagent working")],
+        messages: vec![ThreadMessage::new(MessageRole::Agent, "subagent working")],
         pending_aux: None,
         final_output: None,
         error: None,
@@ -2225,7 +2231,7 @@ fn inline_viewport_uses_reserved_height_not_fullscreen() {
         },
     )
     .expect("inline viewport initializes on TestBackend");
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "hello"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::User, "hello"));
     app.inline_mode = true;
     app.committed_history_lines = usize::MAX;
     let mut runtime = UiRuntimeState::default();
@@ -2250,7 +2256,7 @@ fn inline_viewport_uses_reserved_height_not_fullscreen() {
 
 #[test]
 fn idle_inline_needed_viewport_height_is_content_not_reserved_24() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "hello"));
+    let mut app = build_view_model(ThreadMessage::new(MessageRole::User, "hello"));
     app.inline_mode = true;
     app.committed_history_lines = usize::MAX;
     assert_eq!(
@@ -2268,9 +2274,9 @@ fn idle_inline_needed_viewport_height_is_content_not_reserved_24() {
 
 #[test]
 fn history_omits_brand_header() {
-    let mut inline_app = build_view_model(ChatMessage::new(MessageRole::Agent, "hello"));
+    let mut inline_app = build_view_model(ThreadMessage::new(MessageRole::Agent, "hello"));
     inline_app.inline_mode = true;
-    let fullscreen = build_view_model(ChatMessage::new(MessageRole::Agent, "hello"));
+    let fullscreen = build_view_model(ThreadMessage::new(MessageRole::Agent, "hello"));
 
     for (label, app) in [("inline", &inline_app), ("fullscreen", &fullscreen)] {
         let snapshot = render_text_lines(build_history_lines(app, 80)).join("\n");

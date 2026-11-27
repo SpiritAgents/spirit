@@ -34,7 +34,7 @@ export async function syncWindowsJumpList(iconPath?: string): Promise<void> {
 
   const categories = buildWindowsJumpListCategories({
     recentLabel: i18nHost.t("jumpList.recent"),
-    newAgentLabel: i18nHost.t("jumpList.newChat"),
+    newAgentLabel: i18nHost.t("jumpList.newThread"),
     sessions,
     execPath: process.execPath,
     iconPath: resolvedIcon,

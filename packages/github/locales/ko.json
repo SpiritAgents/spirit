@@ -142,7 +142,7 @@
     "prMarkReadyForReview": "리뷰 준비됨",
     "prMarkingReady": "준비 중 표시…",
     "prMarkReadyFailed": "끌어오기 요청을 리뷰 준비 상태로 표시하는 데 실패했습니다",
-    "addSelectionToChat": "채팅에 추가"
+    "addSelectionToThread": "스레드에 추가"
   },
   "github": {
     "connect": "GitHub 연결",

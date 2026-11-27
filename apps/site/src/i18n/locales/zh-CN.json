@@ -111,7 +111,7 @@
       "maximize": "最大化",
       "close": "关闭"
     },
-    "sessionSidebar": {
+    "threadSidebar": {
       "currentWorkspace": "当前工作区",
       "basics": "基础",
       "models": "模型",
@@ -121,15 +121,15 @@
       "mcps": "MCP",
       "appearance": "外观",
       "settingsNavSidebarAria": "设置导航侧栏",
-      "sessionsSidebarAria": "对话与设置侧栏",
+      "threadsSidebarAria": "线程与设置侧栏",
       "back": "返回",
       "settingsHeading": "设置",
       "pageNavigation": "页面导航",
-      "newChat": "新对话",
+      "newThread": "新线程",
       "extensionsButton": "扩展",
       "workspacesHeading": "工作区",
       "settingsTabsAria": "设置页签",
-      "workspaceSessionsAria": "工作区对话",
+      "workspaceThreadsAria": "工作区线程",
       "settingsButton": "设置"
     },
     "conversation": {
@@ -226,7 +226,7 @@
       "previewEditorOnlyTextError": "仅为预览中的文本文件启用编辑器。",
       "hostStatus": "Web Hero Preview",
       "mcpReady": "MCP ready",
-      "newChat": "新对话"
+      "newThread": "新线程"
     },
     "commit": {
       "modeCommit": "提交",

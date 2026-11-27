@@ -15,8 +15,8 @@ import { DesktopMacTrafficLights } from "@/components/desktop-mac-traffic-lights
 import { DesktopConversationPreview } from "@/components/desktop-conversation-preview";
 import { DesktopModelsPreview } from "@/components/desktop-models-preview";
 import { DesktopLayoutChromeBar } from "@/components/layout/desktop-layout-chrome-bar";
-import { SessionSidebar, type SettingsSidebarTab } from "@/components/session-sidebar";
-import { SessionSidebarShell } from "@/components/session-sidebar-shell";
+import { ThreadSidebar, type SettingsSidebarTab } from "@/components/thread-sidebar";
+import { ThreadSidebarShell } from "@/components/thread-sidebar-shell";
 import { WorkspaceToolsDock } from "@/components/workspace-tools-panel";
 import { EmptyCard } from "@/components/ui/empty";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -24,10 +24,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Messages } from "@/i18n/messages";
 import { useI18n } from "@/i18n/provider";
 import {
-  NESTED_SESSION_SIDEBAR_MAX_WIDTH_PX,
-  NESTED_SESSION_SIDEBAR_MIN_WIDTH_PX,
-  NESTED_SESSION_SIDEBAR_WIDTH_PX,
-  sessionSidebarShellWidth,
+  NESTED_THREAD_SIDEBAR_MAX_WIDTH_PX,
+  NESTED_THREAD_SIDEBAR_MIN_WIDTH_PX,
+  NESTED_THREAD_SIDEBAR_WIDTH_PX,
+  threadSidebarShellWidth,
 } from "@/lib/desktop-chrome";
 import {
   readWorkspaceToolsWidthPx,
@@ -39,9 +39,9 @@ import {
 } from "@/lib/design-mode-demo-state";
 import { cn } from "@/lib/utils";
 import {
-  SessionSidebarChromeProvider,
-  useSessionSidebarChrome,
-} from "@/contexts/session-sidebar-chrome-context";
+  ThreadSidebarChromeProvider,
+  useThreadSidebarChrome,
+} from "@/contexts/thread-sidebar-chrome-context";
 import { DesktopPreviewDensityProvider } from "@/contexts/desktop-preview-density-context";
 import type {
   DesktopModelCatalogHint,
@@ -242,7 +242,7 @@ function createDesktopPreview(copy: Messages["desktop"]["previews"]): WorkspaceP
       ],
       "src/components": [
         { name: "desktop-mac-traffic-lights.tsx", kind: "file" },
-        { name: "session-sidebar.tsx", kind: "file" },
+        { name: "thread-sidebar.tsx", kind: "file" },
         { name: "workspace-tools-panel.tsx", kind: "file" },
       ],
       electron: [
@@ -272,7 +272,7 @@ ${copy.desktopReadmeDescription}
   return null
 }
 `,
-      "src/components/session-sidebar.tsx": `export function SessionSidebar() {
+      "src/components/thread-sidebar.tsx": `export function ThreadSidebar() {
   return null
 }
 `,
@@ -507,7 +507,7 @@ export function SpiritDesktopWindow({
     initialSurface === "marketplace" ? "marketplace" : "conversation",
   );
   const [settingsTab, setSettingsTab] = useState<SettingsSidebarTab>(initialSettingsTab);
-  const [sessionSidebarOpen, setSessionSidebarOpen] = useState(() => {
+  const [threadSidebarOpen, setThreadSidebarOpen] = useState(() => {
     if (demoVariant === "agentPlan" || demoVariant === "designMode") {
       return false;
     }
@@ -551,7 +551,7 @@ export function SpiritDesktopWindow({
     const handleResize = () => {
       const width = window.innerWidth;
       if (width < 640) {
-        setSessionSidebarOpen(false);
+        setThreadSidebarOpen(false);
         setWorkspaceToolsOpen(false);
         return;
       }
@@ -606,9 +606,9 @@ export function SpiritDesktopWindow({
     if (existing) {
       return existing.path;
     }
-    const newChat = createSession(nextWorkspaceRoot, messages.desktop.window.newChat);
-    setSessions((current) => sortSessionsNewestFirst([newChat, ...current]));
-    return newChat.path;
+    const newThread = createSession(nextWorkspaceRoot, messages.desktop.window.newThread);
+    setSessions((current) => sortSessionsNewestFirst([newThread, ...current]));
+    return newThread.path;
   };
 
   const handleSelectWorkspace = (nextWorkspaceRoot: string) => {
@@ -630,7 +630,7 @@ export function SpiritDesktopWindow({
       path: nextRoot,
     };
     const preview = createPreviewForWorkspace(nextRoot, messages.desktop.previews);
-    const nextSession = createSession(nextRoot, messages.desktop.window.newChat);
+    const nextSession = createSession(nextRoot, messages.desktop.window.newThread);
 
     setAvailableWorkspaces((current) => [...current, nextWorkspace]);
     setWorkspacePreviews((current) => ({
@@ -644,8 +644,8 @@ export function SpiritDesktopWindow({
     setLastNonSettingsSurface("conversation");
   };
 
-  const handleNewChat = () => {
-    const nextSession = createSession(workspaceRoot, messages.desktop.window.newChat);
+  const handleNewThread = () => {
+    const nextSession = createSession(workspaceRoot, messages.desktop.window.newThread);
     setSessions((current) => sortSessionsNewestFirst([nextSession, ...current]));
     setActiveSessionPath(nextSession.path);
     setActiveSurface("conversation");
@@ -668,11 +668,11 @@ export function SpiritDesktopWindow({
   return (
     <DesktopPreviewDensityProvider nested={nestedPreview}>
       <TooltipProvider>
-        <SessionSidebarChromeProvider
-          open={sessionSidebarOpen}
-          onOpenChange={setSessionSidebarOpen}
-          defaultOpen={sessionSidebarOpen}
-          initialWidthPx={nestedPreview ? NESTED_SESSION_SIDEBAR_WIDTH_PX : undefined}
+        <ThreadSidebarChromeProvider
+          open={threadSidebarOpen}
+          onOpenChange={setThreadSidebarOpen}
+          defaultOpen={threadSidebarOpen}
+          initialWidthPx={nestedPreview ? NESTED_THREAD_SIDEBAR_WIDTH_PX : undefined}
         >
           <SpiritDesktopWindowBody
             windowRootElement={windowRootElement}
@@ -697,7 +697,7 @@ export function SpiritDesktopWindow({
             setWorkspaceToolsOpen={setWorkspaceToolsOpen}
             workspaceToolsWidthPx={workspaceToolsWidthPx}
             setWorkspaceToolsWidthPx={setWorkspaceToolsWidthPx}
-            handleNewChat={handleNewChat}
+            handleNewThread={handleNewThread}
             handleSelectWorkspace={handleSelectWorkspace}
             handleAddWorkspace={handleAddWorkspace}
             activeSessionTitle={activeSessionTitle}
@@ -722,7 +722,7 @@ export function SpiritDesktopWindow({
             currentBranch={currentBranch}
             messages={messages}
           />
-        </SessionSidebarChromeProvider>
+        </ThreadSidebarChromeProvider>
       </TooltipProvider>
     </DesktopPreviewDensityProvider>
   );
@@ -751,7 +751,7 @@ type SpiritDesktopWindowBodyProps = {
   setWorkspaceToolsOpen: Dispatch<SetStateAction<boolean>>;
   workspaceToolsWidthPx: number;
   setWorkspaceToolsWidthPx: Dispatch<SetStateAction<number>>;
-  handleNewChat: () => void;
+  handleNewThread: () => void;
   handleSelectWorkspace: (path: string) => void;
   handleAddWorkspace: () => void;
   activeSessionTitle: string | null;
@@ -800,7 +800,7 @@ function SpiritDesktopWindowBody({
   setWorkspaceToolsOpen,
   workspaceToolsWidthPx,
   setWorkspaceToolsWidthPx,
-  handleNewChat,
+  handleNewThread,
   handleSelectWorkspace,
   handleAddWorkspace,
   activeSessionTitle,
@@ -826,10 +826,10 @@ function SpiritDesktopWindowBody({
   messages,
 }: SpiritDesktopWindowBodyProps) {
   const {
-    open: sessionSidebarOpen,
-    widthPx: sessionSidebarWidthPx,
+    open: threadSidebarOpen,
+    widthPx: threadSidebarWidthPx,
     openSidebar,
-  } = useSessionSidebarChrome();
+  } = useThreadSidebarChrome();
 
   return (
     <div
@@ -862,7 +862,7 @@ function SpiritDesktopWindowBody({
             aria-hidden
             className="pointer-events-none absolute top-0 right-0 z-20 h-px dark:bg-white/8"
             style={{
-              left: sessionSidebarOpen ? sessionSidebarShellWidth(true, sessionSidebarWidthPx) : 0,
+              left: threadSidebarOpen ? threadSidebarShellWidth(true, threadSidebarWidthPx) : 0,
             }}
           />
         ) : null}
@@ -874,17 +874,17 @@ function SpiritDesktopWindowBody({
             data-spirit-surface="main-frame"
             className="flex min-h-0 min-w-0 flex-1 overflow-hidden"
           >
-            <SessionSidebarShell
+            <ThreadSidebarShell
               useTranslucency={useTranslucency}
-              minWidthPx={nestedPreview ? NESTED_SESSION_SIDEBAR_MIN_WIDTH_PX : undefined}
-              maxWidthPx={nestedPreview ? NESTED_SESSION_SIDEBAR_MAX_WIDTH_PX : undefined}
+              minWidthPx={nestedPreview ? NESTED_THREAD_SIDEBAR_MIN_WIDTH_PX : undefined}
+              maxWidthPx={nestedPreview ? NESTED_THREAD_SIDEBAR_MAX_WIDTH_PX : undefined}
             >
-              <SessionSidebar
+              <ThreadSidebar
                 narrow={false}
                 mode={activeSurface === "settings" ? "settings" : "sessions"}
                 sessions={sessions}
                 activeFilePath={activeSessionPath}
-                onNewChat={handleNewChat}
+                onNewThread={handleNewThread}
                 onSelectSession={(path) => {
                   setActiveSessionPath(path);
                   setActiveSurface("conversation");
@@ -910,7 +910,7 @@ function SpiritDesktopWindowBody({
                 onSettingsTabChange={setSettingsTab}
                 translucency={useTranslucency}
               />
-            </SessionSidebarShell>
+            </ThreadSidebarShell>
 
             <div
               data-spirit-surface="conversation-tools-row"
@@ -926,7 +926,7 @@ function SpiritDesktopWindowBody({
                   showWorkspaceToggle={activeSurface === "conversation"}
                   workspaceToolsOpen={workspaceToolsOpen}
                   onToggleWorkspaceTools={() => setWorkspaceToolsOpen((open) => !open)}
-                  onNewChat={handleNewChat}
+                  onNewThread={handleNewThread}
                   sessionTitle={activeSurface === "settings" ? null : activeSessionTitle}
                 />
 

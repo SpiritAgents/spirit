@@ -10,7 +10,7 @@ export const maskFadeHorizontalEnd: CSSProperties = {
 export const sidebarSessionsScrollTopGapClass = "pt-4";
 
 /**
- * Horizontal left/right edge fade: same algorithm as the session-sidebar vertical masks
+ * Horizontal left/right edge fade: same algorithm as the thread-sidebar vertical masks
  * (mask-image + interpolable alpha); clipped content turns transparent to reveal the
  * background below, without hardcoding a mask color.
  */

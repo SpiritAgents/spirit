@@ -99,7 +99,7 @@ pub(crate) struct BridgeChatArchive {
     /// (same shape as chat-file `desktopMessageTimeline`); absent when no host
     /// has pushed one for this session.
     #[serde(default)]
-    pub(crate) desktop_message_timeline: Option<Vec<crate::chat_timeline::PersistedTimelineTurn>>,
+    pub(crate) desktop_message_timeline: Option<Vec<crate::thread_timeline::PersistedTimelineTurn>>,
 }
 
 /// `session.getDesktopTimeline` result (null when the session has none).
@@ -107,7 +107,7 @@ pub(crate) struct BridgeChatArchive {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BridgeDesktopTimelineResult {
     pub(crate) revision: u64,
-    pub(crate) timeline: Vec<crate::chat_timeline::PersistedTimelineTurn>,
+    pub(crate) timeline: Vec<crate::thread_timeline::PersistedTimelineTurn>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

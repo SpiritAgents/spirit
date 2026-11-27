@@ -6,7 +6,7 @@ use crate::rewind::{
     ConversationMessageRole, ConversationMessageSnapshot, MessageAuxSnapshot, ToolBlockSnapshot,
 };
 use crate::tool_ui::tool_request_from_streaming_preview;
-use crate::view::{AssistantAuxData, ChatMessage, MessageRole};
+use crate::view::{AssistantAuxData, MessageRole, ThreadMessage};
 use std::collections::HashMap;
 
 pub const CHAT_SCHEMA_VERSION: i32 = 2;
@@ -357,21 +357,23 @@ pub fn derive_archive_projection(
 
 /// UI projection from daemon `llm_history` for live session attach.
 #[derive(Clone, Debug, Default)]
-pub struct LiveChatProjection {
-    pub messages: Vec<ChatMessage>,
+pub struct LiveThreadProjection {
+    pub messages: Vec<ThreadMessage>,
     pub assistant_aux_by_message: HashMap<usize, AssistantAuxData>,
 }
 
-/// Project daemon `llm_history` into TUI chat rows, including tool cards.
-pub fn project_live_chat_from_llm_history(history: &[ArchivedLlmMessage]) -> LiveChatProjection {
-    project_live_chat_with_task_notices(history, &[])
+/// Project daemon `llm_history` into TUI thread rows, including tool cards.
+pub fn project_live_thread_from_llm_history(
+    history: &[ArchivedLlmMessage],
+) -> LiveThreadProjection {
+    project_live_thread_with_task_notices(history, &[])
 }
 
-pub(crate) fn project_live_chat_with_task_notices(
+pub(crate) fn project_live_thread_with_task_notices(
     history: &[ArchivedLlmMessage],
     notices: &[serde_json::Value],
-) -> LiveChatProjection {
-    let mut projection = LiveChatProjection::default();
+) -> LiveThreadProjection {
+    let mut projection = LiveThreadProjection::default();
     let mut index = 0usize;
     while index < history.len() {
         let entry = &history[index];
@@ -403,7 +405,7 @@ pub(crate) fn project_live_chat_with_task_notices(
                         });
                     projection.messages.push(
                         projected
-                            .unwrap_or_else(|error| ChatMessage::new(MessageRole::Agent, error)),
+                            .unwrap_or_else(|error| ThreadMessage::new(MessageRole::Agent, error)),
                     );
                 } else {
                     push_user_message(&mut projection, entry);
@@ -423,7 +425,7 @@ pub(crate) fn project_live_chat_with_task_notices(
 }
 
 pub(crate) fn append_presentation_events(
-    projection: &mut LiveChatProjection,
+    projection: &mut LiveThreadProjection,
     entries: &[serde_json::Value],
 ) -> Result<(), String> {
     use crate::host_runtime::RuntimeEvent;
@@ -438,7 +440,7 @@ pub(crate) fn append_presentation_events(
                     .ok_or("Invalid presentation user turn")?;
                 projection
                     .messages
-                    .push(ChatMessage::new(MessageRole::User, text));
+                    .push(ThreadMessage::new(MessageRole::User, text));
                 active = None;
                 continue;
             }
@@ -453,14 +455,14 @@ pub(crate) fn append_presentation_events(
                 RuntimeEvent::BeginAssistantResponse => {
                     projection
                         .messages
-                        .push(ChatMessage::new(MessageRole::Agent, ""));
+                        .push(ThreadMessage::new(MessageRole::Agent, ""));
                     active = Some(projection.messages.len() - 1);
                 }
                 RuntimeEvent::AssistantChunk(text) => {
                     let index = *active.get_or_insert_with(|| {
                         projection
                             .messages
-                            .push(ChatMessage::new(MessageRole::Agent, ""));
+                            .push(ThreadMessage::new(MessageRole::Agent, ""));
                         projection.messages.len() - 1
                     });
                     projection.messages[index].content.push_str(&text);
@@ -523,16 +525,18 @@ pub(crate) fn append_presentation_events(
 }
 
 /// Backward-compatible wrapper returning message rows only.
-pub fn project_chat_messages_from_llm_history(history: &[ArchivedLlmMessage]) -> Vec<ChatMessage> {
-    project_live_chat_from_llm_history(history).messages
+pub fn project_thread_messages_from_llm_history(
+    history: &[ArchivedLlmMessage],
+) -> Vec<ThreadMessage> {
+    project_live_thread_from_llm_history(history).messages
 }
 
-fn push_user_message(projection: &mut LiveChatProjection, entry: &ArchivedLlmMessage) {
+fn push_user_message(projection: &mut LiveThreadProjection, entry: &ArchivedLlmMessage) {
     let content = entry.text_content();
     if content.trim().is_empty() {
         return;
     }
-    projection.messages.push(ChatMessage {
+    projection.messages.push(ThreadMessage {
         role: MessageRole::User,
         content,
         tool_block: None,
@@ -540,7 +544,7 @@ fn push_user_message(projection: &mut LiveChatProjection, entry: &ArchivedLlmMes
 }
 
 fn push_assistant_turn(
-    projection: &mut LiveChatProjection,
+    projection: &mut LiveThreadProjection,
     history: &[ArchivedLlmMessage],
     start_index: usize,
 ) -> usize {
@@ -561,7 +565,7 @@ fn push_assistant_turn(
     let content = entry.text_content();
     if !content.trim().is_empty() {
         let message_index = projection.messages.len();
-        projection.messages.push(ChatMessage {
+        projection.messages.push(ThreadMessage {
             role: MessageRole::Agent,
             content,
             tool_block: None,
@@ -573,7 +577,7 @@ fn push_assistant_turn(
         }
     } else if let Some(aux) = assistant_aux_from_provider_state(entry.provider_state.as_ref()) {
         let message_index = projection.messages.len();
-        projection.messages.push(ChatMessage {
+        projection.messages.push(ThreadMessage {
             role: MessageRole::Agent,
             content: String::new(),
             tool_block: None,
@@ -610,7 +614,7 @@ fn collect_following_tool_outputs<'a>(
 }
 
 fn push_tool_call_message(
-    projection: &mut LiveChatProjection,
+    projection: &mut LiveThreadProjection,
     tool_call: &ArchivedLlmToolCall,
     tool_output: Option<&ArchivedLlmMessage>,
 ) {
@@ -627,7 +631,7 @@ fn push_tool_call_message(
             build_tool_preview_block(&tool_call.name, &tool_call.id, &request),
         )
     };
-    projection.messages.push(ChatMessage {
+    projection.messages.push(ThreadMessage {
         role: MessageRole::Agent,
         content,
         tool_block: Some(tool_block),
@@ -757,7 +761,7 @@ mod tests {
     }
 
     #[test]
-    fn project_chat_messages_from_llm_history_includes_tool_cards() {
+    fn project_thread_messages_from_llm_history_includes_tool_cards() {
         use crate::ports::ArchivedLlmToolCall;
 
         let history = vec![
@@ -789,7 +793,7 @@ mod tests {
             ),
         ];
 
-        let projection = project_live_chat_from_llm_history(&history);
+        let projection = project_live_thread_from_llm_history(&history);
         assert_eq!(projection.messages.len(), 3);
         assert_eq!(projection.messages[0].role, MessageRole::User);
         assert!(projection.messages[1].tool_block.is_some());
@@ -797,7 +801,7 @@ mod tests {
     }
 
     #[test]
-    fn project_chat_messages_from_llm_history_skips_orphan_tool_rows() {
+    fn project_thread_messages_from_llm_history_skips_orphan_tool_rows() {
         use crate::ports::ArchivedLlmToolCall;
 
         let history = vec![
@@ -829,7 +833,7 @@ mod tests {
             ),
         ];
 
-        let projection = project_live_chat_from_llm_history(&history);
+        let projection = project_live_thread_from_llm_history(&history);
         assert_eq!(projection.messages.len(), 3);
         assert_eq!(projection.messages[0].role, MessageRole::User);
         assert_eq!(projection.messages[0].content, "hi");

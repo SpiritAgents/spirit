@@ -446,12 +446,12 @@ html.dark,
   --foreground: #e4e4e4;
 }
 
-[data-spirit-preview-shell="darwin"] #session-sidebar-panel {
+[data-spirit-preview-shell="darwin"] #thread-sidebar-panel {
   position: relative;
   padding-top: var(--spirit-macos-titlebar-inset);
 }
 
-[data-spirit-preview-shell="darwin"] #session-sidebar-panel::before {
+[data-spirit-preview-shell="darwin"] #thread-sidebar-panel::before {
   content: "";
   position: absolute;
   z-index: 0;
@@ -472,7 +472,7 @@ html.dark,
 }
 
 [data-spirit-preview-shell="darwin"]
-  [data-spirit-surface="layout-chrome"][data-session-sidebar-open="false"] {
+  [data-spirit-surface="layout-chrome"][data-thread-sidebar-open="false"] {
   padding-left: var(--spirit-macos-traffic-lights-inset-left);
 }
 

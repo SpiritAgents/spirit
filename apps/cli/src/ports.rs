@@ -302,14 +302,14 @@ pub trait ConfigStore: Send + Sync {
 
 #[derive(Clone, Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ChatSessionListItem {
+pub struct ThreadSessionListItem {
     pub path: String,
     pub display_name: String,
     pub modified_at_unix_ms: u128,
 }
 
 pub trait ChatRepository: Send + Sync {
-    fn list(&self) -> Result<Vec<ChatSessionListItem>>;
+    fn list(&self) -> Result<Vec<ThreadSessionListItem>>;
     fn save(&self, path: Option<&str>, archive: &ChatArchive) -> Result<PathBuf>;
     fn load(&self, path: &str) -> Result<ChatArchive>;
 }

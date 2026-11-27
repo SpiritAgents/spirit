@@ -1,4 +1,4 @@
-import type { SettingsSidebarTab } from "@/components/session-sidebar";
+import type { SettingsSidebarTab } from "@/components/thread-sidebar";
 import type { ThemePreference } from "@/lib/theme";
 
 export const settingsPageTitleKey: Record<SettingsSidebarTab, string> = {

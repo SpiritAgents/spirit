@@ -498,7 +498,7 @@ function DreamGraphCanvas({
   }
 
   // Localized strings reach the graph memo as real inputs, so a locale switch rebuilds labels.
-  const currentWorkspaceLabel = t("sidebar.currentWorkspace");
+  const currentWorkspaceLabel = t("threadSidebar.currentWorkspace");
   const scopeCollectingLabel = t("dreams.scopeCollecting");
   const graph = useMemo(
     () =>

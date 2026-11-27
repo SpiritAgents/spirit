@@ -10,8 +10,8 @@ import {
 } from "react";
 import type { TFunction } from "i18next";
 
-import type { SessionSidebarChromeApi } from "@/contexts/session-sidebar-chrome-context";
-import type { SettingsSidebarTab } from "@/components/session-sidebar";
+import type { ThreadSidebarChromeApi } from "@/contexts/thread-sidebar-chrome-context";
+import type { SettingsSidebarTab } from "@/components/thread-sidebar";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 import { resolveEffectiveEmptySession } from "@/lib/conversation-empty-session";
 import {
@@ -45,7 +45,7 @@ export type UseAppSurfaceNavigationOptions = {
   longConversationListDemoActive: boolean;
   approvalPreviewDemoActive: boolean;
   toolCardPreviewDemoActive: boolean;
-  newChatBusy: boolean;
+  newThreadBusy: boolean;
   t: TFunction;
   composerAutomationApiRef?: MutableRefObject<FocusedPaneComposerControls | null>;
 };
@@ -59,7 +59,7 @@ export function useAppSurfaceNavigation({
   longConversationListDemoActive,
   approvalPreviewDemoActive,
   toolCardPreviewDemoActive,
-  newChatBusy,
+  newThreadBusy,
   t,
   composerAutomationApiRef,
 }: UseAppSurfaceNavigationOptions) {
@@ -81,12 +81,12 @@ export function useAppSurfaceNavigation({
   const [createAutomationDialogOpen, setCreateAutomationDialogOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsSidebarTab>("models");
   const [extensionSettingsId, setExtensionSettingsId] = useState<string | null>(null);
-  const sessionSidebarChromeApiRef = useRef<SessionSidebarChromeApi | null>(null);
+  const threadSidebarChromeApiRef = useRef<ThreadSidebarChromeApi | null>(null);
 
   const sessionNavPending = resolveSessionNavPending({ navTarget: sessionNavTarget, snapshot });
 
   // The intent is fulfilled once the snapshot shows the target session; clear it
-  // so a later foreground change (new chat, delete-and-open-next) is not mistaken
+  // so a later foreground change (new thread, delete-and-open-next) is not mistaken
   // for this navigation still being in flight.
   if (sessionNavTarget && !sessionNavPending) {
     setSessionNavTarget(null);
@@ -128,10 +128,10 @@ export function useAppSurfaceNavigation({
     longConversationListDemoActive,
     approvalPreviewDemoActive,
     toolCardPreviewDemoActive,
-    newChatBusy,
+    newThreadBusy,
   });
 
-  const handleNewChat = useCallback(() => {
+  const handleNewThread = useCallback(() => {
     if (runtime.busyAction === "reset") {
       return;
     }
@@ -141,7 +141,7 @@ export function useAppSurfaceNavigation({
     void runtime.resetSession();
   }, [runtime, updateSessionNavTarget]);
 
-  const handleNewChatInWorkspace = useCallback(
+  const handleNewThreadInWorkspace = useCallback(
     async (workspaceRoot: string) => {
       const trimmed = workspaceRoot.trim();
       if (!trimmed) {
@@ -234,7 +234,7 @@ export function useAppSurfaceNavigation({
   }, [composerAutomationApiRef, runtime, t, updateSessionNavTarget]);
 
   const handleOpenSettings = useCallback(() => {
-    sessionSidebarChromeApiRef.current?.openSidebar();
+    threadSidebarChromeApiRef.current?.openSidebar();
     const current = activeSurfaceRef.current;
     if (current !== "settings") {
       setLastNonSettingsSurface(
@@ -282,15 +282,15 @@ export function useAppSurfaceNavigation({
     setSettingsTab,
     extensionSettingsId,
     setExtensionSettingsId,
-    sessionSidebarChromeApiRef,
+    threadSidebarChromeApiRef,
     settingsMode,
     marketplaceMode,
     automationsMode,
     automationDetailMode,
     preserveConversationSurface,
     isEmptySession,
-    handleNewChat,
-    handleNewChatInWorkspace,
+    handleNewThread,
+    handleNewThreadInWorkspace,
     handleGenerateAutomation,
     handlePrefillComposerSkillChip,
     handleOpenSettings,

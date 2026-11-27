@@ -184,7 +184,7 @@ export function MarketplaceContributionGroups({
     desktopItems.push({
       key: "desktop:settings",
       icon: Monitor,
-      title: t("sidebar.extensionSettings"),
+      title: t("threadSidebar.extensionSettings"),
     });
   }
   if (item.desktopViews?.length) {

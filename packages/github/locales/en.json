@@ -142,7 +142,7 @@
     "prMarkReadyForReview": "Ready for review",
     "prMarkingReady": "Marking ready…",
     "prMarkReadyFailed": "Failed to mark pull request ready for review",
-    "addSelectionToChat": "Add to Chat"
+    "addSelectionToThread": "Add to Thread"
   },
   "github": {
     "connect": "Connect GitHub",

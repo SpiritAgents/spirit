@@ -478,18 +478,18 @@ pub(in crate::ui) fn build_model_picker_lines(
     lines
 }
 
-pub(in crate::ui) fn build_chat_picker_lines(
+pub(in crate::ui) fn build_thread_picker_lines(
     app: &TuiViewModel,
     max_items: usize,
 ) -> Vec<Line<'static>> {
-    if app.chat_picker_sessions.is_empty() {
+    if app.thread_picker_sessions.is_empty() {
         return vec![Line::from(t!("ui.picker.sessions.empty").into_owned())];
     }
 
     let selected = app
-        .chat_picker_index
-        .min(app.chat_picker_sessions.len().saturating_sub(1));
-    let total = app.chat_picker_sessions.len();
+        .thread_picker_index
+        .min(app.thread_picker_sessions.len().saturating_sub(1));
+    let total = app.thread_picker_sessions.len();
     let (start, end) = inline_picker_bounds(total, selected, max_items);
 
     let mut lines = Vec::new();
@@ -500,7 +500,7 @@ pub(in crate::ui) fn build_chat_picker_lines(
     let locale = crate::locale::resolve_ui_locale(&app.config);
     let relative_time = crate::relative_time::RelativeTimeEngine::new(&locale);
     for (idx, session) in app
-        .chat_picker_sessions
+        .thread_picker_sessions
         .iter()
         .enumerate()
         .take(end)

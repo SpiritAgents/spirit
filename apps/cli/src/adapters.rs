@@ -68,7 +68,7 @@ impl ConfigStore for JsonConfigStore {
 pub struct JsonChatRepository;
 
 impl ChatRepository for JsonChatRepository {
-    fn list(&self) -> Result<Vec<crate::ports::ChatSessionListItem>> {
+    fn list(&self) -> Result<Vec<crate::ports::ThreadSessionListItem>> {
         let workspace_root = env::current_dir()?;
         let value = call_config_rpc(&workspace_root, "session.listStored", serde_json::json!({}))?;
         Ok(serde_json::from_value(value)?)
@@ -102,12 +102,12 @@ impl ChatRepository for JsonChatRepository {
             "session.loadStored",
             serde_json::json!({ "path": load_path.to_string_lossy() }),
         )?;
-        let timeline: Vec<crate::chat_timeline::PersistedTimelineTurn> =
+        let timeline: Vec<crate::thread_timeline::PersistedTimelineTurn> =
             serde_json::from_value(stored["desktopMessageTimeline"].clone())?;
         let desktop_messages =
-            crate::chat_timeline::hydrate_desktop_messages_from_timeline(&timeline);
+            crate::thread_timeline::hydrate_desktop_messages_from_timeline(&timeline);
         let (messages, assistant_aux) =
-            crate::chat_timeline::derive_archive_projection(&desktop_messages);
+            crate::thread_timeline::derive_archive_projection(&desktop_messages);
         Ok(ChatArchive {
             messages,
             assistant_aux,

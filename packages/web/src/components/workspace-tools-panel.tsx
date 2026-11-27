@@ -74,9 +74,9 @@ import {
   useWorkspaceToolsChromeFullScreen,
   useWorkspaceToolsChromeOpen,
   useWorkspaceToolsChromeWidthFlight,
-  useWorkspaceToolsNewChatChrome,
+  useWorkspaceToolsNewThreadChrome,
 } from "@/contexts/workspace-tools-chrome-context";
-import { useSessionSidebarChrome } from "@/contexts/session-sidebar-chrome-context";
+import { useThreadSidebarChrome } from "@/contexts/thread-sidebar-chrome-context";
 import { useMcpAppWorkspaceTabBridge } from "@/contexts/mcp-app-contexts";
 import { setWorkspacePanelRegionActive } from "@/lib/desktop-keyboard-shortcut-eligibility";
 import { isDarwinElectronShell } from "@/lib/desktop-shell";
@@ -213,15 +213,15 @@ export type WorkspaceToolsDockProps = {
   onTabsChange: Dispatch<SetStateAction<WorkspaceToolTab[]>>;
   onActiveTabIdChange(id: string): void;
   onBrowserElementPicked?: WorkspaceBrowserTabProps["onElementPicked"];
-  onPrDiffAddToChat?: (attachment: import("@spiritagent/ui/composer").PrDiffAttachment) => void;
-  onTerminalAddToChat?: (
+  onPrDiffAddToThread?: (attachment: import("@spiritagent/ui/composer").PrDiffAttachment) => void;
+  onTerminalAddToThread?: (
     attachment: import("@spiritagent/ui/composer").TerminalSnippetAttachment,
   ) => void;
-  onFileSnippetAddToChat?: (
+  onFileSnippetAddToThread?: (
     attachment: import("@spiritagent/ui/composer").FileSnippetAttachment,
   ) => void;
-  onWorkspaceFileAddToChat?: (relativePath: string, sourceTabId?: string) => void;
-  onGitCommitAddToChat?: (
+  onWorkspaceFileAddToThread?: (relativePath: string, sourceTabId?: string) => void;
+  onGitCommitAddToThread?: (
     attachment: import("@spiritagent/ui/composer").GitCommitAttachment,
   ) => void;
   onBrowserOpenInNewTab?: WorkspaceBrowserTabProps["onOpenUrlInNewTab"];
@@ -557,11 +557,11 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   onTabsChange,
   onActiveTabIdChange,
   onBrowserElementPicked,
-  onPrDiffAddToChat,
-  onTerminalAddToChat,
-  onFileSnippetAddToChat,
-  onWorkspaceFileAddToChat,
-  onGitCommitAddToChat,
+  onPrDiffAddToThread,
+  onTerminalAddToThread,
+  onFileSnippetAddToThread,
+  onWorkspaceFileAddToThread,
+  onGitCommitAddToThread,
   onBrowserOpenInNewTab,
   browserTabEnabled = false,
 
@@ -581,8 +581,8 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   const mcpAppTabBridge = useMcpAppWorkspaceTabBridge();
   const workspaceToolsOpen = useWorkspaceToolsChromeOpen();
   const workspaceToolsFullScreen = useWorkspaceToolsChromeFullScreen();
-  const hasNewChatChrome = useWorkspaceToolsNewChatChrome();
-  const { open: sessionSidebarOpen } = useSessionSidebarChrome();
+  const hasNewThreadChrome = useWorkspaceToolsNewThreadChrome();
+  const { open: threadSidebarOpen } = useThreadSidebarChrome();
   const darwinElectron = isDarwinElectronShell();
   const darwinWindowFullscreen = useDarwinWindowFullscreen(darwinElectron);
   const workspaceToolsOpenRef = useRef(workspaceToolsOpen);
@@ -809,19 +809,19 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     [onTabsChange],
   );
 
-  // While full screen, the pinned conversation chrome (new chat, and on Win/Linux the sidebar
+  // While full screen, the pinned conversation chrome (new thread, and on Win/Linux the sidebar
   // toggle) floats over the tab row's left edge; grow the margin to clear it. Margin (not
   // padding) so the tab bar's border box and -webkit-app-region: drag do not cover the pins. Keyed
   // on fullScreen (not chromePinned) so the inset retracts during the exit flight — the strict
   // reverse — while the pins themselves hold until the flight settles. The margin-left
   // transition lives in styles.css. Sidebar open on macOS windowed: the pinned cluster floats
-  // over the sidebar, not the panel, so no extra inset. Empty session omits the new-chat
+  // over the sidebar, not the panel, so no extra inset. Empty session omits the new-thread
   // button, so the plus slot is not reserved.
-  const plusSlot = !sessionSidebarOpen && hasNewChatChrome;
+  const plusSlot = !threadSidebarOpen && hasNewThreadChrome;
   const toolTabsPaddingLeft = !workspaceToolsFullScreen
     ? undefined
     : darwinElectron && !darwinWindowFullscreen
-      ? sessionSidebarOpen
+      ? threadSidebarOpen
         ? undefined
         : plusSlot
           ? "calc(var(--spirit-macos-sidebar-toggle-inset-left) + 4rem)"
@@ -1127,12 +1127,12 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     "desktop-composer-attachments",
                   )}
                   onAttachment={(input) => {
-                    if (input.kind === "prDiff" && onPrDiffAddToChat)
-                      onPrDiffAddToChat(input.attachment);
-                    else if (input.kind === "fileSnippet" && onFileSnippetAddToChat)
-                      onFileSnippetAddToChat(input.attachment);
-                    else if (input.kind === "terminalSnippet" && onTerminalAddToChat)
-                      onTerminalAddToChat(input.attachment);
+                    if (input.kind === "prDiff" && onPrDiffAddToThread)
+                      onPrDiffAddToThread(input.attachment);
+                    else if (input.kind === "fileSnippet" && onFileSnippetAddToThread)
+                      onFileSnippetAddToThread(input.attachment);
+                    else if (input.kind === "terminalSnippet" && onTerminalAddToThread)
+                      onTerminalAddToThread(input.attachment);
                     else throw new Error("Composer attachment insertion is unavailable.");
                   }}
                   onChrome={onExtensionTabChrome}
@@ -1217,15 +1217,15 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     onFilesViewModeChange={(viewMode) =>
                       handleTabFilesViewModeChange(item.id, viewMode)
                     }
-                    onFileSnippetAddToChat={
-                      onFileSnippetAddToChat
+                    onFileSnippetAddToThread={
+                      onFileSnippetAddToThread
                         ? (attachment) =>
-                            onFileSnippetAddToChat({ ...attachment, sourceTabId: item.id })
+                            onFileSnippetAddToThread({ ...attachment, sourceTabId: item.id })
                         : undefined
                     }
-                    onWorkspaceFileAddToChat={
-                      onWorkspaceFileAddToChat
-                        ? (relativePath) => onWorkspaceFileAddToChat(relativePath, item.id)
+                    onWorkspaceFileAddToThread={
+                      onWorkspaceFileAddToThread
+                        ? (relativePath) => onWorkspaceFileAddToThread(relativePath, item.id)
                         : undefined
                     }
                     useTranslucency={useTranslucency}
@@ -1240,10 +1240,10 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                       useTranslucency={useTranslucency}
                       onTitleChange={(title) => handleTabTitleChange(item.id, title)}
                       terminalDisplayName={workspaceTerminalChipDisplayName(item, tabs, t)}
-                      onTerminalAddToChat={
-                        onTerminalAddToChat
+                      onTerminalAddToThread={
+                        onTerminalAddToThread
                           ? (attachment) =>
-                              onTerminalAddToChat({ ...attachment, sourceTabId: item.id })
+                              onTerminalAddToThread({ ...attachment, sourceTabId: item.id })
                           : undefined
                       }
                       suspendTerminalResize={isResizing}
@@ -1291,10 +1291,10 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     readGitHistory={readGitHistory}
                     readGitCommitMessage={readGitCommitMessage}
                     submitGitChip={submitGitChip}
-                    onGitCommitAddToChat={
-                      onGitCommitAddToChat
+                    onGitCommitAddToThread={
+                      onGitCommitAddToThread
                         ? (attachment) =>
-                            onGitCommitAddToChat({ ...attachment, sourceTabId: item.id })
+                            onGitCommitAddToThread({ ...attachment, sourceTabId: item.id })
                         : undefined
                     }
                     onOpenChangedFile={onOpenWorkspaceFile}

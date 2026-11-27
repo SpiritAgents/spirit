@@ -34,22 +34,22 @@ function makeFileSnippetAttachment(
 export function FileDomSelectionMenu({
   rootRef,
   filePath,
-  onFileSnippetAddToChat,
+  onFileSnippetAddToThread,
 }: {
   rootRef: RefObject<HTMLElement | null>;
   filePath: string;
-  onFileSnippetAddToChat?: (attachment: FileSnippetAttachment) => void;
+  onFileSnippetAddToThread?: (attachment: FileSnippetAttachment) => void;
 }) {
   const { t } = useTranslation();
-  const enabled = Boolean(onFileSnippetAddToChat && filePath);
+  const enabled = Boolean(onFileSnippetAddToThread && filePath);
   const { open, setOpen, anchor, selectionText, dismiss } = useTextSelectionActionMenu({
     enabled,
     rootRef,
   });
 
-  const handleAddToChat = useCallback(() => {
+  const handleAddToThread = useCallback(() => {
     const selection = typeof window !== "undefined" ? window.getSelection() : null;
-    if (!onFileSnippetAddToChat || !filePath) {
+    if (!onFileSnippetAddToThread || !filePath) {
       dismiss();
       return;
     }
@@ -60,10 +60,10 @@ export function FileDomSelectionMenu({
       return;
     }
 
-    onFileSnippetAddToChat(makeFileSnippetAttachment(filePath, selectedText, 0, 0));
+    onFileSnippetAddToThread(makeFileSnippetAttachment(filePath, selectedText, 0, 0));
     dismiss();
     selection?.removeAllRanges();
-  }, [dismiss, filePath, onFileSnippetAddToChat, selectionText]);
+  }, [dismiss, filePath, onFileSnippetAddToThread, selectionText]);
 
   if (!enabled) {
     return null;
@@ -76,8 +76,8 @@ export function FileDomSelectionMenu({
       onOpenChange={setOpen}
     >
       <TextSelectionActionMenuItem
-        label={t("workspace.addSelectionToChat")}
-        onSelect={handleAddToChat}
+        label={t("workspace.addSelectionToThread")}
+        onSelect={handleAddToThread}
       />
     </TextSelectionActionMenu>
   );
@@ -87,15 +87,15 @@ export function FileMonacoSelectionMenu({
   containerRef,
   editor,
   filePath,
-  onFileSnippetAddToChat,
+  onFileSnippetAddToThread,
 }: {
   containerRef: RefObject<HTMLElement | null>;
   editor: MonacoEditor | null;
   filePath: string;
-  onFileSnippetAddToChat?: (attachment: FileSnippetAttachment) => void;
+  onFileSnippetAddToThread?: (attachment: FileSnippetAttachment) => void;
 }) {
   const { t } = useTranslation();
-  const enabled = Boolean(onFileSnippetAddToChat && filePath);
+  const enabled = Boolean(onFileSnippetAddToThread && filePath);
   const { open, setOpen, anchor, selectionText, lineRange, dismiss } = useMonacoSelectionActionMenu(
     {
       enabled,
@@ -104,9 +104,9 @@ export function FileMonacoSelectionMenu({
     },
   );
 
-  const handleAddToChat = useCallback(() => {
+  const handleAddToThread = useCallback(() => {
     const activeEditor = editor;
-    if (!activeEditor || !onFileSnippetAddToChat || !filePath) {
+    if (!activeEditor || !onFileSnippetAddToThread || !filePath) {
       dismiss();
       return;
     }
@@ -118,7 +118,7 @@ export function FileMonacoSelectionMenu({
     }
 
     const range = readMonacoSelectionLineRange(activeEditor) ?? lineRange;
-    onFileSnippetAddToChat(
+    onFileSnippetAddToThread(
       makeFileSnippetAttachment(filePath, selectedText, range?.lineStart ?? 0, range?.lineEnd ?? 0),
     );
     dismiss();
@@ -134,7 +134,7 @@ export function FileMonacoSelectionMenu({
         ),
       );
     }
-  }, [dismiss, editor, filePath, lineRange, onFileSnippetAddToChat, selectionText]);
+  }, [dismiss, editor, filePath, lineRange, onFileSnippetAddToThread, selectionText]);
 
   if (!enabled) {
     return null;
@@ -147,8 +147,8 @@ export function FileMonacoSelectionMenu({
       onOpenChange={setOpen}
     >
       <TextSelectionActionMenuItem
-        label={t("workspace.addSelectionToChat")}
-        onSelect={handleAddToChat}
+        label={t("workspace.addSelectionToThread")}
+        onSelect={handleAddToThread}
       />
     </TextSelectionActionMenu>
   );

@@ -30,12 +30,12 @@ export async function renameSessionCommand(
 
     const trimmedName = displayName.trim();
     if (!trimmedName) {
-      throw new Error(i18n.t("error.emptyChatDisplayName"));
+      throw new Error(i18n.t("error.emptyThreadDisplayName"));
     }
 
     const resolvedPath = path.resolve(trimmedPath);
     if (ctx.bundleRuntimeIsBusy(resolvedPath)) {
-      throw new Error(i18n.t("error.cannotRenameBusyChat"));
+      throw new Error(i18n.t("error.cannotRenameBusyThread"));
     }
 
     const registry = ctx.sessionRegistry();

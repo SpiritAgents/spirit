@@ -1,6 +1,6 @@
 use crate::rewind::{ConversationMessageRole, ConversationMessageSnapshot};
 
-/// Stackable fork title: `My Chat` → `(1) My Chat` → `(2) My Chat`.
+/// Stackable fork title: `My Thread` → `(1) My Thread` → `(2) My Thread`.
 pub fn derive_forked_session_display_name(source_display_name: &str) -> String {
     let trimmed = source_display_name.trim();
     if let Some(rest) = trimmed.strip_prefix('(')
@@ -77,14 +77,17 @@ mod tests {
 
     #[test]
     fn derive_forked_session_display_name_stacks_prefix() {
-        assert_eq!(derive_forked_session_display_name("My Chat"), "(1) My Chat");
         assert_eq!(
-            derive_forked_session_display_name("(1) My Chat"),
-            "(2) My Chat"
+            derive_forked_session_display_name("My Thread"),
+            "(1) My Thread"
         );
         assert_eq!(
-            derive_forked_session_display_name("(9) My Chat"),
-            "(10) My Chat"
+            derive_forked_session_display_name("(1) My Thread"),
+            "(2) My Thread"
+        );
+        assert_eq!(
+            derive_forked_session_display_name("(9) My Thread"),
+            "(10) My Thread"
         );
     }
 

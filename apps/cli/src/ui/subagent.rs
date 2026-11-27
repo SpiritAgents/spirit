@@ -294,7 +294,7 @@ pub(in crate::ui) fn render_subagent_pending_aux_lines(
 }
 
 pub(in crate::ui) fn render_subagent_message_lines(
-    msg: &ChatMessage,
+    msg: &ThreadMessage,
     show_aux_details: bool,
 ) -> Vec<Line<'static>> {
     let prefix_style = match msg.role {

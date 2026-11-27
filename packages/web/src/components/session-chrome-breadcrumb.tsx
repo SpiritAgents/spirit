@@ -142,7 +142,7 @@ export function SessionChromeBreadcrumb({
       ref={renameInputRef}
       value={renameValue}
       className={cn(SESSION_TITLE_RENAME_INPUT_CLASS, "electron-no-drag w-full")}
-      aria-label={t("sidebar.renameSession")}
+      aria-label={t("threadSidebar.renameThread")}
       onChange={(event) => onRenameValueChange?.(event.target.value)}
       onKeyDown={handleRenameKeyDown}
       onBlur={() => {

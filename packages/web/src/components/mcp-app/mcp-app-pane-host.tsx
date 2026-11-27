@@ -102,7 +102,7 @@ export interface McpAppGlobalHostProviderProps {
  * App-level host owning live MCP App instances, cross-session / cross-surface PiP
  * floating windows, portal containers, and approval/confirmation dialogs.
  * Keeping the registry above conversation views ensures PiP windows persist without
- * reloading when switching sessions, opening new chats, or visiting Settings,
+ * reloading when switching sessions, opening new threads, or visiting Settings,
  * Extensions, or Automations.
  */
 export function McpAppGlobalHostProvider({

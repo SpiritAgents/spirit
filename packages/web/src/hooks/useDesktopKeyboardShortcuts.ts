@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, type MutableRefObject } from "react";
 
-import type { SessionSidebarChromeApi } from "@/contexts/session-sidebar-chrome-context";
+import type { ThreadSidebarChromeApi } from "@/contexts/thread-sidebar-chrome-context";
 import {
   useWorkspaceToolsChromeActions,
   useWorkspaceToolsChromeOpen,
@@ -24,7 +24,7 @@ import {
   shouldTriggerConversationAbortShortcut,
   shouldTriggerSettingsEscapeShortcut,
 } from "@/lib/desktop-keyboard-shortcut-eligibility";
-import { resolveVisibleSidebarSessionsForDigitShortcut } from "@/lib/session-sidebar-digit-shortcut-bridge";
+import { resolveVisibleSidebarSessionsForDigitShortcut } from "@/lib/thread-sidebar-digit-shortcut-bridge";
 import { triggerWorkspaceNewToolTabShortcut } from "@/lib/workspace-new-tool-tab-shortcut-bridge";
 import { triggerSplitPaneShortcut } from "@/lib/split-pane-shortcut-bridge";
 import { resolveUiLayoutZoomShortcutAction } from "@/lib/ui-layout-scale";
@@ -62,8 +62,8 @@ export type UseDesktopKeyboardShortcutsOptions = {
   conversationAbortShortcutEligibleRef: MutableRefObject<boolean>;
   conversationAbortShortcutTargetRef?: ConversationAbortShortcutTargetRef;
   moveBackgroundShortcutTargetRef?: MoveBackgroundShortcutTargetRef;
-  sessionSidebarChromeApiRef: MutableRefObject<SessionSidebarChromeApi | null>;
-  handleNewChat: () => void;
+  threadSidebarChromeApiRef: MutableRefObject<ThreadSidebarChromeApi | null>;
+  handleNewThread: () => void;
   handleSelectSession: (path: string) => void;
   handleOpenSettings: () => void;
   handleCloseSettings: () => void;
@@ -80,8 +80,8 @@ export function useDesktopKeyboardShortcuts({
   conversationAbortShortcutEligibleRef,
   conversationAbortShortcutTargetRef,
   moveBackgroundShortcutTargetRef,
-  sessionSidebarChromeApiRef,
-  handleNewChat,
+  threadSidebarChromeApiRef,
+  handleNewThread,
   handleSelectSession,
   handleOpenSettings,
   handleCloseSettings,
@@ -142,11 +142,11 @@ export function useDesktopKeyboardShortcuts({
       }
       event.preventDefault();
       event.stopPropagation();
-      sessionSidebarChromeApiRef.current?.toggle();
+      threadSidebarChromeApiRef.current?.toggle();
     };
     window.addEventListener("keydown", onKeyDown, { capture: true });
     return () => window.removeEventListener("keydown", onKeyDown, { capture: true });
-  }, [moveBackgroundShortcutTargetRef, runtime, sessionSidebarChromeApiRef]);
+  }, [moveBackgroundShortcutTargetRef, runtime, threadSidebarChromeApiRef]);
 
   // Cmd+Opt+B is not stolen by Lexical (isBold requires an exact modifier match).
   // Capture here is pairing with Cmd+B, not a necessity for the same bug.
@@ -289,19 +289,19 @@ export function useDesktopKeyboardShortcuts({
         return;
       }
       event.preventDefault();
-      handleNewChat();
+      handleNewThread();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleNewChat]);
+  }, [handleNewThread]);
 
   useEffect(() => {
     const bridge = window.spiritDesktop;
     if (!bridge?.subscribeNewSession) {
       return;
     }
-    return bridge.subscribeNewSession(handleNewChat);
-  }, [handleNewChat]);
+    return bridge.subscribeNewSession(handleNewThread);
+  }, [handleNewThread]);
 
   // Cmd/Ctrl+, — open settings (macOS menu accelerator handles this; skip here).
   useEffect(() => {

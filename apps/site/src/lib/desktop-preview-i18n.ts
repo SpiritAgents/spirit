@@ -27,14 +27,14 @@ const defaultMessages = {
       maximize: "Maximize",
       close: "Close",
     },
-    sessionSidebar: {
+    threadSidebar: {
       currentWorkspace: "Current workspace",
-      newChat: "New chat",
+      newThread: "New Thread",
       extensionsButton: "Extensions",
       settingsTabsAria: "Settings tabs",
-      workspaceSessionsAria: "Workspace chats",
+      workspaceThreadsAria: "Workspace Threads",
       settingsNavSidebarAria: "Settings navigation sidebar",
-      sessionsSidebarAria: "Chats sidebar",
+      threadsSidebarAria: "Threads Sidebar",
       workspacesHeading: "Workspaces",
       settingsHeading: "Settings",
     },
@@ -57,7 +57,7 @@ const defaultMessages = {
       collapseTools: "Collapse tools",
       expandTools: "Expand tools",
       commitButton: "Commit",
-      newChat: "New chat",
+      newThread: "New Thread",
     },
     files: { noWorkspace: "No workspace" },
     tools: {

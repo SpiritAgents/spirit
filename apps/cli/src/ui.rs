@@ -45,10 +45,10 @@ use crate::{
     view::{
         AskQuestionsOptionView, AskQuestionsQuestionView, AssistantAuxKind,
         BottomFormFieldEditorView, BottomFormFieldView, BottomFormKind, BottomFormView,
-        ChatMessage, CliUiHookSlot, ConversationPanelHit, InputSuggestion, InputSuggestionKind,
-        MainInputMode, MarketplaceViewModel, MessageRole, PendingAssistantAux,
-        PendingSubagentApprovalView, SubagentApprovalInputView, SubagentSessionDetailView,
-        ToolUiBlock, ToolUiPhase, TuiViewModel,
+        CliUiHookSlot, ConversationPanelHit, InputSuggestion, InputSuggestionKind, MainInputMode,
+        MarketplaceViewModel, MessageRole, PendingAssistantAux, PendingSubagentApprovalView,
+        SubagentApprovalInputView, SubagentSessionDetailView, ThreadMessage, ToolUiBlock,
+        ToolUiPhase, TuiViewModel,
     },
 };
 
@@ -245,7 +245,7 @@ pub fn draw_ui(
     let show_language_picker = app.language_picker_active;
     let show_approval_picker = app.approval_picker_active;
     let show_tui_picker = app.tui_picker_active;
-    let show_chat_picker = app.chat_picker_active;
+    let show_thread_picker = app.thread_picker_active;
     let show_subagent_picker = app.subagent_picker_active;
     let show_image_picker = app.image_picker_active;
     let show_marketplace = app.marketplace_view.is_some();
@@ -253,7 +253,7 @@ pub fn draw_ui(
     let show_bottom_form = app.bottom_form.is_some();
     let show_inline_picker = show_model_picker
         || show_language_picker
-        || show_chat_picker
+        || show_thread_picker
         || show_subagent_picker
         || show_approval_picker
         || show_tui_picker
@@ -263,7 +263,7 @@ pub fn draw_ui(
         || show_language_picker
         || show_approval_picker
         || show_tui_picker
-        || show_chat_picker
+        || show_thread_picker
         || show_subagent_picker
         || show_image_picker;
 
@@ -418,7 +418,7 @@ pub fn draw_ui(
             show_language_picker,
             show_approval_picker,
             show_tui_picker,
-            show_chat_picker,
+            show_thread_picker,
             show_subagent_picker,
             show_image_picker,
             show_marketplace,
@@ -481,7 +481,7 @@ struct InlineSurfaceFlags {
     show_language_picker: bool,
     show_approval_picker: bool,
     show_tui_picker: bool,
-    show_chat_picker: bool,
+    show_thread_picker: bool,
     show_subagent_picker: bool,
     show_image_picker: bool,
     show_marketplace: bool,
@@ -496,7 +496,7 @@ fn inline_surface_flags(app: &TuiViewModel) -> InlineSurfaceFlags {
     let show_language_picker = app.language_picker_active;
     let show_approval_picker = app.approval_picker_active;
     let show_tui_picker = app.tui_picker_active;
-    let show_chat_picker = app.chat_picker_active;
+    let show_thread_picker = app.thread_picker_active;
     let show_subagent_picker = app.subagent_picker_active;
     let show_image_picker = app.image_picker_active;
     let show_marketplace = app.marketplace_view.is_some();
@@ -505,7 +505,7 @@ fn inline_surface_flags(app: &TuiViewModel) -> InlineSurfaceFlags {
     let show_bottom_form = app.bottom_form.is_some();
     let show_inline_picker = show_model_picker
         || show_language_picker
-        || show_chat_picker
+        || show_thread_picker
         || show_subagent_picker
         || show_approval_picker
         || show_tui_picker
@@ -515,7 +515,7 @@ fn inline_surface_flags(app: &TuiViewModel) -> InlineSurfaceFlags {
         || show_language_picker
         || show_approval_picker
         || show_tui_picker
-        || show_chat_picker
+        || show_thread_picker
         || show_subagent_picker
         || show_image_picker;
 
@@ -529,7 +529,7 @@ fn inline_surface_flags(app: &TuiViewModel) -> InlineSurfaceFlags {
         show_language_picker,
         show_approval_picker,
         show_tui_picker,
-        show_chat_picker,
+        show_thread_picker,
         show_subagent_picker,
         show_image_picker,
         show_marketplace,
@@ -748,7 +748,7 @@ fn draw_inline_ui(
             show_language_picker: flags.show_language_picker,
             show_approval_picker: flags.show_approval_picker,
             show_tui_picker: flags.show_tui_picker,
-            show_chat_picker: flags.show_chat_picker,
+            show_thread_picker: flags.show_thread_picker,
             show_subagent_picker: flags.show_subagent_picker,
             show_image_picker: flags.show_image_picker,
             show_marketplace: flags.show_marketplace,
@@ -790,7 +790,7 @@ struct AuxOverlayFlags {
     show_language_picker: bool,
     show_approval_picker: bool,
     show_tui_picker: bool,
-    show_chat_picker: bool,
+    show_thread_picker: bool,
     show_subagent_picker: bool,
     show_image_picker: bool,
     show_marketplace: bool,
@@ -889,8 +889,8 @@ fn draw_aux_overlay(
     } else if flags.show_language_picker {
         let picker_lines = build_language_picker_lines(app, 5);
         draw_inline_picker(frame, overlay, picker_lines);
-    } else if flags.show_chat_picker {
-        let picker_lines = build_chat_picker_lines(app, 5);
+    } else if flags.show_thread_picker {
+        let picker_lines = build_thread_picker_lines(app, 5);
         draw_inline_picker(frame, overlay, picker_lines);
     } else if flags.show_subagent_picker {
         let picker_lines = build_subagent_picker_lines(app, 5);

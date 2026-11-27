@@ -54,7 +54,7 @@ function buildAttentionFlags(
 }
 
 function sessionDisplayName(snapshot: DesktopSnapshot | null | undefined): string {
-  return snapshot?.activeSession?.displayName?.trim() || i18n.t("notification.defaultChatName");
+  return snapshot?.activeSession?.displayName?.trim() || i18n.t("notification.defaultThreadName");
 }
 
 async function requestDesktopNotification(

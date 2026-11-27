@@ -17,7 +17,7 @@ impl TuiShell {
                     .map(|m| format!("{} ({})", m.name, m.api_base))
                     .collect::<Vec<_>>()
                     .join(", ");
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!(
                         "tui.model.list",
@@ -29,7 +29,7 @@ impl TuiShell {
                 });
             }
             ["use"] => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.model.use_usage").into_owned(),
                     tool_block: None,
@@ -40,7 +40,7 @@ impl TuiShell {
                 let model_ref = match config.parse_model_ref_selector(model) {
                     Ok(model_ref) => model_ref,
                     Err(message) => {
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: message,
                             tool_block: None,
@@ -49,7 +49,7 @@ impl TuiShell {
                     }
                 };
                 let Some(profile) = config.resolve_model_profile(&model_ref) else {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.model.not_found", model = model).into_owned(),
                         tool_block: None,
@@ -63,7 +63,7 @@ impl TuiShell {
                     Ok(updated) => {
                         self.runtime.replace_config(updated);
                         self.apply_runtime_events();
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: t!("tui.model_picker.switch_success", model = model)
                                 .into_owned(),
@@ -71,7 +71,7 @@ impl TuiShell {
                         });
                     }
                     Err(err) => {
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: err.to_string(),
                             tool_block: None,
@@ -81,7 +81,7 @@ impl TuiShell {
             }
             ["add"] => {
                 self.open_model_add_form();
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.model_add.opened").into_owned(),
                     tool_block: None,
@@ -98,14 +98,14 @@ impl TuiShell {
                     Ok(updated) => {
                         self.runtime.replace_config(updated);
                         self.apply_runtime_events();
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: t!("tui.model_add.saved", name = model).into_owned(),
                             tool_block: None,
                         });
                     }
                     Err(err) => {
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: err.to_string(),
                             tool_block: None,
@@ -114,7 +114,7 @@ impl TuiShell {
                 }
             }
             ["remove"] => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.model.remove_usage").into_owned(),
                     tool_block: None,
@@ -125,7 +125,7 @@ impl TuiShell {
                 let model_ref = match config.parse_model_ref_selector(model) {
                     Ok(model_ref) => model_ref,
                     Err(message) => {
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: message,
                             tool_block: None,
@@ -134,7 +134,7 @@ impl TuiShell {
                     }
                 };
                 if config.resolve_model_profile(&model_ref).is_none() {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.model.not_found", model = model).into_owned(),
                         tool_block: None,
@@ -144,14 +144,14 @@ impl TuiShell {
                 match self.runtime.remove_model(&model_ref) {
                     Ok(updated) => {
                         self.runtime.replace_config(updated);
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: t!("tui.model.removed", model = model).into_owned(),
                             tool_block: None,
                         });
                     }
                     Err(err) => {
-                        self.messages.push(ChatMessage {
+                        self.messages.push(ThreadMessage {
                             role: MessageRole::Agent,
                             content: err.to_string(),
                             tool_block: None,
@@ -160,7 +160,7 @@ impl TuiShell {
                 }
             }
             _ => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.model.usage").into_owned(),
                     tool_block: None,
@@ -175,30 +175,30 @@ impl TuiShell {
             .map(str::trim)
             .unwrap_or("");
         if tail.is_empty() {
-            self.open_chat_picker();
+            self.open_thread_picker();
             return;
         }
         if tail == "save" {
-            self.save_current_chat(None);
+            self.save_current_thread(None);
             return;
         }
         if let Some(path) = tail.strip_prefix("save ") {
-            self.save_current_chat(Some(path.trim()));
+            self.save_current_thread(Some(path.trim()));
             return;
         }
         if let Some(path) = tail.strip_prefix("load ") {
-            self.load_chat_by_path(path.trim());
+            self.load_thread_by_path(path.trim());
             return;
         }
         if tail == "load" {
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.session.load_usage").into_owned(),
                 tool_block: None,
             });
             return;
         }
-        self.messages.push(ChatMessage {
+        self.messages.push(ThreadMessage {
             role: MessageRole::Agent,
             content: t!("tui.session.usage").into_owned(),
             tool_block: None,
@@ -481,7 +481,7 @@ impl TuiShell {
             return;
         }
 
-        self.messages.push(ChatMessage {
+        self.messages.push(ThreadMessage {
             role: MessageRole::Agent,
             content: t!("tui.subagents.usage").into_owned(),
             tool_block: None,
@@ -493,7 +493,7 @@ impl TuiShell {
 
         if tail == "clear" {
             let cleared = self.runtime.clear_pending_images();
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.image_queue.cleared", count = cleared).into_owned(),
                 tool_block: None,
@@ -502,7 +502,7 @@ impl TuiShell {
         }
 
         if tail.is_empty() {
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.image.usage").into_owned(),
                 tool_block: None,
@@ -517,7 +517,7 @@ impl TuiShell {
 
         let (raw_path, prompt) = parse_image_path_and_prompt(tail);
         if raw_path.is_empty() {
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.image.path_usage").into_owned(),
                 tool_block: None,
@@ -525,7 +525,7 @@ impl TuiShell {
             return;
         }
         if !is_supported_image_path(raw_path) {
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.image.unsupported_type").into_owned(),
                 tool_block: None,
@@ -533,7 +533,7 @@ impl TuiShell {
             return;
         }
         if !Path::new(raw_path).exists() {
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.image.not_found", path = raw_path).into_owned(),
                 tool_block: None,
@@ -543,7 +543,7 @@ impl TuiShell {
 
         if !prompt.is_empty() {
             if self.runtime.is_busy() {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.busy.pending_reply").into_owned(),
                     tool_block: None,
@@ -551,7 +551,7 @@ impl TuiShell {
                 return;
             }
             self.scroll_history_to_bottom();
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::User,
                 content: t!("tui.user.attached_image", prompt = prompt, path = raw_path)
                     .into_owned(),
@@ -563,7 +563,7 @@ impl TuiShell {
         }
 
         self.runtime.add_pending_image(raw_path.to_string());
-        self.messages.push(ChatMessage {
+        self.messages.push(ThreadMessage {
             role: MessageRole::Agent,
             content: t!(
                 "tui.image_queue.added_auto_attach",
@@ -578,14 +578,14 @@ impl TuiShell {
         match args {
             [] => match self.open_cli_log_file() {
                 Ok(path) => {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.log.opened", path = path.display()).into_owned(),
                         tool_block: None,
                     });
                 }
                 Err(err) => {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.log.open_failed", err = err).into_owned(),
                         tool_block: None,
@@ -594,14 +594,14 @@ impl TuiShell {
             },
             ["export"] => match self.export_cli_log_to_temp() {
                 Ok(path) => {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.log.exported", path = path.display()).into_owned(),
                         tool_block: None,
                     });
                 }
                 Err(err) => {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.log.export_failed", err = err).into_owned(),
                         tool_block: None,
@@ -610,14 +610,14 @@ impl TuiShell {
             },
             ["session", "export"] => match self.export_llm_history_json_to_temp() {
                 Ok(path) => {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.log.session_exported", path = path.display()).into_owned(),
                         tool_block: None,
                     });
                 }
                 Err(err) => {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!("tui.log.session_export_failed", err = err).into_owned(),
                         tool_block: None,
@@ -625,7 +625,7 @@ impl TuiShell {
                 }
             },
             _ => {
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.log.usage").into_owned(),
                     tool_block: None,
@@ -787,7 +787,7 @@ impl TuiShell {
             [] => self.open_language_picker(),
             [locale_code] => {
                 let Some(normalized) = locale::parse_ui_locale(locale_code) else {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: t!(
                             "tui.language.unsupported",
@@ -818,7 +818,7 @@ impl TuiShell {
         }
 
         if let Err(err) = self.refresh_rules_from_disk() {
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.rules.read_failed", err = err).into_owned(),
                 tool_block: None,
@@ -827,7 +827,7 @@ impl TuiShell {
         }
 
         self.open_rules_form();
-        self.messages.push(ChatMessage {
+        self.messages.push(ThreadMessage {
             role: MessageRole::Agent,
             content: t!("tui.rules.opened").into_owned(),
             tool_block: None,
@@ -841,7 +841,7 @@ impl TuiShell {
         }
 
         if let Err(err) = self.refresh_skills_from_disk() {
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.skills.read_failed", err = err).into_owned(),
                 tool_block: None,
@@ -850,7 +850,7 @@ impl TuiShell {
         }
 
         self.open_skills_form();
-        self.messages.push(ChatMessage {
+        self.messages.push(ThreadMessage {
             role: MessageRole::Agent,
             content: t!("tui.skills.opened").into_owned(),
             tool_block: None,
@@ -979,7 +979,7 @@ impl TuiShell {
 
     pub(crate) fn handle_start_implementing_slash(&mut self) {
         if self.runtime.is_busy() || self.runtime.has_pending_tool_approval() {
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.busy.pending_reply").into_owned(),
                 tool_block: None,
@@ -1000,7 +1000,7 @@ impl TuiShell {
         }
 
         if self.runtime.is_busy() {
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.busy.pending_reply").into_owned(),
                 tool_block: None,
@@ -1078,7 +1078,7 @@ impl TuiShell {
         };
 
         if self.runtime.is_busy() {
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.busy.pending_reply").into_owned(),
                 tool_block: None,
@@ -1112,7 +1112,7 @@ impl TuiShell {
 
         if tail == "add" {
             self.open_mcp_add_form();
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.mcp.add_form_opened").into_owned(),
                 tool_block: None,
@@ -1135,7 +1135,7 @@ impl TuiShell {
 
             match self.runtime.inspect_mcp_server(&server) {
                 Ok(inspection) => {
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: format!(
                             "server: {}\ndisplay: {}\nprotocol: {}\npeer: {} {}\ncapabilities: tools={} resources={} prompts={}\ncounts: tools={} resources={} prompts={}",
@@ -1154,7 +1154,7 @@ impl TuiShell {
                         tool_block: None,
                     });
                 }
-                Err(err) => self.messages.push(ChatMessage {
+                Err(err) => self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.inspect_failed", err = err).into_owned(),
                     tool_block: None,
@@ -1177,7 +1177,7 @@ impl TuiShell {
             };
 
             match self.runtime.list_mcp_tools(&server) {
-                Ok(tools) if tools.is_empty() => self.messages.push(ChatMessage {
+                Ok(tools) if tools.is_empty() => self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.tools_empty", server = server).into_owned(),
                     tool_block: None,
@@ -1193,13 +1193,13 @@ impl TuiShell {
                         })
                         .collect::<Vec<_>>()
                         .join("\n");
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: format!("MCP tools:\n{}", lines),
                         tool_block: None,
                     });
                 }
-                Err(err) => self.messages.push(ChatMessage {
+                Err(err) => self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.tools_read_failed", err = err).into_owned(),
                     tool_block: None,
@@ -1222,7 +1222,7 @@ impl TuiShell {
             };
 
             match self.runtime.list_mcp_resources(&server) {
-                Ok(resources) if resources.is_empty() => self.messages.push(ChatMessage {
+                Ok(resources) if resources.is_empty() => self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.resources_empty", server = server).into_owned(),
                     tool_block: None,
@@ -1233,13 +1233,13 @@ impl TuiShell {
                         .map(|resource| format!("- {} ({})", resource.uri, resource.name))
                         .collect::<Vec<_>>()
                         .join("\n");
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: format!("MCP resources:\n{}", lines),
                         tool_block: None,
                     });
                 }
-                Err(err) => self.messages.push(ChatMessage {
+                Err(err) => self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.resources_read_failed", err = err).into_owned(),
                     tool_block: None,
@@ -1262,7 +1262,7 @@ impl TuiShell {
             };
 
             match self.runtime.list_mcp_prompts(&server) {
-                Ok(prompts) if prompts.is_empty() => self.messages.push(ChatMessage {
+                Ok(prompts) if prompts.is_empty() => self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.prompts_empty", server = server).into_owned(),
                     tool_block: None,
@@ -1278,13 +1278,13 @@ impl TuiShell {
                         })
                         .collect::<Vec<_>>()
                         .join("\n");
-                    self.messages.push(ChatMessage {
+                    self.messages.push(ThreadMessage {
                         role: MessageRole::Agent,
                         content: format!("MCP prompts:\n{}", lines),
                         tool_block: None,
                     });
                 }
-                Err(err) => self.messages.push(ChatMessage {
+                Err(err) => self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.prompts_read_failed", err = err).into_owned(),
                     tool_block: None,
@@ -1340,7 +1340,7 @@ impl TuiShell {
                         }
                         PromptTail::Empty => {
                             self.open_mcp_prompt_form(&server, &prompt_definition, None);
-                            self.messages.push(ChatMessage {
+                            self.messages.push(ThreadMessage {
                                 role: MessageRole::Agent,
                                 content: t!(
                                     "tui.bottom_form.prompt_opened",
@@ -1357,7 +1357,7 @@ impl TuiShell {
                                 &prompt_definition,
                                 Some(user_message),
                             );
-                            self.messages.push(ChatMessage {
+                            self.messages.push(ThreadMessage {
                                 role: MessageRole::Agent,
                                 content: t!(
                                     "tui.bottom_form.prompt_opened",
@@ -1370,7 +1370,7 @@ impl TuiShell {
                         }
                     }
                 }
-                Err(err) => self.messages.push(ChatMessage {
+                Err(err) => self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.prompt_args_read_failed", err = err).into_owned(),
                     tool_block: None,
@@ -1393,7 +1393,7 @@ impl TuiShell {
                 .execute_mcp_tool(server, tool, non_empty_opt(args_json))
             {
                 Ok(()) => self.apply_runtime_events(),
-                Err(err) => self.messages.push(ChatMessage {
+                Err(err) => self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.tool_call_failed", err = err).into_owned(),
                     tool_block: None,
@@ -1413,7 +1413,7 @@ impl TuiShell {
                 return;
             }
             match self.runtime.attach_mcp_resource(server, uri) {
-                Ok(label) => self.messages.push(ChatMessage {
+                Ok(label) => self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!(
                         "tui.mcp.resource_attached",
@@ -1423,7 +1423,7 @@ impl TuiShell {
                     .into_owned(),
                     tool_block: None,
                 }),
-                Err(err) => self.messages.push(ChatMessage {
+                Err(err) => self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.mcp.resource_attach_failed", err = err).into_owned(),
                     tool_block: None,
@@ -1434,7 +1434,7 @@ impl TuiShell {
 
         if tail == "resource clear" {
             let cleared = self.runtime.clear_pending_mcp_resources();
-            self.messages.push(ChatMessage {
+            self.messages.push(ThreadMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.mcp.resource_queue_cleared", count = cleared).into_owned(),
                 tool_block: None,
@@ -1485,7 +1485,7 @@ impl TuiShell {
             }
             PromptTail::Empty => {
                 self.open_mcp_prompt_form(&server, &prompt, None);
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!(
                         "tui.bottom_form.prompt_opened",
@@ -1498,7 +1498,7 @@ impl TuiShell {
             }
             PromptTail::UserMessage(user_message) => {
                 self.open_mcp_prompt_form(&server, &prompt, Some(user_message));
-                self.messages.push(ChatMessage {
+                self.messages.push(ThreadMessage {
                     role: MessageRole::Agent,
                     content: t!(
                         "tui.bottom_form.prompt_opened",
