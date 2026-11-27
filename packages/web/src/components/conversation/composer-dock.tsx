@@ -406,7 +406,8 @@ export const ComposerDock = forwardRef<HTMLDivElement, ComposerDockProps>(functi
         "pointer-events-none absolute inset-x-0 z-10 bg-transparent",
         isEmptySession
           ? cn(
-              "inset-y-0 flex items-center justify-center pb-[env(safe-area-inset-bottom,0px)]",
+              // Compensate for the in-flow layout-chrome bar so Doodle + Composer center on the full pane height.
+              "inset-y-0 flex items-center justify-center pb-[calc(var(--spirit-layout-chrome-height,2rem)+env(safe-area-inset-bottom,0px))]",
               CONVERSATION_GUTTER_X,
             )
           : "bottom-0 pt-2 pb-0",

@@ -141,6 +141,8 @@ body {
 :root {
   /* Shared with the sidebar's content spacing. */
   --spirit-chrome-controls-padding: 0.625rem;
+  /* Height of [data-spirit-surface="layout-chrome"]; reused to center empty-session content over the full pane. */
+  --spirit-layout-chrome-height: 2rem;
 }
 
 /* The Windows custom-drawn title bar sits outside the scale root (inside desktop-chrome-root); the native titleBarOverlay is unaffected */
@@ -154,6 +156,7 @@ html.spirit-desktop-darwin {
     var(--spirit-macos-titlebar-chrome-top) - var(--spirit-macos-titlebar-control-pad)
   );
   --spirit-macos-titlebar-inset: calc(var(--spirit-macos-titlebar-chrome-pad-top) + 1.75rem);
+  --spirit-layout-chrome-height: var(--spirit-macos-titlebar-inset);
   /* Width occupied by the hiddenInset traffic lights (about 16px margin + three buttons + spacing) */
   --spirit-macos-traffic-lights-inset-left: 4.875rem;
   /* Sidebar toggle: right edge of the traffic lights + small gap (used for fixed pinning; does not change the drag region geometry) */
@@ -278,7 +281,7 @@ html.spirit-desktop-darwin [data-spirit-surface="workspace-tool-tabs"] {
 }
 
 html.spirit-desktop-darwin [data-spirit-surface="layout-chrome"] {
-  height: var(--spirit-macos-titlebar-inset);
+  height: var(--spirit-layout-chrome-height);
 }
 
 html.spirit-desktop-darwin [data-spirit-surface="workspace-tool-tabs"] {
@@ -295,6 +298,10 @@ html.spirit-desktop-darwin [data-spirit-surface="workspace-tool-tabs"] a {
 }
 
 /* Browser chrome has no native traffic lights, but keeps the same comfortable top content row. */
+html:not(.spirit-desktop-native) {
+  --spirit-layout-chrome-height: calc(1.75rem + var(--spirit-chrome-controls-padding));
+}
+
 html:not(.spirit-desktop-native) [data-spirit-surface="layout-chrome"],
 html:not(.spirit-desktop-native) [data-spirit-surface="workspace-tool-tabs"] {
   box-sizing: border-box;
@@ -303,7 +310,7 @@ html:not(.spirit-desktop-native) [data-spirit-surface="workspace-tool-tabs"] {
 }
 
 html:not(.spirit-desktop-native) [data-spirit-surface="layout-chrome"] {
-  height: calc(1.75rem + var(--spirit-chrome-controls-padding));
+  height: var(--spirit-layout-chrome-height);
 }
 
 html:not(.spirit-desktop-native) [data-spirit-surface="workspace-tool-tabs"] {
@@ -351,6 +358,7 @@ html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen {
   --spirit-macos-titlebar-control-pad: 0px;
   --spirit-macos-titlebar-inset: 0px;
   --spirit-macos-titlebar-chrome-pad-top: var(--spirit-chrome-controls-padding);
+  --spirit-layout-chrome-height: calc(1.75rem + var(--spirit-chrome-controls-padding));
   --spirit-macos-traffic-lights-inset-left: 0px;
   --spirit-macos-sidebar-toggle-inset-left: 0.375rem;
 }
@@ -365,7 +373,7 @@ html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen #thread-sidebar-pane
  * fullscreen and browser chrome align with the sidebar instead of hugging the window edge.
  */
 html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen [data-spirit-surface="layout-chrome"] {
-  height: calc(1.75rem + var(--spirit-chrome-controls-padding));
+  height: var(--spirit-layout-chrome-height);
 }
 
 html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen
