@@ -13,8 +13,6 @@ export const GIT_CHANGES_HISTORY_SPLIT_SHELL_DIVIDER_ATTR =
   "data-spirit-git-changes-history-split-shell-divider";
 export const GIT_HISTORY_HEADER_SHELL_DIVIDER_ATTR = "data-spirit-git-history-header-shell-divider";
 export const BROWSER_NAV_SHELL_DIVIDER_ATTR = "data-spirit-browser-nav-shell-divider";
-export const WORKSPACE_TOOLS_SHELL_LIST_DIVIDER_HOST_ATTR =
-  "data-spirit-workspace-tools-shell-list-divider-host";
 
 export function getWorkspaceToolsShellSplit(): HTMLElement | null {
   return document.querySelector<HTMLElement>(WORKSPACE_TOOLS_SPLIT_SELECTOR);
@@ -33,18 +31,3 @@ export function getWorkspaceToolsShellDividerLeftPx(shellSplit: HTMLElement): nu
   const viewportDelta = resizeLineRect ? Math.max(0, resizeLineRect.right - shellRect.left) : 1;
   return shellLocalLengthFromViewportDelta(viewportDelta);
 }
-
-export function getWorkspaceToolsShellDividerLeftPxFromAnchor(
-  shellSplit: HTMLElement,
-  anchor: HTMLElement,
-  edge: "left" | "right" = "left",
-): number {
-  const shellRect = shellSplit.getBoundingClientRect();
-  const anchorRect = anchor.getBoundingClientRect();
-  return shellLocalLengthFromViewportDelta(
-    Math.max(0, (edge === "right" ? anchorRect.right : anchorRect.left) - shellRect.left),
-  );
-}
-
-export const PR_CHANGED_FILE_HEADER_SHELL_DIVIDER_ATTR =
-  "data-spirit-pr-changed-file-header-shell-divider";

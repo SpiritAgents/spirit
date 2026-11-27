@@ -1,10 +1,9 @@
-import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ScrollArea } from "@spiritagent/ui/scroll-area";
 import { formatRelativeTime } from "@spiritagent/ui/rendering/format-relative-time";
 import { resolveGitHubAvatarUrl } from "../lib/github-avatar-url.js";
-import { useWorkspaceToolsShellRowDividers } from "@spiritagent/ui/rendering/use-workspace-tools-shell-row-dividers";
+import { PR_LIST_ROW_RULES_CLASS } from "../lib/pr-list-row-rules.js";
 import { cn } from "@spiritagent/ui/cn";
 import type { GitHubPullRequestCommit } from "../types.js";
 
@@ -73,13 +72,6 @@ export function WorkspacePrCommitsView({
   className,
 }: WorkspacePrCommitsViewProps) {
   const { t } = useTranslation();
-  const listRef = useRef<HTMLDivElement>(null);
-  const showList = commits.length > 0;
-
-  useWorkspaceToolsShellRowDividers(listRef, [commits.length, hasMore], {
-    enabled: showList,
-    trailingDivider: !hasMore,
-  });
 
   if (loading && commits.length === 0) {
     return (
@@ -99,7 +91,7 @@ export function WorkspacePrCommitsView({
 
   return (
     <ScrollArea className={cn("min-h-0 flex-1", className)} type="auto">
-      <div ref={listRef}>
+      <div className={PR_LIST_ROW_RULES_CLASS} data-trailing-rule={hasMore ? undefined : ""}>
         {commits.map((commit) => (
           <PrCommitRow key={commit.sha} commit={commit} onOpenExternal={onOpenExternal} />
         ))}

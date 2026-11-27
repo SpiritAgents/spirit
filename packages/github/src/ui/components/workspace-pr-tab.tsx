@@ -134,8 +134,6 @@ export type WorkspacePrTabProps = {
   prRevealNonce?: number;
   prRevealRequest?: GitHubPullRequestRevealRequest | null;
   onPrDiffAddToChat?: (attachment: import("@spiritagent/ui/composer").PrDiffAttachment) => void;
-  /** Windows Mica / macOS Vibrancy: forwarded to the detail view's changes tab. */
-  useTranslucency?: boolean;
   /** Called when the current PR detail title changes ("PR #XXX" in detail view, undefined when back to the list or on load failure) */
   onTitleChange?: (title: string | undefined) => void;
   /** Called when the current PR detail state changes (undefined when back to the list or on load failure) */
@@ -164,7 +162,6 @@ export function WorkspacePrTab({
   prRevealNonce = 0,
   prRevealRequest = null,
   onPrDiffAddToChat,
-  useTranslucency = false,
   onTitleChange,
   onPrStatusChange,
   className,
@@ -823,7 +820,6 @@ export function WorkspacePrTab({
                 onMerge={handleMergePullRequest}
                 onMarkReady={handleMarkPullRequestReady}
                 onPrDiffAddToChat={onPrDiffAddToChat}
-                useTranslucency={useTranslucency}
                 className="min-h-0 flex-1"
               />
             </div>

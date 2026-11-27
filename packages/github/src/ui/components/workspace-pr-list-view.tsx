@@ -18,9 +18,9 @@ import { DetailPageTabs } from "@spiritagent/ui/rendering/detail-page-tabs";
 import { Input } from "@spiritagent/ui/input";
 import { ScrollArea } from "@spiritagent/ui/scroll-area";
 import { WorkspacePrListRow } from "./workspace-pr-list-row.js";
+import { PR_LIST_ROW_RULES_CLASS } from "../lib/pr-list-row-rules.js";
 import { useWorkspaceToolsShellHorizontalDivider } from "@spiritagent/ui/rendering/use-workspace-tools-shell-horizontal-divider";
 import { PR_LIST_SEARCH_SHELL_DIVIDER_ATTR } from "@spiritagent/ui/rendering/workspace-tools-panel-edge";
-import { useWorkspaceToolsShellRowDividers } from "@spiritagent/ui/rendering/use-workspace-tools-shell-row-dividers";
 import { cn } from "@spiritagent/ui/cn";
 import type {
   GetGitHubPullRequestTabCountsRequest,
@@ -91,7 +91,6 @@ export const WorkspacePrListView = forwardRef<WorkspacePrListViewHandle, Workspa
     const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const listRef = useRef<HTMLDivElement>(null);
     const searchBarRef = useRef<HTMLDivElement>(null);
     const scrollAreaRef = useRef<ComponentRef<typeof ScrollArea>>(null);
     const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
@@ -114,13 +113,6 @@ export const WorkspacePrListView = forwardRef<WorkspacePrListViewHandle, Workspa
       },
       [],
     );
-
-    const showList = items.length > 0;
-
-    useWorkspaceToolsShellRowDividers(listRef, [items.length, hasMore, loadingMore], {
-      enabled: showList,
-      trailingDivider: !hasMore && !loadingMore,
-    });
 
     useEffect(() => {
       listCacheRef.current.clear();
@@ -381,7 +373,10 @@ export const WorkspacePrListView = forwardRef<WorkspacePrListViewHandle, Workspa
         />
       ) : (
         <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1" type="auto">
-          <div ref={listRef}>
+          <div
+            className={PR_LIST_ROW_RULES_CLASS}
+            data-trailing-rule={hasMore || loadingMore ? undefined : ""}
+          >
             {items.map((item) => (
               <WorkspacePrListRow key={item.number} item={item} onSelect={onSelectPullRequest} />
             ))}

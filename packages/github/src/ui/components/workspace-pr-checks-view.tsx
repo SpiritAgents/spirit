@@ -10,8 +10,8 @@ import { ScrollArea } from "@spiritagent/ui/scroll-area";
 import { Spinner } from "@spiritagent/ui/spinner";
 import { formatCiDuration } from "@spiritagent/ui/rendering/format-ci-duration";
 import { useElapsedDuration } from "@spiritagent/ui/rendering/use-elapsed-duration";
-import { useWorkspaceToolsShellRowDividers } from "@spiritagent/ui/rendering/use-workspace-tools-shell-row-dividers";
 import { cn } from "@spiritagent/ui/cn";
+import { PR_LIST_ROW_RULES_CLASS } from "../lib/pr-list-row-rules.js";
 import type { GitHubPullRequestCheck, GitHubPullRequestCheckState } from "../types.js";
 
 export type WorkspacePrChecksViewProps = {
@@ -105,16 +105,9 @@ export function WorkspacePrChecksView({
   className,
 }: WorkspacePrChecksViewProps) {
   const { t } = useTranslation();
-  const listRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<ComponentRef<typeof ScrollArea>>(null);
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
   const loadMoreInFlightRef = useRef(false);
-  const showList = checks.length > 0;
-
-  useWorkspaceToolsShellRowDividers(listRef, [checks.length, hasMore, loadingMore], {
-    enabled: showList,
-    trailingDivider: !hasMore && !loadingMore,
-  });
 
   useEffect(() => {
     if (!hasMore || !onLoadMore || loadingMore || checks.length === 0) {
@@ -168,7 +161,10 @@ export function WorkspacePrChecksView({
 
   return (
     <ScrollArea ref={scrollAreaRef} className={cn("min-h-0 flex-1", className)} type="auto">
-      <div ref={listRef}>
+      <div
+        className={PR_LIST_ROW_RULES_CLASS}
+        data-trailing-rule={hasMore || loadingMore ? undefined : ""}
+      >
         {checks.map((check) => (
           <PrCheckRow key={check.id} check={check} onOpenExternal={onOpenExternal} />
         ))}

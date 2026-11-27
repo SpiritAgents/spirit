@@ -65,8 +65,6 @@ export type WorkspacePrDetailViewProps = {
   onMerge?: (method: GitHubPullRequestMergeMethod) => void;
   onMarkReady?: () => void;
   onPrDiffAddToChat?: (attachment: PrDiffAttachment) => void;
-  /** Windows Mica / macOS Vibrancy: forwarded to the changes view's pinned-header occlusion. */
-  useTranslucency?: boolean;
   className?: string;
 };
 
@@ -142,7 +140,6 @@ export function WorkspacePrDetailView({
   onMerge,
   onMarkReady,
   onPrDiffAddToChat,
-  useTranslucency = false,
   className,
 }: WorkspacePrDetailViewProps) {
   const { readPrOverviewPaneRatio, writePrOverviewPaneRatio } = useGitHubLayoutPreferences();
@@ -448,7 +445,6 @@ export function WorkspacePrDetailView({
             prStatus={resolvePullRequestChipStatus(detail)}
             onPrDiffAddToChat={onPrDiffAddToChat}
             onOpenExternal={onOpenExternal}
-            useTranslucency={useTranslucency}
             className="h-full min-h-0"
           />
         ) : null}

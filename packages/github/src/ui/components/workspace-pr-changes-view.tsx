@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
   type ComponentRef,
+  type CSSProperties,
   type RefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,13 +22,11 @@ import {
 import { EditFileLineDeltaBadge } from "@spiritagent/ui/rendering/edit-file-line-delta-badge";
 import { WorkspacePrChangesFileTree } from "./workspace-pr-changes-file-tree.js";
 import { AnimatedCollapse, AnimatedCollapseContent } from "@spiritagent/ui/animated-collapse";
+import { COLLAPSIBLE_OPEN_ANIMATION_MS } from "@spiritagent/ui/collapsible-animation";
 import { TEXT_LINK_CLASS } from "@spiritagent/ui/link";
 import { ScrollArea } from "@spiritagent/ui/scroll-area";
 import { useCollapsibleChildMount } from "@spiritagent/ui/hooks/use-collapsible-child-mount";
-import {
-  scrollAreaViewport,
-  useStickyHeaderPinned,
-} from "@spiritagent/ui/rendering/use-sticky-header-pinned";
+import { scrollAreaViewport } from "@spiritagent/ui/rendering/use-sticky-header-pinned";
 import { useTextSelectionActionMenu } from "@spiritagent/ui/rendering/use-text-selection-action-menu";
 import { buildPrChangedFilesTree } from "../lib/pr-changed-files-tree.js";
 import { installContainedSelectAll } from "@spiritagent/ui/rendering/contained-text-selection";
@@ -44,10 +43,6 @@ import {
   PR_CHANGES_TREE_MIN_WIDTH_PX,
   computePrChangesTreeMaxWidthPx,
 } from "../lib/layout-prefs.js";
-import { useWorkspaceToolsShellRowDividers } from "@spiritagent/ui/rendering/use-workspace-tools-shell-row-dividers";
-import { useScrollTopBandOcclusion } from "@spiritagent/ui/rendering/scroll-top-band-occlusion";
-import { useWorkspaceToolsShellHorizontalDivider } from "@spiritagent/ui/rendering/use-workspace-tools-shell-horizontal-divider";
-import { PR_CHANGED_FILE_HEADER_SHELL_DIVIDER_ATTR } from "@spiritagent/ui/rendering/workspace-tools-panel-edge";
 import { cn } from "@spiritagent/ui/cn";
 import type { GitHubPullRequestChangedFile } from "../types.js";
 
@@ -188,8 +183,13 @@ function PrChangesSelectionMenu({
   );
 }
 
-/** Sticky file header when scrolled: opaque panel background (no backdrop blur). */
-const PR_STICKY_PINNED_HEADER_CLASS = "bg-background";
+/**
+ * Height of a file header row: the button's `py-3` plus one `text-xs leading-relaxed` line.
+ * Declared from those tokens rather than measured, so the dock clip beneath an expanded
+ * file's sticky header can dock at exactly this line.
+ */
+const PR_CHANGED_FILE_HEADER_HEIGHT =
+  "calc(var(--spacing) * 6 + var(--text-xs) * var(--leading-relaxed))";
 
 function PrChangedFileHeaderButton({
   displayPath,
@@ -213,6 +213,7 @@ function PrChangedFileHeaderButton({
         "flex w-full min-w-0 items-center gap-2 px-3 py-3 text-left outline-none cursor-pointer",
         "focus-visible:ring-2 focus-visible:ring-ring/60",
       )}
+      style={{ height: PR_CHANGED_FILE_HEADER_HEIGHT }}
       aria-expanded={open}
       aria-label={open ? t("workspace.prChangesFileCollapse") : t("workspace.prChangesFileExpand")}
       onClick={onToggle}
@@ -238,40 +239,27 @@ function PrChangedFileHeaderButton({
   );
 }
 
+/**
+ * One changed file. Expanded, its header is ordinary in-flow sticky content: it travels with
+ * the list, docks at the top edge, leaves with its own section and rubber-bands natively. It
+ * paints no background on any surface; the diff sliding beneath it is clipped by the
+ * compositor-driven dock clip instead, which needs no pin state.
+ */
 function PrChangedFileCard({
   file,
   open,
   onOpenChange,
   onOpenExternal,
-  getScrollViewport,
-  dividerAnchorRef,
-  useTranslucency,
-  onPinnedHeaderChange,
 }: {
   file: GitHubPullRequestChangedFile;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onOpenExternal?: (url: string) => void;
-  getScrollViewport: () => HTMLElement | null;
-  dividerAnchorRef: RefObject<HTMLElement | null>;
-  useTranslucency: boolean;
-  onPinnedHeaderChange: (filename: string, headerElement: HTMLElement | null) => void;
 }) {
   const { t } = useTranslation();
   const mounted = useCollapsibleChildMount(open);
-  const stickySentinelRef = useRef<HTMLDivElement>(null);
-  const stickyHeaderRef = useRef<HTMLDivElement>(null);
   const diffHostRef = useRef<HTMLDivElement>(null);
   const showExpandedChrome = open || mounted;
-  const pinned = useStickyHeaderPinned(stickySentinelRef, getScrollViewport, showExpandedChrome);
-
-  // Report the pinned header so the parent can render its visible copy outside the masked
-  // scroll root and size the occlusion band. Layout effect: the overlay appears in the same
-  // commit as the pin, so content never flashes beneath the transparent header.
-  useLayoutEffect(() => {
-    onPinnedHeaderChange(file.filename, pinned ? stickyHeaderRef.current : null);
-    return () => onPinnedHeaderChange(file.filename, null);
-  }, [file.filename, onPinnedHeaderChange, pinned]);
   const displayPath =
     file.status === "renamed" && file.previousFilename
       ? `${file.previousFilename} → ${file.filename}`
@@ -292,20 +280,6 @@ function PrChangedFileCard({
     return installContainedSelectAll(diffRoot);
   }, [file.patch, mounted]);
 
-  useWorkspaceToolsShellHorizontalDivider(
-    stickyHeaderRef,
-    {
-      enabled: showExpandedChrome,
-      edge: "bottom",
-      dividerAttr: PR_CHANGED_FILE_HEADER_SHELL_DIVIDER_ATTR,
-      dividerKey: file.filename,
-      dividerAnchorRef,
-      dividerAnchorEdge: "right",
-      watchRefs: [dividerAnchorRef],
-    },
-    [showExpandedChrome, file.filename],
-  );
-
   return (
     <section
       id={prChangedFileAnchorId(file.filename)}
@@ -313,24 +287,8 @@ function PrChangedFileCard({
       data-pr-changed-file={file.filename}
     >
       <AnimatedCollapse open={open} onOpenChange={onOpenChange} className="min-w-0">
-        {showExpandedChrome ? (
-          <div
-            ref={stickySentinelRef}
-            className="pointer-events-none h-px w-full shrink-0 -mb-px"
-            aria-hidden
-          />
-        ) : null}
         <div
-          ref={stickyHeaderRef}
-          className={cn(
-            "relative",
-            showExpandedChrome && "sticky top-0 z-10",
-            // Translucency: the in-flow pinned header is clipped by the occlusion mask; the
-            // overlay copy (transparent) is what stays visible, so no opaque paint here.
-            showExpandedChrome && pinned && !useTranslucency
-              ? PR_STICKY_PINNED_HEADER_CLASS
-              : "bg-transparent",
-          )}
+          className={cn("relative", showExpandedChrome && "spirit-dock-header spirit-rule-b z-10")}
         >
           <PrChangedFileHeaderButton
             displayPath={displayPath}
@@ -340,32 +298,41 @@ function PrChangedFileCard({
             onToggle={() => onOpenChange(!open)}
           />
         </div>
-        <AnimatedCollapseContent>
-          {mounted ? (
-            file.patch ? (
-              <div ref={diffHostRef} className="min-w-0">
-                <ReviewCommentHunkView
-                  path={file.filename}
-                  diffHunk={file.patch}
-                  layout="embedded"
-                />
-              </div>
-            ) : (
-              <div className="space-y-2 px-3 pb-3 text-xs text-muted-foreground">
-                <p>{t("workspace.prChangesNoPatch")}</p>
-                {file.blobUrl && onOpenExternal ? (
-                  <button
-                    type="button"
-                    className={TEXT_LINK_CLASS}
-                    onClick={() => onOpenExternal(file.blobUrl!)}
-                  >
-                    {t("workspace.prChangesViewOnGitHub")}
-                  </button>
-                ) : null}
-              </div>
-            )
-          ) : null}
-        </AnimatedCollapseContent>
+        {/* The clip only exists while there is a diff to clip: a long list of collapsed files
+            must not carry two scroll-linked animations per row. */}
+        <div
+          className={showExpandedChrome ? "spirit-dock-clip" : undefined}
+          style={{ "--spirit-dock-clip-inset": PR_CHANGED_FILE_HEADER_HEIGHT } as CSSProperties}
+        >
+          <div>
+            <AnimatedCollapseContent>
+              {mounted ? (
+                file.patch ? (
+                  <div ref={diffHostRef} className="min-w-0">
+                    <ReviewCommentHunkView
+                      path={file.filename}
+                      diffHunk={file.patch}
+                      layout="embedded"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2 px-3 pb-3 text-xs text-muted-foreground">
+                    <p>{t("workspace.prChangesNoPatch")}</p>
+                    {file.blobUrl && onOpenExternal ? (
+                      <button
+                        type="button"
+                        className={TEXT_LINK_CLASS}
+                        onClick={() => onOpenExternal(file.blobUrl!)}
+                      >
+                        {t("workspace.prChangesViewOnGitHub")}
+                      </button>
+                    ) : null}
+                  </div>
+                )
+              ) : null}
+            </AnimatedCollapseContent>
+          </div>
+        </div>
       </AnimatedCollapse>
     </section>
   );
@@ -379,8 +346,6 @@ export type WorkspacePrChangesViewProps = {
   prStatus?: PullRequestChipStatus;
   onPrDiffAddToChat?: (attachment: PrDiffAttachment) => void;
   onOpenExternal?: (url: string) => void;
-  /** Windows Mica / macOS Vibrancy: pinned file headers become transparent + occlude content via mask. */
-  useTranslucency?: boolean;
   className?: string;
 };
 
@@ -392,7 +357,6 @@ export function WorkspacePrChangesView({
   prStatus = "open",
   onPrDiffAddToChat,
   onOpenExternal,
-  useTranslucency = false,
   className,
 }: WorkspacePrChangesViewProps) {
   const { readPrChangesTreeWidthPx, writePrChangesTreeWidthPx } = useGitHubLayoutPreferences();
@@ -406,15 +370,7 @@ export function WorkspacePrChangesView({
     setSplitContainer(node);
   }, []);
   const cardsScrollRef = useRef<ComponentRef<typeof ScrollArea>>(null);
-  const [cardsScrollRoot, setCardsScrollRoot] = useState<ComponentRef<typeof ScrollArea> | null>(
-    null,
-  );
-  const setCardsScrollRef = useCallback((node: ComponentRef<typeof ScrollArea> | null) => {
-    cardsScrollRef.current = node;
-    setCardsScrollRoot(node);
-  }, []);
   const cardsListRef = useRef<HTMLDivElement>(null);
-  const treeAsideRef = useRef<HTMLElement>(null);
   const treeDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const latestTreeWidthPxRef = useRef(readPrChangesTreeWidthPx());
   const [treeWidthPx, setTreeWidthPx] = useState(() => readPrChangesTreeWidthPx());
@@ -423,52 +379,6 @@ export function WorkspacePrChangesView({
   const [expandedFilenames, setExpandedFilenames] = useState<Set<string>>(() => new Set());
 
   const treeNodes = useMemo(() => buildPrChangedFilesTree(files), [files]);
-  const showFileList = files.length > 0;
-
-  const getCardsScrollViewport = useCallback(() => scrollAreaViewport(cardsScrollRef.current), []);
-
-  // Translucency pinned-header overlay: cards report their pinned in-flow headers; the visible
-  // header is rendered outside the scroll root (the occlusion mask clips every DOM descendant
-  // of the masked root, including the in-flow copies). When several sections report pinned,
-  // the last one in file order owns the viewport top (earlier sections have scrolled past).
-  const [pinnedHeaders, setPinnedHeaders] = useState<ReadonlyMap<string, HTMLElement>>(
-    () => new Map(),
-  );
-  const handlePinnedHeaderChange = useCallback(
-    (filename: string, headerElement: HTMLElement | null) => {
-      setPinnedHeaders((previous) => {
-        if (previous.get(filename) === (headerElement ?? undefined)) {
-          return previous;
-        }
-        const next = new Map(previous);
-        if (headerElement) {
-          next.set(filename, headerElement);
-        } else {
-          next.delete(filename);
-        }
-        return next;
-      });
-    },
-    [],
-  );
-  const pinnedOverlayFile = useMemo(() => {
-    let chosen: GitHubPullRequestChangedFile | null = null;
-    for (const file of files) {
-      if (pinnedHeaders.has(file.filename)) {
-        chosen = file;
-      }
-    }
-    return chosen;
-  }, [files, pinnedHeaders]);
-  const pinnedOverlayElement = pinnedOverlayFile
-    ? (pinnedHeaders.get(pinnedOverlayFile.filename) ?? null)
-    : null;
-  const { occlusionStyle: cardsOcclusionStyle, bandHeight: pinnedHeaderBandHeight } =
-    useScrollTopBandOcclusion(
-      cardsScrollRoot,
-      pinnedOverlayElement,
-      useTranslucency && pinnedOverlayFile != null,
-    );
 
   const setFileOpen = useCallback((filename: string, nextOpen: boolean) => {
     setExpandedFilenames((previous) => {
@@ -481,20 +391,6 @@ export function WorkspacePrChangesView({
       return next;
     });
   }, []);
-
-  useWorkspaceToolsShellRowDividers(
-    cardsListRef,
-    [files.length, hasMore, expandedFilenames.size, pinnedHeaderBandHeight],
-    {
-      enabled: showFileList,
-      trailingDivider: !hasMore,
-      dividerAnchorRef: treeAsideRef,
-      dividerAnchorEdge: "right",
-      layoutWatchRef: treeAsideRef,
-      clipTopInsetPx:
-        useTranslucency && pinnedOverlayFile != null ? (pinnedHeaderBandHeight ?? 0) : 0,
-    },
-  );
 
   useLayoutEffect(() => {
     latestTreeWidthPxRef.current = treeWidthPx;
@@ -582,6 +478,7 @@ export function WorkspacePrChangesView({
     [treeDragCursor, writePrChangesTreeWidthPx],
   );
 
+  const revealFrameRef = useRef(0);
   const navigateToFile = useCallback((filename: string) => {
     setExpandedFilenames((previous) => {
       const next = new Set(previous);
@@ -589,13 +486,30 @@ export function WorkspacePrChangesView({
       return next;
     });
 
-    requestAnimationFrame(() => {
+    // The file's header can only reach the top of the list once the list is long enough
+    // below it, and the diff that makes it so is still animating open. `scrollIntoView` aims
+    // at what is reachable when it is called, so wait for that room first: at most for the
+    // length of the expand, after which the list is as long as it is going to get.
+    cancelAnimationFrame(revealFrameRef.current);
+    const deadline = performance.now() + COLLAPSIBLE_OPEN_ANIMATION_MS;
+    const reveal = () => {
       const viewport = scrollAreaViewport(cardsScrollRef.current);
       const section = viewport?.querySelector<HTMLElement>(
         `[data-pr-changed-file="${CSS.escape(filename)}"]`,
       );
-      section?.scrollIntoView({ block: "start", behavior: "smooth" });
-    });
+      if (!viewport || !section) {
+        return;
+      }
+      const distance = section.getBoundingClientRect().top - viewport.getBoundingClientRect().top;
+      const room = viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop;
+      // `scrollHeight` is rounded: ask for a pixel to spare.
+      if (room < distance + 1 && performance.now() < deadline) {
+        revealFrameRef.current = requestAnimationFrame(reveal);
+        return;
+      }
+      section.scrollIntoView({ block: "start", behavior: "smooth" });
+    };
+    revealFrameRef.current = requestAnimationFrame(reveal);
   }, []);
 
   if (loading && files.length === 0) {
@@ -624,7 +538,6 @@ export function WorkspacePrChangesView({
       )}
     >
       <aside
-        ref={treeAsideRef}
         className="flex min-h-0 shrink-0 flex-col border-r border-border/40"
         style={{ width: treeWidthPx }}
       >
@@ -653,50 +566,36 @@ export function WorkspacePrChangesView({
           aria-hidden
         />
       </div>
-      <div className="relative min-h-0 min-w-0 flex-1">
-        <ScrollArea
-          ref={setCardsScrollRef}
-          className="h-full min-h-0 w-full"
-          type="auto"
-          style={cardsOcclusionStyle}
+      {/* The tree resize handle above is a 4px strip that overlaps the tree border by 1px. The
+          list runs beneath its other 3px (-ml / pl), so row rules can start flush against the
+          tree border while every row stays where the handle leaves it. */}
+      <ScrollArea
+        ref={cardsScrollRef}
+        className="-ml-[3px] h-full min-h-0 min-w-0 flex-1"
+        type="auto"
+      >
+        {/* overflow-y-clip keeps the shifted dock clip boxes from extending the scroll range. */}
+        <div
+          ref={cardsListRef}
+          className="spirit-row-rules overflow-y-clip pl-[3px] [--spirit-rule-inset-start:-3px]"
+          data-trailing-rule={hasMore ? undefined : ""}
         >
-          <div ref={cardsListRef}>
-            {files.map((file) => (
-              <PrChangedFileCard
-                key={file.filename}
-                file={file}
-                open={expandedFilenames.has(file.filename)}
-                onOpenExternal={onOpenExternal}
-                getScrollViewport={getCardsScrollViewport}
-                dividerAnchorRef={treeAsideRef}
-                useTranslucency={useTranslucency}
-                onPinnedHeaderChange={handlePinnedHeaderChange}
-                onOpenChange={(nextOpen) => setFileOpen(file.filename, nextOpen)}
-              />
-            ))}
-            {hasMore ? (
-              <p className="px-3 py-2 text-xs text-muted-foreground/75 dark:text-muted-foreground/65">
-                {t("workspace.prChangesHasMore")}
-              </p>
-            ) : null}
-          </div>
-        </ScrollArea>
-        {useTranslucency && pinnedOverlayFile ? (
-          <div className="absolute inset-x-0 top-0 z-20">
-            <PrChangedFileHeaderButton
-              displayPath={
-                pinnedOverlayFile.status === "renamed" && pinnedOverlayFile.previousFilename
-                  ? `${pinnedOverlayFile.previousFilename} → ${pinnedOverlayFile.filename}`
-                  : pinnedOverlayFile.filename
-              }
-              open
-              additions={pinnedOverlayFile.additions}
-              deletions={pinnedOverlayFile.deletions}
-              onToggle={() => setFileOpen(pinnedOverlayFile.filename, false)}
+          {files.map((file) => (
+            <PrChangedFileCard
+              key={file.filename}
+              file={file}
+              open={expandedFilenames.has(file.filename)}
+              onOpenExternal={onOpenExternal}
+              onOpenChange={(nextOpen) => setFileOpen(file.filename, nextOpen)}
             />
-          </div>
-        ) : null}
-      </div>
+          ))}
+          {hasMore ? (
+            <p className="px-3 py-2 text-xs text-muted-foreground/75 dark:text-muted-foreground/65">
+              {t("workspace.prChangesHasMore")}
+            </p>
+          ) : null}
+        </div>
+      </ScrollArea>
       <PrChangesSelectionMenu
         rootRef={cardsListRef}
         files={files}

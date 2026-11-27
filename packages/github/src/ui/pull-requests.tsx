@@ -158,9 +158,6 @@ async function start() {
                   onPrDiffAddToChat={(attachment) => {
                     void page.addAttachment({ kind: "prDiff", ...attachment }).catch(reportError);
                   }}
-                  useTranslucency={context.theme.htmlClassName.includes(
-                    "spirit-desktop-translucency",
-                  )}
                   onTitleChange={(title) =>
                     page.setChrome({ title: title ?? i18n.t("workspace.prTab") })
                   }
