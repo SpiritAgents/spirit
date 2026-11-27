@@ -70,6 +70,7 @@ const nodeDomains = new Set([
   "automations",
   "code-completion",
   "config",
+  "exa",
   "extensions",
   "github",
   "hooks",
@@ -91,6 +92,7 @@ const nodeDomains = new Set([
   "workspace",
 ]);
 const reactPresentationPaths = [
+  /^packages\/exa\/src\/ui\//u,
   /^packages\/github\/src\/ui\//u,
   /^packages\/linear\/src\/ui\//u,
   /^packages\/notion\/src\/ui\//u,

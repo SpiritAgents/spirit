@@ -9,6 +9,13 @@
   },
   "extensions": [
     {
+      "name": "exa",
+      "source": "./extensions/exa",
+      "icon": "./extensions/exa/icon.svg",
+      "reviewStatus": "verified",
+      "defaultInstalled": false
+    },
+    {
       "name": "github",
       "source": "./extensions/github",
       "icon": "./extensions/github/icon.svg",
