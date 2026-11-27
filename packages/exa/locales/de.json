@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Exa",
+    "description": "Suchen und Abrufen.",
+    "keywords": {
+      "search": "Suche",
+      "fetch": "Abrufen",
+      "web": "Web"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "exa": {
+      "displayName": "Exa"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Exa"
+    }
+  },
+  "exa": {
+    "waiting": "Warte auf Autorisierung im Browser",
+    "openAuthorizationPage": "Exa-Autorisierungsseite öffnen",
+    "connected": "Mit Exa verbunden",
+    "disconnect": "Trennen"
+  },
+  "common": {
+    "cancel": "Abbrechen"
+  }
+}

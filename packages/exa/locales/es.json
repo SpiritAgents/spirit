@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Exa",
+    "description": "Buscar y obtener.",
+    "keywords": {
+      "search": "búsqueda",
+      "fetch": "obtener",
+      "web": "web"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "exa": {
+      "displayName": "Exa"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Exa"
+    }
+  },
+  "exa": {
+    "waiting": "Esperando la autorización en el navegador",
+    "openAuthorizationPage": "Abrir la página de autorización de Exa",
+    "connected": "Conectado a Exa",
+    "disconnect": "Desconectar"
+  },
+  "common": {
+    "cancel": "Cancelar"
+  }
+}

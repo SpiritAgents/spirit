@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Exa",
+    "description": "搜索与抓取。",
+    "keywords": {
+      "search": "搜索",
+      "fetch": "抓取",
+      "web": "网页"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "exa": {
+      "displayName": "Exa"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Exa"
+    }
+  },
+  "exa": {
+    "waiting": "等待浏览器授权",
+    "openAuthorizationPage": "打开 Exa 授权页面",
+    "connected": "已连接 Exa",
+    "disconnect": "断开连接"
+  },
+  "common": {
+    "cancel": "取消"
+  }
+}

@@ -1,15 +1,18 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "vitest";
 
+import { McpService } from "@spiritagent/agent-core";
 import { parseMarketplaceIndexText, readExtensionMessage } from "@spiritagent/extension-toolkit";
 import { VALID_LANGUAGES } from "@spiritagent/i18n";
 import { localizedTestFields } from "@spiritagent/extension-toolkit/test-localization";
 
+import { collectEnabledExtensionInstructionContributions } from "../extension-contributions.js";
 import { createHostExtensionManager, installPreparedExtensionDirectory } from "../extensions.js";
 import { loadBuiltInState } from "./state.js";
 import {
@@ -125,6 +128,232 @@ test("GitHub is available for manual installation but is not installed by defaul
     assert.equal(after.find((item) => item.id === "built-in/github")?.installed, true);
   } finally {
     await rm(spiritDataDir, { recursive: true, force: true });
+  }
+});
+
+test("Exa is an opt-in built-in that contributes only its keyless-or-authorized MCP server", async () => {
+  const index = await readBuiltInMarketplaceIndex();
+  const exa = index.extensions.find((entry) => entry.name === "exa");
+  assert.ok(exa);
+  assert.equal(exa.defaultInstalled, false);
+  assert.equal(exa.icon, "extensions/exa/icon.svg");
+  assert.equal(readExtensionMessage(exa, exa.description, "zh-CN"), "搜索与抓取。");
+  assert.deepEqual(Object.keys(exa.manifest.contributes ?? {}).sort(), [
+    "authorizations",
+    "desktop",
+    "mcp",
+  ]);
+  assert.ok(existsSync(join(resolveBuiltInRegistryRoot(), "extensions/exa/mcp.json")));
+
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-exa-opt-in-"));
+  try {
+    const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
+    const seeded = await ensureBuiltInExtensions({ spiritDataDir, hostKind: "desktop", manager });
+    assert.equal(
+      seeded.some((item) => item.id === "built-in/exa"),
+      false,
+    );
+    const installed = await installBuiltInExtension({
+      spiritDataDir,
+      hostKind: "desktop",
+      extensionId: "built-in/exa",
+    });
+    assert.equal(installed.id, "built-in/exa");
+    const listed = (await manager.list()).find((item) => item.id === "built-in/exa");
+    assert.deepEqual(
+      listed?.manifest.contributes?.authorizations?.map(({ id, action }) => ({ id, action })),
+      [{ id: "oauth", action: "authorize" }],
+    );
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+  }
+});
+
+test("Exa built-in artifact transitions Keyless -> OAuth -> Keyless against a local Streamable HTTP MCP server", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-exa-loopback-data-"));
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-exa-loopback-ws-"));
+  const seenAuthorizations: Array<string | undefined> = [];
+  let sessionCounter = 0;
+
+  const server = createServer(async (req, res) => {
+    if (req.method === "DELETE") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+    if (req.method === "GET") {
+      res.writeHead(405);
+      res.end();
+      return;
+    }
+    const authHeader = req.headers.authorization;
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(Buffer.from(chunk));
+    const msg = JSON.parse(Buffer.concat(chunks).toString("utf8")) as {
+      id?: number;
+      method?: string;
+    };
+    if (msg.method === "notifications/initialized") {
+      res.writeHead(202, { "Mcp-Session-Id": `exa-sess-${sessionCounter}` });
+      res.end();
+      return;
+    }
+    if (msg.method === "initialize") {
+      sessionCounter += 1;
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Mcp-Session-Id": `exa-sess-${sessionCounter}`,
+      });
+      res.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: msg.id,
+          result: {
+            protocolVersion: "2025-11-25",
+            capabilities: { tools: {} },
+            serverInfo: { name: "mock-exa-mcp", version: "1.0.0" },
+          },
+        }),
+      );
+      return;
+    }
+    if (msg.method === "tools/list") {
+      seenAuthorizations.push(authHeader);
+      const isAuthorized = authHeader === "Bearer exa-oauth-token";
+      if (authHeader !== undefined && !isAuthorized) {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "invalid_token" }));
+        return;
+      }
+      const tools = isAuthorized
+        ? [
+            {
+              name: "web_search_exa",
+              description: "Search the web",
+              inputSchema: { type: "object" },
+            },
+            {
+              name: "deep_researcher_start",
+              description: "Authenticated deep research",
+              inputSchema: { type: "object" },
+            },
+          ]
+        : [
+            {
+              name: "web_search_exa",
+              description: "Keyless web search",
+              inputSchema: { type: "object" },
+            },
+          ];
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Mcp-Session-Id": `exa-sess-${sessionCounter}`,
+      });
+      res.end(JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: { tools } }));
+      return;
+    }
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: {} }));
+  });
+
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+
+  const secretStore = new Map<string, string>();
+  const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
+  let service: McpService | undefined;
+
+  try {
+    const installed = await installBuiltInExtension({
+      spiritDataDir,
+      hostKind: "desktop",
+      extensionId: "built-in/exa",
+    });
+    const mcpPath = join(installed.directoryPath, "mcp.json");
+    const mcpConfig = JSON.parse(await readFile(mcpPath, "utf8")) as {
+      servers: {
+        exa: {
+          displayName: string;
+          transport: { type: "http"; url: string; headers?: Record<string, string> };
+        };
+      };
+    };
+    assert.equal(mcpConfig.servers.exa.transport.url, "https://mcp.exa.ai/mcp");
+    assert.equal(
+      mcpConfig.servers.exa.transport.headers?.Authorization,
+      "Bearer ${extension-secret?:oauthCredentials:accessToken}",
+    );
+    mcpConfig.servers.exa.transport.url = `http://127.0.0.1:${address.port}/mcp`;
+    await writeFile(mcpPath, `${JSON.stringify(mcpConfig, null, 2)}\n`, "utf8");
+
+    service = new McpService(workspaceRoot, false, {
+      extraConfigs: async () => {
+        const collected = await collectEnabledExtensionInstructionContributions(
+          await manager.list(),
+          undefined,
+          {
+            loadSecret: async (extensionId, key) =>
+              extensionId === "built-in/exa" ? secretStore.get(key) : undefined,
+          },
+        );
+        return {
+          servers: collected.mcp.servers,
+          extensionServerOwnership: collected.mcpOwnership,
+        };
+      },
+    });
+
+    // 1. Keyless before authorization: no Authorization header is sent and keyless tools load.
+    await service.refreshConfig();
+    await service.ensureToolingCache();
+    assert.deepEqual(
+      service
+        .catalogSnapshot()
+        .servers.find((entry) => entry.name === "exa")
+        ?.tools.map((tool) => tool.name),
+      ["web_search_exa"],
+    );
+    assert.equal(seenAuthorizations.at(-1), undefined);
+
+    // 2. OAuth stored: refresh attaches Bearer token and exposes authenticated tools.
+    secretStore.set(
+      "oauthCredentials",
+      JSON.stringify({
+        accessToken: "exa-oauth-token",
+        refreshToken: "exa-refresh-token",
+        accessTokenExpiresAt: Date.now() + 3_600_000,
+      }),
+    );
+    assert.equal(await service.refreshConfig(), true);
+    await service.ensureToolingCache();
+    assert.deepEqual(
+      service
+        .catalogSnapshot()
+        .servers.find((entry) => entry.name === "exa")
+        ?.tools.map((tool) => tool.name),
+      ["web_search_exa", "deep_researcher_start"],
+    );
+    assert.equal(seenAuthorizations.at(-1), "Bearer exa-oauth-token");
+
+    // 3. Disconnected: secret removed, header omitted again, and keyless tools return.
+    secretStore.delete("oauthCredentials");
+    assert.equal(await service.refreshConfig(), true);
+    await service.ensureToolingCache();
+    assert.deepEqual(
+      service
+        .catalogSnapshot()
+        .servers.find((entry) => entry.name === "exa")
+        ?.tools.map((tool) => tool.name),
+      ["web_search_exa"],
+    );
+    assert.equal(seenAuthorizations.at(-1), undefined);
+  } finally {
+    await service?.dispose();
+    server.close();
+    server.closeIdleConnections();
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(workspaceRoot, { recursive: true, force: true });
   }
 });
 

@@ -47,6 +47,7 @@
     "@spiritagent/agent-core": "workspace:*",
     "@spiritagent/automations": "workspace:*",
     "@spiritagent/config": "workspace:*",
+    "@spiritagent/exa": "workspace:*",
     "@spiritagent/extension-toolkit": "workspace:*",
     "@spiritagent/github": "workspace:*",
     "@spiritagent/i18n": "workspace:*",

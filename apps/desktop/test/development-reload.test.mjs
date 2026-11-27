@@ -52,6 +52,7 @@ test("runtime restart watches cover the Workbench domain graph", () => {
   }
 
   for (const name of [
+    "@spiritagent/exa",
     "@spiritagent/github",
     "@spiritagent/brand",
     "@spiritagent/icons",
@@ -82,6 +83,7 @@ test("development package watching covers extension dependencies without the pro
   const packages = developmentWatchPackageNames(repoRoot);
   assert.ok(packages.includes("@spiritagent/workbench"));
   for (const name of [
+    "@spiritagent/exa",
     "@spiritagent/github",
     "@spiritagent/icons",
     "@spiritagent/linear",
@@ -101,6 +103,7 @@ test("development builds order simultaneous edits and refresh packed extensions"
   assert.ok(order.indexOf("@spiritagent/i18n") < order.indexOf("@spiritagent/workbench"));
   assert.ok(order.indexOf("@spiritagent/icons") < order.indexOf("@spiritagent/ui"));
   for (const name of [
+    "@spiritagent/exa",
     "@spiritagent/github",
     "@spiritagent/linear",
     "@spiritagent/notion",
@@ -119,6 +122,7 @@ test("development builds order simultaneous edits and refresh packed extensions"
 
 test("shared dependencies rebuild every affected built-in extension", () => {
   const allExtensions = [
+    "@spiritagent/exa",
     "@spiritagent/extensions",
     "@spiritagent/github",
     "@spiritagent/linear",

@@ -10,6 +10,7 @@ const RENDERER_ONLY_PACKAGES = new Set([
   "@spiritagent/web",
 ]);
 const EXTENSION_BUILD_PACKAGES = [
+  "@spiritagent/exa",
   "@spiritagent/github",
   "@spiritagent/linear",
   "@spiritagent/notion",

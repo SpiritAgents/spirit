@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Exa",
+    "description": "Rechercher et récupérer.",
+    "keywords": {
+      "search": "recherche",
+      "fetch": "récupération",
+      "web": "web"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "exa": {
+      "displayName": "Exa"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Exa"
+    }
+  },
+  "exa": {
+    "waiting": "En attente d'autorisation dans le navigateur",
+    "openAuthorizationPage": "Ouvrir la page d'autorisation Exa",
+    "connected": "Connecté à Exa",
+    "disconnect": "Déconnecter"
+  },
+  "common": {
+    "cancel": "Annuler"
+  }
+}

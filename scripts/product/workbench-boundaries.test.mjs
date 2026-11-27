@@ -10,6 +10,7 @@ const domains = [
   "automations",
   "code-completion",
   "config",
+  "exa",
   "extensions",
   "github",
   "hooks",
