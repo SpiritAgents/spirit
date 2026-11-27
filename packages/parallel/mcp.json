@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "parallel": {
+      "displayName": "Parallel",
+      "transport": {
+        "type": "http",
+        "url": "https://mcp.parallel.ai/mcp",
+        "headers": {
+          "Authorization": "Bearer ${extension-secret?:oauthCredentials:accessToken}"
+        }
+      }
+    }
+  }
+}

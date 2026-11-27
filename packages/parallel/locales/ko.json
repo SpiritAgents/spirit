@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Parallel",
+    "description": "검색 및 가져오기.",
+    "keywords": {
+      "search": "검색",
+      "fetch": "가져오기",
+      "research": "리서치"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "parallel": {
+      "displayName": "Parallel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Parallel"
+    }
+  },
+  "parallel": {
+    "waiting": "브라우저 인증 대기 중",
+    "openAuthorizationPage": "Parallel 인증 페이지 열기",
+    "connected": "Parallel에 연결됨",
+    "disconnect": "연결 해제"
+  },
+  "common": {
+    "cancel": "취소"
+  }
+}

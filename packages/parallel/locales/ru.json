@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Parallel",
+    "description": "Поиск и загрузка.",
+    "keywords": {
+      "search": "поиск",
+      "fetch": "загрузка",
+      "research": "исследование"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "parallel": {
+      "displayName": "Parallel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Parallel"
+    }
+  },
+  "parallel": {
+    "waiting": "Ожидание авторизации в браузере",
+    "openAuthorizationPage": "Открыть страницу авторизации Parallel",
+    "connected": "Подключено к Parallel",
+    "disconnect": "Отключить"
+  },
+  "common": {
+    "cancel": "Отмена"
+  }
+}

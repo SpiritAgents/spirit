@@ -57,6 +57,7 @@ test("runtime restart watches cover the Workbench domain graph", () => {
     "@spiritagent/icons",
     "@spiritagent/linear",
     "@spiritagent/notion",
+    "@spiritagent/parallel",
     "@spiritagent/ui",
     "@spiritagent/vercel",
     "@spiritagent/web",
@@ -86,6 +87,7 @@ test("development package watching covers extension dependencies without the pro
     "@spiritagent/icons",
     "@spiritagent/linear",
     "@spiritagent/notion",
+    "@spiritagent/parallel",
     "@spiritagent/ui",
     "@spiritagent/vercel",
   ]) {
@@ -104,6 +106,7 @@ test("development builds order simultaneous edits and refresh packed extensions"
     "@spiritagent/github",
     "@spiritagent/linear",
     "@spiritagent/notion",
+    "@spiritagent/parallel",
     "@spiritagent/vercel",
   ]) {
     assert.ok(order.indexOf("@spiritagent/ui") < order.indexOf(name));
@@ -123,6 +126,7 @@ test("shared dependencies rebuild every affected built-in extension", () => {
     "@spiritagent/github",
     "@spiritagent/linear",
     "@spiritagent/notion",
+    "@spiritagent/parallel",
     "@spiritagent/vercel",
   ];
   assert.deepEqual(

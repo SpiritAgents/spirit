@@ -72,8 +72,8 @@ export function assertExtensionMcpSecretSlotsDeclared(
 
 /**
  * Resolves `${extension-secret:slot[:field]}` and optional `${extension-secret?:slot[:field]}`
- * templates. Returns `undefined` when an optional secret slot is absent so callers can omit the
- * header and let the MCP server connect without authentication.
+ * templates. Returns `undefined` when an optional secret slot or JSON field is absent so callers
+ * can omit the header and let the MCP server connect without authentication.
  */
 export async function resolveExtensionMcpSecretTemplate(
   template: string,
@@ -108,10 +108,13 @@ export async function resolveExtensionMcpSecretTemplate(
       } catch {
         throw new Error(`Extension secret must contain a JSON object: ${reference.slot}`);
       }
-      const fieldValue =
-        typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
-          ? (parsed as Record<string, unknown>)[reference.field]
-          : undefined;
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        throw new Error(`Extension secret must contain a JSON object: ${reference.slot}`);
+      }
+      const fieldValue = (parsed as Record<string, unknown>)[reference.field];
+      if (fieldValue === undefined && reference.optional) {
+        return undefined;
+      }
       if (typeof fieldValue !== "string" || fieldValue.length === 0) {
         throw new Error(
           `Extension secret field must be a non-empty string: ${reference.slot}:${reference.field}`,

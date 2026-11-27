@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Parallel",
+    "description": "Suchen und Abrufen.",
+    "keywords": {
+      "search": "Suche",
+      "fetch": "Abrufen",
+      "research": "Recherche"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "parallel": {
+      "displayName": "Parallel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Parallel"
+    }
+  },
+  "parallel": {
+    "waiting": "Warte auf Autorisierung im Browser",
+    "openAuthorizationPage": "Parallel-Autorisierungsseite öffnen",
+    "connected": "Mit Parallel verbunden",
+    "disconnect": "Trennen"
+  },
+  "common": {
+    "cancel": "Abbrechen"
+  }
+}

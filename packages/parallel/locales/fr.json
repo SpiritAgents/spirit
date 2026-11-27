@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Parallel",
+    "description": "Rechercher et récupérer.",
+    "keywords": {
+      "search": "recherche",
+      "fetch": "récupération",
+      "research": "étude"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "parallel": {
+      "displayName": "Parallel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Parallel"
+    }
+  },
+  "parallel": {
+    "waiting": "En attente d'autorisation dans le navigateur",
+    "openAuthorizationPage": "Ouvrir la page d'autorisation Parallel",
+    "connected": "Connecté à Parallel",
+    "disconnect": "Déconnecter"
+  },
+  "common": {
+    "cancel": "Annuler"
+  }
+}

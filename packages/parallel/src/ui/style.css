@@ -1,0 +1,26 @@
+@import "tailwindcss";
+@import "@spiritagent/ui/theme.css";
+@import "@spiritagent/ui/native-interactions.css";
+@source "../../../ui/src";
+@custom-variant dark (&:is(.dark *));
+@custom-variant motion-reduce (&:is(html.spirit-reduce-motion *));
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  html.spirit-font-smoothing {
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    margin: 0;
+    color: var(--foreground);
+    background: transparent;
+  }
+}

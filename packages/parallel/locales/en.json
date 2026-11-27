@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "displayName": "Parallel",
+    "description": "Search and fetch.",
+    "keywords": {
+      "search": "search",
+      "fetch": "fetch",
+      "research": "research"
+    }
+  },
+  "authorization": {
+    "oauth": {
+      "displayName": "OAuth"
+    }
+  },
+  "mcp": {
+    "parallel": {
+      "displayName": "Parallel"
+    }
+  },
+  "views": {
+    "authorize": {
+      "title": "Parallel"
+    }
+  },
+  "parallel": {
+    "waiting": "Waiting for browser authorization",
+    "openAuthorizationPage": "Open Parallel Authorization Page",
+    "connected": "Connected to Parallel",
+    "disconnect": "Disconnect"
+  },
+  "common": {
+    "cancel": "Cancel"
+  }
+}
