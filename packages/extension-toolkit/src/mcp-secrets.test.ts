@@ -53,6 +53,56 @@ test("extension MCP secret validation checks declared slots and malformed refere
   }
 });
 
+test("optional extension MCP secret templates omit when absent and resolve when configured", async () => {
+  assert.deepEqual(
+    findExtensionMcpSecretReferences(
+      "Bearer ${extension-secret?:credentials:accessToken}; region=${extension-secret?:region}",
+    ),
+    [
+      { slot: "credentials", field: "accessToken", optional: true },
+      { slot: "region", optional: true },
+    ],
+  );
+  assert.doesNotThrow(() =>
+    assertExtensionMcpSecretSlotsDeclared("Bearer ${extension-secret?:credentials:accessToken}", [
+      "credentials",
+    ]),
+  );
+  assert.throws(
+    () =>
+      assertExtensionMcpSecretSlotsDeclared("Bearer ${extension-secret?:other}", ["credentials"]),
+    /undeclared extension secret slot: other/,
+  );
+  assert.equal(
+    await resolveExtensionMcpSecretTemplate(
+      "Bearer ${extension-secret?:credentials:accessToken}",
+      async () => undefined,
+    ),
+    undefined,
+  );
+  assert.equal(
+    await resolveExtensionMcpSecretTemplate(
+      "Bearer ${extension-secret?:credentials:accessToken}",
+      async () => "",
+    ),
+    undefined,
+  );
+  assert.equal(
+    await resolveExtensionMcpSecretTemplate(
+      "Bearer ${extension-secret?:credentials:accessToken}",
+      async () => JSON.stringify({ accessToken: "private-token" }),
+    ),
+    "Bearer private-token",
+  );
+  await assert.rejects(
+    resolveExtensionMcpSecretTemplate(
+      "Bearer ${extension-secret?:credentials:accessToken}",
+      async () => "not-json",
+    ),
+    /must contain a JSON object/,
+  );
+});
+
 test("extension MCP secret failures never include the stored value", async () => {
   const privateValue = "private-value-that-must-not-leak";
   for (const [secrets, pattern] of [

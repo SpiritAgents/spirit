@@ -406,6 +406,73 @@ test("collector resolves declared MCP secrets and isolates missing credentials",
   }
 });
 
+test("collector omits optional MCP secret headers when absent and injects them when configured", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-opt-secret-mcp-data-"));
+  const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-opt-secret-mcp-package-"));
+  const privateToken = "optional-private-token";
+  try {
+    const packageDir = join(preparedRoot, "optional-secret-mcp");
+    await writeExtensionPackage(packageDir, {
+      name: "optional-secret-mcp",
+      requestedCapabilities: ["mcp", "secret-storage"],
+      secretSlots: ["oauthCredentials"],
+      contributes: {
+        mcp: mcpDeclaration("keyless-capable", "http"),
+      },
+      files: {
+        "mcp.json": JSON.stringify({
+          servers: {
+            "keyless-capable": {
+              transport: {
+                type: "http",
+                url: "http://127.0.0.1/mcp",
+                headers: {
+                  Authorization: "Bearer ${extension-secret?:oauthCredentials:accessToken}",
+                },
+              },
+            },
+          },
+        }),
+      },
+    });
+    await installPreparedExtensionDirectory(
+      { spiritDataDir, hostKind: "desktop" },
+      { preparedDirectoryPath: packageDir },
+    );
+    const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
+    const listed = await manager.list();
+
+    const withoutSecret = await collectEnabledExtensionInstructionContributions(listed, undefined, {
+      loadSecret: async () => undefined,
+    });
+    const keyless = withoutSecret.mcp.servers["keyless-capable"];
+    assert.equal(keyless?.transport.type, "http");
+    if (keyless?.transport.type === "http") {
+      assert.equal(keyless.transport.headers, undefined);
+    }
+    assert.ok(withoutSecret.mcpOwnership["keyless-capable"]);
+
+    const withoutStorage = await collectEnabledExtensionInstructionContributions(listed);
+    const keylessWithoutStorage = withoutStorage.mcp.servers["keyless-capable"];
+    assert.equal(keylessWithoutStorage?.transport.type, "http");
+    if (keylessWithoutStorage?.transport.type === "http") {
+      assert.equal(keylessWithoutStorage.transport.headers, undefined);
+    }
+
+    const withSecret = await collectEnabledExtensionInstructionContributions(listed, undefined, {
+      loadSecret: async () => JSON.stringify({ accessToken: privateToken }),
+    });
+    const authorized = withSecret.mcp.servers["keyless-capable"];
+    assert.equal(authorized?.transport.type, "http");
+    if (authorized?.transport.type === "http") {
+      assert.equal(authorized.transport.headers?.Authorization, `Bearer ${privateToken}`);
+    }
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(preparedRoot, { recursive: true, force: true });
+  }
+});
+
 test("overlay keeps user and workspace skills ahead of extension skills", async () => {
   const overlay = overlayExtensionRulesAndSkills(
     [

@@ -32,7 +32,11 @@ import type {
   HostExtensionContributedRule,
   HostExtensionContributedSkill,
 } from "@spiritagent/instructions/contributions";
-import { resolveExtensionMcpSecretTemplate } from "@spiritagent/extension-toolkit";
+import {
+  assertExtensionMcpSecretSlotsDeclared,
+  findExtensionMcpSecretReferences,
+  resolveExtensionMcpSecretTemplate,
+} from "@spiritagent/extension-toolkit";
 
 export type { HostExtensionContributedRule, HostExtensionContributedSkill };
 
@@ -219,17 +223,27 @@ async function resolveExtensionMcpServerSecrets(
   if (server.transport.type !== "http" || !server.transport.headers) {
     return server;
   }
+  const declaredSlots = extension.manifest.secretSlots ?? [];
   const headers: Record<string, string> = {};
   for (const [name, template] of Object.entries(server.transport.headers)) {
-    headers[name] = await resolveExtensionMcpSecretTemplate(template, async (slot) => {
-      if (!extension.manifest.secretSlots?.includes(slot)) {
-        throw new Error(`MCP header references an undeclared extension secret slot: ${slot}`);
+    const references = findExtensionMcpSecretReferences(template);
+    assertExtensionMcpSecretSlotsDeclared(template, declaredSlots);
+    if (references.length > 0 && !loadSecret) {
+      if (references.every((reference) => reference.optional)) {
+        continue;
       }
-      if (!loadSecret) {
-        throw new Error("Extension secret storage is unavailable for MCP contributions.");
-      }
-      return loadSecret(extension.id, slot);
-    });
+      throw new Error("Extension secret storage is unavailable for MCP contributions.");
+    }
+    const resolved = await resolveExtensionMcpSecretTemplate(template, async (slot) =>
+      loadSecret ? loadSecret(extension.id, slot) : undefined,
+    );
+    if (resolved !== undefined) {
+      headers[name] = resolved;
+    }
+  }
+  if (Object.keys(headers).length === 0) {
+    const { headers: _omitted, ...transportWithoutHeaders } = server.transport;
+    return { ...server, transport: transportWithoutHeaders };
   }
   return { ...server, transport: { ...server.transport, headers } };
 }
