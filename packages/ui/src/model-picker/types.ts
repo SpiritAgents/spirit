@@ -108,6 +108,7 @@ export type ProviderEntryMeta = { id: string; label?: string };
 export type ProviderPickerPresetRow = {
   id: string;
   label: string;
+  featured?: boolean;
 };
 
 /** Model profile subset the picker reads; host snapshot profiles satisfy this structurally. */

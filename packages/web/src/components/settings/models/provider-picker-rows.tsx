@@ -14,6 +14,7 @@ export type ProviderLabelTranslate = (key: string, options?: { defaultValue?: st
 export type LocalizedProviderRow = {
   id: string;
   label: string;
+  featured?: boolean;
 };
 
 export function providerPickerLabel(
@@ -35,6 +36,7 @@ export function localizedProviderRows(
       .map((preset) => ({
         id: preset.id,
         label: providerPickerLabel(t, preset.id, presets),
+        ...(preset.featured === true ? { featured: true } : {}),
       }))
       .sort((left, right) => left.label.localeCompare(right.label)),
     {

@@ -52,6 +52,8 @@ export interface ProviderPresetCatalog {
 export interface ProviderPreset {
   id: string;
   label: string;
+  /** Marks the preset for curated picker presentation; each host controls how it uses this hint. */
+  featured?: boolean;
   defaultTransport: LlmTransportKind;
   /** Explicit SDK adapter npm package name; absent for the self-held bedrock transport. */
   sdk?: string;

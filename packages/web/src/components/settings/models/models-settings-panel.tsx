@@ -28,6 +28,7 @@ import {
   useChatGptOAuthDialog,
 } from "@/components/settings/models/chatgpt-auth-dialog";
 import { ProviderConnectDialog } from "@/components/settings/models/provider-connect-dialog";
+import { ProviderFeaturedSection } from "@/components/settings/models/provider-featured-section";
 import {
   ProviderPickerRowButton,
   filterProviderRows,
@@ -53,7 +54,6 @@ import {
 import { DesktopFormInput } from "@/components/ui/desktop-form-field";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent } from "@/components/ui/tooltip";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { RovingFocusGroup } from "@/components/ui/roving-focus-group";
 import {
   buildModelCatalogDetailMap,
@@ -265,6 +265,11 @@ export function ModelsSettingsPanel({
     ),
     providerQuery,
   );
+  const isProviderFiltering = providerQuery.trim().length > 0;
+  const featuredProviders = filteredProviders.filter((row) => row.featured);
+  const restProviders = filteredProviders.filter((row) => !row.featured);
+  const showFeaturedProviders = !isProviderFiltering && featuredProviders.length > 0;
+  const visibleProviders = isProviderFiltering ? filteredProviders : restProviders;
 
   const collectProviderListButtons = (container: HTMLElement | null): HTMLElement[] => {
     if (!container) {
@@ -956,25 +961,27 @@ export function ModelsSettingsPanel({
                 className="pl-9 pr-3.5"
               />
             </div>
-            <ScrollArea className="h-[min(28rem,calc(100dvh-6rem))]">
-              <RovingFocusGroup
-                asChild
-                orientation="vertical"
-                onKeyDownCapture={handleProviderListKeyDownCapture}
-              >
-                <div ref={providerListRef} className="px-0.5">
-                  {filteredProviders.length === 0 ? (
-                    <p className="px-2 py-6 text-center text-sm text-muted-foreground">
-                      {t("app.noMatches")}
-                    </p>
-                  ) : (
-                    filteredProviders.map((row) => (
-                      <ProviderPickerRowButton key={row.id} row={row} onSelect={startConnect} />
-                    ))
-                  )}
-                </div>
-              </RovingFocusGroup>
-            </ScrollArea>
+            {/* Bleed into the dialog's p-4 so the rows keep their px-3 hover cushion while their icons align with the title. */}
+            <ProviderFeaturedSection
+              label={t("marketplace.featured")}
+              rows={showFeaturedProviders ? featuredProviders : []}
+              className="-mx-3 h-[min(28rem,calc(100dvh-6rem))]"
+              listRef={providerListRef}
+              onListKeyDownCapture={handleProviderListKeyDownCapture}
+              type="hover"
+              hideScrollbar
+              onSelect={startConnect}
+            >
+              {filteredProviders.length === 0 ? (
+                <p className="px-2 py-6 text-center text-sm text-muted-foreground">
+                  {t("app.noMatches")}
+                </p>
+              ) : (
+                visibleProviders.map((row) => (
+                  <ProviderPickerRowButton key={row.id} row={row} onSelect={startConnect} />
+                ))
+              )}
+            </ProviderFeaturedSection>
           </div>
         </DialogContent>
       </Dialog>

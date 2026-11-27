@@ -1536,6 +1536,7 @@ export type DesktopProviderConfigEntry = Omit<
 export interface DesktopProviderPickerPreset {
   id: string;
   label: string;
+  featured?: boolean;
 }
 
 export interface DesktopConfigSnapshot {

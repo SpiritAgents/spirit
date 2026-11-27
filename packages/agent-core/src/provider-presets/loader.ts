@@ -204,6 +204,10 @@ function readProviderPreset(value: unknown, index: number): ProviderPreset {
   }
   const id = readRequiredString(value, "id", context);
   const label = readRequiredString(value, "label", context);
+  const featured = value["featured"];
+  if (featured !== undefined && typeof featured !== "boolean") {
+    fail(`${context}.featured must be a boolean when present.`);
+  }
   const defaultTransport = readTransportKind(
     value["defaultTransport"],
     `${context}.defaultTransport`,
@@ -331,6 +335,7 @@ function readProviderPreset(value: unknown, index: number): ProviderPreset {
   return {
     id,
     label,
+    ...(featured === true ? { featured: true } : {}),
     defaultTransport,
     ...(sdk !== undefined ? { sdk } : {}),
     transports,

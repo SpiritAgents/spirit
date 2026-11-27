@@ -8,19 +8,17 @@ import {
   useChatGptOAuthDialog,
 } from "@/components/settings/models/chatgpt-auth-dialog";
 import { ProviderConnectDialog } from "@/components/settings/models/provider-connect-dialog";
+import { ProviderFeaturedSection } from "@/components/settings/models/provider-featured-section";
 import {
   ProviderPickerRowButton,
   filterProviderRows,
   localizedProviderRows,
 } from "@/components/settings/models/provider-picker-rows";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { RovingFocusGroup } from "@/components/ui/roving-focus-group";
 import {
   DESKTOP_OVERLAY_LIST_FILTER_INPUT,
   DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL,
 } from "@/lib/desktop-chrome";
-import { bottomScrollFadeMaskStyle } from "@/lib/mask-styles";
 import { cn } from "@/lib/utils";
 import type {
   AddModelRequest,
@@ -86,15 +84,20 @@ export function OnboardingConnectControls({
     onCompleteChatGptOAuth,
     onCancelChatGptOAuth,
   });
-  const scrollRootRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const providerListRef = useRef<HTMLDivElement>(null);
   const [hasMoreBelow, setHasMoreBelow] = useState(() => pinnedBottomFade ?? false);
+  const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
 
   const filteredProviders = filterProviderRows(
     localizedProviderRows((key, options) => String(t(key, options)), providerPickerPresets),
     query,
   );
+  const isProviderFiltering = query.trim().length > 0;
+  const featuredProviders = filteredProviders.filter((row) => row.featured);
+  const restProviders = filteredProviders.filter((row) => !row.featured);
+  const showFeaturedProviders = !isProviderFiltering && featuredProviders.length > 0;
+  const visibleProviders = isProviderFiltering ? filteredProviders : restProviders;
 
   const startConnect = (id: string) => {
     if (isChatGptOAuthProvider(id)) {
@@ -109,8 +112,7 @@ export function OnboardingConnectControls({
     if (freezeBottomFade) {
       return;
     }
-    const root = scrollRootRef.current;
-    const viewport = root?.querySelector<HTMLElement>("[data-radix-scroll-area-viewport]");
+    const viewport = scrollRoot?.querySelector<HTMLElement>("[data-radix-scroll-area-viewport]");
     if (!viewport) {
       return;
     }
@@ -132,7 +134,7 @@ export function OnboardingConnectControls({
       viewport.removeEventListener("scroll", update);
       observer.disconnect();
     };
-  }, [filteredProviders.length, freezeBottomFade, onBottomFadeChange]);
+  }, [filteredProviders.length, freezeBottomFade, onBottomFadeChange, scrollRoot]);
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col items-center">
@@ -161,40 +163,39 @@ export function OnboardingConnectControls({
           />
         </div>
       </div>
-      <ScrollArea
-        ref={scrollRootRef}
+      <ProviderFeaturedSection
+        label={t("marketplace.featured")}
+        rows={showFeaturedProviders ? featuredProviders : []}
+        className="-mx-8 min-h-0 w-[calc(100%+4rem)] flex-1"
+        listClassName="mx-auto w-full max-w-md px-1 pt-2 pb-4"
+        listRef={providerListRef}
+        onListKeyDownCapture={(event) => {
+          if (event.key !== "ArrowUp") {
+            return;
+          }
+          const firstButton = providerListRef.current?.querySelector("button");
+          if (firstButton && event.target === firstButton) {
+            event.preventDefault();
+            event.stopPropagation();
+            searchInputRef.current?.focus();
+          }
+        }}
         type="auto"
-        className="min-h-0 w-full max-w-md flex-1"
-        style={bottomScrollFadeMaskStyle(hasMoreBelow, { animate: !freezeBottomFade })}
+        hasMoreBelow={hasMoreBelow}
+        animateFade={!freezeBottomFade}
+        onScrollRootChange={setScrollRoot}
+        onSelect={startConnect}
       >
-        <RovingFocusGroup
-          asChild
-          orientation="vertical"
-          onKeyDownCapture={(event) => {
-            if (event.key !== "ArrowUp") {
-              return;
-            }
-            const firstButton = providerListRef.current?.querySelector("button");
-            if (firstButton && event.target === firstButton) {
-              event.preventDefault();
-              event.stopPropagation();
-              searchInputRef.current?.focus();
-            }
-          }}
-        >
-          <div ref={providerListRef} className="px-1 pt-2 pb-4">
-            {filteredProviders.length === 0 ? (
-              <p className="px-2 py-6 text-center text-sm text-muted-foreground">
-                {t("app.noMatches")}
-              </p>
-            ) : (
-              filteredProviders.map((row) => (
-                <ProviderPickerRowButton key={row.id} row={row} onSelect={startConnect} />
-              ))
-            )}
-          </div>
-        </RovingFocusGroup>
-      </ScrollArea>
+        {filteredProviders.length === 0 ? (
+          <p className="px-2 py-6 text-center text-sm text-muted-foreground">
+            {t("app.noMatches")}
+          </p>
+        ) : (
+          visibleProviders.map((row) => (
+            <ProviderPickerRowButton key={row.id} row={row} onSelect={startConnect} />
+          ))
+        )}
+      </ProviderFeaturedSection>
 
       {connectTarget !== null ? (
         <ProviderConnectDialog

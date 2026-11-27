@@ -125,6 +125,7 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
       providerPickerPresets: listProviderPresets().map((preset) => ({
         id: preset.id,
         label: preset.label,
+        ...(preset.featured === true ? { featured: true } : {}),
       })),
       models: flattenedModels.map((model) => ({
         ...model,
