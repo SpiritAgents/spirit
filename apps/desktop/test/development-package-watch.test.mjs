@@ -7,6 +7,10 @@ import { afterEach, test } from "vitest";
 
 import { cleanPackageDist } from "../../../scripts/clean-package-dist.mjs";
 import {
+  developmentBuildClosure,
+  developmentPackageBuildOrder,
+} from "../scripts/dev-reload-graph.mjs";
+import {
   DevelopmentPackageBuildQueue,
   developmentReloadSignalPath,
   isIgnoredPackageWatchPath,
@@ -77,6 +81,33 @@ test("the build queue publishes one idle event after the whole affected batch", 
   assert.deepEqual(builds, ["a", "b", "c"]);
   assert.deepEqual(idle, [["a", "b", "c"]]);
   queue.close();
+});
+
+test("a shared UI edit rebuilds built-in extensions before one reload signal", async () => {
+  const builds = [];
+  const idle = [];
+  const order = developmentPackageBuildOrder(repoRoot);
+  const affected = developmentBuildClosure(["@spiritagent/ui"], repoRoot);
+  const queue = new DevelopmentPackageBuildQueue({
+    order,
+    debounceMs: 0,
+    build: async (name) => builds.push(name),
+    onIdle: async (names) => idle.push(names),
+    onError: (error) => {
+      throw error;
+    },
+  });
+
+  try {
+    for (const name of affected) queue.schedule(name);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const expected = order.filter((name) => affected.has(name));
+    assert.deepEqual(builds, expected);
+    assert.deepEqual(idle, [expected]);
+  } finally {
+    queue.close();
+  }
 });
 
 test("a failed build keeps the old runtime and retries on the next edit", async () => {

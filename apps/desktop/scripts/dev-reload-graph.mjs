@@ -16,6 +16,26 @@ const EXTENSION_BUILD_PACKAGES = [
   "@spiritagent/vercel",
 ];
 
+function workspacePackageDependencyNames(repoRoot, name) {
+  const packageDir = path.join(repoRoot, "packages", name.slice(SPIRIT_SCOPE.length));
+  const manifest = JSON.parse(fs.readFileSync(path.join(packageDir, "package.json"), "utf8"));
+  return Object.keys({ ...manifest.dependencies, ...manifest.peerDependencies }).filter(
+    (dependency) => dependency.startsWith(SPIRIT_SCOPE),
+  );
+}
+
+function workspaceDependencyClosure(repoRoot, roots) {
+  const names = new Set();
+  const pending = [...roots];
+  while (pending.length > 0) {
+    const name = pending.shift();
+    if (!name || names.has(name)) continue;
+    names.add(name);
+    pending.push(...workspacePackageDependencyNames(repoRoot, name));
+  }
+  return names;
+}
+
 /**
  * Follow only runtime dependencies. Renderer packages are source-served by
  * Vite and must not restart Electron for every component edit.
@@ -47,10 +67,13 @@ export function developmentRestartWatchDirs(desktopRoot, repoRoot) {
   ];
 }
 
-/** Packages whose development builds feed either Electron or built-in extensions. */
+/** Packages whose development builds feed either Electron or built-in extension bundles. */
 export function developmentWatchPackageNames(repoRoot) {
   return [
-    ...new Set([...workbenchRuntimePackageNames(repoRoot), ...EXTENSION_BUILD_PACKAGES]),
+    ...new Set([
+      ...workbenchRuntimePackageNames(repoRoot),
+      ...workspaceDependencyClosure(repoRoot, EXTENSION_BUILD_PACKAGES),
+    ]),
   ].sort();
 }
 
@@ -72,9 +95,7 @@ export function developmentPackageBuildOrder(repoRoot) {
     if (name === "@spiritagent/extensions") {
       for (const dependency of EXTENSION_BUILD_PACKAGES) visit(dependency);
     }
-    const packageDir = path.join(repoRoot, "packages", name.slice(SPIRIT_SCOPE.length));
-    const manifest = JSON.parse(fs.readFileSync(path.join(packageDir, "package.json"), "utf8"));
-    for (const dependency of Object.keys(manifest.dependencies ?? {})) {
+    for (const dependency of workspacePackageDependencyNames(repoRoot, name)) {
       if (names.has(dependency)) visit(dependency);
     }
     visiting.delete(name);
@@ -86,8 +107,17 @@ export function developmentPackageBuildOrder(repoRoot) {
   return ordered;
 }
 
-export function developmentBuildClosure(changedPackages) {
+/**
+ * Runtime dependants load fresh dependency output on the next reload, but an
+ * extension bundle contains a snapshot of its dependencies. Rebuild every
+ * affected extension and then reassemble the built-in registry.
+ */
+export function developmentBuildClosure(changedPackages, repoRoot) {
   const changed = new Set(changedPackages);
+  for (const name of EXTENSION_BUILD_PACKAGES) {
+    const dependencies = workspaceDependencyClosure(repoRoot, [name]);
+    if ([...changed].some((changedName) => dependencies.has(changedName))) changed.add(name);
+  }
   if (EXTENSION_BUILD_PACKAGES.some((name) => changed.has(name))) {
     changed.add("@spiritagent/extensions");
   }

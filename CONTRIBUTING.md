@@ -56,7 +56,7 @@ pnpm run dev:cli      # CLI with TUI
 pnpm run build        # production build of TS packages + Desktop + site + CLI
 ```
 
-During `pnpm run dev:desktop`, package source edits need no manual rebuild: renderer-consumed packages and locale resources update live, while Electron runtime code is rebuilt per changed package and reloaded only after the affected build batch succeeds.
+During `pnpm run dev:desktop`, package source edits need no manual rebuild: renderer-consumed packages and locale resources update live, while Electron runtime code is rebuilt per changed package and reloaded only after the affected build batch succeeds. Shared package edits also rebuild every built-in extension that bundles them before the packed extension registry and host reload.
 
 | Command                     | Description                              |
 | --------------------------- | ---------------------------------------- |

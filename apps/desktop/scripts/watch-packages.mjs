@@ -144,7 +144,7 @@ function main() {
       if (!file || isIgnoredPackageWatchPath(file)) return;
       const absolute = path.join(packageRoot, file.toString());
       if (isUiLocaleSource(repoRoot, absolute)) return;
-      for (const affected of developmentBuildClosure([name])) queue.schedule(affected);
+      for (const affected of developmentBuildClosure([name], repoRoot)) queue.schedule(affected);
     });
     watchers.push(watcher);
   }
@@ -158,7 +158,7 @@ function main() {
   ];
   for (const input of globalInputs) {
     const watcher = fs.watch(input.file, () => {
-      for (const name of developmentBuildClosure(input.packages)) queue.schedule(name);
+      for (const name of developmentBuildClosure(input.packages, repoRoot)) queue.schedule(name);
     });
     watchers.push(watcher);
   }

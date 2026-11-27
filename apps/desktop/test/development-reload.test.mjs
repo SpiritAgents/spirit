@@ -74,35 +74,73 @@ test("runtime restart watches cover the Workbench domain graph", () => {
   assert.ok(dirs.includes(path.join(repoRoot, "packages", "workbench", "dist")));
 });
 
-test("development package watching does not rebuild the production renderer", () => {
+test("development package watching covers extension dependencies without the production renderer", () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(desktopRoot, "package.json"), "utf8"));
   const script = manifest.scripts["watch:packages"];
   assert.equal(script, "node scripts/watch-packages.mjs");
 
   const packages = developmentWatchPackageNames(repoRoot);
   assert.ok(packages.includes("@spiritagent/workbench"));
-  assert.ok(packages.includes("@spiritagent/github"));
-  assert.ok(packages.includes("@spiritagent/linear"));
-  assert.ok(packages.includes("@spiritagent/notion"));
-  assert.ok(packages.includes("@spiritagent/vercel"));
+  for (const name of [
+    "@spiritagent/github",
+    "@spiritagent/icons",
+    "@spiritagent/linear",
+    "@spiritagent/notion",
+    "@spiritagent/ui",
+    "@spiritagent/vercel",
+  ]) {
+    assert.ok(packages.includes(name), `${name} must be watched for built-in extension changes`);
+  }
   assert.ok(!packages.includes("@spiritagent/web"));
-  assert.ok(!packages.includes("@spiritagent/ui"));
+  assert.ok(!packages.includes("@spiritagent/brand"));
 });
 
 test("development builds order simultaneous edits and refresh packed extensions", () => {
   const order = developmentPackageBuildOrder(repoRoot);
   assert.ok(order.indexOf("@spiritagent/product") < order.indexOf("@spiritagent/i18n"));
   assert.ok(order.indexOf("@spiritagent/i18n") < order.indexOf("@spiritagent/workbench"));
-  assert.ok(order.indexOf("@spiritagent/github") < order.indexOf("@spiritagent/extensions"));
-  assert.ok(order.indexOf("@spiritagent/linear") < order.indexOf("@spiritagent/extensions"));
-  assert.ok(order.indexOf("@spiritagent/notion") < order.indexOf("@spiritagent/extensions"));
-  assert.ok(order.indexOf("@spiritagent/vercel") < order.indexOf("@spiritagent/extensions"));
+  assert.ok(order.indexOf("@spiritagent/icons") < order.indexOf("@spiritagent/ui"));
+  for (const name of [
+    "@spiritagent/github",
+    "@spiritagent/linear",
+    "@spiritagent/notion",
+    "@spiritagent/vercel",
+  ]) {
+    assert.ok(order.indexOf("@spiritagent/ui") < order.indexOf(name));
+    assert.ok(order.indexOf(name) < order.indexOf("@spiritagent/extensions"));
+  }
   assert.ok(order.indexOf("@spiritagent/extensions") < order.indexOf("@spiritagent/workbench"));
 
-  assert.deepEqual([...developmentBuildClosure(["@spiritagent/github"])].sort(), [
+  assert.deepEqual([...developmentBuildClosure(["@spiritagent/github"], repoRoot)].sort(), [
     "@spiritagent/extensions",
     "@spiritagent/github",
   ]);
+});
+
+test("shared dependencies rebuild every affected built-in extension", () => {
+  const allExtensions = [
+    "@spiritagent/extensions",
+    "@spiritagent/github",
+    "@spiritagent/linear",
+    "@spiritagent/notion",
+    "@spiritagent/vercel",
+  ];
+  assert.deepEqual(
+    [...developmentBuildClosure(["@spiritagent/ui"], repoRoot)].sort(),
+    [...allExtensions, "@spiritagent/ui"].sort(),
+  );
+  assert.deepEqual(
+    [...developmentBuildClosure(["@spiritagent/icons"], repoRoot)].sort(),
+    [...allExtensions, "@spiritagent/icons"].sort(),
+  );
+  assert.deepEqual(
+    [...developmentBuildClosure(["@spiritagent/product"], repoRoot)].sort(),
+    [...allExtensions, "@spiritagent/product"].sort(),
+  );
+  assert.deepEqual(
+    [...developmentBuildClosure(["@spiritagent/sessions"], repoRoot)],
+    ["@spiritagent/sessions"],
+  );
 });
 
 test("development restart fingerprints only settled runtime changes", () => {
